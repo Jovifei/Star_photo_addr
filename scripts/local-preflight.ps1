@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-Write-Host "[1/6] Checking required commands..." -ForegroundColor Cyan
+Write-Host "[1/7] Checking required commands..." -ForegroundColor Cyan
 foreach ($command in @("git", "node", "npm")) {
     if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
         throw "Missing required command: $command"
@@ -16,7 +16,7 @@ if ($nodeMajor -lt 22) {
     throw "Node.js 22 or newer is required. Current: $(node --version)"
 }
 
-Write-Host "[2/6] Installing locked dependencies..." -ForegroundColor Cyan
+Write-Host "[2/7] Installing locked dependencies..." -ForegroundColor Cyan
 npm ci
 
 Write-Host "[3/7] Running algorithm unit tests (no build required)..." -ForegroundColor Cyan
@@ -28,7 +28,7 @@ npm run test:live
 Write-Host "[5/7] Building production assets (produces dist/)..." -ForegroundColor Cyan
 npm run build
 
-Write-Host "[6/7] Running Sites Worker packaging test (needs dist/)..." -ForegroundColor Cyan
+Write-Host "[6/7] Running Sites Worker packaging test (needs dist/ from step 5)..." -ForegroundColor Cyan
 npm run test:sites
 
 Write-Host "[7/7] Checking Docker Compose when available..." -ForegroundColor Cyan
