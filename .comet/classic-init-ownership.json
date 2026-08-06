@@ -1,0 +1,14 @@
+{
+  "schema": "comet.classic-init-ownership.v1",
+  "id": "4feec5fe-00f5-456a-82f1-0923d09afd9b",
+  "stage": "initializing",
+  "artifactLayout": "docs",
+  "root": "docs/openspec",
+  "quarantine": null,
+  "configIdentity": {
+    "exists": false,
+    "sha256": null
+  },
+  "rootIdentity": null,
+  "manifest": null
+}
