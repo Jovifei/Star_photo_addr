@@ -19,16 +19,19 @@ if ($nodeMajor -lt 22) {
 Write-Host "[2/6] Installing locked dependencies..." -ForegroundColor Cyan
 npm ci
 
-Write-Host "[3/6] Running unit and Sites Worker tests..." -ForegroundColor Cyan
-npm test
+Write-Host "[3/7] Running algorithm unit tests (no build required)..." -ForegroundColor Cyan
+npm run test:unit
 
-Write-Host "[4/6] Calling the real Open-Meteo API..." -ForegroundColor Cyan
+Write-Host "[4/7] Calling the real Open-Meteo API..." -ForegroundColor Cyan
 npm run test:live
 
-Write-Host "[5/6] Building production assets..." -ForegroundColor Cyan
+Write-Host "[5/7] Building production assets (produces dist/)..." -ForegroundColor Cyan
 npm run build
 
-Write-Host "[6/6] Checking Docker Compose when available..." -ForegroundColor Cyan
+Write-Host "[6/7] Running Sites Worker packaging test (needs dist/)..." -ForegroundColor Cyan
+npm run test:sites
+
+Write-Host "[7/7] Checking Docker Compose when available..." -ForegroundColor Cyan
 if (Get-Command docker -ErrorAction SilentlyContinue) {
     docker compose version
     docker compose config --quiet

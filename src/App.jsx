@@ -85,6 +85,26 @@ export function App() {
     if (!nightKeys.includes(selectedNight)) setSelectedNight(nightKeys[0]);
   }, [nightKeys, selectedNight]);
 
+  // 切换顶部/底部导航（今晚·对比·点位）时自动回到页面顶部，避免跳转后停留在上次滚动位置
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [view]);
+
+  // 打开详情抽屉时锁定背景滚动，并支持 Esc 键关闭，让点击跳转的落点更明确
+  useEffect(() => {
+    if (!selectedLocationId) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setSelectedLocationId(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedLocationId]);
+
   const rankings = useMemo(() => {
     return locations
       .map((location) => {
@@ -424,7 +444,7 @@ function baseChartStyle() {
   return {
     backgroundColor: "transparent",
     textStyle: { color: "#aebbd0", fontFamily: "system-ui, sans-serif" },
-    tooltip: { trigger: "axis", backgroundColor: "#101a2b", borderColor: "#30415f", textStyle: { color: "#f4f7fb" } },
+    tooltip: { trigger: "axis", backgroundColor: "#1a2154", borderColor: "#4a5599", textStyle: { color: "#f4f6ff" } },
     grid: { left: 38, right: 14, top: 38, bottom: 32 },
   };
 }
