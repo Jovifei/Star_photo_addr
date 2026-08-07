@@ -38,3 +38,10 @@ _broken_git/
 
 # WorkBuddy assistant memory (local only)
 .workbuddy/
+
+# Temporary probe/debug files
+.ps-*.txt
+.gs-tmp.txt
+.nodeopt-result.txt
+.del-check.txt
+.comet/
