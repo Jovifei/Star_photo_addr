@@ -2,7 +2,12 @@
 
 import { useEffect, useCallback } from "react";
 import { useStore } from "@/lib/store";
-import { formatNightLabel, formatHour, isInNight } from "@/lib/nighttime";
+import {
+  formatNightLabel,
+  formatHour,
+  formatHourWithDate,
+  isInNight,
+} from "@/lib/nighttime";
 import { getValuesAtTime, averageLayer } from "@/lib/cloudGrid";
 
 /** Number of night-time ticks (20:00 → 05:00 = 9 hours). */
@@ -16,7 +21,8 @@ const PLAY_INTERVAL_MS = 1500;
  *
  * Features:
  *   - Range slider 0-8 (9 ticks: 20:00 → 05:00).
- *   - Displays the current time as "8/12 周三 20:00".
+ *   - Displays the current time as "8/12夜 01:00（次日）", with the full night
+ *     window ("8月12日 周三 夜间（20:00–次日05:00）") available as a tooltip.
  *   - Play/pause button that auto-advances the time index every 1.5 seconds.
  *   - Three layer proportion bars (high/mid/low) showing average values.
  *
@@ -32,9 +38,9 @@ export default function CloudTimeline() {
     : [];
   const currentHour = nightHours[Math.min(cloudState.timeIndex, Math.max(0, nightHours.length - 1))];
 
-  // Format the current time label.
+  // Format the current time label, e.g. "8/7夜 01:00（次日）".
   const timeLabel = currentHour
-    ? `${formatNightLabel(selectedNight, true)} ${formatHour(currentHour.time)}`
+    ? `${formatNightLabel(selectedNight, true)} ${formatHourWithDate(currentHour.time, selectedNight)}`
     : formatNightLabel(selectedNight, true);
 
   // ----- Auto-play effect -----
@@ -84,7 +90,12 @@ export default function CloudTimeline() {
             <span>
               {nightHours[0] ? formatHour(nightHours[0].time) : "20:00"}
             </span>
-            <span className="cloud-timeline-current">{timeLabel}</span>
+            <span
+              className="cloud-timeline-current"
+              title={formatNightLabel(selectedNight, false)}
+            >
+              {timeLabel}
+            </span>
             <span>
               {nightHours[nightHours.length - 1]
                 ? formatHour(nightHours[nightHours.length - 1].time)

@@ -268,6 +268,7 @@ export default function StarWindowTable() {
                 <th
                   key={night}
                   className={`star-window-date-col${sortKey === night ? " sorted" : ""}`}
+                  title={formatNightLabel(night, false)}
                   onClick={() => handleSort(night)}
                 >
                   {formatNightLabel(night, true)}
