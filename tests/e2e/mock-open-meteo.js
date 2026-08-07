@@ -105,3 +105,23 @@ export async function installOpenMeteoMock(page, fixture) {
     }
   });
 }
+
+export async function installGeocodingMock(page) {
+  await page.route("**/geocoding-api.open-meteo.com/v1/search**", async (route) => {
+    const url = new URL(route.request().url());
+    const results = url.searchParams.get("name")?.includes("杭州")
+      ? [{
+          id: 1808926,
+          name: "杭州",
+          latitude: 30.29365,
+          longitude: 120.16142,
+          elevation: 12,
+          admin1: "浙江",
+          admin2: "杭州市",
+          country: "中国",
+          timezone: "Asia/Shanghai",
+        }]
+      : [];
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ results }) });
+  });
+}
