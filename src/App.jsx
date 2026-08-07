@@ -13,6 +13,7 @@ import {
   Info,
   ListBullets,
   MapPin,
+  MapTrifold,
   Moon,
   Mountains,
   Plus,
@@ -22,6 +23,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import ReactECharts from "echarts-for-react";
+import { ObservationMap } from "./components/ObservationMap";
 import { PRESET_LOCATIONS, createLocation } from "./data/locations";
 import { deriveCloudLayers } from "./lib/clouds";
 import { readCustomLocations, readForecastCache, writeCustomLocations, writeForecastCache } from "./lib/cache";
@@ -31,6 +33,7 @@ import { formatHour, formatNightLabel, nextNightKeys, relativeFreshness } from "
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "今晚", icon: Binoculars },
+  { id: "map", label: "地图", icon: MapTrifold },
   { id: "matrix", label: "对比", icon: ChartLineUp },
   { id: "locations", label: "点位", icon: MapPin },
 ];
@@ -84,6 +87,26 @@ export function App() {
   useEffect(() => {
     if (!nightKeys.includes(selectedNight)) setSelectedNight(nightKeys[0]);
   }, [nightKeys, selectedNight]);
+
+  // 切换顶部/底部导航（今晚·对比·点位）时自动回到页面顶部，避免跳转后停留在上次滚动位置
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [view]);
+
+  // 打开详情抽屉时锁定背景滚动，并支持 Esc 键关闭，让点击跳转的落点更明确
+  useEffect(() => {
+    if (!selectedLocationId) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setSelectedLocationId(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedLocationId]);
 
   const rankings = useMemo(() => {
     return locations
@@ -149,8 +172,8 @@ export function App() {
         </section>
 
         {error && <StatusBanner message={error} stale={stale} />}
-        {!forecasts.length && loading ? <LoadingState /> : null}
-        {!forecasts.length && !loading ? <EmptyState onRefresh={() => refresh()} /> : null}
+        {view !== "map" && !forecasts.length && loading ? <LoadingState /> : null}
+        {view !== "map" && view !== "locations" && !forecasts.length && !loading ? <EmptyState onRefresh={() => refresh()} /> : null}
 
         {forecasts.length > 0 && view === "dashboard" && (
           <Dashboard
@@ -173,6 +196,17 @@ export function App() {
               setSelectedNight(night);
               setSelectedLocationId(locationId);
             }}
+          />
+        )}
+        {view === "map" && (
+          <ObservationMap
+            locations={locations}
+            forecasts={forecasts}
+            days={days}
+            nightKeys={nightKeys}
+            selectedNight={selectedNight}
+            onSelectNight={setSelectedNight}
+            onSave={addLocation}
           />
         )}
         {view === "locations" && (
@@ -365,7 +399,7 @@ function LocationsView({ locations, customLocations, onAdd, onRemove }) {
     <section className="locations-section">
       <div className="section-heading-row"><div><span className="section-kicker">OBSERVATION SITES</span><h2>点位管理</h2><p>天气查询统一使用 WGS84 坐标；用户海拔不会被模型静默覆盖。</p></div><button className="primary-button" onClick={() => setShowForm(true)}><Plus />新增点位</button></div>
       <div className="location-table-wrap"><table className="location-table"><thead><tr><th>点位</th><th>纬度</th><th>经度</th><th>海拔(m)</th><th>来源</th><th /></tr></thead><tbody>{locations.map((location) => <tr key={location.id}><td><MapPin />{location.name}</td><td>{location.latitude.toFixed(4)}</td><td>{location.longitude.toFixed(4)}</td><td>{location.elevation}</td><td>{location.source}</td><td>{customLocations.some((item) => item.id === location.id) && <button className="icon-button danger" onClick={() => onRemove(location.id)} aria-label={`删除 ${location.name}`}><X /></button>}</td></tr>)}</tbody></table></div>
-      {showForm && <div className="modal-backdrop" onMouseDown={() => setShowForm(false)}><form className="location-form" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}><div className="form-header"><div><span className="section-kicker">NEW LOCATION</span><h3>新增观测点</h3></div><button type="button" className="icon-button" onClick={() => setShowForm(false)}><X /></button></div><label>点位名称<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：东白山" required /></label><div className="form-grid"><label>纬度<input type="number" step="0.0001" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} placeholder="29.5000" required /></label><label>经度<input type="number" step="0.0001" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} placeholder="120.3000" required /></label></div><label>用户海拔（米）<input type="number" step="0.1" value={form.elevation} onChange={(event) => setForm({ ...form, elevation: event.target.value })} placeholder="1000" required /></label><p className="form-note"><Info />保存后点击刷新获取 14 天天气。自定义点位只保存在本机浏览器。</p><button className="primary-button wide" type="submit"><CheckCircle />保存点位</button></form></div>}
+      {showForm && <div className="modal-backdrop" onMouseDown={() => setShowForm(false)}><form className="location-form" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}><div className="form-header"><div><span className="section-kicker">NEW LOCATION</span><h3>新增观测点</h3></div><button type="button" className="icon-button" aria-label="关闭表单" onClick={() => setShowForm(false)}><X /></button></div><label>点位名称<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：东白山" required /></label><div className="form-grid"><label>纬度<input type="number" step="0.0001" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} placeholder="29.5000" required /></label><label>经度<input type="number" step="0.0001" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} placeholder="120.3000" required /></label></div><label>用户海拔（米）<input type="number" step="0.1" value={form.elevation} onChange={(event) => setForm({ ...form, elevation: event.target.value })} placeholder="1000" required /></label><p className="form-note"><Info />保存后点击刷新获取 14 天天气。自定义点位只保存在本机浏览器。</p><button className="primary-button wide" type="submit"><CheckCircle />保存点位</button></form></div>}
     </section>
   );
 }
@@ -396,7 +430,7 @@ function DetailDrawer({ item, nightKey, onClose }) {
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
       <aside className="detail-drawer" onMouseDown={(event) => event.stopPropagation()} aria-label={`${location.name} 详情`}>
-        <div className="drawer-header"><div><span className="section-kicker">LOCATION DETAIL · {formatNightLabel(nightKey)}</span><h2>{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" onClick={onClose}><X /></button></div>
+        <div className="drawer-header"><div><span className="section-kicker">LOCATION DETAIL · {formatNightLabel(nightKey)}</span><h2>{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
         <div className="detail-summary"><ScoreRing value={evaluation?.score} label="星空分" /><div><span className={`status-pill ${statusMeta(evaluation?.status).tone}`}>{statusMeta(evaluation?.status).label}</span><h3>{evaluation?.windowLabel}</h3><p>{evaluation?.reason}</p></div></div>
         <div className="detail-metrics"><Metric icon={Cloud} label="云海潜力" value={evaluation?.cloudSeaPotential} /><Metric icon={Moon} label="月面照度" value={`${Math.round((evaluation?.moonIllumination ?? 0) * 100)}%`} /><Metric icon={Sparkle} label="天文暗夜" value={`${evaluation?.darkHours ?? 0}h`} /><Metric icon={Compass} label="银河最高" value={`${evaluation?.galacticMax ?? 0}°`} /></div>
 
@@ -424,7 +458,7 @@ function baseChartStyle() {
   return {
     backgroundColor: "transparent",
     textStyle: { color: "#aebbd0", fontFamily: "system-ui, sans-serif" },
-    tooltip: { trigger: "axis", backgroundColor: "#101a2b", borderColor: "#30415f", textStyle: { color: "#f4f7fb" } },
+    tooltip: { trigger: "axis", backgroundColor: "#1a2154", borderColor: "#4a5599", textStyle: { color: "#f4f6ff" } },
     grid: { left: 38, right: 14, top: 38, bottom: 32 },
   };
 }
