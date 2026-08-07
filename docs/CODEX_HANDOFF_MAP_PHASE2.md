@@ -1,4 +1,4 @@
-# Codex 继续开发交接：统一主题与地图 Phase 2
+# Codex 继续开发交接：UI/UX Pro Max 与地图 Phase 2
 
 更新时间：2026-08-06
 权威基线：GitHub `main`（本轮提交合并后）
@@ -14,6 +14,8 @@
 - 增加不依赖 Vite 网络接口枚举的测试预览服务器，支持 SPA fallback。
 - 完成光污染数据决策文档：`docs/LIGHT_POLLUTION_DATA_DECISION.md`。
 - 重写 README，使功能、数据边界、运行方式和真实状态与代码一致。
+- 完成 UI/UX Pro Max 优化：设计系统落盘、44px 触控、skip link、导航/筛选语义、弹层焦点管理、地图键盘点位列表、读屏状态与图表按需加载。
+- E2E 增加 375/768/1024/1440 横向溢出、skip link、导航状态与弹层初始焦点检查。
 
 ## 本轮验证证据
 
@@ -25,14 +27,21 @@ npm test
   Sites Worker: 4/4
   Vite production build: passed
 
+npm run test:live
+  Open-Meteo: 2 locations / 48 surface hours / 10 pressure levels
+
+npx playwright test --list
+  30 desktop/mobile tests enumerated
+
 node scripts/serve-preview.mjs
   / and /map: HTTP 200 (SPA fallback passed)
 ```
 
-E2E 测试被 Playwright Chromium 缺失阻断。`npm run test:e2e` 能构建、启动测试服务器并枚举 26 个 desktop/mobile 用例，但浏览器启动前报：
+E2E 测试被 Playwright Chromium 缺失阻断。已尝试把浏览器安装到工作区，但当前网络把 Playwright CDN 下载响应截断为 0 MiB，反复报：
 
 ```text
-Executable doesn't exist at .../chromium_headless_shell-1234/...
+End of central directory record signature not found
+Failed to download Chrome for Testing 151.0.7922.34
 ```
 
 这不是产品用例失败，不能算作浏览器通过。请在允许下载浏览器的环境执行下方命令补齐。
@@ -53,17 +62,17 @@ npm run test:live
 重点检查 `docs/qa/` 新生成的：
 
 - `*-desktop-dashboard.jpg`
-- `*-mobile-dashboard.jpg`
+- `*-mobile-dashboard.jpg`（375×812）
 - `*-desktop-map-search.jpg`
 - `*-mobile-map-search.jpg`
 
-验收分辨率以 `playwright.config.js` 为准：桌面 1440×1000，手机 390×844。
+验收分辨率以 `playwright.config.js` 为准：桌面 1440×1000，手机 375×812；响应式用例还会检查 768 与 1024。
 
 ## 真实剩余项
 
 ### P0：浏览器与部署验收
 
-1. 安装 Playwright Chromium，跑完 26 个 desktop/mobile 用例。
+1. 安装 Playwright Chromium，跑完 `npm run test:e2e` 当前枚举的全部 desktop/mobile 用例。
 2. 检查首页、地图搜索、矩阵、点位表和详情抽屉截图；若出现溢出、裁切、对比不足再做小范围 CSS 修复。
 3. 在真实浏览器手动允许一次定位权限，确认 HTTPS 部署下定位成功；自动化已覆盖 API 成功/拒绝逻辑，但没有使用真实设备 GPS。
 4. 在装有 Docker 的机器运行容器并验证 `/healthz`；当前环境没有 Docker。
@@ -101,6 +110,8 @@ npm run test:live
 3. docs/PERSEIDS_REFERENCE_AUDIT.md
 4. docs/LIGHT_POLLUTION_DATA_DECISION.md
 5. docs/CODEX_HANDOFF_MAP_PHASE2.md
+6. docs/UI_UX_PRO_MAX_AUDIT.md
+7. design-system/star-photo-planner/MASTER.md
 
 第一目标是完成 P0 真实浏览器验收，不要先扩功能：
 - npm ci
@@ -109,7 +120,7 @@ npm run test:live
 - npm run test:e2e
 - npm run test:live
 - 检查 docs/qa 中 desktop/mobile 的 dashboard、map-search、matrix、drawer、location-form 截图。
-- 对照 Observatory Theme v2 检查：所有页面背景、面板、圆角、边框、按钮、表格、导航、状态色一致；手机 390×844 不横向溢出，地图搜索框、候选点名称输入和底栏不重叠。
+- 对照 Observatory Theme v3 检查：所有页面背景、面板、圆角、边框、按钮、表格、导航、状态色一致；375/768/1024/1440 不出现页面级横向溢出，地图搜索框、快速点位列表、候选点名称输入和底栏不重叠。
 - E2E 必须覆盖：进入地图、搜索杭州、选择结果、切换 14 天、编辑名称、保存、防重复、定位允许/拒绝。
 - 在装有 Docker 的机器执行 docker compose up --build -d，再验证 /healthz。
 
@@ -120,7 +131,7 @@ npm run test:live
 
 ## 完成定义
 
-- 26 个 E2E 用例在 desktop/mobile 全绿，且截图人工检查无明显溢出或层级割裂。
+- 当前全部 E2E 用例在 desktop/mobile 全绿，且截图人工检查无明显溢出或层级割裂。
 - Docker `/healthz` 实际返回成功。
 - 第三方数据均有名称、许可证、版本/年份、分辨率、更新时间和缺失状态。
 - 第三方图层失败时，基础天气、地图选点和点位管理仍可使用。
