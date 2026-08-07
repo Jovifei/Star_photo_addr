@@ -17,18 +17,41 @@ export interface Location {
   bortle?: number;
 }
 
-/** Result of sampling the night-sky brightness at a coordinate. */
+/**
+ * Why a dark-sky sample does or does not carry a trustworthy value.
+ * - `ok`                 : a real pixel was read and decoded.
+ * - `nodata`             : the pixel exists but encodes nodata (value 0).
+ * - `unsupported-region` : outside the China VIIRS grid; encoding unknown.
+ * - `layer-unavailable`  : the local raster bundle is not installed at all.
+ */
+export type DarkSkyStatus =
+  | "ok"
+  | "nodata"
+  | "unsupported-region"
+  | "layer-unavailable";
+
+/**
+ * Result of sampling the night-sky brightness at a coordinate.
+ *
+ * IMPORTANT: `bortle`/`bortleName`/`mpsas` are `null` whenever `status !== "ok"`.
+ * Nodata must never be presented as a trustworthy B9 / SQM reading — see
+ * `docs/LIGHT_POLLUTION_DATA_DECISION.md` ("无数据、过期、质量差必须有独立状态，
+ * 不能默认为『暗』").
+ */
 export interface DarkSkySample {
   latitude: number;
   longitude: number;
-  /** 14..22 mag/arcsec²; null = nodata / unknown. */
+  /** 14..22 mag/arcsec²; null = nodata / unknown. Never fabricated. */
   mpsas: number | null;
-  /** 1..9 (falls back to 9 with `uncertain=true` when mpsas is null). */
-  bortle: number;
-  bortleName: string;
+  /** 1..9, or null when no trustworthy classification exists. */
+  bortle: number | null;
+  /** Class name, or null when `bortle` is null. */
+  bortleName: string | null;
   source: "viirs-2024" | "world-atlas-2015" | "none";
-  /** True for non-China samples (encoding unknown) or failed tile reads. */
-  uncertain?: boolean;
+  /** Discriminator explaining the absence of a value. */
+  status: DarkSkyStatus;
+  /** True whenever the sample must not be used as a trustworthy reading. */
+  uncertain: boolean;
 }
 
 /** A single Bortle-equivalent class. */

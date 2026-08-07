@@ -1,0 +1,17 @@
+name: local-run-finalization
+why: >
+  当前 main 分支已恢复 Next.js 16 应用并通过类型/lint/构建门禁，但从干净克隆无法可靠运行：package-lock.json
+  仍是旧 Vite 依赖树，Node 24 下 npm ci 失败；README、Playwright 与本地预检脚本仍调用已删除的 Vite
+  命令；CI 监听错误分支；应用请求的 /public 资源不存在。本变更让应用在 Windows 本机从干净克隆可靠安装、
+  启动（含 /api/forecast、/api/geocode 同源接口），并把文档/CI/测试门禁与真实代码对齐。
+whatChanges: >
+  在 Node 24 下同步 package-lock.json 与 package.json；统一 npm scripts、Playwright、预检脚本与 README
+  到 Next.js 实际入口；修正 CI 监听 main 并使用 Node24 + npm ci + npm run check；恢复或优雅降级缺失的
+  /public 资源；新增 Windows 一键本地启动脚本；验收路由/API/浏览器布局；重写交接文档。不部署服务器。
+deltas:
+  - spec: local-run
+    operation: ADDED
+    description: 本地运行与安装能力——干净克隆 npm ci、端口 3000 的 npm run dev、Windows 一键启动、资源缺失优雅降级、CI 监听 main。
+metadata:
+  version: "1.0.0"
+  format: openspec-change

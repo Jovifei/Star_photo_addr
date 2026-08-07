@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
-import { fetchCityCandidates, selectFeatured } from "@/data/cities";
+import {
+  fetchCityCandidates,
+  selectFeatured,
+  type CityCandidateStatus,
+} from "@/data/cities";
 import { formatNightLabel } from "@/lib/nighttime";
 import type { CityCandidate } from "@/lib/types";
 import ObservationDetails from "@/components/ObservationDetails";
@@ -28,11 +32,15 @@ export default function SidePanel() {
   const { state, setCandidates, selectNight, sampleAt, setDetailOpen } =
     useStore();
   const isMobile = useIsMobile();
+  const [candidateStatus, setCandidateStatus] =
+    useState<CityCandidateStatus>("loading");
 
   useEffect(() => {
     let cancelled = false;
-    void fetchCityCandidates().then((cities) => {
-      if (!cancelled) setCandidates(selectFeatured(cities, 34));
+    void fetchCityCandidates().then((result) => {
+      if (cancelled) return;
+      setCandidates(selectFeatured(result.candidates, 34));
+      setCandidateStatus(result.status);
     });
     return () => {
       cancelled = true;
@@ -147,6 +155,7 @@ export default function SidePanel() {
 
         <CandidateList
           candidates={state.candidates}
+          status={candidateStatus}
           onPick={handleCandidate}
         />
       </aside>

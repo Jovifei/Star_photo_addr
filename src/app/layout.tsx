@@ -22,21 +22,16 @@ export const metadata: Metadata = {
     url: "https://perseids.giraffetree.cn",
     type: "website",
     locale: "zh_CN",
-    images: [
-      {
-        url: "/images/perseids/og.png",
-        width: 1200,
-        height: 630,
-        alt: "逐星：全球英仙座流星雨观测地图",
-      },
-    ],
+    // No `images`: the previous /images/perseids/og.png was never distributed
+    // with this repository (unlicensed copy, see docs/PUBLIC_ASSETS_AUDIT.md).
+    // Declaring it made every social crawler fetch a 404.
   },
   twitter: {
-    card: "summary_large_image",
+    // `summary` rather than `summary_large_image` — we have no owned OG asset.
+    card: "summary",
     title: "逐星｜全球英仙座流星雨观测地图",
     description:
       "把全球 11 晚暗夜、月光、流星活动与当地可靠天气放在一张地图上。",
-    images: ["/images/perseids/og.png"],
   },
 };
 

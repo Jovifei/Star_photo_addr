@@ -19,6 +19,7 @@ import {
   METEOR_SHOWER_NIGHTS,
 } from "@/lib/constants";
 import { sampleBortle } from "@/lib/darksky";
+import { hasDarkSkyLayer } from "@/lib/assets";
 import type {
   CityCandidate,
   CloudState,
@@ -47,7 +48,9 @@ const initialState: AppState = {
   forecast: null,
   nightKeys: [...METEOR_SHOWER_NIGHTS],
   selectedNight: DEFAULT_NIGHT_KEY,
-  bortleEnabled: true,
+  // Off by default when no dark-sky raster is installed, so the map never
+  // mounts a layer whose tiles would all 404.
+  bortleEnabled: hasDarkSkyLayer(),
   cloudState: { ...DEFAULT_CLOUD_STATE },
   candidates: [],
   detailOpen: false,
@@ -192,6 +195,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleBortle = useCallback(() => {
+    // Without a raster source there is nothing to toggle on.
+    if (!hasDarkSkyLayer()) return;
     dispatch({ type: "SET_BORTLE", enabled: !state.bortleEnabled });
   }, [state.bortleEnabled]);
 
