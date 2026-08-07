@@ -1,7 +1,9 @@
 :root {
   color-scheme: dark;
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-family: "Fira Sans", Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   font-synthesis: none;
+  --font-body: "Fira Sans", Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-data: "Fira Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --bg: #0b1024;
   --bg-deep: #060916;
   --bg-rise: #18224f;
@@ -26,6 +28,16 @@
   --shadow-panel: 0 18px 48px rgba(1, 4, 16, .28);
   --shadow-float: 0 14px 34px rgba(1, 4, 16, .4);
   --transition: 180ms ease;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --z-sticky: 30;
+  --z-mobile-nav: 40;
+  --z-map-control: 500;
+  --z-popover: 510;
+  --z-modal: 1000;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -37,6 +49,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
   color: var(--text);
   background:
     radial-gradient(1.6px 1.6px at 12% 18%, #ffffff 0%, transparent 60%),
@@ -56,7 +70,7 @@ body {
   background-attachment: fixed;
 }
 button, input { font: inherit; }
-button { color: inherit; }
+button { color: inherit; cursor: pointer; touch-action: manipulation; }
 button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 2px;
@@ -65,7 +79,22 @@ button:focus-visible, input:focus-visible, a:focus-visible, [tabindex]:focus-vis
 }
 a { color: var(--cyan); }
 
-.app-shell { min-height: 100vh; padding-bottom: 80px; }
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: calc(var(--z-modal) + 1);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--cyan);
+  color: var(--bg-deep);
+  font-weight: 800;
+  transform: translateY(-160%);
+  transition: transform var(--transition);
+}
+.skip-link:focus { transform: translateY(0); }
+
+.app-shell { min-height: 100vh; min-height: 100dvh; padding-bottom: 80px; }
 .topbar { position: sticky; top: 0; z-index: 30; height: 76px; display: flex; align-items: center; gap: 28px; padding: 0 max(20px, calc((100vw - 1280px) / 2)); border-bottom: 1px solid var(--line); background: rgba(18, 26, 69, 0.85); backdrop-filter: blur(16px); }
 .brand-lockup { display: flex; align-items: center; gap: 12px; min-width: 210px; }
 .brand-mark { width: 36px; height: 48px; display: grid; place-items: center; border-left: 4px solid var(--cyan); color: var(--cyan); }
@@ -581,4 +610,181 @@ th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--lin
   .map-workspace { border-radius: 0; }
   .mobile-nav { padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); gap: 4px; height: 70px; }
   .mobile-nav button { border-radius: 12px; }
+}
+
+/* UI/UX Pro Max pass: accessible operations-dashboard rhythm and controls. */
+.topbar { z-index: var(--z-sticky); }
+.modal-backdrop,
+.drawer-backdrop { z-index: var(--z-modal); }
+.map-search,
+.map-hint { z-index: var(--z-map-control); }
+.search-popover { z-index: var(--z-popover); }
+
+h1, h2, h3,
+.section-kicker,
+.eyebrow { text-wrap: balance; }
+.score-ring strong,
+.rank-number,
+.rank-score strong,
+.night-rail strong,
+.map-night-rail strong,
+.map-score-row strong,
+.map-weather-grid strong,
+.matrix-cell,
+.coordinate,
+.inspector-coordinate,
+.location-table td:not(:first-child) {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+
+.refresh-button,
+.primary-button,
+.detail-cta,
+.desktop-nav button,
+.segmented button,
+.map-search button,
+.inspector-name-input,
+.location-form input { min-height: 44px; }
+
+.desktop-nav button,
+.mobile-nav button,
+.refresh-button,
+.primary-button,
+.detail-cta,
+.rank-card,
+.night-rail button,
+.map-night-rail button,
+.hour-chips button,
+.matrix-cell,
+.map-site-quicklist button,
+.search-popover > button {
+  transition: color var(--transition), background-color var(--transition), border-color var(--transition), box-shadow var(--transition), opacity var(--transition), transform var(--transition);
+}
+.desktop-nav button:active,
+.mobile-nav button:active,
+.refresh-button:active:not(:disabled),
+.primary-button:active:not(:disabled),
+.detail-cta:active,
+.night-rail button:active,
+.map-night-rail button:active,
+.hour-chips button:active,
+.matrix-cell:active,
+.map-site-quicklist button:active { transform: translateY(1px); }
+
+.eyebrow,
+.section-kicker { font-size: 11px; }
+.score-ring span,
+.window-callout span,
+.metric span,
+.brief-note,
+.night-rail span,
+.night-rail small,
+.rank-title p,
+.rank-stats,
+.rank-score span,
+.matrix-cell span,
+.legend span,
+.form-note,
+.detail-section-heading p,
+.hour-chips span,
+.profile-meta,
+.cloud-layer span,
+.method-note p,
+.event-chip,
+.search-popover small,
+.map-hint,
+.inspector-coordinate,
+.map-night-rail span,
+.map-night-rail small,
+.map-score-row span,
+.map-weather-grid span,
+.layer-boundary p,
+.map-error,
+.save-state,
+.site-footer { font-size: 12px; }
+
+.chart-frame { min-width: 0; margin-top: 6px; }
+.chart-loading {
+  min-height: 230px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.map-site-picker {
+  margin: -2px 0 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.picker-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.map-site-quicklist {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 2px 7px;
+  scrollbar-color: var(--line-strong) transparent;
+  scroll-snap-type: x proximity;
+}
+.map-site-quicklist button {
+  flex: 0 0 auto;
+  min-width: 92px;
+  min-height: 48px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(5, 9, 24, .48);
+  color: var(--muted);
+  text-align: left;
+  scroll-snap-align: start;
+}
+.map-site-quicklist button:hover,
+.map-site-quicklist button.active {
+  border-color: var(--cyan);
+  background: var(--cyan-soft);
+  color: var(--text);
+}
+.map-site-quicklist span,
+.map-site-quicklist small { display: block; }
+.map-site-quicklist span { font-size: 13px; font-weight: 700; }
+.map-site-quicklist small { margin-top: 3px; color: var(--muted); font-family: var(--font-data); font-size: 11px; }
+
+@media (max-width: 840px) {
+  .app-shell { padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
+  .main-content { padding-bottom: 34px; }
+  .mobile-nav { z-index: var(--z-mobile-nav); }
+  .mobile-nav button { min-height: 52px; font-size: 12px; }
+  .segmented button { min-height: 44px; }
+  .freshness { min-height: 32px; font-size: 13px; }
+  .map-search button { min-height: 40px; }
+  .map-search { min-height: 56px; }
+  .search-popover { top: 77px; }
+  .picker-label { font-size: 13px; }
+}
+
+@media (max-width: 375px) {
+  .main-content { width: calc(100% - 18px); }
+  .control-strip { gap: 6px; padding: 7px; }
+  .segmented button { padding-inline: 6px; font-size: 13px; }
+  .hero-card,
+  .briefing-card,
+  .night-section,
+  .rank-section,
+  .matrix-section,
+  .locations-section { padding-inline: 12px; }
+  .hero-location h2 { font-size: 31px; }
+  .rank-card { grid-template-columns: 36px minmax(0, 1fr) 48px; }
+  .rank-number { font-size: 13px; }
+  .rank-score strong { font-size: 18px; }
+  .rank-stats { grid-template-columns: 1fr; }
+  .map-search { left: 44px; right: 8px; padding-left: 9px; }
+  .map-hint { max-width: calc(100% - 24px); width: max-content; }
 }

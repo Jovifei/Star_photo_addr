@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowsClockwise,
   Binoculars,
@@ -22,7 +22,6 @@ import {
   Wind,
   X,
 } from "@phosphor-icons/react";
-import ReactECharts from "echarts-for-react";
 import { ObservationMap } from "./components/ObservationMap";
 import { PRESET_LOCATIONS, createLocation } from "./data/locations";
 import { deriveCloudLayers } from "./lib/clouds";
@@ -38,8 +37,47 @@ const NAV_ITEMS = [
   { id: "locations", label: "点位", icon: MapPin },
 ];
 
+const ReactECharts = lazy(() => import("echarts-for-react"));
+
 function rankValue(item, mode) {
   return mode === "cloud" ? item.evaluation?.cloudSeaPotential ?? -1 : item.evaluation?.score ?? -1;
+}
+
+function useDialogFocus(open, onClose) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    if (!open || !dialogRef.current) return undefined;
+    const previousFocus = document.activeElement;
+    const dialog = dialogRef.current;
+    const focusableSelector = "button:not(:disabled), input:not(:disabled), [href], [tabindex]:not([tabindex='-1'])";
+    const focusables = () => Array.from(dialog.querySelectorAll(focusableSelector));
+    focusables()[0]?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [open]); // the close action is stable for the lifetime of each dialog instance
+  return dialogRef;
 }
 
 export function App() {
@@ -136,6 +174,7 @@ export function App() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">跳到主要内容</a>
       <header className="topbar">
         <div className="brand-lockup">
           <span className="brand-mark"><Sparkle weight="fill" /></span>
@@ -155,18 +194,18 @@ export function App() {
         </button>
       </header>
 
-      <main className="main-content">
+      <main className="main-content" id="main-content" tabIndex="-1">
         <section className="control-strip" aria-label="预测范围与摄影模式">
           <div className="segmented" aria-label="预测天数">
             {[7, 14].map((value) => (
-              <button key={value} className={days === value ? "active" : ""} onClick={() => setDays(value)}>{value} 天</button>
+              <button key={value} type="button" aria-pressed={days === value} className={days === value ? "active" : ""} onClick={() => setDays(value)}>{value} 天</button>
             ))}
           </div>
           <div className="segmented mode-switch" aria-label="摄影模式">
-            <button className={mode === "star" ? "active" : ""} onClick={() => setMode("star")}><Moon />星空</button>
-            <button className={mode === "cloud" ? "active" : ""} onClick={() => setMode("cloud")}><Mountains />云海</button>
+            <button type="button" aria-pressed={mode === "star"} className={mode === "star" ? "active" : ""} onClick={() => setMode("star")}><Moon />星空</button>
+            <button type="button" aria-pressed={mode === "cloud"} className={mode === "cloud" ? "active" : ""} onClick={() => setMode("cloud")}><Mountains />云海</button>
           </div>
-          <div className={`freshness ${stale ? "stale" : ""}`}>
+          <div className={`freshness ${stale ? "stale" : ""}`} role="status" aria-live="polite">
             <span className="freshness-dot" />{relativeFreshness(savedAt)}{stale ? " · 已过期" : ""}
           </div>
         </section>
@@ -231,19 +270,19 @@ export function App() {
 
 function NavButton({ item, active, onClick }) {
   const Icon = item.icon;
-  return <button className={active ? "active" : ""} onClick={onClick}><Icon weight={active ? "fill" : "regular"} /><span>{item.label}</span></button>;
+  return <button type="button" aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={onClick}><Icon aria-hidden="true" weight={active ? "fill" : "regular"} /><span>{item.label}</span></button>;
 }
 
 function StatusBanner({ message, stale }) {
-  return <div className={`status-banner ${stale ? "warning" : "info"}`}><Warning weight="fill" /><span>{message}</span></div>;
+  return <div className={`status-banner ${stale ? "warning" : "info"}`} role="status" aria-live="polite"><Warning aria-hidden="true" weight="fill" /><span>{message}</span></div>;
 }
 
 function LoadingState() {
-  return <section className="loading-state"><div className="loader" /><h2>正在读取 12 个山顶的天气</h2><p>首次加载会计算 14 天云量、降水和天文窗口。</p></section>;
+  return <section className="loading-state" role="status" aria-live="polite"><div className="loader" aria-hidden="true" /><h2>正在读取 12 个山顶的天气</h2><p>首次加载会计算 14 天云量、降水和天文窗口。</p></section>;
 }
 
 function EmptyState({ onRefresh }) {
-  return <section className="empty-state"><Cloud size={36} /><h2>还没有天气数据</h2><p>连接网络后刷新，页面会保留最近一次成功数据。</p><button className="primary-button" onClick={onRefresh}>立即刷新</button></section>;
+  return <section className="empty-state"><Cloud size={36} /><h2>还没有天气数据</h2><p>连接网络后刷新，页面会保留最近一次成功数据。</p><button className="primary-button" type="button" onClick={onRefresh}>立即刷新</button></section>;
 }
 
 function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail }) {
@@ -276,7 +315,7 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
             <Metric icon={Compass} label="银河最高" value={`${evaluation?.galacticMax ?? 0}°`} />
             <Metric icon={Info} label="置信度" value={evaluation?.confidence.level ?? "—"} />
           </div>
-          <button className="detail-cta" onClick={() => best && onOpenDetail(best.location.id)}>查看逐小时详情<CaretRight /></button>
+          <button className="detail-cta" type="button" onClick={() => best && onOpenDetail(best.location.id)}>查看逐小时详情<CaretRight /></button>
         </article>
 
         <article className="briefing-card">
@@ -328,7 +367,7 @@ function NightRail({ nightKeys, selectedNight, onSelect, rankings, mode }) {
             .sort((a, b) => (mode === "cloud" ? b.cloudSeaPotential - a.cloudSeaPotential : b.score - a.score))[0];
           const meta = statusMeta(best?.status);
           return (
-            <button key={night} className={selectedNight === night ? "active" : ""} onClick={() => onSelect(night)}>
+            <button key={night} type="button" aria-pressed={selectedNight === night} className={selectedNight === night ? "active" : ""} onClick={() => onSelect(night)}>
               <span>{formatNightLabel(night, true)}</span>
               <strong>{mode === "cloud" ? best?.cloudSeaPotential ?? "—" : best?.score ?? "—"}</strong>
               <small className={meta.tone}>{index >= 7 ? "趋势" : meta.label}</small>
@@ -346,7 +385,7 @@ function RankCard({ item, rank, mode, onOpen }) {
   const score = mode === "cloud" ? evaluation?.cloudSeaPotential : evaluation?.score;
   const bestHour = evaluation?.window[0] ?? evaluation?.hours?.sort((a, b) => b.score - a.score)[0];
   return (
-    <button className="rank-card" onClick={onOpen}>
+    <button className="rank-card" type="button" onClick={onOpen}>
       <span className={`rank-number ${rank <= 3 ? "top" : ""}`}>{String(rank).padStart(2, "0")}</span>
       <div className="rank-main">
         <div className="rank-title"><div><h3>{item.location.name}</h3><p>{item.location.elevation} m · {evaluation?.confidence.level ?? "—"}置信度</p></div><span className={`status-pill ${meta.tone}`}>{meta.label}</span></div>
@@ -376,7 +415,7 @@ function MatrixView({ locations, forecasts, nightKeys, mode, onSelect }) {
           <thead><tr><th>点位</th>{nightKeys.map((night) => <th key={night}>{formatNightLabel(night, true)}</th>)}</tr></thead>
           <tbody>{matrix.map((row) => <tr key={row.location.id}><th>{row.location.name}<small>{row.location.elevation}m</small></th>{row.values.map((value, index) => {
             const meta = statusMeta(value?.status);
-            return <td key={nightKeys[index]}><button className={`matrix-cell ${meta.tone}`} onClick={() => onSelect(row.location.id, nightKeys[index])}>{mode === "star" ? <><strong>{value?.window.length ?? 0}h</strong><span>/ {value?.score ?? "—"}</span></> : <strong>{value?.cloudSeaPotential ?? "—"}</strong>}</button></td>;
+            return <td key={nightKeys[index]}><button type="button" aria-label={`${row.location.name} ${formatNightLabel(nightKeys[index], true)} ${mode === "star" ? `${value?.window.length ?? 0} 小时，${value?.score ?? "无"} 分` : `${value?.cloudSeaPotential ?? "无"} 分`}`} className={`matrix-cell ${meta.tone}`} onClick={() => onSelect(row.location.id, nightKeys[index])}>{mode === "star" ? <><strong>{value?.window.length ?? 0}h</strong><span>/ {value?.score ?? "—"}</span></> : <strong>{value?.cloudSeaPotential ?? "—"}</strong>}</button></td>;
           })}</tr>)}</tbody>
         </table>
       </div>
@@ -388,6 +427,7 @@ function MatrixView({ locations, forecasts, nightKeys, mode, onSelect }) {
 function LocationsView({ locations, customLocations, onAdd, onRemove }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", latitude: "", longitude: "", elevation: "" });
+  const formRef = useDialogFocus(showForm, () => setShowForm(false));
   function submit(event) {
     event.preventDefault();
     if (!form.name || !Number.isFinite(Number(form.latitude)) || !Number.isFinite(Number(form.longitude)) || !Number.isFinite(Number(form.elevation))) return;
@@ -397,9 +437,9 @@ function LocationsView({ locations, customLocations, onAdd, onRemove }) {
   }
   return (
     <section className="locations-section">
-      <div className="section-heading-row"><div><span className="section-kicker">OBSERVATION SITES</span><h2>点位管理</h2><p>天气查询统一使用 WGS84 坐标；用户海拔不会被模型静默覆盖。</p></div><button className="primary-button" onClick={() => setShowForm(true)}><Plus />新增点位</button></div>
-      <div className="location-table-wrap"><table className="location-table"><thead><tr><th>点位</th><th>纬度</th><th>经度</th><th>海拔(m)</th><th>来源</th><th /></tr></thead><tbody>{locations.map((location) => <tr key={location.id}><td><MapPin />{location.name}</td><td>{location.latitude.toFixed(4)}</td><td>{location.longitude.toFixed(4)}</td><td>{location.elevation}</td><td>{location.source}</td><td>{customLocations.some((item) => item.id === location.id) && <button className="icon-button danger" onClick={() => onRemove(location.id)} aria-label={`删除 ${location.name}`}><X /></button>}</td></tr>)}</tbody></table></div>
-      {showForm && <div className="modal-backdrop" onMouseDown={() => setShowForm(false)}><form className="location-form" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}><div className="form-header"><div><span className="section-kicker">NEW LOCATION</span><h3>新增观测点</h3></div><button type="button" className="icon-button" aria-label="关闭表单" onClick={() => setShowForm(false)}><X /></button></div><label>点位名称<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：东白山" required /></label><div className="form-grid"><label>纬度<input type="number" step="0.0001" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} placeholder="29.5000" required /></label><label>经度<input type="number" step="0.0001" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} placeholder="120.3000" required /></label></div><label>用户海拔（米）<input type="number" step="0.1" value={form.elevation} onChange={(event) => setForm({ ...form, elevation: event.target.value })} placeholder="1000" required /></label><p className="form-note"><Info />保存后点击刷新获取 14 天天气。自定义点位只保存在本机浏览器。</p><button className="primary-button wide" type="submit"><CheckCircle />保存点位</button></form></div>}
+      <div className="section-heading-row"><div><span className="section-kicker">OBSERVATION SITES</span><h2>点位管理</h2><p>天气查询统一使用 WGS84 坐标；用户海拔不会被模型静默覆盖。</p></div><button className="primary-button" type="button" onClick={() => setShowForm(true)}><Plus />新增点位</button></div>
+      <div className="location-table-wrap"><table className="location-table"><thead><tr><th>点位</th><th>纬度</th><th>经度</th><th>海拔(m)</th><th>来源</th><th /></tr></thead><tbody>{locations.map((location) => <tr key={location.id}><td><MapPin />{location.name}</td><td>{location.latitude.toFixed(4)}</td><td>{location.longitude.toFixed(4)}</td><td>{location.elevation}</td><td>{location.source}</td><td>{customLocations.some((item) => item.id === location.id) && <button className="icon-button danger" type="button" onClick={() => onRemove(location.id)} aria-label={`删除 ${location.name}`}><X /></button>}</td></tr>)}</tbody></table></div>
+      {showForm && <div className="modal-backdrop" onMouseDown={() => setShowForm(false)}><form ref={formRef} className="location-form" role="dialog" aria-modal="true" aria-labelledby="location-form-title" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}><div className="form-header"><div><span className="section-kicker">NEW LOCATION</span><h3 id="location-form-title">新增观测点</h3></div><button type="button" className="icon-button" aria-label="关闭表单" onClick={() => setShowForm(false)}><X /></button></div><label>点位名称<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：东白山" required /></label><div className="form-grid"><label>纬度<input type="number" step="0.0001" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} placeholder="29.5000" required /></label><label>经度<input type="number" step="0.0001" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} placeholder="120.3000" required /></label></div><label>用户海拔（米）<input type="number" step="0.1" value={form.elevation} onChange={(event) => setForm({ ...form, elevation: event.target.value })} placeholder="1000" required /></label><p className="form-note"><Info />保存后点击刷新获取 14 天天气。自定义点位只保存在本机浏览器。</p><button className="primary-button wide" type="submit"><CheckCircle />保存点位</button></form></div>}
     </section>
   );
 }
@@ -410,6 +450,7 @@ function DetailDrawer({ item, nightKey, onClose }) {
   const [pressureError, setPressureError] = useState("");
   const [pressureLoading, setPressureLoading] = useState(true);
   const [activeHour, setActiveHour] = useState(evaluation?.window[0]?.time ?? evaluation?.hours?.[0]?.time);
+  const drawerRef = useDialogFocus(true, onClose);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -429,20 +470,20 @@ function DetailDrawer({ item, nightKey, onClose }) {
 
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
-      <aside className="detail-drawer" onMouseDown={(event) => event.stopPropagation()} aria-label={`${location.name} 详情`}>
-        <div className="drawer-header"><div><span className="section-kicker">LOCATION DETAIL · {formatNightLabel(nightKey)}</span><h2>{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
+      <aside ref={drawerRef} className="detail-drawer" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()} aria-labelledby="detail-drawer-title">
+        <div className="drawer-header"><div><span className="section-kicker">LOCATION DETAIL · {formatNightLabel(nightKey)}</span><h2 id="detail-drawer-title">{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" type="button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
         <div className="detail-summary"><ScoreRing value={evaluation?.score} label="星空分" /><div><span className={`status-pill ${statusMeta(evaluation?.status).tone}`}>{statusMeta(evaluation?.status).label}</span><h3>{evaluation?.windowLabel}</h3><p>{evaluation?.reason}</p></div></div>
         <div className="detail-metrics"><Metric icon={Cloud} label="云海潜力" value={evaluation?.cloudSeaPotential} /><Metric icon={Moon} label="月面照度" value={`${Math.round((evaluation?.moonIllumination ?? 0) * 100)}%`} /><Metric icon={Sparkle} label="天文暗夜" value={`${evaluation?.darkHours ?? 0}h`} /><Metric icon={Compass} label="银河最高" value={`${evaluation?.galacticMax ?? 0}°`} /></div>
 
         <DetailSection title="逐小时天气" subtitle="云量、降水与风" icon={Cloud}>
-          <ReactECharts option={weatherOption} style={{ height: 260 }} notMerge />
-          <div className="hour-chips">{evaluation?.hours.map((hour) => <button key={hour.time} className={activeHour === hour.time ? "active" : ""} onClick={() => setActiveHour(hour.time)}><span>{formatHour(hour.time)}</span><strong>{hour.score}</strong></button>)}</div>
+          <AccessibleChart option={weatherOption} height={260} label="逐小时天气图：总云量、低云量、降水概率和阵风" />
+          <div className="hour-chips">{evaluation?.hours.map((hour) => <button key={hour.time} type="button" aria-pressed={activeHour === hour.time} aria-label={`${formatHour(hour.time)}，评分 ${hour.score}`} className={activeHour === hour.time ? "active" : ""} onClick={() => setActiveHour(hour.time)}><span>{formatHour(hour.time)}</span><strong>{hour.score}</strong></button>)}</div>
         </DetailSection>
-        <DetailSection title="天文轨迹" subtitle="太阳、月亮与银河核心高度" icon={Moon}><ReactECharts option={astroOption} style={{ height: 230 }} notMerge /></DetailSection>
+        <DetailSection title="天文轨迹" subtitle="太阳、月亮与银河核心高度" icon={Moon}><AccessibleChart option={astroOption} height={230} label="天文轨迹图：太阳、月亮与银河核心高度" /></DetailSection>
         <DetailSection title="低云海拔评估" subtitle="实验性气压层推导，不是山顶实测" icon={Mountains}>
           {pressureLoading && <div className="inline-loading"><span className="loader small" />读取垂直云层…</div>}
           {pressureError && <p className="inline-error"><Warning />{pressureError}</p>}
-          {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>用户海拔：{location.elevation} m</span><span>时次：{formatHour(activeHour)}</span></div><ReactECharts option={profileOption} style={{ height: 250 }} notMerge />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud weight="fill" /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
+          {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>用户海拔：{location.elevation} m</span><span>时次：{formatHour(activeHour)}</span></div><AccessibleChart option={profileOption} height={250} label="低云垂直剖面图：云量与海拔关系" />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud weight="fill" /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
         </DetailSection>
         <div className="method-note"><Info /><p><strong>方法边界</strong> 云底/云顶由数值模型气压层推导，已过滤模型地表以下层并取整到 50 m。复杂山地仍需结合现场云图、能见度与周边谷地情况。</p></div>
       </aside>
@@ -454,9 +495,20 @@ function DetailSection({ title, subtitle, icon: Icon, children }) {
   return <section className="detail-section"><div className="detail-section-heading"><div><Icon /><div><h3>{title}</h3><p>{subtitle}</p></div></div></div>{children}</section>;
 }
 
+function AccessibleChart({ option, height, label }) {
+  return (
+    <div className="chart-frame" role="img" aria-label={label}>
+      <Suspense fallback={<div className="chart-loading" role="status"><span className="loader small" aria-hidden="true" />正在加载图表…</div>}>
+        <ReactECharts option={option} style={{ height }} notMerge />
+      </Suspense>
+    </div>
+  );
+}
+
 function baseChartStyle() {
   return {
     backgroundColor: "transparent",
+    aria: { enabled: true, decal: { show: true } },
     textStyle: { color: "#aebbd0", fontFamily: "system-ui, sans-serif" },
     tooltip: { trigger: "axis", backgroundColor: "#1a2154", borderColor: "#4a5599", textStyle: { color: "#f4f6ff" } },
     grid: { left: 38, right: 14, top: 38, bottom: 32 },

@@ -72,6 +72,32 @@ test("homepage renders with rankings and no white screen", async ({ page }) => {
   await shot(page, "dashboard");
 });
 
+test("skip link and navigation expose keyboard state", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "跳到主要内容" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#main-content")).toBeFocused();
+  await expect(navButton(page, "今晚")).toHaveAttribute("aria-current", "page");
+});
+
+test("375 / 768 / 1024 / 1440 widths avoid page-level horizontal overflow", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "One project audits all target widths.");
+  for (const width of [375, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: width < 800 ? 900 : 1000 });
+    await page.goto("/");
+    await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
+    const dashboardOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(dashboardOverflow, `dashboard overflow at ${width}px`).toBeLessThanOrEqual(1);
+    const scope = width <= 840 ? ".mobile-nav" : ".desktop-nav";
+    await page.locator(`${scope} button`, { hasText: "地图" }).click();
+    await expect(page.locator(".map-workspace")).toBeVisible();
+    const mapOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(mapOverflow, `map overflow at ${width}px`).toBeLessThanOrEqual(1);
+  }
+});
+
 test("7天 / 14天 toggle switches active range", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
@@ -177,6 +203,7 @@ test("detail drawer opens, Esc closes, body scroll locked", async ({ page }) => 
   await expect(page.locator(".drawer-backdrop")).toBeVisible();
   const overflowOpen = await page.evaluate(() => document.body.style.overflow);
   expect(overflowOpen).toBe("hidden");
+  await expect(page.getByRole("button", { name: "关闭详情" })).toBeFocused();
   await shot(page, "drawer");
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden({ timeout: 10000 });

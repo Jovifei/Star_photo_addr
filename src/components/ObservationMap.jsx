@@ -184,8 +184,8 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
             <button className="locate-button" type="button" onClick={locateMe} disabled={locating} aria-label="使用当前位置"><Crosshair />{locating ? "定位中" : "定位"}</button>
           </form>
           {(results.length > 0 || searchError) && (
-            <div className="search-popover">
-              {searchError && <p className="search-message"><Warning />{searchError}</p>}
+            <div className="search-popover" aria-label="地点搜索结果">
+              {searchError && <p className="search-message" role="status" aria-live="polite"><Warning />{searchError}</p>}
               {results.map((result) => (
                 <button key={result.id} type="button" onClick={() => { setSelected(result); setResults([]); setQuery(result.name); }}>
                   <MapPin /><span><strong>{result.name}</strong><small>{result.context || `${result.latitude.toFixed(3)}, ${result.longitude.toFixed(3)}`}</small></span>
@@ -193,7 +193,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
               ))}
             </div>
           )}
-          <MapContainer center={DEFAULT_CENTER} zoom={7} minZoom={3} className="observation-map" zoomControl>
+          <MapContainer center={DEFAULT_CENTER} zoom={7} minZoom={3} className="observation-map" aria-label="观测点位地图" zoomControl>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -218,7 +218,23 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
           <div className="map-hint"><NavigationArrow weight="fill" />点击地图任意位置开始评估</div>
         </div>
 
-        <aside className="map-inspector">
+        <aside className="map-inspector" aria-label="观测点位评估">
+          <div className="map-site-picker">
+            <span className="picker-label">已保存点位 · 可用键盘快速选择</span>
+            <div className="map-site-quicklist" aria-label="已保存点位快速选择">
+              {locations.map((location) => (
+                <button
+                  key={location.id}
+                  type="button"
+                  aria-pressed={selected?.id === location.id}
+                  className={selected?.id === location.id ? "active" : ""}
+                  onClick={() => setSelected(location)}
+                >
+                  <span>{location.name}</span><small>{location.elevation} m</small>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="inspector-heading">
             <div>
               <span className="section-kicker">SELECTED SITE</span>
@@ -232,18 +248,18 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
                 />
               ) : <h3>{selected?.name ?? "选择一个地点"}</h3>}
             </div>
-            <span className={`status-pill ${meta.tone}`}>{forecastLoading ? "计算中" : meta.label}</span>
+            <span className={`status-pill ${meta.tone}`} role="status" aria-live="polite">{forecastLoading ? "计算中" : meta.label}</span>
           </div>
           {selected && <p className="inspector-coordinate"><MapPin />{selected.latitude.toFixed(5)}, {selected.longitude.toFixed(5)} · {Number.isFinite(selected.elevation) ? `${Math.round(selected.elevation)} m` : activeForecast ? `模型地形 ${Math.round(activeForecast.modelElevation)} m` : "海拔读取中"}</p>}
 
           <div className="map-night-rail" aria-label={`未来 ${days} 个观测夜`}>
             {nightKeys.map((night, index) => {
               const value = activeForecast && selected ? evaluateNight(activeForecast, selected, night, index) : null;
-              return <button key={night} className={selectedNight === night ? "active" : ""} onClick={() => onSelectNight(night)}><span>{formatNightLabel(night, true)}</span><strong>{value?.score ?? "—"}</strong><small>{index >= 7 ? "趋势" : statusMeta(value?.status).label}</small></button>;
+              return <button key={night} type="button" aria-pressed={selectedNight === night} className={selectedNight === night ? "active" : ""} onClick={() => onSelectNight(night)}><span>{formatNightLabel(night, true)}</span><strong>{value?.score ?? "—"}</strong><small>{index >= 7 ? "趋势" : statusMeta(value?.status).label}</small></button>;
             })}
           </div>
 
-          {forecastError && <p className="map-error"><Warning />{forecastError}</p>}
+          {forecastError && <p className="map-error" role="status" aria-live="polite"><Warning />{forecastError}</p>}
           <div className="map-score-row">
             <div><span>天气/天文分</span><strong>{evaluation?.score ?? "—"}</strong></div>
             <div><span>连续窗口</span><strong>{evaluation?.windowLabel ?? "—"}</strong></div>
@@ -258,7 +274,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
 
           <div className="layer-boundary"><Info /><p><strong>光污染数据尚未接入</strong>当前底图仅用于选点，不展示 Bortle/SQM；上方分数不含光污染，不能单独作为机位结论。后续必须接入有版本、许可和更新时间的可信图层后才能参与排名。</p></div>
           <button className="primary-button wide" type="button" onClick={saveSelected} disabled={!selected || !activeForecast || !selected.name.trim() || selectedIsSaved}><Plus />{selectedIsSaved ? "已在点位列表" : "保存为我的点位"}</button>
-          {saveState && <p className="save-state">{saveState}</p>}
+          {saveState && <p className="save-state" role="status" aria-live="polite">{saveState}</p>}
         </aside>
       </div>
     </section>
