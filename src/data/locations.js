@@ -13,14 +13,14 @@ export const PRESET_LOCATIONS = [
   { id: "niucaoshan", name: "牛草山", latitude: 31.047, longitude: 116.259, elevation: 1442 },
 ].map((location) => ({ ...location, timezone: "Asia/Shanghai", source: "参考点位" }));
 
-export function createLocation({ name, latitude, longitude, elevation }) {
+export function createLocation({ name, latitude, longitude, elevation, timezone = "Asia/Shanghai", source = "自定义" }) {
   return {
     id: `custom-${Date.now()}`,
     name: name.trim(),
     latitude: Number(latitude),
     longitude: Number(longitude),
     elevation: Number(elevation),
-    timezone: "Asia/Shanghai",
-    source: "自定义",
+    timezone,
+    source,
   };
 }
