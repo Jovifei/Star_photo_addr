@@ -11,6 +11,9 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // Legacy Vite build output (untracked); linting it crashes eslint with
+    // "RangeError: Invalid string length" due to the large bundled assets.
+    "dist/**",
     "next-env.d.ts",
     // Legacy Vite star-weather source (not part of the Next build; do not lint).
     "src/App.jsx",
