@@ -1,0 +1,3 @@
+0000000000000000000000000000000000000000 7e94868af7627a71889b07457d184c63c07f8c42 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786009236 +0800	reset: moving to origin/main
+7e94868af7627a71889b07457d184c63c07f8c42 b626caa40e91a34d69d515ecda7c106b0b0d9256 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786009729 +0800	commit: feat: starry theme + nav optimization, fix preflight/test ordering
+b626caa40e91a34d69d515ecda7c106b0b0d9256 2385e6b36db74557e3225db3113691991d0b4360 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786013127 +0800	commit: test: harden clean-clone and browser validation

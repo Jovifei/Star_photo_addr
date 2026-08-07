@@ -1,0 +1,56 @@
+classDiagram
+    class PerseidsApp { +StoreProvider +MapStage +SidePanel }
+    class Store { +state: AppState +dispatch(action) }
+    class MapCanvas { +onSample(lat,lng) +sample +layers }
+    class ViirsTileLayer { +renderTiles() }
+    class WorldAtlasOverlay { +render() }
+    class BoundaryLayers { +renderByZoom() }
+    class CloudLayer { +render(model,variable,time) }
+    class BortleControl { +enabled +onToggle() }
+    class CloudControl { +disabled +state +onChange() }
+    class MapSearchCard { +onPick(loc) +onLocate() }
+    class SearchCombobox { +query +debounce() }
+    class SidePanel { +sample +evaluation +candidates }
+    class ObservationDetails { +render(sample,evaluation) }
+    class CandidateList { +candidates }
+    class DecisionBrief { +render(evaluation) }
+
+    class ForecastService { +fetch(locations,days) ForecastResponse }
+    class GeocodeService { +search(q) GeocodeResponse }
+    class ScoringEngine { +evaluateNight(fc,loc,night,lead) NightEvaluation }
+    class Astronomy { +astronomyAt(date,loc) }
+    class NightWindow { +isInNight(time,night) +nextNightKeys(days) }
+    class DarkSky { +sample(lat,lng) DarkSkySample +classify(mpsas) BortleClass }
+
+    class Location
+    class DarkSkySample
+    class NightEvaluation
+    class LocationForecast
+    class BortleClass
+
+    PerseidsApp --> Store
+    PerseidsApp --> MapStage
+    PerseidsApp --> SidePanel
+    MapStage --> MapCanvas
+    MapCanvas --> ViirsTileLayer
+    MapCanvas --> WorldAtlasOverlay
+    MapCanvas --> BoundaryLayers
+    MapCanvas --> CloudLayer
+    MapStage --> BortleControl
+    MapStage --> CloudControl
+    MapStage --> MapSearchCard
+    MapSearchCard --> SearchCombobox
+    SidePanel --> ObservationDetails
+    SidePanel --> CandidateList
+    SidePanel --> DecisionBrief
+
+    MapCanvas ..> DarkSky : samples pixel
+    SearchCombobox ..> GeocodeService
+    ObservationDetails ..> ScoringEngine
+    ScoringEngine --> Astronomy
+    ScoringEngine --> NightWindow
+    ScoringEngine --> LocationForecast
+    DarkSky --> BortleClass
+    DarkSky --> DarkSkySample
+    LocationForecast --> Location
+    NightEvaluation --> Location

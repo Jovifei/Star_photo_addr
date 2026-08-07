@@ -1,0 +1,10 @@
+0000000000000000000000000000000000000000 7e94868af7627a71889b07457d184c63c07f8c42 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786009236 +0800	reset: moving to origin/main
+7e94868af7627a71889b07457d184c63c07f8c42 b626caa40e91a34d69d515ecda7c106b0b0d9256 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786009729 +0800	commit: feat: starry theme + nav optimization, fix preflight/test ordering
+b626caa40e91a34d69d515ecda7c106b0b0d9256 2385e6b36db74557e3225db3113691991d0b4360 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786013127 +0800	commit: test: harden clean-clone and browser validation
+2385e6b36db74557e3225db3113691991d0b4360 2385e6b36db74557e3225db3113691991d0b4360 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786026756 +0800	checkout: moving from codex/local-validation-and-hardening to feature/20260806/prod-proxy
+2385e6b36db74557e3225db3113691991d0b4360 201ca889aa3a2a6de79dfbe328fdc0de33cc66a3 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786026756 +0800	commit: docs: add prod-hardening plan (same-domain proxy, local-first then docker)
+201ca889aa3a2a6de79dfbe328fdc0de33cc66a3 d4a566edb9168b7838ce8de99dc6186cbe225a44 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786028477 +0800	commit: feat: configurable forecast base url (TDD)
+d4a566edb9168b7838ce8de99dc6186cbe225a44 dbd45c21ca1acd6a08965e8e27eba9e4cfab251d xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786028478 +0800	commit: docs: add .env.example
+dbd45c21ca1acd6a08965e8e27eba9e4cfab251d 54e41ab03fe1c3f25f67eafb0f0e275115d79ac6 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786028479 +0800	commit: feat: nginx /api/forecast proxy
+54e41ab03fe1c3f25f67eafb0f0e275115d79ac6 ee163013390170f87bdce78019fe16b02f8b0794 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786028480 +0800	commit: feat: worker /api/forecast proxy route
+ee163013390170f87bdce78019fe16b02f8b0794 ee163013390170f87bdce78019fe16b02f8b0794 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786064583 +0800	checkout: moving from feature/20260806/prod-proxy to feature/nextjs-perseids-clone

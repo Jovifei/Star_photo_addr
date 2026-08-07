@@ -1,66 +1,171 @@
-# 星野决策｜星空摄影天气决策网页
+# AI Website Cloner Template
 
-一个已接通实时数据的响应式网页：同时比较 12 个摄影点位，给出未来 7/14 天逐夜星空评分、硬性安全门禁、连续可拍窗口、月光、银河高度和低云高度剖面。
+<a href="https://github.com/JCodesMore/ai-website-cloner-template/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License" /></a> <a href="https://github.com/JCodesMore/ai-website-cloner-template/stargazers"><img src="https://img.shields.io/github/stars/JCodesMore/ai-website-cloner-template?style=flat" alt="Stars" /></a> <a href="https://discord.gg/hrTSX5yTpB"><img src="https://img.shields.io/discord/1400896964597383279?label=discord" alt="Discord" /></a> <img src="https://img.shields.io/endpoint?url=https://gittokens.rsamf.com/badge/JCodesMore/ai-website-cloner-template" alt="tokens" />
 
-## 已完成
+A reusable template for reverse-engineering any website into a clean, modern Next.js codebase using AI coding agents. 
 
-- Open‑Meteo 实时逐小时天气：总/低/中/高云量、降水、能见度、湿度、露点、风和阵风。
-- Astronomy Engine 本地天文计算：太阳/月球高度、月面照度、银河中心高度。
-- 7/14 天切换；第 8 天以后明确标为“趋势”，避免制造远期精度幻觉。
-- 12 个预置点位；可在浏览器本地新增/删除自定义点位。
-- 星空和云海两个独立评分，雷暴、降水、低能见度、大阵风、极高云量为硬门禁。
-- 点位排名、核心窗口矩阵、逐小时详情、气压层云高推导。
-- 缓存优先启动和手动刷新；缓存默认 1 小时。
-- 响应式深色界面，适配桌面与手机。
+**Recommended: [Claude Code](https://docs.anthropic.com/en/docs/claude-code) with Opus 4.8 for best results** — but works with a variety of AI coding agents.
 
-## 本地运行
+Point it at a URL, run `/clone-website`, and your AI agent will inspect the site, extract design tokens and assets, write component specs, and dispatch parallel builders to reconstruct every section.
 
-要求 Node.js 22+。
+## Demo
 
-```bash
-npm ci
-npm run dev
+[![Watch the demo](docs/design-references/comparison.png)](https://youtu.be/O669pVZ_qr0)
+
+> Click the image above to watch the full demo on YouTube.
+
+## Quick Start
+
+> **Important:** Start by making your own copy with GitHub's **Use this template** button. Do not clone this template repository directly for your website project, and do not open pull requests here with your generated website.
+
+1. **Create your own repository from this template**
+
+   On the GitHub page for this project, click **Use this template**, then click **Create a new repository**.
+
+   Give your new repository a name, choose whether it should be public or private, then click **Create repository**. If GitHub shows an **Include all branches** option, you can leave it off.
+
+   This gives you your own separate project to work in, so your website changes stay in your account instead of coming back to the main template.
+
+2. **Open your new repository on your computer**
+
+   After GitHub creates your copy, open that new repository. Click **Code** and open or clone your new repository with your preferred coding tool.
+
+   If you use the terminal, the command will look like this:
+
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/YOUR-NEW-REPOSITORY.git
+   cd YOUR-NEW-REPOSITORY
+   ```
+
+3. **Install dependencies**
+   ```bash
+   npm install
+   ```
+4. **Start your AI agent** — Claude Code recommended:
+   ```bash
+   claude --chrome
+   ```
+5. **Run the skill**:
+   ```
+   /clone-website <target-url1> [<target-url2> ...]
+   ```
+6. **Customize** (optional) — after the base clone is built, modify as needed
+
+> Using a different agent? Open `AGENTS.md` for project instructions — most agents pick it up automatically.
+
+## Supported Platforms
+
+| Agent                                                         | Status                     |
+| ------------------------------------------------------------- | -------------------------- |
+| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | **Recommended** — Opus 4.8 |
+| [Codex CLI](https://github.com/openai/codex)                  | Supported                  |
+| [OpenCode](https://opencode.ai/)                              | Supported                  |
+| [GitHub Copilot](https://github.com/features/copilot)         | Supported                  |
+| [Cursor](https://cursor.com/)                                 | Supported                  |
+| [Windsurf](https://codeium.com/windsurf)                      | Supported                  |
+| [Gemini CLI](https://github.com/google-gemini/gemini-cli)     | Supported                  |
+| [Cline](https://github.com/cline/cline)                       | Supported                  |
+| [Roo Code](https://github.com/RooCodeInc/Roo-Code)            | Supported                  |
+| [Continue](https://continue.dev/)                             | Supported                  |
+| [Amazon Q](https://aws.amazon.com/q/developer/)               | Supported                  |
+| [Augment Code](https://www.augmentcode.com/)                  | Supported                  |
+| [Aider](https://aider.chat/)                                  | Supported                  |
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) 24+
+- An AI coding agent (see [Supported Platforms](#supported-platforms))
+
+## Tech Stack
+
+- **Next.js 16** — App Router, React 19, TypeScript strict
+- **shadcn/ui** — Radix primitives + Tailwind CSS v4
+- **Tailwind CSS v4** — oklch design tokens
+- **Lucide React** — default icons (replaced by extracted SVGs during cloning)
+
+## How It Works
+
+The `/clone-website` skill runs a multi-phase pipeline:
+
+1. **Reconnaissance** — screenshots, design token extraction, interaction sweep (scroll, click, hover, responsive)
+2. **Foundation** — updates fonts, colors, globals, downloads all assets
+3. **Component Specs** — writes detailed spec files (`docs/research/components/`) with exact computed CSS values, states, behaviors, and content
+4. **Parallel Build** — dispatches builder agents in git worktrees, one per section/component
+5. **Assembly & QA** — merges worktrees, wires up the page, runs visual diff against the original
+
+Each builder agent receives the full component specification inline — exact `getComputedStyle()` values, interaction models, multi-state content, responsive breakpoints, and asset paths. No guessing.
+
+## Use Cases
+
+- **Platform migration** — rebuild a site you own from WordPress/Webflow/Squarespace into a modern Next.js codebase
+- **Lost source code** — your site is live but the repo is gone, the developer left, or the stack is legacy. Get the code back in a modern format
+- **Learning** — deconstruct how production sites achieve specific layouts, animations, and responsive behavior by working with real code
+
+## Not Intended For
+
+- **Phishing or impersonation** — this project must not be used for deceptive purposes, impersonation, or any activity that breaks the law.
+- **Passing off someone's design as your own** — logos, brand assets, and original copy belong to their owners.
+- **Violating terms of service** — some sites explicitly prohibit scraping or reproduction. Check first.
+
+## Project Structure
+
+```
+src/
+  app/              # Next.js routes
+  components/       # React components
+    ui/             # shadcn/ui primitives
+    icons.tsx       # Extracted SVG icons
+  lib/utils.ts      # cn() utility
+  types/            # TypeScript interfaces
+  hooks/            # Custom React hooks
+public/
+  images/           # Downloaded images from target
+  videos/           # Downloaded videos from target
+  seo/              # Favicons, OG images
+docs/
+  research/         # Extraction output & component specs
+  design-references/ # Screenshots
+scripts/
+  sync-agent-rules.sh  # Regenerate agent instruction files
+  sync-skills.mjs      # Regenerate /clone-website for all platforms
+AGENTS.md           # Agent instructions (single source of truth)
+CLAUDE.md           # Claude Code config (imports AGENTS.md)
+GEMINI.md           # Gemini CLI config (imports AGENTS.md)
 ```
 
-生产构建与验证：
+## Commands
 
 ```bash
-npm test
-npm run test:live
-npm run build
+npm run dev    # Start dev server
+npm run build  # Production build
+npm run lint   # ESLint check
+npm run typecheck # TypeScript check
+npm run check  # Run lint + typecheck + build
 ```
 
-## Docker
+### If using docker
 
 ```bash
-docker compose up --build -d
+docker compose up app --build # build and run the app
+docker compose up dev --build # run the app in dev mode on port 3001
 ```
 
-打开 `http://localhost:8080`，健康检查为 `/healthz`。当前执行环境没有 Docker，因此镜像文件已编写但未在此环境实际启动；请在装有 Docker 的机器执行上面的命令完成最后一项验证。
+## Updating for Other Platforms
 
-## 数据与精度边界
+Two source-of-truth files power all platform support. Edit the source, then run the sync script:
 
-- 天气：Open‑Meteo Forecast API。免费层适合非商业原型；商业运营前应核对许可、限额和 SLA。
-- 海拔：表内为用户给定机位海拔；模型地形海拔来自天气接口，两者会同时保留。
-- 云高：由离散气压层的云量/相对湿度与位势高度推导，是区间估算，不是测云仪实测。界面采用 50 m 舍入并显示置信度。
-- 0–72 小时用于出发判断，4–7 天用于规划，8–14 天只看趋势。任何推荐均不替代道路、雷电、地质灾害和现场安全判断。
-- 网页从浏览器直接请求 Open‑Meteo；正式公网产品建议增加同域代理、服务端缓存、限流、快照留存和监控。
+| What                   | Source of truth                         | Sync command                       |
+| ---------------------- | --------------------------------------- | ---------------------------------- |
+| Project instructions   | `AGENTS.md`                             | `bash scripts/sync-agent-rules.sh` |
+| `/clone-website` skill | `.claude/skills/clone-website/SKILL.md` | `node scripts/sync-skills.mjs`     |
 
-## 目录
+Each script regenerates the platform-specific copies automatically. Agents that read the source files natively need no regeneration.
 
-- `src/lib/scoring.js`：可审计评分和安全门禁
-- `src/lib/clouds.js`：气压层云高区间
-- `src/lib/astronomy.js`：天文条件
-- `src/lib/openMeteo.js`：实时数据适配器
-- `tests/`：算法和 Sites Worker 测试
-- `HANDOFF_CODEX.md`：后续 Codex 的精确任务与提示词
-- `../星空摄影天气决策网页_整体方案与Codex执行提示词.md`：完整产品/技术方案
 
-## 上线前建议
+## Star History
 
-1. 把天气请求迁移到服务端代理，并按点位和模型时次缓存。
-2. 保存每次预报快照和用户现场反馈，计算 Brier score、推荐命中率及校准曲线。
-3. 接入道路封闭、雷达/卫星临近观测与灾害预警；这些数据应作为安全门禁，不混入审美评分。
-4. 根据真实拍摄反馈校准阈值，版本化评分模型，保留可回滚能力。
+[![Star History Chart](https://api.star-history.com/svg?repos=JCodesMore/ai-website-cloner-template&type=Date)](https://star-history.com/#JCodesMore/ai-website-cloner-template&Date)
 
-数据归 Open‑Meteo；天文计算使用 Astronomy Engine。请保留网页页脚署名。
+## License
+
+MIT

@@ -1,0 +1,6 @@
+0000000000000000000000000000000000000000 2385e6b36db74557e3225db3113691991d0b4360 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786026756 +0800	branch: Created from HEAD
+2385e6b36db74557e3225db3113691991d0b4360 201ca889aa3a2a6de79dfbe328fdc0de33cc66a3 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786026756 +0800	commit: docs: add prod-hardening plan (same-domain proxy, local-first then docker)
+201ca889aa3a2a6de79dfbe328fdc0de33cc66a3 d4a566edb9168b7838ce8de99dc6186cbe225a44 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786028477 +0800	commit: feat: configurable forecast base url (TDD)
+d4a566edb9168b7838ce8de99dc6186cbe225a44 dbd45c21ca1acd6a08965e8e27eba9e4cfab251d xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786028478 +0800	commit: docs: add .env.example
+dbd45c21ca1acd6a08965e8e27eba9e4cfab251d 54e41ab03fe1c3f25f67eafb0f0e275115d79ac6 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786028479 +0800	commit: feat: nginx /api/forecast proxy
+54e41ab03fe1c3f25f67eafb0f0e275115d79ac6 ee163013390170f87bdce78019fe16b02f8b0794 xiangfeiZhu <zhuxiangfei@geeco-energy.com> 1786028480 +0800	commit: feat: worker /api/forecast proxy route

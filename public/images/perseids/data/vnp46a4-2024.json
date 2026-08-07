@@ -1,0 +1,381 @@
+{
+  "title": "2024 VNP46A4 Garstang-Cinzano modeled zenith sky brightness + zero-anchored 2025 external-display alignment",
+  "product": "VNP46A4",
+  "collection": "002",
+  "year": 2024,
+  "doi": "10.5067/VIIRS/VNP46A4.002",
+  "sourceResolutionArcSeconds": 15,
+  "sourceGranulesForWebLayer": 42,
+  "sourceSds": "NearNadir_Composite_Snow_Free",
+  "sourceUnit": "nW/cm²/sr",
+  "sourceBounds": [
+    70.0,
+    0.0,
+    140.0,
+    60.0
+  ],
+  "outputBounds": [
+    72.0,
+    3.0,
+    136.0,
+    55.0
+  ],
+  "qualityFilter": "quality=0, num>=4, std>=0, land_water in [0,1,5], radiance>=0.5",
+  "model": {
+    "version": "garstang-cinzano-zsb-2024-v2.0",
+    "physicalModelVersion": "garstang-cinzano-zsb-2024-v1.0",
+    "name": "Garstang-Cinzano zenith sky brightness analytical PSF",
+    "formula": "log10(PSF_ZSB)=a0+a1*h_obs^0.34+a2*2^log10(D)+a3*h_obs^-1.5+a4*h_obs^0.49+a5*log10(D)^4*(1/2)^h_src+a6*h_obs^-1.15*h_src^1.5+a7*log10(D)^11+a8*log10(D)^4+a9*(1/6)^log10(D)+a10*ln(h_obs)^8*h_src^0.76+a11*log10(D)^2-7.86; L_art(x)=A_cell*sum_i(R_i*PSF_ZSB(D_i)); m_raw=-2.5*log10((L_art+143.1685*10^(-0.4*22))/143.1685); L_cal=1e-6*3.7968519361994737*(L_art/1e-6)^0.7702832766980802 for L_art>0, else L_cal=0; m_display=-2.5*log10((L_cal+143.1685*10^(-0.4*22))/143.1685)",
+    "coefficients": [
+      1.57971,
+      0.266809,
+      -1.88908,
+      -0.150676,
+      -0.793737,
+      -0.0282754,
+      0.440433,
+      -1.89817e-05,
+      0.0657736,
+      0.0430336,
+      -4.1948e-05,
+      0.111841
+    ],
+    "calibrationLog10": -7.86,
+    "modelCrs": "EPSG:6933",
+    "gridMetres": 1000,
+    "cellAreaKm2": 1.0,
+    "propagationRadiusKm": 194.0,
+    "observerAltitudeKm": 0.5,
+    "sourceAltitudeKm": 0.25,
+    "clarityKPrime": 1.0,
+    "atmosphere": "US62 standard clear atmosphere",
+    "horizontalVisibilityKm": 26,
+    "opticalDepthV": 0.31,
+    "naturalSkyMpsas": 22.0,
+    "vBandZeroPointWm2Sr": 143.1685,
+    "nearFieldMinimumDistanceKm": 0.12,
+    "fitRmseLog10": 0.04907,
+    "fitR2": 0.99948,
+    "paper": "https://doi.org/10.1093/mnras/stac2929",
+    "calibrationProvenance": "Published PSF calibration against the New World Atlas and 20,000+ ground observations; not refitted to 2015 raster data in this project"
+  },
+  "displayCalibration": {
+    "enabledForPublishedClasses": true,
+    "version": "external-display-2025-zero-anchored-radiance-power-v2",
+    "stage": "optional post-process after the physical PSF; raw physical output remains GeoTIFF band 2",
+    "input": "artificial zenith radiance L_art from the physical PSF (W m-2 sr-1)",
+    "output": "zero-anchored external-display-equivalent brightness index m_display; not an SQM measurement",
+    "formula": "L_cal=L_ref*S*(L_art/L_ref)^gamma when L_art>0; L_cal=0 when L_art=0; m_display=-2.5*log10((L_cal+L_natural)/143.1685)",
+    "radianceReferenceWm2Sr": 1e-06,
+    "dimensionlessScale": 3.7968519361994737,
+    "exponentGamma": 0.7702832766980802,
+    "zeroArtificialRadianceMapsToZero": true,
+    "zeroArtificialRadianceMpsas": 22.0,
+    "strictlyIncreasingForPositiveRadiance": true,
+    "reference": {
+      "dataset": "validation/reference-darkmap-live-2025.csv",
+      "source": "darkmap.cn live external display, 光污染·2025",
+      "referenceYear": 2025,
+      "sampleCount": 21,
+      "fitMethod": "ordinary least-squares log10(target artificial radiance) = intercept + gamma*log10(model artificial radiance)",
+      "inSampleMapePercent": 0.353682705,
+      "inSampleMaximumAbsolutePercentageError": 1.278531152,
+      "leaveOneSpatialGroupOutMeanMapePercent": 0.55001548,
+      "leaveOneSpatialGroupOutPooledMapePercent": 0.370956402,
+      "leaveOneSpatialGroupOutMaxMapePercent": 1.490075641,
+      "leaveOneSpatialGroupOutMaeMpsas": 0.073495765,
+      "leaveOneSpatialGroupOutRmseMpsas": 0.111407862,
+      "independentGroundTruth": false
+    },
+    "scientificBoundary": "This transfer aligns a 2024-source model with a third-party 2025 display. Its <1% in-sample/mean grouped MAPE is benchmark agreement, not 2024 temporal agreement and not independently measured SQM truth. The zero anchor is a physical boundary condition, not a fitted sea sample."
+  },
+  "classification": {
+    "name": "operational Bortle-equivalent class from external-display-calibrated index",
+    "productionInputBand": 3,
+    "productionInput": "zero-anchored external-display-calibrated m_display",
+    "lowerBoundsMpsas": [
+      21.989999771118164,
+      21.889999389648438,
+      21.690000534057617,
+      20.489999771118164,
+      19.5,
+      18.940000534057617,
+      18.3799991607666,
+      17.799999237060547
+    ],
+    "classes": [
+      {
+        "level": 1,
+        "name": "极佳暗空",
+        "color": "#000000"
+      },
+      {
+        "level": 2,
+        "name": "典型暗空",
+        "color": "#222222"
+      },
+      {
+        "level": 3,
+        "name": "乡村天空",
+        "color": "#143072"
+      },
+      {
+        "level": 4,
+        "name": "乡村—郊区过渡",
+        "color": "#105715"
+      },
+      {
+        "level": 5,
+        "name": "郊区天空",
+        "color": "#FD9650"
+      },
+      {
+        "level": 6,
+        "name": "明亮郊区天空",
+        "color": "#FC5A49"
+      },
+      {
+        "level": 7,
+        "name": "郊区—城市过渡",
+        "color": "#FC998A"
+      },
+      {
+        "level": 8,
+        "name": "城市天空",
+        "color": "#A0A0A0"
+      },
+      {
+        "level": 9,
+        "name": "城市中心天空",
+        "color": "#F2F2F2"
+      }
+    ],
+    "scientificBoundary": "Bortle is a visual scale; these classes are an explicit mV-equivalent mapping, not a field Bortle observation"
+  },
+  "displayColors": [
+    "#000000",
+    "#222222",
+    "#143072",
+    "#105715",
+    "#FD9650",
+    "#FC5A49",
+    "#FC998A",
+    "#A0A0A0",
+    "#F2F2F2"
+  ],
+  "displayNames": [
+    "极佳暗空",
+    "典型暗空",
+    "乡村天空",
+    "乡村—郊区过渡",
+    "郊区天空",
+    "明亮郊区天空",
+    "郊区—城市过渡",
+    "城市天空",
+    "城市中心天空"
+  ],
+  "webLayer": {
+    "type": "xyz-webp-bortle-equivalent-soft-bands",
+    "cacheVersion": "garstang-cinzano-zsb-2024-v2.0-soft-bands-no-outline-v2",
+    "styleVersion": "soft-bands-no-outline-v2",
+    "opacity": 0.8,
+    "classBoundaryStroke": "none",
+    "tiles": "/data/vnp46a4/2024/{z}/{x}/{y}.webp",
+    "valueTiles": "/data/vnp46a4/2024-values/8/{x}/{y}.webp",
+    "valueEncoding": "0=nodata; 1..255 => 14+(value-1)/254*8 magV/arcsec²",
+    "valueSemantics": "zero-anchored external-display-equivalent index; not SQM",
+    "minzoom": 3,
+    "maxzoom": 8,
+    "tileSize": 256,
+    "tileCount": 2884,
+    "valueTileCount": 2116,
+    "bytes": 3362718,
+    "valueBytes": 10542806
+  },
+  "pointSampleCount": 404,
+  "validation": {
+    "status": "external-display-2025-benchmark-calibrated; independent-China-2024-SQM-pending",
+    "recommendedInstrument": "calibrated SQM-L or Johnson-V calibrated camera aimed at zenith",
+    "protocol": "moon below horizon, Sun below -18 degrees, clear sky, exclude direct local lights, record AOD550 and repeat median",
+    "reportMetrics": [
+      "bias_mpsas",
+      "MAE_mpsas",
+      "RMSE_mpsas",
+      "class_accuracy",
+      "within_one_class"
+    ],
+    "screeningUncertainty": "Use ±1 class until an independent spatially held-out China validation set is published",
+    "externalDisplayBenchmarkIsSqmTruth": false
+  },
+  "sourceFiles": [
+    {
+      "name": "VNP46A4.A2024001.h25v03.002.2025162124523.h5",
+      "bytes": 145459494
+    },
+    {
+      "name": "VNP46A4.A2024001.h25v04.002.2025162124730.h5",
+      "bytes": 144824983
+    },
+    {
+      "name": "VNP46A4.A2024001.h25v05.002.2025162125122.h5",
+      "bytes": 148200633
+    },
+    {
+      "name": "VNP46A4.A2024001.h25v06.002.2025162125135.h5",
+      "bytes": 150994184
+    },
+    {
+      "name": "VNP46A4.A2024001.h25v07.002.2025162125316.h5",
+      "bytes": 130067754
+    },
+    {
+      "name": "VNP46A4.A2024001.h25v08.002.2025162125325.h5",
+      "bytes": 75486200
+    },
+    {
+      "name": "VNP46A4.A2024001.h26v03.002.2025162131013.h5",
+      "bytes": 152181942
+    },
+    {
+      "name": "VNP46A4.A2024001.h26v04.002.2025162131912.h5",
+      "bytes": 144089894
+    },
+    {
+      "name": "VNP46A4.A2024001.h26v05.002.2025162132244.h5",
+      "bytes": 115037083
+    },
+    {
+      "name": "VNP46A4.A2024001.h26v06.002.2025162132415.h5",
+      "bytes": 151515297
+    },
+    {
+      "name": "VNP46A4.A2024001.h26v07.002.2025162132145.h5",
+      "bytes": 80989101
+    },
+    {
+      "name": "VNP46A4.A2024001.h26v08.002.2025162132200.h5",
+      "bytes": 72246406
+    },
+    {
+      "name": "VNP46A4.A2024001.h27v03.002.2025162135030.h5",
+      "bytes": 150242689
+    },
+    {
+      "name": "VNP46A4.A2024001.h27v04.002.2025162135353.h5",
+      "bytes": 129331136
+    },
+    {
+      "name": "VNP46A4.A2024001.h27v05.002.2025162134613.h5",
+      "bytes": 130459909
+    },
+    {
+      "name": "VNP46A4.A2024001.h27v06.002.2025162134900.h5",
+      "bytes": 112857099
+    },
+    {
+      "name": "VNP46A4.A2024001.h27v07.002.2025162145758.h5",
+      "bytes": 81232278
+    },
+    {
+      "name": "VNP46A4.A2024001.h27v08.002.2025162150420.h5",
+      "bytes": 77260118
+    },
+    {
+      "name": "VNP46A4.A2024001.h28v03.002.2025162160147.h5",
+      "bytes": 152147986
+    },
+    {
+      "name": "VNP46A4.A2024001.h28v04.002.2025162160416.h5",
+      "bytes": 133534193
+    },
+    {
+      "name": "VNP46A4.A2024001.h28v05.002.2025162160838.h5",
+      "bytes": 126172737
+    },
+    {
+      "name": "VNP46A4.A2024001.h28v06.002.2025162160729.h5",
+      "bytes": 114601233
+    },
+    {
+      "name": "VNP46A4.A2024001.h28v07.002.2025162162225.h5",
+      "bytes": 109123406
+    },
+    {
+      "name": "VNP46A4.A2024001.h28v08.002.2025162162527.h5",
+      "bytes": 86672023
+    },
+    {
+      "name": "VNP46A4.A2024001.h29v03.002.2025162163736.h5",
+      "bytes": 147847877
+    },
+    {
+      "name": "VNP46A4.A2024001.h29v04.002.2025162164010.h5",
+      "bytes": 141794524
+    },
+    {
+      "name": "VNP46A4.A2024001.h29v05.002.2025162164326.h5",
+      "bytes": 167145442
+    },
+    {
+      "name": "VNP46A4.A2024001.h29v06.002.2025162164542.h5",
+      "bytes": 115009189
+    },
+    {
+      "name": "VNP46A4.A2024001.h29v07.002.2025162165532.h5",
+      "bytes": 72047298
+    },
+    {
+      "name": "VNP46A4.A2024001.h29v08.002.2025162164730.h5",
+      "bytes": 79806178
+    },
+    {
+      "name": "VNP46A4.A2024001.h30v03.002.2025162170940.h5",
+      "bytes": 147898454
+    },
+    {
+      "name": "VNP46A4.A2024001.h30v04.002.2025162172511.h5",
+      "bytes": 159168627
+    },
+    {
+      "name": "VNP46A4.A2024001.h30v05.002.2025162170911.h5",
+      "bytes": 106169682
+    },
+    {
+      "name": "VNP46A4.A2024001.h30v06.002.2025162171810.h5",
+      "bytes": 81128082
+    },
+    {
+      "name": "VNP46A4.A2024001.h30v07.002.2025162170733.h5",
+      "bytes": 80010799
+    },
+    {
+      "name": "VNP46A4.A2024001.h30v08.002.2025162170737.h5",
+      "bytes": 76835245
+    },
+    {
+      "name": "VNP46A4.A2024001.h31v03.002.2025162172720.h5",
+      "bytes": 146447675
+    },
+    {
+      "name": "VNP46A4.A2024001.h31v04.002.2025162172831.h5",
+      "bytes": 115347973
+    },
+    {
+      "name": "VNP46A4.A2024001.h31v05.002.2025162173924.h5",
+      "bytes": 90722000
+    },
+    {
+      "name": "VNP46A4.A2024001.h31v06.002.2025162175432.h5",
+      "bytes": 70413568
+    },
+    {
+      "name": "VNP46A4.A2024001.h31v07.002.2025162174532.h5",
+      "bytes": 70063321
+    },
+    {
+      "name": "VNP46A4.A2024001.h31v08.002.2025162173645.h5",
+      "bytes": 70011551
+    }
+  ],
+  "generatedAt": "2026-08-05"
+}

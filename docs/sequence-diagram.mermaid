@@ -1,0 +1,38 @@
+sequenceDiagram
+    actor U as 用户
+    participant P as PerseidsApp (客户端)
+    participant S as Store
+    participant M as MapCanvas
+    participant D as DarkSky (像素采样)
+    participant G as /api/geocode
+    participant F as /api/forecast
+    participant E as ScoringEngine
+    participant SP as SidePanel
+
+    U->>P: 打开 '/'
+    P->>M: 初始化 Leaflet + CARTO 底图 + 暗夜/边界叠加
+    M->>D: 默认定位中国，加载 VIIRS/Bortle 图层
+    Note over P: 尝试读 localStorage 缓存（cache.ts）
+
+    U->>M: 点击地图任意位置
+    M->>D: sample(lat,lng) 读取 value 瓦片像素
+    D-->>M: DarkSkySample(mpsas,Bortle,source)
+    M->>S: SET_SAMPLE(sample)
+    S->>F: fetch([location], days=14)  [同源代理]
+    F->>F: 调 Open-Meteo forecast(timezone=auto)
+    F-->>S: LocationForecast (含本地时区)
+    S->>E: evaluateNight(forecast, loc, nightKeys)
+    E->>E: 逐小时评分 + 夜间窗口(20:00–05:00) + 月光/银河
+    E-->>SP: NightEvaluation(status,score,window,...)
+    SP-->>U: 展示暗夜/天气/月光/决策建议
+
+    U->>M: 搜索框输入「北京」(≥2字, 280ms 防抖)
+    M->>G: search(q=北京)
+    G->>G: 代理 Open-Meteo geocoding
+    G-->>M: GeocodeResult[]
+    U->>M: 选择候选 → flyTo + sample
+    M->>S: SET_SAMPLE + 重新 fetch/evaluate（同上）
+
+    U->>M: 开启「未来云图」(需先选地点+日期)
+    M->>S: SET_CLOUD(enabled)
+    S->>M: CloudControl 启用 → CloudLayer 简化渲染(cloud_cover)

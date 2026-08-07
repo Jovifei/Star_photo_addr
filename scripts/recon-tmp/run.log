@@ -1,0 +1,284 @@
+[step] launched
+[step] desktop context
+[step] desktop goto
+[step] desktop shots
+[step] mobile shots
+[step] search state
+[step] bortle help
+[step] cloud state
+[step] locate state
+[step] TOKENS done
+TOKENS_JSON_START
+{
+  "body": {
+    "background": "rgb(2, 7, 11)",
+    "color": "rgb(231, 231, 224)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "0px",
+    "margin": "0px",
+    "borderRadius": "0px",
+    "border": "0px solid rgb(231, 231, 224)",
+    "boxShadow": "none",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "appShell": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(231, 231, 224)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "0px",
+    "margin": "0px",
+    "borderRadius": "0px",
+    "border": "0px solid rgb(231, 231, 224)",
+    "boxShadow": "none",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "topbar": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(231, 231, 224)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "0px 18px",
+    "margin": "0px",
+    "borderRadius": "0px",
+    "border": "",
+    "boxShadow": "none",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "brandMark": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(212, 178, 115)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "0px",
+    "margin": "0px",
+    "borderRadius": "50%",
+    "border": "1px solid rgba(212, 178, 115, 0.42)",
+    "boxShadow": "rgba(212, 178, 115, 0.16) 0px 0px 28px 0px, rgba(212, 178, 115, 0.1) 0px 0px 16px 0px inset",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "brandStrong": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(234, 213, 170)",
+    "fontFamily": "\"Songti SC\", STSong, \"Noto Serif CJK SC\", Georgia, serif",
+    "fontSize": "22px",
+    "fontWeight": "400",
+    "padding": "0px",
+    "margin": "0px",
+    "borderRadius": "0px",
+    "border": "0px solid rgb(234, 213, 170)",
+    "boxShadow": "none",
+    "letterSpacing": "4.84px",
+    "lineHeight": "22px"
+  },
+  "eventStatus": {
+    "background": "rgba(7, 20, 28, 0.52)",
+    "color": "rgb(145, 164, 171)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "12px",
+    "fontWeight": "400",
+    "padding": "9px 16px",
+    "margin": "0px",
+    "borderRadius": "9px",
+    "border": "1px solid rgba(165, 205, 216, 0.16)",
+    "boxShadow": "rgba(236, 247, 250, 0.05) 0px 1px 0px 0px inset",
+    "letterSpacing": "normal",
+    "lineHeight": "18px"
+  },
+  "mapHeadlineH1": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(236, 233, 223)",
+    "fontFamily": "\"Songti SC\", STSong, \"Noto Serif CJK SC\", Georgia, serif",
+    "fontSize": "38px",
+    "fontWeight": "400",
+    "padding": "0px",
+    "margin": "10px 0px 0px",
+    "borderRadius": "0px",
+    "border": "0px solid rgb(236, 233, 223)",
+    "boxShadow": "none",
+    "letterSpacing": "3.04px",
+    "lineHeight": "39.52px"
+  },
+  "searchBox": {
+    "background": "rgba(2, 10, 16, 0.56)",
+    "color": "rgb(231, 231, 224)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "0px 34px 0px 11px",
+    "margin": "0px",
+    "borderRadius": "6px",
+    "border": "1px solid rgba(157, 203, 213, 0.2)",
+    "boxShadow": "none",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "locateButton": {
+    "background": "rgba(71, 56, 34, 0.24)",
+    "color": "rgb(220, 204, 169)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "10px",
+    "fontWeight": "400",
+    "padding": "0px 10px",
+    "margin": "0px",
+    "borderRadius": "7px",
+    "border": "1px solid rgba(212, 178, 115, 0.22)",
+    "boxShadow": "none",
+    "letterSpacing": "normal",
+    "lineHeight": "15px"
+  },
+  "cloudControl": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(231, 231, 224)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "8px",
+    "margin": "0px",
+    "borderRadius": "10px",
+    "border": "1px solid rgba(165, 205, 216, 0.16)",
+    "boxShadow": "rgba(230, 247, 250, 0.07) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 44px 0px",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "cloudToggle": {
+    "background": "rgba(43, 105, 120, 0.24)",
+    "color": "rgb(228, 245, 248)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "0px 9px",
+    "margin": "0px",
+    "borderRadius": "6px",
+    "border": "1px solid rgba(111, 200, 219, 0.38)",
+    "boxShadow": "rgba(78, 185, 207, 0.08) 0px 0px 18px 0px inset",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "bortleControl": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(231, 231, 224)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "8px 9px",
+    "margin": "0px",
+    "borderRadius": "10px",
+    "border": "1px solid rgba(165, 205, 216, 0.16)",
+    "boxShadow": "rgba(230, 247, 250, 0.07) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.3) 0px 16px 44px 0px",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "bortleToggle": {
+    "background": "rgba(36, 103, 86, 0.22)",
+    "color": "rgb(201, 238, 227)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "9px",
+    "fontWeight": "400",
+    "padding": "0px",
+    "margin": "0px",
+    "borderRadius": "6px",
+    "border": "1px solid rgba(84, 205, 174, 0.34)",
+    "boxShadow": "none",
+    "letterSpacing": "normal",
+    "lineHeight": "13.5px"
+  },
+  "sourceButton": {
+    "background": "rgba(7, 20, 28, 0.46)",
+    "color": "rgb(169, 187, 192)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "11px",
+    "fontWeight": "400",
+    "padding": "8px 12px",
+    "margin": "0px",
+    "borderRadius": "6px",
+    "border": "1px solid rgba(165, 205, 216, 0.16)",
+    "boxShadow": "none",
+    "letterSpacing": "normal",
+    "lineHeight": "16.5px"
+  },
+  "detailRestore": {
+    "background": "rgba(0, 0, 0, 0)",
+    "color": "rgb(202, 215, 213)",
+    "fontFamily": "\"PingFang SC\", \"Microsoft YaHei\", \"Noto Sans CJK SC\", system-ui, sans-serif",
+    "fontSize": "14px",
+    "fontWeight": "400",
+    "padding": "0px 12px",
+    "margin": "0px",
+    "borderRadius": "10px",
+    "border": "1px solid rgba(151, 211, 225, 0.32)",
+    "boxShadow": "rgba(0, 0, 0, 0.34) 0px 18px 48px 0px, rgba(230, 247, 250, 0.07) 0px 1px 0px 0px inset",
+    "letterSpacing": "normal",
+    "lineHeight": "21px"
+  },
+  "rootVars": {
+    "--spacing": ".25rem",
+    "--panel": "#061118d1",
+    "--muted": "#91a4ab",
+    "--line-strong": "#97d3e152",
+    "--green": "#79cfe2",
+    "--text": "#e7e7e0",
+    "--panel-2": "#0c1e27b8",
+    "--tw-drop-shadow-alpha": "100%",
+    "--font-sans": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+    "--font-mono": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace",
+    "--amber": "#d4b273",
+    "--red": "#cb7768",
+    "--line": "#a5cdd829",
+    "--tw-outline-style": "solid",
+    "--green-soft": "#b0e6ef",
+    "--default-mono-font-family": "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \"Liberation Mono\", \"Courier New\", monospace",
+    "--bg": "#02070b",
+    "--default-font-family": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\""
+  },
+  "bortleScale": [
+    {
+      "bg": "rgb(0, 0, 0)",
+      "title": "波特尔 B1 · 极佳暗空"
+    },
+    {
+      "bg": "rgb(34, 34, 34)",
+      "title": "波特尔 B2 · 典型暗空"
+    },
+    {
+      "bg": "rgb(20, 48, 114)",
+      "title": "波特尔 B3 · 乡村天空"
+    },
+    {
+      "bg": "rgb(16, 87, 21)",
+      "title": "波特尔 B4 · 乡村—郊区过渡"
+    },
+    {
+      "bg": "rgb(253, 150, 80)",
+      "title": "波特尔 B5 · 郊区天空"
+    },
+    {
+      "bg": "rgb(252, 90, 73)",
+      "title": "波特尔 B6 · 明亮郊区天空"
+    },
+    {
+      "bg": "rgb(252, 153, 138)",
+      "title": "波特尔 B7 · 郊区—城市过渡"
+    },
+    {
+      "bg": "rgb(160, 160, 160)",
+      "title": "波特尔 B8 · 城市天空"
+    },
+    {
+      "bg": "rgb(242, 242, 242)",
+      "title": "波特尔 B9 · 城市中心天空"
+    }
+  ],
+  "bodyBg": "rgb(2, 7, 11)"
+}
+TOKENS_JSON_END
+NETWORK_COUNT 33
