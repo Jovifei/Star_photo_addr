@@ -46,6 +46,13 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 
+  /* Unified design tokens (ui-ux-pro-max pre-delivery checklist) */
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  --transition: 150ms ease;
+  --ring: var(--green-soft);
+
   color-scheme: dark;
 }
 
@@ -71,6 +78,26 @@
   .font-mono {
     font-family: var(--font-mono);
   }
+}
+
+/* ============================================================
+   Accessibility: visible focus ring for keyboard navigation
+   (ui-ux-pro-max pre-delivery checklist — Focus states)
+   Wrapped in :where() so specificity stays 0 and never overrides
+   component-level styling.
+   ============================================================ */
+:where(a, button, input, select, textarea, [tabindex], [role="button"]):focus-visible {
+  outline: 2px solid var(--green-soft);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* .search-box wraps a borderless input (outline:none), so surface the
+   keyboard focus ring on the container instead of the inner input. */
+.search-box:focus-within {
+  border-color: var(--green);
+  outline: 2px solid var(--green-soft);
+  outline-offset: 1px;
 }
 
 /* ============================================================
@@ -159,9 +186,9 @@
   color: var(--muted);
   font-size: 11px;
   padding: 7px 12px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition);
 }
 .source-button:hover {
   color: var(--text);
@@ -260,10 +287,10 @@
   color: var(--text);
   font-size: 11px;
   padding: 7px 12px;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   backdrop-filter: blur(8px);
-  transition: all 0.15s ease;
+  transition: all var(--transition);
 }
 .map-view-actions > button:hover {
   border-color: var(--line-strong);
@@ -276,7 +303,7 @@
   padding: 10px 12px;
   border: 1px solid var(--line);
   background: var(--panel);
-  border-radius: 10px;
+  border-radius: var(--radius);
   font-size: 11px;
   color: var(--muted);
   backdrop-filter: blur(8px);
@@ -373,7 +400,7 @@
   padding-right: 34px;
   border: 1px solid var(--line);
   background: var(--panel);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   backdrop-filter: blur(8px);
   color: var(--text);
 }
@@ -401,7 +428,7 @@
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--amber);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   cursor: pointer;
   backdrop-filter: blur(8px);
@@ -417,7 +444,7 @@
   top: calc(100% + 6px);
   border: 1px solid var(--line);
   background: var(--panel);
-  border-radius: 8px;
+  border-radius: var(--radius);
   overflow: hidden;
   backdrop-filter: blur(12px);
   z-index: 900;
@@ -459,7 +486,7 @@
   width: 264px;
   border: 1px solid var(--line);
   background: var(--panel);
-  border-radius: 10px;
+  border-radius: var(--radius);
   backdrop-filter: blur(10px);
   box-shadow: rgba(0, 0, 0, 0.3) 0 16px 44px;
   overflow: hidden;
@@ -489,7 +516,7 @@
   color: var(--muted);
   font-size: 11px;
   padding: 5px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .cloud-master-toggle[aria-pressed="true"] {
@@ -532,7 +559,7 @@
   color: var(--muted);
   font-size: 11px;
   padding: 6px 4px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .cloud-tabs button.active {
@@ -578,7 +605,7 @@
   padding: 8px 12px;
   border: 1px solid var(--line);
   background: var(--panel);
-  border-radius: 10px;
+  border-radius: var(--radius);
   backdrop-filter: blur(10px);
 }
 .bortle-toggle {
@@ -596,7 +623,7 @@
   background: #0c1e27;
   border: 1px solid var(--line);
   position: relative;
-  transition: all 0.15s ease;
+  transition: all var(--transition);
 }
 .bortle-toggle .switch::after {
   content: "";
@@ -607,7 +634,7 @@
   background: var(--muted);
   top: 1px;
   left: 1px;
-  transition: all 0.15s ease;
+  transition: all var(--transition);
 }
 .bortle-toggle.on .switch {
   background: #0c2a33;
@@ -627,7 +654,7 @@
   height: 10px;
   border-radius: 2px;
   opacity: 0.55;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--transition);
 }
 .bortle-control.on .bortle-strip i {
   opacity: 1;
@@ -709,7 +736,7 @@
   color: var(--muted);
   font-size: 11px;
   padding: 10px 8px;
-  border-radius: 8px 0 0 8px;
+  border-radius: var(--radius) 0 0 var(--radius);
   cursor: pointer;
   writing-mode: vertical-rl;
   letter-spacing: 2px;
@@ -760,7 +787,7 @@
 .metric {
   border: 1px solid var(--line);
   background: var(--panel-2);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 10px;
 }
 .metric .label {
@@ -850,7 +877,7 @@
   margin-top: 14px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--panel-2);
 }
 .window-callout .icon {
@@ -947,7 +974,7 @@
   font-family: var(--font-mono);
   font-size: 11px;
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   color: var(--text);
   flex-shrink: 0;
@@ -1047,7 +1074,7 @@
   font-family: var(--font-mono);
   background: #0c1e27;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 2px 6px;
   color: var(--green-soft);
   font-size: 12px;
@@ -1090,7 +1117,7 @@
   border-left: 3px solid var(--amber);
   padding: 8px 14px;
   background: #0c1e2711;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
   margin: 14px 0;
 }
 .viirs-back {
@@ -1099,6 +1126,7 @@
   color: var(--green-soft);
   font-size: 13px;
   text-decoration: none;
+  cursor: pointer;
 }
 .viirs-back:hover {
   color: var(--amber);
@@ -1169,6 +1197,22 @@
     right: 12px;
     transform: none;
     writing-mode: horizontal-tb;
-    border-radius: 8px;
+    border-radius: var(--radius);
+  }
+}
+
+/* ============================================================
+   Accessibility: respect users who prefer reduced motion
+   (ui-ux-pro-max pre-delivery checklist — prefers-reduced-motion)
+   Disables pulse / spin / drawer slide / hover transitions.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
