@@ -2,22 +2,23 @@
 
 ## 当前状态
 
-分支：`agent/map-observatory`  
-基线：GitHub `main` + 选择性移植已验证的 UI/测试改动；没有带入实验分支里的 `.workbuddy` / `.comet` 污染。  
+权威分支：`main`  
+基线：PR #1 已合并到 GitHub `main`；已吸收验证通过的 UI/测试与地图功能，没有带入实验分支里的 `.workbuddy` / `.comet` 污染。  
 本轮完成：地图导航、Leaflet 深色底图、12 个预设点标记、中国地点搜索、地图点击取点、定位入口、单点 14 天实时预报、7/14 天夜晚轨道、候选点保存、光污染边界声明。
 
 ## 本地继续
 
-优先使用交付的 Git bundle（它包含完整提交历史，不依赖 GitHub 分支已推送）：
+直接从权威 `main` 继续：
 
 ```bash
-git clone -b agent/map-observatory Star_photo_addr-map-observatory.bundle Star_photo_addr
+git clone https://github.com/Jovifei/Star_photo_addr.git
 cd Star_photo_addr
+git switch main
 npm ci
 npm run dev
 ```
 
-也可以直接解压 `Star_photo_addr-map-observatory.zip` 后运行 `npm install && npm run dev`，但 zip 不包含 Git 历史。不要从 `codex/local-validation-and-hardening` 整体合并，因为该远程分支包含与产品无关的大型技能数据提交。
+后续开发请从 `main` 新建任务分支。不要从 `codex/local-validation-and-hardening` 整体合并，因为该远程分支包含与产品无关的大型技能数据提交。
 
 ## 已验证命令
 
@@ -62,7 +63,7 @@ npm test
 ## 可直接交给 Codex 的提示词
 
 ```text
-你接手仓库 Jovifei/Star_photo_addr 的 agent/map-observatory 分支。先完整阅读：
+你接手仓库 Jovifei/Star_photo_addr。以最新 `main` 为唯一权威基线，新建独立任务分支后先完整阅读：
 1. docs/PRODUCT_TECH_PLAN.md
 2. docs/PERSEIDS_REFERENCE_AUDIT.md
 3. docs/CODEX_HANDOFF_MAP_PHASE2.md
