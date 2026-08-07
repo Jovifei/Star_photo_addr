@@ -1,163 +1,196 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import {
-  BORTLE_CLASSES,
-  BORTLE_LOWER_BOUNDS_MPSAS,
-  VIIRS_DISPLAY_CALIBRATION,
-  VIIRS_MODEL,
-  VIIRS_SCIENTIFIC_BOUNDARY,
-  VIIRS_VALIDATION,
-  VIIRS_WEB_LAYER,
-} from "@/data/viirsMeta";
+"use client";
 
-export const metadata: Metadata = {
-  title: "暗夜等级公式与验证 · 逐星",
-  description:
-    "VNP46A4 2024 VIIRS 暗夜增强层的 Bortle 等效分类、数值编码、物理 PSF 模型与校准/验证方法。",
-};
+import dynamic from "next/dynamic";
+import { useRef, useState, useMemo } from "react";
+import type { Map as LeafletMap } from "leaflet";
+import { useStore } from "@/lib/store";
+import TopBar from "@/components/TopBar";
+import ViirsDocCollapse from "@/components/ViirsDocCollapse";
+import RecommendationMarker from "@/components/RecommendationMarker";
+import { RECOMMENDATIONS } from "@/data/recommendations";
+import { astronomyAt } from "@/lib/astronomy";
 
-function CoefficientTable({ coefficients }: { coefficients: number[] }) {
-  return (
-    <table>
-      <thead>
-        <tr>
-          <th>系数</th>
-          <th>值</th>
-        </tr>
-      </thead>
-      <tbody>
-        {coefficients.map((value, index) => (
-          <tr key={index}>
-            <td>a{index}</td>
-            <td>{value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
+// Leaflet touches `window`, so the map is client-only.
+const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
+  ssr: false,
+  loading: () => <div className="map-canvas" />,
+});
 
+/**
+ * 星野决策 · 推荐观星地点 page.
+ *
+ * Replaces the old static VIIRS documentation page with an interactive
+ * recommendation map. Features:
+ *   - Full-width map with Chinese label basemap + recommendation markers.
+ *   - Side panel listing all recommendations (clickable to focus map).
+ *   - Selected location's stargazing time info (sunset, moonset, astro night).
+ *   - Collapsible VIIRS documentation at the bottom.
+ *
+ * Uses the shared StoreProvider (lifted to layout.tsx in T01) so that
+ * selecting a recommendation here and navigating to / carries the location
+ * over seamlessly.
+ */
 export default function ViirsPage() {
+  const mapRef = useRef<LeafletMap | null>(null);
+  const { selectLocation, sampleAt } = useStore();
+  const [selectedRecId, setSelectedRecId] = useState<string | null>(null);
+
+  // Compute stargazing info for the selected recommendation.
+  const selectedRec = useMemo(
+    () => RECOMMENDATIONS.find((r) => r.id === selectedRecId) ?? null,
+    [selectedRecId],
+  );
+
+  const astroInfo = useMemo(() => {
+    if (!selectedRec) return null;
+    const now = new Date();
+    const location = {
+      id: selectedRec.id,
+      name: selectedRec.name,
+      latitude: selectedRec.latitude,
+      longitude: selectedRec.longitude,
+      elevation: selectedRec.elevation,
+      source: "参考点位" as const,
+    };
+    // Compute for tonight at 22:00 local time (approximate).
+    const tonight = new Date(now);
+    tonight.setHours(22, 0, 0, 0);
+    const astro = astronomyAt(tonight, location);
+    return {
+      sunAltitude: Math.round(astro.sunAltitude * 10) / 10,
+      moonAltitude: Math.round(astro.moonAltitude * 10) / 10,
+      moonIllumination: Math.round(astro.moonIllumination * 100),
+      galacticAltitude: Math.round(astro.galacticAltitude * 10) / 10,
+    };
+  }, [selectedRec]);
+
+  const handlePickRecommendation = (recId: string) => {
+    setSelectedRecId(recId);
+    const rec = RECOMMENDATIONS.find((r) => r.id === recId);
+    if (rec && mapRef.current) {
+      mapRef.current.setView([rec.latitude, rec.longitude], 8, {
+        animate: true,
+      });
+    }
+  };
+
+  const handleNavigateToMain = () => {
+    const rec = RECOMMENDATIONS.find((r) => r.id === selectedRecId);
+    if (!rec) return;
+    void selectLocation({
+      id: rec.id,
+      name: rec.name,
+      latitude: rec.latitude,
+      longitude: rec.longitude,
+      elevation: rec.elevation,
+      source: "参考点位",
+      bortle: rec.bortle,
+    });
+  };
+
   return (
-    <main className="viirs-page">
-      <Link className="viirs-back" href="/">
-        ← 返回逐星地图
-      </Link>
-      <h1>暗夜等级：公开公式、参数与验证方法</h1>
-      <p>
-        本页公开逐星使用的 2024 VNP46A4（Garstang–Cinzano 天顶天空亮度解析
-        PSF）暗夜增强层的分类方法、数值编码、物理模型与校准边界，供独立复核。
-      </p>
+    <div className="app-shell viirs-page-shell">
+      <TopBar />
+      <div className="viirs-workspace">
+        <section className="viirs-map-stage">
+          <MapCanvas
+            mapRef={mapRef}
+            onSample={(latitude, longitude) => void sampleAt(latitude, longitude)}
+            center={[34, 108]}
+            zoom={4}
+            layers={{ viirs: false, cloud: false, boundaries: true, recommendations: true }}
+          >
+            {RECOMMENDATIONS.map((rec) => (
+              <RecommendationMarker key={rec.id} recommendation={rec} />
+            ))}
+          </MapCanvas>
+        </section>
 
-      <h2 id="bortle">Bortle 等效分类</h2>
-      <p>
-        分类为「Bortle 等效映射」，并非现场实测 Bortle。每一级由天顶天空亮度
-        （mag/arcsec²，mpsas）的下限界定；mpsas 高于该级下限即归入该级，全部不满足归入
-        B9（城市中心天空）。
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>等级</th>
-            <th>名称</th>
-            <th>色带</th>
-            <th>下限 mpsas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {BORTLE_CLASSES.map((klass) => (
-            <tr key={klass.level}>
-              <td>B{klass.level}</td>
-              <td>{klass.name}</td>
-              <td>
-                <span
-                  className="swatch"
-                  style={{
-                    background: klass.color,
-                    border: "1px solid var(--line)",
-                  }}
-                />
-                {klass.color}
-              </td>
-              <td>
-                {klass.level <= 8
-                  ? BORTLE_LOWER_BOUNDS_MPSAS[klass.level - 1].toFixed(2)
-                  : "—（无下限）"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <aside className="viirs-side-panel">
+          <div className="panel-section">
+            <div className="panel-head">
+              <div>
+                <span className="panel-kicker">STARGAZING SITES</span>
+                <h3>推荐观星地点</h3>
+              </div>
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                {RECOMMENDATIONS.length} 个地点
+              </span>
+            </div>
+            <div className="candidate-list" style={{ marginTop: 8 }}>
+              {RECOMMENDATIONS.map((rec) => (
+                <div
+                  key={rec.id}
+                  className={`candidate-row${selectedRecId === rec.id ? " active" : ""}`}
+                  onClick={() => handlePickRecommendation(rec.id)}
+                >
+                  <div>
+                    <div className="name">{rec.name}</div>
+                    <div className="meta">
+                      {rec.province} · {rec.latitude.toFixed(2)},{" "}
+                      {rec.longitude.toFixed(2)}
+                    </div>
+                  </div>
+                  <span className="bortle-chip">B{rec.bortle}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      <h2>数值编码（像素 → 天顶亮度）</h2>
-      <p>中国 z=8 数值瓦片每个像素的灰度值编码如下：</p>
-      <code className="formula">{VIIRS_WEB_LAYER.valueEncoding}</code>
-      <p>即：</p>
-      <code className="formula">
-        mpsas = value === 0 ? null : 14 + (value - 1) / 254 * 8
-      </code>
-      <p>
-        其中 0 表示 nodata（无数据），有效值 1–255 线性映射到 14–22
-        mag/arcsec²。编码语义：{VIIRS_WEB_LAYER.valueSemantics}。
-      </p>
-
-      <h2>物理 PSF 模型</h2>
-      <p>
-        模型版本 <code>{VIIRS_MODEL.version}</code>（物理模型{" "}
-        <code>{VIIRS_MODEL.physicalModelVersion}</code>）。天顶人造辐射亮度由
-        以下解析模型给出：
-      </p>
-      <code className="formula">{VIIRS_MODEL.formula}</code>
-      <CoefficientTable coefficients={VIIRS_MODEL.coefficients} />
-      <p>
-        拟合优度 R² = {VIIRS_MODEL.fitR2}，log10 RMSE ={" "}
-        {VIIRS_MODEL.fitRmseLog10}。自然天空亮度基准{" "}
-        {VIIRS_MODEL.naturalSkyMpsas} mpsas，V 波段零点{" "}
-        {VIIRS_MODEL.vBandZeroPointWm2Sr} W·m⁻²·sr⁻¹。
-      </p>
-
-      <h2>显示校准（零锚定外部显示对齐）</h2>
-      <p>版本 {VIIRS_DISPLAY_CALIBRATION.version}：</p>
-      <code className="formula">{VIIRS_DISPLAY_CALIBRATION.formula}</code>
-      <p>
-        无量纲尺度 S = {VIIRS_DISPLAY_CALIBRATION.dimensionlessScale}，指数 γ ={" "}
-        {VIIRS_DISPLAY_CALIBRATION.exponentGamma}；零人造辐射亮度锚定到{" "}
-        {VIIRS_DISPLAY_CALIBRATION.zeroArtificialRadianceMpsas} mpsas。
-      </p>
-
-      <div className="note">
-        <p>
-          <strong>科学边界：</strong>
-          {VIIRS_SCIENTIFIC_BOUNDARY}
-        </p>
+          {selectedRec && astroInfo && (
+            <div className="panel-section viirs-astro-info">
+              <div className="panel-head">
+                <div>
+                  <span className="panel-kicker">STARGAZING TONIGHT</span>
+                  <h3>{selectedRec.name}</h3>
+                </div>
+                <span className="bortle-chip">B{selectedRec.bortle}</span>
+              </div>
+              <div className="metric-grid">
+                <div className="metric">
+                  <div className="label">太阳高度</div>
+                  <div className="value">
+                    {astroInfo.sunAltitude}°<small>地平线下</small>
+                  </div>
+                </div>
+                <div className="metric">
+                  <div className="label">月亮高度</div>
+                  <div className="value">
+                    {astroInfo.moonAltitude}°<small>{astroInfo.moonIllumination}%亮</small>
+                  </div>
+                </div>
+                <div className="metric">
+                  <div className="label">银河核心</div>
+                  <div className="value">
+                    {astroInfo.galacticAltitude}°<small>地平线上</small>
+                  </div>
+                </div>
+                <div className="metric">
+                  <div className="label">海拔</div>
+                  <div className="value">
+                    {selectedRec.elevation}<small>m</small>
+                  </div>
+                </div>
+              </div>
+              <p className="panel-reason">{selectedRec.reason}</p>
+              <div className="recommendation-card-season">
+                <span className="recommendation-card-label">最佳季节：</span>
+                {selectedRec.bestSeason}
+              </div>
+              <button
+                type="button"
+                className="recommendation-card-button"
+                onClick={handleNavigateToMain}
+                style={{ marginTop: 12, width: "100%" }}
+              >
+                前往逐星深度分析 →
+              </button>
+            </div>
+          )}
+        </aside>
       </div>
 
-      <h2>验证方法与报告指标</h2>
-      <p>
-        建议的独立验证协议：月亮低于地平、太阳低于 −18°、晴空、排除局地直接灯光，
-        记录 AOD550 并取重复中位数。报告指标包括：
-      </p>
-      <ul>
-        {VIIRS_VALIDATION.metrics.map((metric) => (
-          <li key={metric}>
-            <code>{metric}</code>
-          </li>
-        ))}
-      </ul>
-      <p>
-        筛选不确定性：{VIIRS_VALIDATION.screeningUncertainty}。注：外部显示基准并非
-        SQM 真值。
-      </p>
-
-      <h2>使用说明</h2>
-      <p>
-        客户端在点击地图时读取对应数值瓦片像素，按上述编码换算 mpsas 并分类。中国以外区域（全球
-        2015 暗夜世界地图）数值编码未知，结果标记为「不确定」。瓦片类型：
-        <code>{VIIRS_WEB_LAYER.type}</code>，opacity {VIIRS_WEB_LAYER.opacity}。
-      </p>
-      <Link className="viirs-back" href="/">
-        ← 返回逐星地图
-      </Link>
-    </main>
+      <ViirsDocCollapse />
+    </div>
   );
 }

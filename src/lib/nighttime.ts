@@ -84,7 +84,7 @@ export function formatNightLabel(dateKey: string, compact = false): string {
     timeZone: "Asia/Shanghai",
     month: compact ? "numeric" : "long",
     day: "numeric",
-    weekday: compact ? undefined : "short",
+    weekday: compact ? "short" : "short",
   }).format(date);
 }
 

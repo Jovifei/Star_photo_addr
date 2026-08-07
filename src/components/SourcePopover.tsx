@@ -1,8 +1,16 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { VIIRS_SCIENTIFIC_BOUNDARY } from "@/data/viirsMeta";
 
-/** "数据依据与局限" popover describing data sources and limitations. */
+/**
+ * "数据依据与局限" popover describing data sources and limitations.
+ *
+ * v2: Uses `createPortal` to render to `document.body`, escaping the
+ * `.topbar` containing block created by `backdrop-filter: blur(10px)`.
+ * This ensures `position: fixed; inset: 0` is relative to the viewport,
+ * not the ~54 px tall top bar.
+ */
 export default function SourcePopover({
   open,
   onClose,
@@ -11,7 +19,8 @@ export default function SourcePopover({
   onClose: () => void;
 }) {
   if (!open) return null;
-  return (
+
+  const content = (
     <div
       className="popover-backdrop"
       role="dialog"
@@ -56,4 +65,8 @@ export default function SourcePopover({
       </div>
     </div>
   );
+
+  // Guard for SSR — document is only available in the browser.
+  if (typeof document === "undefined") return content;
+  return createPortal(content, document.body);
 }

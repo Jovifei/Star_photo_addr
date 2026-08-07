@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { StoreProvider } from "@/lib/store";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -49,7 +50,9 @@ export default function RootLayout({
   // No web fonts are loaded — the design uses system CJK font stacks only.
   return (
     <html lang="zh-CN" className="h-full">
-      <body className="min-h-full antialiased">{children}</body>
+      <body className="min-h-full antialiased">
+        <StoreProvider>{children}</StoreProvider>
+      </body>
     </html>
   );
 }

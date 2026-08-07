@@ -10,17 +10,26 @@ const EMPTY_TEXT: Record<Exclude<CityCandidateStatus, "ok">, string> = {
     "暂无候选点位数据：本地候选清单未随仓库分发（许可未确认）。可点击地图任意位置取样。",
 };
 
-/** The featured dark-sky candidate locations, with an explicit no-data state. */
+/**
+ * The featured dark-sky candidate locations, with an explicit no-data state.
+ *
+ * v2: Each row now includes a delete button (✕) to remove it from the
+ * candidate list. The active location is highlighted. Clicking a row
+ * still selects it (calls onPick).
+ */
 export default function CandidateList({
   candidates,
   status,
   activeId,
   onPick,
+  onRemove,
 }: {
   candidates: CityCandidate[];
   status: CityCandidateStatus;
   activeId?: string;
   onPick: (candidate: CityCandidate) => void;
+  /** Optional remove handler. If provided, each row shows a ✕ delete button. */
+  onRemove?: (id: string) => void;
 }) {
   const hasRows = status === "ok" && candidates.length > 0;
 
@@ -48,17 +57,32 @@ export default function CandidateList({
               className={`candidate-row${activeId === candidate.id ? " active" : ""}`}
               onClick={() => onPick(candidate)}
             >
-              <div>
+              <div className="candidate-row-content">
                 <div className="name">{candidate.name}</div>
                 <div className="meta">
                   {candidate.province} · {candidate.latitude.toFixed(2)},{" "}
                   {candidate.longitude.toFixed(2)}
                 </div>
               </div>
-              {/* bortle === 0 means the source row carried no usable class. */}
-              <span className="bortle-chip">
-                {candidate.bortle > 0 ? `B${candidate.bortle}` : "—"}
-              </span>
+              <div className="candidate-row-actions">
+                {/* bortle === 0 means the source row carried no usable class. */}
+                <span className="bortle-chip">
+                  {candidate.bortle > 0 ? `B${candidate.bortle}` : "—"}
+                </span>
+                {onRemove && (
+                  <button
+                    type="button"
+                    className="candidate-row-delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(candidate.id);
+                    }}
+                    aria-label="删除"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
           ))}
       </div>

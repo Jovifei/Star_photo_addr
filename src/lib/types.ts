@@ -182,12 +182,27 @@ export interface PressureLevel {
   heightMsl?: number;
 }
 
-/** Cloud-control interactive state (Phase 1 simplified rendering). */
+/**
+ * Cloud-control interactive state (Phase 2 — three-layer independent control).
+ * The old `variable` single-select field has been replaced by three boolean
+ * toggles (`highEnabled`/`midEnabled`/`lowEnabled`) and a `playing` flag for
+ * the timeline auto-advance.
+ */
 export interface CloudState {
+  /** Master switch (controls the entire cloud feature). */
   enabled: boolean;
+  /** Forecast model. */
   model: "icon" | "gfs" | "aifs";
-  variable: "total" | "low" | "mid" | "high";
+  /** High-level cloud layer toggle. */
+  highEnabled: boolean;
+  /** Mid-level cloud layer toggle. */
+  midEnabled: boolean;
+  /** Low-level cloud layer toggle. */
+  lowEnabled: boolean;
+  /** Current timeline index (0 = 20:00, 8 = 05:00; 9 ticks total). */
   timeIndex: number;
+  /** Whether the timeline is auto-playing. */
+  playing: boolean;
 }
 
 /** A pre-computed dark-sky candidate city (from cities.json). */
@@ -203,3 +218,72 @@ export interface CityCandidate {
   kind: string;
   note: string;
 }
+
+// ---------------------------------------------------------------------------
+// v2 new types
+// ---------------------------------------------------------------------------
+
+/** A curated recommendation for stargazing (human-curated data source). */
+export interface Recommendation {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  /** Elevation in metres. */
+  elevation: number;
+  /** Bortle scale 1-9. */
+  bortle: number;
+  /** Recommendation reason / community review summary. */
+  reason: string;
+  /** Best stargazing season (e.g. "夏季 6-8月"). */
+  bestSeason: string;
+  /** Province / region. */
+  province: string;
+  /** Optional: months when the galactic core is visible. */
+  galaxyMonths?: string[];
+}
+
+/** A grid sampling point for spatial cloud coverage. */
+export interface CloudGridSample {
+  latitude: number;
+  longitude: number;
+}
+
+/** Complete data from one grid sampling pass (all time ticks included). */
+export interface CloudGridData {
+  /** Sampling point coordinates. */
+  samples: CloudGridSample[];
+  /** Bounding rectangle of the sampling area (for dashed boundary rendering). */
+  bounds: { north: number; south: number; east: number; west: number };
+  /** Hourly forecast for each sampling point (one-to-one with `samples`). */
+  forecasts: LocationForecast[];
+  /** Data fetch timestamp. */
+  fetchedAt: string;
+}
+
+/** Three-layer cloud coverage interpolation result at a single time tick. */
+export interface CloudLayerValues {
+  high: number; // 0-100
+  mid: number; // 0-100
+  low: number; // 0-100
+}
+
+/** Table cell: evaluation status for a location on a given night. */
+export interface StarWindowCell {
+  nightKey: string;
+  /** Evaluation status. */
+  status: NightStatus;
+  /** Score 0-100. */
+  score: number;
+  /** Whether the forecast is still loading. */
+  loading: boolean;
+}
+
+/** Table row: all night evaluations for one location. */
+export interface StarWindowRow {
+  location: Location;
+  cells: Map<string, StarWindowCell>;
+}
+
+/** Table sort direction. */
+export type SortDirection = "asc" | "desc";
