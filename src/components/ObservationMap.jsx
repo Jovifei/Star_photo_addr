@@ -75,6 +75,13 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
   }, [activeForecast, selected, selectedNight, nightKeys]);
   const meta = statusMeta(evaluation?.status);
   const summary = weatherSummary(evaluation);
+  const selectedIsExisting = locations.some((item) => item.id === selected?.id);
+  const selectedIsSaved = locations.some((item) => (
+    item.id === selected?.id
+    || (selected
+      && Math.abs(item.latitude - selected.latitude) < 0.00001
+      && Math.abs(item.longitude - selected.longitude) < 0.00001)
+  ));
 
   useEffect(() => {
     if (!selected || existingForecast) {
@@ -146,9 +153,11 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
   }
 
   function saveSelected() {
-    if (!selected || !activeForecast) return;
+    const name = selected?.name?.trim();
+    if (!selected || !activeForecast || !name || selectedIsSaved) return;
     onSave({
       ...selected,
+      name,
       elevation: Number.isFinite(selected.elevation) ? selected.elevation : Math.round(activeForecast.modelElevation),
       source: selected.source === "地图点击" ? "地图选点 · 模型海拔" : selected.source,
     });
@@ -163,7 +172,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
           <h2>在地图上寻找观测机位</h2>
           <p>搜索中国境内地点，或直接点击地图取点；选中后立即计算 7/14 天星空建议。</p>
         </div>
-        <div className="event-chip"><MoonStars weight="fill" /><span><strong>2026 英仙座流星雨</strong>峰值窗口：8 月 13 日 02:00–04:00 UTC</span></div>
+        <div className="event-chip"><MoonStars weight="fill" /><span><strong>2026 英仙座流星雨</strong>峰值窗口：8 月 13 日 02:00–04:00 UTC · <a href="https://www.imo.net/the-2026-meteor-shower-calendar-is-here/" target="_blank" rel="noreferrer">IMO 来源</a></span></div>
       </div>
 
       <div className="map-layout">
@@ -211,7 +220,18 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
 
         <aside className="map-inspector">
           <div className="inspector-heading">
-            <div><span className="section-kicker">SELECTED SITE</span><h3>{selected?.name ?? "选择一个地点"}</h3></div>
+            <div>
+              <span className="section-kicker">SELECTED SITE</span>
+              {selected && !selectedIsExisting ? (
+                <input
+                  className="inspector-name-input"
+                  aria-label="点位名称"
+                  value={selected.name}
+                  maxLength={40}
+                  onChange={(event) => setSelected((current) => ({ ...current, name: event.target.value }))}
+                />
+              ) : <h3>{selected?.name ?? "选择一个地点"}</h3>}
+            </div>
             <span className={`status-pill ${meta.tone}`}>{forecastLoading ? "计算中" : meta.label}</span>
           </div>
           {selected && <p className="inspector-coordinate"><MapPin />{selected.latitude.toFixed(5)}, {selected.longitude.toFixed(5)} · {Number.isFinite(selected.elevation) ? `${Math.round(selected.elevation)} m` : activeForecast ? `模型地形 ${Math.round(activeForecast.modelElevation)} m` : "海拔读取中"}</p>}
@@ -237,7 +257,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
           <p className="map-reason">{evaluation?.reason ?? (forecastLoading ? "正在读取逐小时天气与天文条件…" : "选择地点后显示判断依据。")}</p>
 
           <div className="layer-boundary"><Info /><p><strong>光污染数据尚未接入</strong>当前底图仅用于选点，不展示 Bortle/SQM；上方分数不含光污染，不能单独作为机位结论。后续必须接入有版本、许可和更新时间的可信图层后才能参与排名。</p></div>
-          <button className="primary-button wide" type="button" onClick={saveSelected} disabled={!selected || !activeForecast || locations.some((item) => item.id === selected.id)}><Plus />{locations.some((item) => item.id === selected?.id) ? "已在点位列表" : "保存为我的点位"}</button>
+          <button className="primary-button wide" type="button" onClick={saveSelected} disabled={!selected || !activeForecast || !selected.name.trim() || selectedIsSaved}><Plus />{selectedIsSaved ? "已在点位列表" : "保存为我的点位"}</button>
           {saveState && <p className="save-state">{saveState}</p>}
         </aside>
       </div>

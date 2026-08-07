@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { installOpenMeteoMock } from "./mock-open-meteo.js";
+import { installGeocodingMock, installOpenMeteoMock } from "./mock-open-meteo.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -48,6 +48,12 @@ test.beforeEach(async ({ page }) => {
     failedExternal.push(u);
   });
   await installOpenMeteoMock(page, fixture);
+  await installGeocodingMock(page);
+  await page.route(/https:\/\/[^/]+\.basemaps\.cartocdn\.com\/.*/, (route) => route.fulfill({
+    status: 200,
+    contentType: "image/png",
+    body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"),
+  }));
   page.__qa = { consoleErrors, pageErrors, failedExternal };
 });
 
@@ -90,9 +96,11 @@ test("星空 / 云海 mode toggle switches active and labels", async ({ page }) 
   await expect(star).toHaveClass(/active/);
 });
 
-test("navigation between 今晚 / 对比 / 点位", async ({ page }) => {
+test("navigation between 今晚 / 地图 / 对比 / 点位", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
+  await navButton(page, "地图").click();
+  await expect(page.locator(".map-workspace")).toBeVisible();
   await navButton(page, "对比").click();
   await expect(page.locator(".matrix-section")).toBeVisible();
   await shot(page, "matrix");
@@ -100,6 +108,54 @@ test("navigation between 今晚 / 对比 / 点位", async ({ page }) => {
   await expect(page.locator(".locations-section")).toBeVisible();
   await navButton(page, "今晚").click();
   await expect(page.locator(".rank-card").first()).toBeVisible();
+});
+
+test("map search evaluates 14 nights, edits name and saves without duplicates", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
+  await navButton(page, "地图").click();
+  await page.getByRole("textbox", { name: "搜索地点" }).fill("杭州");
+  await page.getByRole("button", { name: "搜索", exact: true }).click();
+  await page.getByRole("button", { name: /杭州.*浙江.*杭州市.*中国/ }).click();
+
+  const nameInput = page.getByRole("textbox", { name: "点位名称" });
+  await expect(nameInput).toHaveValue("杭州");
+  await expect(page.locator(".map-score-row strong").first()).not.toHaveText("—", { timeout: 20000 });
+  await page.getByRole("button", { name: "14 天" }).click();
+  await expect(page.locator(".map-night-rail button")).toHaveCount(14);
+  await nameInput.fill("杭州暗夜候选点");
+  await page.getByRole("button", { name: "保存为我的点位" }).click();
+  await expect(page.getByText("已保存到本机点位")).toBeVisible();
+  await expect(page.getByRole("button", { name: "已在点位列表" })).toBeDisabled();
+  await shot(page, "map-search");
+
+  await navButton(page, "点位").click();
+  await expect(page.locator(".location-table")).toContainText("杭州暗夜候选点");
+});
+
+test("browser geolocation success and denial paths remain usable", async ({ page }) => {
+  await page.addInitScript(() => {
+    navigator.geolocation.getCurrentPosition = (success) => success({
+      coords: { latitude: 30.25, longitude: 120.15, altitude: 25 },
+    });
+  });
+  await page.goto("/");
+  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
+  await navButton(page, "地图").click();
+  await page.getByRole("button", { name: "使用当前位置" }).click();
+  await expect(page.getByRole("textbox", { name: "点位名称" })).toHaveValue("我的当前位置");
+  await expect(page.locator(".inspector-coordinate")).toContainText("30.25000, 120.15000");
+});
+
+test("browser geolocation denial explains fallback", async ({ page }) => {
+  await page.addInitScript(() => {
+    navigator.geolocation.getCurrentPosition = (_success, error) => error({ code: 1 });
+  });
+  await page.goto("/");
+  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
+  await navButton(page, "地图").click();
+  await page.getByRole("button", { name: "使用当前位置" }).click();
+  await expect(page.getByText("未获得定位权限。你仍可搜索地点或点击地图。")).toBeVisible();
 });
 
 test("observation night switching updates selection", async ({ page }) => {
