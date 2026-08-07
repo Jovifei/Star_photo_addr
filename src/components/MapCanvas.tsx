@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   CircleMarker,
   MapContainer,
   TileLayer,
   Tooltip,
+  useMap,
   useMapEvents,
 } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
@@ -53,6 +55,31 @@ function SampleMarker() {
   );
 }
 
+/** Minimum zoom level applied when auto-recentering on a newly selected location. */
+const RECENTER_MIN_ZOOM = 8;
+
+/**
+ * Pans the map to `state.selectedLocation` whenever it changes.
+ *
+ * Must be rendered as a child of `MapContainer` so that `useMap()` resolves.
+ * Never zooms out: the target zoom is `max(currentZoom, RECENTER_MIN_ZOOM)`.
+ */
+function RecenterOnSelected({ enabled = true }: { enabled?: boolean }) {
+  const map = useMap();
+  const { state } = useStore();
+  const lat = state.selectedLocation?.latitude;
+  const lon = state.selectedLocation?.longitude;
+
+  useEffect(() => {
+    if (!enabled || lat == null || lon == null) return;
+    map.setView([lat, lon], Math.max(map.getZoom(), RECENTER_MIN_ZOOM), {
+      animate: true,
+    });
+  }, [enabled, lat, lon, map]);
+
+  return null;
+}
+
 /** Layer toggle configuration for MapCanvas. */
 export interface MapCanvasLayers {
   /** VIIRS dark-sky tile layer. Default: true. */
@@ -73,6 +100,8 @@ export interface MapCanvasProps {
   zoom: number;
   /** Layer visibility toggles. Unspecified layers default to their documented default. */
   layers?: MapCanvasLayers;
+  /** 选中地点变化时是否自动重定位。默认 true。 */
+  recenterOnSelect?: boolean;
   /** Optional children rendered inside the MapContainer (e.g. recommendation markers). */
   children?: React.ReactNode;
 }
@@ -87,6 +116,9 @@ export interface MapCanvasProps {
  *     layers independently. The `/viirs` recommendation page uses this to show only
  *     the basemap + Chinese labels + recommendation markers.
  *   - `children` prop allows injecting page-specific markers (e.g. RecommendationMarker).
+ *   - `recenterOnSelect` auto-pans the map to the store's selected location. The
+ *     `/viirs` page opts out so a previously selected location does not hijack
+ *     the nationwide overview on mount.
  */
 export default function MapCanvas({
   mapRef,
@@ -95,6 +127,7 @@ export default function MapCanvas({
   center,
   zoom,
   layers,
+  recenterOnSelect = true,
   children,
 }: MapCanvasProps) {
   const showViirs = layers?.viirs ?? true;
@@ -128,6 +161,7 @@ export default function MapCanvas({
       {showCloud && <CloudLayer />}
       <ClickHandler onSample={onSample} />
       <SampleMarker />
+      <RecenterOnSelected enabled={recenterOnSelect} />
       {children}
     </MapContainer>
   );

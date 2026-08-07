@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useMemo } from "react";
 import type { Map as LeafletMap } from "leaflet";
 import { useStore } from "@/lib/store";
@@ -33,6 +34,7 @@ const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
 export default function ViirsPage() {
   const mapRef = useRef<LeafletMap | null>(null);
   const { selectLocation, sampleAt } = useStore();
+  const router = useRouter();
   const [selectedRecId, setSelectedRecId] = useState<string | null>(null);
 
   // Compute stargazing info for the selected recommendation.
@@ -85,6 +87,8 @@ export default function ViirsPage() {
       elevation: rec.elevation,
       source: "参考点位",
       bortle: rec.bortle,
+    }).then(() => {
+      router.push("/");
     });
   };
 
@@ -99,6 +103,7 @@ export default function ViirsPage() {
             center={[34, 108]}
             zoom={4}
             layers={{ viirs: false, cloud: false, boundaries: true, recommendations: true }}
+            recenterOnSelect={false}
           >
             {RECOMMENDATIONS.map((rec) => (
               <RecommendationMarker key={rec.id} recommendation={rec} />
