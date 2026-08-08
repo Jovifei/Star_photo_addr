@@ -19,6 +19,20 @@ const eslintConfig = defineConfig([
     "scripts/**",
     "_tpl/**",
     "_broken_git/**",
+    // Local AI agent / editor tool directories (mirrors .gitignore).
+    // Flat config does not read .gitignore, and these ship bundled/obfuscated
+    // scripts that are never product source — keep local lint parity with CI.
+    ".claude/**",
+    ".codex/**",
+    ".qoder/**",
+    ".agents/**",
+    ".comet/**",
+    ".workbuddy/**",
+    "openspec/**",
+    ".github/skills/**",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "skills-lock.json",
   ]),
 ]);
 
