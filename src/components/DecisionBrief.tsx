@@ -15,7 +15,7 @@ export default function DecisionBrief({
     <div className="panel-section">
       <div className="panel-head">
         <div>
-          <span className="panel-kicker">DECISION BRIEF</span>
+          <span className="panel-kicker">决策摘要</span>
           <h3>今晚判断依据</h3>
         </div>
       </div>

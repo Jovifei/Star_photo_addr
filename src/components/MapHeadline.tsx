@@ -4,7 +4,7 @@
 export default function MapHeadline() {
   return (
     <div className="map-headline">
-      <span>PERSEIDS · 2026</span>
+      <span>英仙座 · 2026</span>
       <h1>英仙座流星雨</h1>
       <p>8月12日夜—13日黎明</p>
       <small>

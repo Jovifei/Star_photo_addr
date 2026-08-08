@@ -13,7 +13,9 @@ export default function DetailRestore({
   return (
     <button
       type="button"
-      className={`detail-restore${open ? "" : " visible"}`}
+      className={`detail-restore ${open ? "open" : "visible"}`}
+      aria-expanded={open}
+      aria-label={open ? "收起观测详情" : `展开观测详情：${label}`}
       onClick={onToggle}
     >
       {open ? "收起" : `观测详情 · ${label}`}

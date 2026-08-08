@@ -1,7 +1,7 @@
 // Deterministic Open-Meteo mock for flake-free E2E.
 // Synthesizes raw Open-Meteo responses from a real captured fixture so the
 // browser app receives contract-correct data without depending on the live API.
-import { PRESSURE_LEVELS } from "../../src/lib/clouds.js";
+import { PRESSURE_LEVELS } from "../../src/features/planner/lib/clouds.js";
 
 const SURFACE_RAW = [
   ["temperature_2m", "temperature"],
@@ -52,6 +52,42 @@ function buildSurfaceRaw(fixture, lats, lons, days) {
   });
 }
 
+function buildNormalizedForecasts(fixture, lats, lons, days) {
+  const start = Date.parse("2026-08-07T00:00:00Z");
+  const src = Array.from({ length: days * 24 }, (_, hourIndex) => ({
+    time: new Date(start + hourIndex * 3_600_000).toISOString().slice(0, 16),
+    temperature: 12 + (hourIndex % 9),
+    humidity: 55 + (hourIndex % 35),
+    dewPoint: 8 + (hourIndex % 7),
+    precipitationProbability: hourIndex % 17,
+    precipitation: 0,
+    weatherCode: 0,
+    cloudCover: (hourIndex * 11 + 9) % 90,
+    cloudLow: (hourIndex * 7 + 13) % 100,
+    cloudMid: (hourIndex * 9 + 21) % 100,
+    cloudHigh: (hourIndex * 13 + 31) % 100,
+    visibility: 20_000,
+    windSpeed: 2,
+    windGust: 4,
+  }));
+  return lats.map((lat, index) => ({
+    locationId: `api-${Number(lat).toFixed(5)}-${Number(lons[index] ?? lat).toFixed(5)}`,
+    modelLatitude: Number(lat),
+    modelLongitude: Number(lons[index] ?? lat),
+    modelElevation: fixture.surface.modelElevation + index * 7,
+    timezone: "Asia/Shanghai",
+    utcOffsetSeconds: 28800,
+    fetchedAt: "2026-08-07T08:00:00.000Z",
+    hourly: src.map((hour) => ({
+      ...hour,
+      cloudCover: perturb("cloudCover", hour.cloudCover, index * 3),
+      cloudLow: perturb("cloudLow", hour.cloudLow, index * 3),
+      cloudMid: perturb("cloudMid", hour.cloudMid, index * 3),
+      cloudHigh: perturb("cloudHigh", hour.cloudHigh, index * 3),
+    })),
+  }));
+}
+
 function buildPressureRaw(fixture, days) {
   const src = fixture.pressure.hourly.slice(0, days * 24);
   const profiles = fixture.pressure.profiles;
@@ -99,7 +135,9 @@ export async function installOpenMeteoMock(page, fixture) {
       const body = buildPressureRaw(fixture, days);
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
     } else {
-      const bodies = buildSurfaceRaw(fixture, lats, lons, days);
+      // Eight days still covers the fixed 8/12 observation night while keeping
+      // the multi-location browser fixture small enough for constrained CI.
+      const bodies = buildSurfaceRaw(fixture, lats, lons, Math.min(days, 8));
       const payload = bodies.length > 1 ? bodies : bodies[0];
       await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });
     }
@@ -123,5 +161,42 @@ export async function installGeocodingMock(page) {
         }]
       : [];
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ results }) });
+  });
+}
+
+/** Same-origin App Router contracts used by the integrated Next.js pages. */
+export async function installNextApiMock(page, fixture) {
+  await page.route("**/api/forecast?**", async (route) => {
+    const url = new URL(route.request().url());
+    const lats = (url.searchParams.get("latitude") || "").split(",").filter(Boolean);
+    const lons = (url.searchParams.get("longitude") || "").split(",").filter(Boolean);
+    const days = Math.min(16, Math.max(1, Number(url.searchParams.get("days")) || 14));
+    const locations = buildNormalizedForecasts(fixture, lats, lons, days);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ locations }),
+    });
+  });
+
+  await page.route("**/api/geocode?**", async (route) => {
+    const url = new URL(route.request().url());
+    const results = url.searchParams.get("q")?.includes("杭州")
+      ? [{
+          id: 1808926,
+          name: "杭州",
+          latitude: 30.29365,
+          longitude: 120.16142,
+          elevation: 12,
+          admin1: "浙江",
+          country: "中国",
+          timezone: "Asia/Shanghai",
+        }]
+      : [];
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ results }),
+    });
   });
 }

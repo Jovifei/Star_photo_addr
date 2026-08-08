@@ -1,6 +1,7 @@
 "use client";
 
 import { statusMeta } from "@/lib/scoring";
+import { describeDarkSkyStatus } from "@/lib/darksky";
 import type { DarkSkySample, Location, NightEvaluation } from "@/lib/types";
 import ScoreRing from "@/components/ScoreRing";
 
@@ -15,14 +16,21 @@ export default function ObservationDetails({
   location: Location | null;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
-  const mpsasText = sample?.mpsas == null ? "—" : sample.mpsas.toFixed(2);
+  // Never render a number the data does not support: nodata / unsupported
+  // region / missing bundle all show "无数据", not a plausible-looking value.
+  const hasReading = sample != null && sample.status === "ok";
+  const mpsasText =
+    hasReading && sample.mpsas != null ? sample.mpsas.toFixed(2) : "无数据";
+  const bortleText =
+    hasReading && sample.bortle != null ? `B${sample.bortle}` : "无数据";
+  const bortleName = hasReading ? (sample.bortleName ?? "") : "";
 
   return (
     <div className="panel-section">
       <div className="panel-head">
         <div>
           <span className="panel-kicker">
-            {location ? location.source : "OBSERVATION"}
+            {location ? location.source : "观测分析"}
           </span>
           <h2 className="panel-location-name">
             {location?.name ?? "尚未选择地点"}
@@ -59,16 +67,22 @@ export default function ObservationDetails({
       <div className="metric-grid">
         <div className="metric">
           <div className="label">天顶亮度</div>
-          <div className="value">
+          <div
+            className="value"
+            style={hasReading ? undefined : { fontSize: 15, color: "var(--muted)" }}
+          >
             {mpsasText}
-            <small>mpsas</small>
+            {hasReading && <small>mpsas</small>}
           </div>
         </div>
         <div className="metric">
           <div className="label">波特尔</div>
-          <div className="value">
-            {sample ? `B${sample.bortle}` : "—"}
-            <small>{sample?.bortleName ?? ""}</small>
+          <div
+            className="value"
+            style={hasReading ? undefined : { fontSize: 15, color: "var(--muted)" }}
+          >
+            {bortleText}
+            {bortleName && <small>{bortleName}</small>}
           </div>
         </div>
         <div className="metric">
@@ -100,7 +114,7 @@ export default function ObservationDetails({
         </div>
       </div>
 
-      {sample?.uncertain && (
+      {sample != null && sample.status !== "ok" && (
         <p
           style={{
             marginTop: 10,
@@ -108,7 +122,7 @@ export default function ObservationDetails({
             color: "var(--amber)",
           }}
         >
-          该位置暗夜采样不确定（中国以外或瓦片缺失），仅供参考。
+          暗夜等级无数据：{describeDarkSkyStatus(sample.status)}
         </p>
       )}
 
