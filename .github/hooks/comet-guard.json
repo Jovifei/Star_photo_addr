@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "matcher": "create|edit|str_replace_editor|apply_patch",
+        "bash": "node \"E:/project/Star_photo_addr/.github/skills/comet/scripts/comet-hook-router.mjs\" --platform \"github-copilot\" --project-root \"E:/project/Star_photo_addr\"",
+        "powershell": "node \"E:/project/Star_photo_addr/.github/skills/comet/scripts/comet-hook-router.mjs\" --platform \"github-copilot\" --project-root \"E:/project/Star_photo_addr\""
+      }
+    ]
+  }
+}
