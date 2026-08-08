@@ -735,11 +735,12 @@
   pointer-events: none;
 }
 .side-panel {
+  --side-panel-width-default: clamp(520px, 40vw, 760px);
   position: absolute;
   top: 0;
   right: 0;
   height: 100%;
-  width: clamp(460px, 38vw, 620px);
+  width: var(--side-panel-width, var(--side-panel-width-default));
   max-width: 92vw;
   background: linear-gradient(180deg, #06141bF2, #04101ae6);
   border-left: 1px solid var(--line);
@@ -752,6 +753,76 @@
   box-shadow: rgba(0, 0, 0, 0.34) 0 18px 48px;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.side-panel .panel-section {
+  padding: 20px 24px;
+}
+.side-panel .panel-location-name {
+  font-size: 24px;
+}
+.side-panel .panel-coords {
+  font-size: 13px;
+}
+.side-panel .panel-kicker {
+  font-size: 11px;
+}
+.side-panel .metric .label {
+  font-size: 12px;
+}
+.side-panel .metric .value {
+  font-size: 22px;
+}
+.side-panel .panel-reason {
+  font-size: 14px;
+  line-height: 1.6;
+}
+/* Drag handle on the left edge of the desktop panel. */
+.side-panel-resizer {
+  position: absolute;
+  top: 0;
+  left: -6px; /* widen the hit area half outside the panel edge */
+  width: 16px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 6;
+  touch-action: none;
+  display: flex;
+  justify-content: center;
+}
+.side-panel-resizer::before {
+  /* Visible grip bar */
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 56px;
+  margin-left: -2px;
+  margin-top: -28px;
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+  transition: background var(--transition), height var(--transition);
+}
+.side-panel-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6px;
+  width: 2px;
+  background: transparent;
+  transition: background var(--transition);
+}
+.side-panel-resizer:hover::before,
+.side-panel-resizer:active::before {
+  background: var(--green);
+  height: 88px;
+  margin-top: -44px;
+}
+.side-panel-resizer:active::before {
+  box-shadow: 0 0 0 4px var(--cyan-soft, rgba(121, 207, 226, 0.18));
 }
 .detail-restore {
   position: absolute;
@@ -773,7 +844,7 @@
   display: block;
 }
 .detail-restore.open {
-  right: min(92vw, clamp(460px, 38vw, 620px));
+  right: min(92vw, var(--side-panel-width, var(--side-panel-width-default)));
 }
 .detail-restore.visible {
   display: block;
@@ -1397,6 +1468,34 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+}
+.cloud-timeline-range {
+  display: inline-flex;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-deep, #04101a);
+}
+.cloud-timeline-range button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.cloud-timeline-range button:hover {
+  color: var(--text);
+}
+.cloud-timeline-range button.active {
+  background: var(--green, #79cfe2);
+  color: #02070b;
+  font-weight: 700;
 }
 .cloud-timeline-slider input[type="range"] {
   width: 100%;
@@ -1419,6 +1518,22 @@
   color: var(--amber);
   text-align: center;
   padding: 2px 0;
+}
+.cloud-overlay-error {
+  position: absolute;
+  left: 50%;
+  top: 72px;
+  transform: translateX(-50%);
+  z-index: 600;
+  max-width: min(80vw, 520px);
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text);
+  background: rgba(120, 40, 32, 0.82);
+  border: 1px solid var(--red);
+  border-radius: var(--radius);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
 }
 .cloud-timeline-layers {
   display: flex;
@@ -1813,6 +1928,26 @@
 .candidate-row-delete:hover {
   color: var(--red);
   background: #0c1e27;
+}
+.candidate-row-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--green-soft);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.candidate-row-track:hover {
+  background: rgba(121, 207, 226, 0.12);
+  border-color: var(--green);
+  color: var(--text);
 }
 
 /* ---------- Mobile ---------- */

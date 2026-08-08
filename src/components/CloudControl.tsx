@@ -27,10 +27,7 @@ const MODELS: { id: "icon" | "gfs" | "aifs"; label: string }[] = [
  */
 export default function CloudControl() {
   const { state, setCloud } = useStore();
-  const { cloudState, selectedLocation, selectedNight, forecast, cloudGrid } =
-    state;
-
-  const ready = Boolean(selectedLocation && selectedNight);
+  const { cloudState, selectedNight, forecast, cloudGrid } = state;
 
   // Compute average cloud values at the current time index.
   let highAvg = 0;
@@ -64,7 +61,6 @@ export default function CloudControl() {
           type="button"
           className="cloud-master-toggle"
           aria-pressed={cloudState.enabled}
-          disabled={!ready}
           onClick={() => setCloud({ enabled: !cloudState.enabled })}
         >
           <Cloud size={16} aria-hidden="true" />
@@ -72,10 +68,7 @@ export default function CloudControl() {
         </button>
       </div>
 
-      {!ready ? (
-        <div className="cloud-hint">请先选择观测地点和日期以启用未来云图</div>
-      ) : (
-        <div className={`cloud-body${cloudState.enabled ? "" : " disabled"}`}>
+      <div className={`cloud-body${cloudState.enabled ? "" : " disabled"}`}>
           {/* Model selector */}
           <div className="cloud-field">
             <label>预报模型</label>
@@ -125,7 +118,6 @@ export default function CloudControl() {
             />
           </div>
         </div>
-      )}
     </div>
   );
 }

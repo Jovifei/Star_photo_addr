@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowUpRight } from "lucide-react";
 import type { CityCandidateStatus } from "@/data/cities";
 import type { CityCandidate } from "@/lib/types";
 
@@ -23,6 +24,7 @@ export default function CandidateList({
   activeId,
   onPick,
   onRemove,
+  onTrack,
 }: {
   candidates: CityCandidate[];
   status: CityCandidateStatus;
@@ -30,6 +32,8 @@ export default function CandidateList({
   onPick: (candidate: CityCandidate) => void;
   /** Optional remove handler. If provided, each row shows a ✕ delete button. */
   onRemove?: (id: string) => void;
+  /** Optional "track in planner" handler. If provided, each row shows a track button. */
+  onTrack?: (candidate: CityCandidate) => void;
 }) {
   const hasRows = status === "ok" && candidates.length > 0;
 
@@ -69,6 +73,21 @@ export default function CandidateList({
                 <span className="bortle-chip">
                   {candidate.bortle > 0 ? `B${candidate.bortle}` : "—"}
                 </span>
+                {onTrack && (
+                  <button
+                    type="button"
+                    className="candidate-row-track"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onTrack(candidate);
+                    }}
+                    aria-label={`将 ${candidate.name} 加入星野决策跟踪`}
+                    title="加入星野决策跟踪"
+                  >
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                    跟踪
+                  </button>
+                )}
                 {onRemove && (
                   <button
                     type="button"

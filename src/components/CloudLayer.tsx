@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Rectangle, useMap, useMapEvents } from "react-leaflet";
 import { useStore } from "@/lib/store";
 import {
-  forecastDaysForNight,
+  forecastDaysForRange,
   generateGridBounds,
   fetchCloudGrid,
 } from "@/lib/cloudGrid";
+import { nightRangeKeys } from "@/lib/nighttime";
 import CloudCanvasOverlay from "@/components/CloudCanvasOverlay";
 
 /**
@@ -26,11 +27,13 @@ export default function CloudLayer() {
   const { state, setCloudGrid, setCloudGridLoading } = useStore();
   const { cloudState, selectedNight, cloudGrid, cloudGridLoading } = state;
   const map = useMap();
+  const [error, setError] = useState<string | null>(null);
 
   // Debounce timer ref for re-sampling on map move.
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track the night key used for the current grid data to avoid stale data.
-  const gridNightRef = useRef<string | null>(null);
+  // Signature of the currently loaded grid, so we don't re-fetch on every
+  // unrelated render. Includes both the start night and the range count.
+  const gridSigRef = useRef<string | null>(null);
 
   // ----- Grid sampling logic -----
   const performSampling = async () => {
@@ -38,32 +41,35 @@ export default function CloudLayer() {
 
     const bounds = map.getBounds();
     const { samples } = generateGridBounds(bounds, 5, 6);
+    const nights = nightRangeKeys(selectedNight, cloudState.range);
 
     setCloudGridLoading(true);
+    setError(null);
     try {
       const data = await fetchCloudGrid(
         samples,
-        selectedNight,
-        forecastDaysForNight(selectedNight),
+        nights,
+        forecastDaysForRange(selectedNight, cloudState.range),
       );
-      gridNightRef.current = selectedNight;
+      gridSigRef.current = `${selectedNight}|${cloudState.range}`;
       setCloudGrid(data);
-    } catch {
-      // Silently fail — the overlay just won't render.
+    } catch (err) {
+      // Surface a small notice instead of silently leaving a blank map.
+      setError(err instanceof Error ? err.message : "云图数据请求失败");
       setCloudGrid(null);
     } finally {
       setCloudGridLoading(false);
     }
   };
 
-  // ----- Trigger initial sampling when cloud is enabled -----
+  // ----- Trigger initial / re-sampling when cloud is enabled or range/night changes -----
   useEffect(() => {
     if (!cloudState.enabled || !map || !selectedNight) return;
-    // Only sample if we don't have data yet, or the night changed.
-    if (cloudGrid && gridNightRef.current === selectedNight) return;
+    const sig = `${selectedNight}|${cloudState.range}`;
+    if (cloudGrid && gridSigRef.current === sig) return;
     void performSampling();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cloudState.enabled, selectedNight, map]);
+  }, [cloudState.enabled, selectedNight, cloudState.range, map]);
 
   // ----- Map move/zoom handler with 500ms debounce -----
   useMapEvents({
@@ -127,6 +133,11 @@ export default function CloudLayer() {
       {cloudGridLoading && !cloudGrid && (
         // Loading indicator will be handled by the timeline/control UI.
         null
+      )}
+      {error && !cloudGrid && (
+        <div className="cloud-overlay-error" role="status">
+          云图加载失败：{error}
+        </div>
       )}
     </>
   );

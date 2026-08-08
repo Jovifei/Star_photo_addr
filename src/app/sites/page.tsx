@@ -11,6 +11,7 @@ import RecommendationMarker from "@/components/RecommendationMarker";
 import { RECOMMENDATIONS } from "@/data/recommendations";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
 import { formatNightLabel } from "@/lib/nighttime";
+import { buildPlannerHref } from "@/lib/utils";
 
 // Leaflet touches `window`, so the map is client-only.
 const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
@@ -247,14 +248,35 @@ export default function ViirsPage() {
                 <span className="recommendation-card-label">最佳季节：</span>
                 {selectedRec.bestSeason}
               </div>
-              <button
-                type="button"
-                className="recommendation-card-button"
-                onClick={handleNavigateToMain}
-                style={{ marginTop: 12, width: "100%" }}
+              <div
+                style={{
+                  marginTop: 12,
+                  display: "flex",
+                  gap: 8,
+                }}
               >
-                前往逐星深度分析 →
-              </button>
+                <a
+                  className="recommendation-card-button"
+                  href={buildPlannerHref({
+                    latitude: selectedRec.latitude,
+                    longitude: selectedRec.longitude,
+                    name: selectedRec.name,
+                    elevation: selectedRec.elevation,
+                    night: state.selectedNight,
+                  })}
+                  style={{ flex: 1, textDecoration: "none", textAlign: "center" }}
+                >
+                  在星野决策中跟踪 ↗
+                </a>
+                <button
+                  type="button"
+                  className="recommendation-card-button"
+                  onClick={handleNavigateToMain}
+                  style={{ flex: 1 }}
+                >
+                  前往逐星深度分析 →
+                </button>
+              </div>
             </div>
           )}
         </aside>

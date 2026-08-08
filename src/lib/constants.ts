@@ -84,15 +84,18 @@ export const FORECAST_CACHE_MAX_AGE_MS = 60 * 60 * 1000;
 export const SELECTED_LOCATION_STORAGE_KEY = "perseids-selected-location-v2";
 export const CUSTOM_CANDIDATES_STORAGE_KEY = "perseids-custom-candidates-v1";
 
-/** Default interactive cloud state (Phase 2 — three-layer independent control). */
+/** Default interactive cloud state (three-layer independent control).
+ *  Cloud is ON by default: on load the map samples the current viewport and
+ *  renders the coverage overlay immediately — no "select a location first" gate. */
 export const DEFAULT_CLOUD_STATE: CloudState = {
-  enabled: false,
+  enabled: true,
   model: "icon",
   highEnabled: true,
   midEnabled: true,
   lowEnabled: true,
   timeIndex: 0,
   playing: false,
+  range: 1,
 };
 
 /** Cloud-coverage colour stops for Canvas IDW rendering (value 0-100 → colour). */

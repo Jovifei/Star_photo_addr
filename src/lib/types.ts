@@ -199,10 +199,12 @@ export interface CloudState {
   midEnabled: boolean;
   /** Low-level cloud layer toggle. */
   lowEnabled: boolean;
-  /** Current timeline index (0 = 20:00, 9 = 05:00; 10 ticks total). */
+  /** Current timeline index (0 = 20:00 of the first night, 9 = 05:00; 10 ticks per night). */
   timeIndex: number;
   /** Whether the timeline is auto-playing. */
   playing: boolean;
+  /** How many nights the cloud timeline covers, starting at `selectedNight`. 1 = one night (default). */
+  range: 1 | 5 | 7;
 }
 
 /** A pre-computed dark-sky candidate city (from cities.json). */
@@ -257,6 +259,8 @@ export interface CloudGridData {
   bounds: { north: number; south: number; east: number; west: number };
   /** Hourly forecast for each sampling point (one-to-one with `samples`). */
   forecasts: LocationForecast[];
+  /** Night keys covered by `forecasts` (multi-night ranges supported). */
+  nightKeys: string[];
   /** Data fetch timestamp. */
   fetchedAt: string;
 }

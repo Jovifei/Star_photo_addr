@@ -25,7 +25,8 @@ interface CloudCanvasOverlayProps {
  *
  * This component does NOT use a Leaflet L.Layer extension. Instead it creates
  * an absolutely-positioned `<canvas>` element on top of the map container and
- * redraws on every map move/zoom and on every prop change.
+ * redraws on prop changes AND on every map move/zoom/resize (rAF-throttled) so
+ * the coverage stays aligned with the basemap while panning.
  *
  * Rendering pipeline:
  *   1. Convert all sample points to pixel coordinates via `map.latLngToContainerPoint`.
@@ -36,9 +37,6 @@ interface CloudCanvasOverlayProps {
  *   4. Map the interpolated value to a colour and fill the pixel block.
  *   5. Layers are composited using `globalCompositeOperation: 'screen'` for
  *      additive blending.
- *
- * Map `moveend`/`zoomend` events trigger a debounced 500ms re-sampling (handled
- * by the parent component which re-fetches grid data).
  */
 export default function CloudCanvasOverlay({
   gridData,
@@ -49,15 +47,24 @@ export default function CloudCanvasOverlay({
 }: CloudCanvasOverlayProps) {
   const map = useMap();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rafRef = useRef<number | null>(null);
 
-  // Redraw function — called on every dependency change.
+  // Keep latest props in a ref so the move/zoom listener always redraws with
+  // current data without re-subscribing on every prop change.
+  const propsRef = useRef({ gridData, timeIndex, highEnabled, midEnabled, lowEnabled });
   useEffect(() => {
-    if (!map || !gridData || !canvasRef.current) return;
+    propsRef.current = { gridData, timeIndex, highEnabled, midEnabled, lowEnabled };
+  }, [gridData, timeIndex, highEnabled, midEnabled, lowEnabled]);
+
+  const draw = () => {
+    const { gridData: data, timeIndex: ti, highEnabled: h, midEnabled: m, lowEnabled: l } =
+      propsRef.current;
+    const canvas = canvasRef.current;
+    if (!map || !data || !canvas) return;
 
     const size = map.getSize();
-    const canvas = canvasRef.current;
+    if (size.x === 0 || size.y === 0) return;
 
-    // Match canvas size to map container.
     canvas.width = size.x;
     canvas.height = size.y;
     canvas.style.width = `${size.x}px`;
@@ -66,11 +73,10 @@ export default function CloudCanvasOverlay({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear previous render.
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Convert sample points to pixel coordinates.
-    const samplePoints = gridData.samples.map((sample) => {
+    const samplePoints = data.samples.map((sample) => {
       const point = map.latLngToContainerPoint([
         sample.latitude,
         sample.longitude,
@@ -78,40 +84,34 @@ export default function CloudCanvasOverlay({
       return { x: point.x, y: point.y };
     });
 
-    // Get cloud values at the current time index.
-    const values = getValuesAtTime(gridData, timeIndex);
-
-    // Render step: compute IDW every STEP pixels and fill a STEP×STEP block.
+    const values = getValuesAtTime(data, ti);
     const STEP = 6;
 
-    // Render each enabled layer with 'screen' compositing.
     const layers: Array<{
       id: "high" | "mid" | "low";
       enabled: boolean;
       values: number[];
     }> = [
-      { id: "low", enabled: lowEnabled, values: values.low },
-      { id: "mid", enabled: midEnabled, values: values.mid },
-      { id: "high", enabled: highEnabled, values: values.high },
+      { id: "low", enabled: l, values: values.low },
+      { id: "mid", enabled: m, values: values.mid },
+      { id: "high", enabled: h, values: values.high },
     ];
 
     for (const layer of layers) {
       if (!layer.enabled) continue;
 
-      // Build the IDW input points for this layer.
       const idwPoints = samplePoints.map((sp, i) => ({
         x: sp.x,
         y: sp.y,
         value: layer.values[i] ?? 0,
       }));
 
-      // Set compositing for additive blending.
       ctx.globalCompositeOperation = "screen";
 
       for (let py = 0; py < canvas.height; py += STEP) {
         for (let px = 0; px < canvas.width; px += STEP) {
           const value = idwInterpolate(px + STEP / 2, py + STEP / 2, idwPoints, 2);
-          if (value < 1) continue; // Skip near-zero values for performance.
+          if (value < 1) continue;
 
           const color = cloudLayerValueToColor(layer.id, value);
           ctx.fillStyle = color;
@@ -120,28 +120,42 @@ export default function CloudCanvasOverlay({
       }
     }
 
-    // Reset compositing.
     ctx.globalCompositeOperation = "source-over";
+  };
+
+  // Redraw whenever the relevant props change.
+  useEffect(() => {
+    draw();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, gridData, timeIndex, highEnabled, midEnabled, lowEnabled]);
 
-  // Update canvas position on map move.
+  // Redraw (rAF-throttled) while the map is moved / zoomed / resized so the
+  // cloud field tracks the basemap instead of staying at stale pixel positions.
   useEffect(() => {
-    if (!map || !canvasRef.current) return;
+    if (!map) return;
 
-    const updateTransform = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      // The canvas covers the entire map container, so no offset is needed.
-      // Leaflet's container point system is relative to the container's top-left.
-      // We just need to ensure the canvas stays aligned.
+    const schedule = () => {
+      if (rafRef.current != null) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        draw();
+      });
     };
 
-    map.on("move", updateTransform);
-    map.on("zoom", updateTransform);
+    map.on("move", schedule);
+    map.on("zoom", schedule);
+    map.on("resize", schedule);
+
     return () => {
-      map.off("move", updateTransform);
-      map.off("zoom", updateTransform);
+      map.off("move", schedule);
+      map.off("zoom", schedule);
+      map.off("resize", schedule);
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
 
   if (!gridData) return null;
@@ -161,10 +175,7 @@ export default function CloudCanvasOverlay({
         zIndex: 350,
       }}
     >
-      <canvas
-        ref={canvasRef}
-        style={{ display: "block" }}
-      />
+      <canvas ref={canvasRef} style={{ display: "block" }} />
     </div>
   );
 }

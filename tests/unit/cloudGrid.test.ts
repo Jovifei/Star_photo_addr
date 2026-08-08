@@ -3,6 +3,7 @@ import {
   averageLayer,
   cloudLayerValueToColor,
   forecastDaysForNight,
+  generateGridBounds,
   getValuesAtTime,
   idwInterpolate,
 } from "@/lib/cloudGrid";
@@ -39,6 +40,7 @@ describe("云图网格与时间轴", () => {
     const grid = {
       samples: [{ latitude: 30, longitude: 120 }],
       bounds: { north: 30, south: 30, east: 120, west: 120 },
+      nightKeys: ["2026-08-12"],
       forecasts: [{
         locationId: "test",
         modelLatitude: 30,
@@ -62,5 +64,30 @@ describe("云图网格与时间轴", () => {
     expect(forecastDaysForNight("2026-08-07", now)).toBe(2);
     expect(forecastDaysForNight("2026-08-12", now)).toBe(7);
     expect(forecastDaysForNight("2026-09-30", now)).toBe(16);
+  });
+
+  it("地图被拖到日期变更线外时，采样经度仍归一化到 [-180,180]", () => {
+    // Simulate a Leaflet bounds whose east exceeds 180 (worldCopyJump disabled).
+    const bounds = {
+      getNorth: () => 60,
+      getSouth: () => 20,
+      getEast: () => 233,
+      getWest: () => 80,
+    };
+    const { samples } = generateGridBounds(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      bounds as any,
+      3,
+      4,
+    );
+    for (const sample of samples) {
+      expect(sample.longitude).toBeGreaterThanOrEqual(-180);
+      expect(sample.longitude).toBeLessThanOrEqual(180);
+      expect(sample.latitude).toBeGreaterThanOrEqual(-90);
+      expect(sample.latitude).toBeLessThanOrEqual(90);
+    }
+    // The easternmost column should wrap, not be 233 which Open-Meteo rejects.
+    const lons = samples.map((s) => s.longitude);
+    expect(Math.max(...lons)).toBeLessThanOrEqual(180);
   });
 });

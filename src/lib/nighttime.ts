@@ -77,6 +77,22 @@ export function isInNight(timeString: string, nightKey: string): boolean {
   );
 }
 
+/** The `count` consecutive night keys starting at `startKey` (inclusive). */
+export function nightRangeKeys(startKey: string, count: number): string[] {
+  return Array.from({ length: Math.max(1, count) }, (_, i) =>
+    addDays(startKey, i),
+  );
+}
+
+/** Whether an hourly string belongs to ANY of the given night keys. */
+export function isInNightRange(timeString: string, nightKeys: string[]): boolean {
+  return nightKeys.some((key) => isInNight(timeString, key));
+}
+
+/** Number of hourly ticks in a night range: `count` nights × 10 hours each. */
+export const HOURS_PER_NIGHT = NIGHT_START + (24 - NIGHT_START) + (NIGHT_END + 1);
+// 20..23 (4h) + 00..05 (6h) = 10
+
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 /** Human-readable night window, e.g. "20:00–次日05:00". */

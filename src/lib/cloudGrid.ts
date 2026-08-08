@@ -16,7 +16,11 @@
 // performs an HTTP request.
 
 import type L from "leaflet";
-import { isInNight } from "@/lib/nighttime";
+import {
+  isInNight,
+  isInNightRange,
+  nightRangeKeys,
+} from "@/lib/nighttime";
 import type {
   CloudGridData,
   CloudGridSample,
@@ -36,10 +40,14 @@ export function generateGridBounds(
   rows = 5,
   cols = 6,
 ): { samples: CloudGridSample[]; rect: CloudGridData["bounds"] } {
-  const north = bounds.getNorth();
-  const south = bounds.getSouth();
-  const east = bounds.getEast();
-  const west = bounds.getWest();
+  // Clamp the viewport to a valid geographic range. Leaflet reports east > 180
+  // (or west < -180) when the map is panned beyond the dateline with
+  // worldCopyJump disabled; feeding those longitudes to Open-Meteo returns 502
+  // and the cloud overlay silently fails to render.
+  const north = Math.min(90, bounds.getNorth());
+  const south = Math.max(-90, bounds.getSouth());
+  const east = Math.min(180, Math.max(-180, bounds.getEast()));
+  const west = Math.min(180, Math.max(-180, bounds.getWest()));
 
   const samples: CloudGridSample[] = [];
   const latStep = (north - south) / (rows - 1);
@@ -47,9 +55,15 @@ export function generateGridBounds(
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
+      const latitude = south + latStep * r;
+      // Wrap longitude into [-180, 180] so a dateline-crossing view still
+      // produces valid sample points.
+      let longitude = west + lngStep * c;
+      if (longitude > 180) longitude -= 360;
+      if (longitude < -180) longitude += 360;
       samples.push({
-        latitude: south + latStep * r,
-        longitude: west + lngStep * c,
+        latitude: Math.max(-90, Math.min(90, latitude)),
+        longitude,
       });
     }
   }
@@ -65,17 +79,17 @@ export function generateGridBounds(
  *
  * Reuses the existing `/api/forecast` route, which already supports
  * comma-separated multi-point requests. The returned forecasts are filtered
- * to only the hours belonging to the specified night (20:00 → 05:00).
+ * to only the hours belonging to any of the requested nights (20:00 → 05:00).
  *
  * @param samples - Grid sample coordinates.
- * @param nightKey - The night key (YYYY-MM-DD) to filter hours for.
- * @param days - Number of forecast days to request (default 2).
+ * @param nightKeys - Night keys (YYYY-MM-DD); the timeline covers each in turn.
+ * @param days - Number of forecast days to request.
  * @returns Complete CloudGridData with filtered forecasts.
  */
 export async function fetchCloudGrid(
   samples: CloudGridSample[],
-  nightKey: string,
-  days = 2,
+  nightKeys: string[],
+  days: number,
 ): Promise<CloudGridData> {
   const latitudes = samples.map((s) => s.latitude).join(",");
   const longitudes = samples.map((s) => s.longitude).join(",");
@@ -89,10 +103,13 @@ export async function fetchCloudGrid(
   const data = await response.json();
   const forecasts: LocationForecast[] = (data.locations ?? []) as LocationForecast[];
 
-  // Filter each forecast's hourly array to only the night hours.
+  // Filter each forecast's hourly array to the requested nights and keep them
+  // in chronological order so the timeline plays back correctly.
   const filteredForecasts = forecasts.map((forecast) => ({
     ...forecast,
-    hourly: forecast.hourly.filter((hour) => isInNight(hour.time, nightKey)),
+    hourly: forecast.hourly
+      .filter((hour) => isInNightRange(hour.time, nightKeys))
+      .sort((a, b) => a.time.localeCompare(b.time)),
   }));
 
   // Compute the bounding rectangle from the samples.
@@ -108,8 +125,27 @@ export async function fetchCloudGrid(
       west: Math.min(...longitudesNum),
     },
     forecasts: filteredForecasts,
+    nightKeys,
     fetchedAt: new Date().toISOString(),
   };
+}
+
+/** Number of forecast days required to cover a range of nights from `startKey`. */
+export function forecastDaysForRange(
+  startKey: string,
+  rangeCount: number,
+  now = new Date(),
+): number {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  });
+  const todayKey = formatter.format(now);
+  const today = Date.parse(`${todayKey}T00:00:00Z`);
+  const target = Date.parse(`${startKey}T00:00:00Z`);
+  if (!Number.isFinite(target)) return Math.min(16, rangeCount + 2);
+  const leadDays = Math.floor((target - today) / 86_400_000);
+  return Math.min(16, Math.max(2, leadDays + rangeCount + 1));
 }
 
 /** Number of forecast days required to include the selected evening. */
@@ -191,14 +227,12 @@ export function idwInterpolate(
 
 /**
  * Extract the three-layer cloud values for all sample points at a given
- * time index within the night window.
- *
- * The time index (0-9) maps to the night hours (20:00 → 05:00, 10 ticks).
- * The forecasts in `gridData` are assumed to be pre-filtered to night hours
- * (done by `fetchCloudGrid`).
+ * time index. For an N-night range each night contributes 10 hours, so the
+ * index ranges over 0..(10*N-1) and maps directly onto the chronologically
+ * sorted, night-filtered `hourly` arrays produced by `fetchCloudGrid`.
  *
  * @param gridData - The complete grid sampling data.
- * @param timeIndex - Index into the night-hour array (0 = 20:00, 9 = 05:00).
+ * @param timeIndex - Flat index into the night-hour array.
  * @returns Three arrays of cloud coverage values (0-100), one per layer.
  */
 export function getValuesAtTime(

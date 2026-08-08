@@ -65,14 +65,12 @@ test("三个产品入口统一，数据来源弹窗真正居中且高于页面",
   await expect(dialog).toBeHidden();
 });
 
-test("地图云图覆盖范围、三层比例和跨午夜时间轴联动", async ({ page }) => {
+test("地图云图默认开启：三层比例随跨午夜时间轴变化", async ({ page }) => {
   await page.goto("/");
-  await selectHangzhou(page);
-  await page.getByRole("button", { name: "收起观测详情" }).click();
-
-  await page.locator(".cloud-master-toggle").click();
+  // Cloud is ON by default; the timeline and overlay render without selecting
+  // a location first (the current viewport is sampled immediately).
   const slider = page.getByRole("slider", { name: "云图时间轴" });
-  await expect(slider).toBeVisible();
+  await expect(slider).toBeVisible({ timeout: 15000 });
   await expect(slider).toHaveAttribute("min", "0");
   await expect(slider).toHaveAttribute("max", "9");
   await expect(page.locator(".cloud-timeline-layer")).toHaveCount(3);
@@ -80,11 +78,20 @@ test("地图云图覆盖范围、三层比例和跨午夜时间轴联动", async
   await expect(page.locator(".cloud-timeline")).toContainText("中云");
   await expect(page.locator(".cloud-timeline")).toContainText("低云");
 
-  const valuesBefore = await page.locator(".cloud-timeline-layer-value").allTextContents();
-  await slider.fill("5");
-  await expect(page.locator(".cloud-canvas-overlay")).toHaveAttribute("data-time-index", "5", {
+  // The master toggle can still turn the cloud layer off and back on.
+  await page.locator(".cloud-master-toggle").click();
+  await expect(slider).toBeHidden();
+  await page.locator(".cloud-master-toggle").click();
+  await expect(slider).toBeVisible();
+
+  // Overlay canvas renders at a real size, and moving the timeline updates
+  // both the data-time-index and the three layer proportion readouts.
+  await expect(page.locator(".cloud-canvas-overlay canvas")).toBeVisible({
     timeout: 15000,
   });
+  const valuesBefore = await page.locator(".cloud-timeline-layer-value").allTextContents();
+  await slider.fill("5");
+  await expect(page.locator(".cloud-canvas-overlay")).toHaveAttribute("data-time-index", "5");
   const valuesAfter = await page.locator(".cloud-timeline-layer-value").allTextContents();
   expect(valuesAfter).not.toEqual(valuesBefore);
   const canvasSize = await page.locator(".cloud-canvas-overlay canvas").evaluate((canvas) => ({

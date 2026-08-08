@@ -143,6 +143,13 @@ export default function MapCanvas({
       maxZoom={12}
       zoomControl
       worldCopyJump={false}
+      // Keep the view within one world so cloud sampling longitudes stay valid
+      // (the grid clamps too, but this prevents panning into empty oceans).
+      maxBounds={[
+        [-85, -180],
+        [85, 180],
+      ]}
+      maxBoundsViscosity={1.0}
       className="map-canvas"
       whenReady={() => onReady?.()}
     >
