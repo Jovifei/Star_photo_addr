@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateHour } from "../src/lib/scoring";
+import { evaluateHour } from "../../src/features/planner/lib/scoring.js";
 
 const location = { latitude: 30.026, longitude: 119.007, elevation: 1489.9 };
 const good = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGeocodingResult } from "../src/lib/geocoding";
+import { normalizeGeocodingResult } from "../../src/features/planner/lib/geocoding.js";
 
 describe("geocoding normalization", () => {
   it("keeps coordinates, elevation and readable administrative context", () => {

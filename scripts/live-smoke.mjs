@@ -1,5 +1,8 @@
-import { PRESET_LOCATIONS } from "../src/data/locations.js";
-import { fetchPressureForecast, fetchSurfaceForecasts } from "../src/lib/openMeteo.js";
+import { PRESET_LOCATIONS } from "../src/features/planner/data/locations.js";
+import {
+  fetchPressureForecast,
+  fetchSurfaceForecasts,
+} from "../src/features/planner/lib/openMeteo.js";
 
 const locations = PRESET_LOCATIONS.slice(0, 2);
 const surface = await fetchSurfaceForecasts(locations, 2);

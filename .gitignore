@@ -38,3 +38,21 @@ _broken_git/
 
 # WorkBuddy assistant memory (local only)
 .workbuddy/
+
+# Temporary probe/debug files
+.ps-*.txt
+.gs-tmp.txt
+.nodeopt-result.txt
+.del-check.txt
+.comet/
+.agents/
+.qoder/
+/.github/skills/comet-*/
+/openspec/
+/docs/superpowers/
+/AGENTS.md
+/CLAUDE.md
+/skills-lock.json
+dist_old_*/
+dist_prebak_*/
+dist.bak/

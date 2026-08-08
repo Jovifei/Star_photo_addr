@@ -35,19 +35,28 @@ export function nextNightKeys(days, now = new Date()) {
 export function isInNight(timeString, nightKey) {
   const next = addDays(nightKey, 1);
   return (
-    (timeString.startsWith(nightKey) && Number(timeString.slice(11, 13)) >= 18) ||
-    (timeString.startsWith(next) && Number(timeString.slice(11, 13)) <= 6)
+    (timeString.startsWith(nightKey) && Number(timeString.slice(11, 13)) >= 20) ||
+    (timeString.startsWith(next) && Number(timeString.slice(11, 13)) <= 5)
   );
 }
 
 export function formatNightLabel(dateKey, compact = false) {
   const date = new Date(`${dateKey}T12:00:00${CHINA_OFFSET}`);
-  return new Intl.DateTimeFormat("zh-CN", {
+  const base = new Intl.DateTimeFormat("zh-CN", {
     timeZone: "Asia/Shanghai",
     month: compact ? "numeric" : "long",
     day: "numeric",
-    weekday: compact ? undefined : "short",
+    weekday: "short",
   }).format(date);
+  if (compact) {
+    const [, month, day] = dateKey.split("-").map(Number);
+    const weekday = new Intl.DateTimeFormat("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      weekday: "short",
+    }).format(date);
+    return `${month}/${day} ${weekday}夜`;
+  }
+  return `${base} 夜间（20:00–次日05:00）`;
 }
 
 export function formatHour(timeString) {

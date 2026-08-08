@@ -12,24 +12,24 @@ Write-Host "Node: $(node --version)"
 Write-Host "npm:  $(npm --version)"
 
 $nodeMajor = [int]((node --version).TrimStart("v").Split(".")[0])
-if ($nodeMajor -lt 22) {
-    throw "Node.js 22 or newer is required. Current: $(node --version)"
+if ($nodeMajor -lt 24) {
+    throw "Node.js 24 or newer is required. Current: $(node --version)"
 }
 
 Write-Host "[2/7] Installing locked dependencies..." -ForegroundColor Cyan
 npm ci
 
-Write-Host "[3/7] Running algorithm unit tests (no build required)..." -ForegroundColor Cyan
-npm run test:unit
+Write-Host "[3/7] Running lint, typecheck, unit tests and production build..." -ForegroundColor Cyan
+npm run check
 
 Write-Host "[4/7] Calling the real Open-Meteo API..." -ForegroundColor Cyan
 npm run test:live
 
-Write-Host "[5/7] Building production assets (produces dist/)..." -ForegroundColor Cyan
-npm run build
+Write-Host "[5/7] Checking Playwright browser tests..." -ForegroundColor Cyan
+npm run test:e2e
 
-Write-Host "[6/7] Running Sites Worker packaging test (needs dist/ from step 5)..." -ForegroundColor Cyan
-npm run test:sites
+Write-Host "[6/7] Checking production health route contract..." -ForegroundColor Cyan
+Write-Host "The /healthz runtime check is covered by Docker in step 7." -ForegroundColor DarkGray
 
 Write-Host "[7/7] Checking Docker Compose when available..." -ForegroundColor Cyan
 if (Get-Command docker -ErrorAction SilentlyContinue) {

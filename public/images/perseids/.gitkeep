@@ -1,0 +1,18 @@
+# Drop-in point for the licensed dark-sky asset bundle.
+#
+# This directory is intentionally EMPTY. No variant found in git history had a
+# confirmed redistribution licence — see docs/PUBLIC_ASSETS_AUDIT.md for the
+# per-asset provenance record and the degradation each missing group triggers.
+#
+# Expected layout once a licensed bundle is obtained:
+#   data/vnp46a4/2024/{z}/{x}/{y}.webp          -> NEXT_PUBLIC_ASSET_VIIRS_TILES=1
+#   data/vnp46a4/2024-values/8/{x}/{y}.webp     -> NEXT_PUBLIC_ASSET_VIIRS_TILES=1
+#   data/world-atlas-2015.webp                  -> NEXT_PUBLIC_ASSET_WORLD_ATLAS=1
+#   data/cities.json                            -> NEXT_PUBLIC_ASSET_CITY_CANDIDATES=1
+#   data/world-country-boundaries.geojson       -> NEXT_PUBLIC_ASSET_BOUNDARIES=1
+#   data/china-province-boundaries-wgs84.geojson
+#   data/china-prefecture-boundaries.index.json
+#   data/boundaries/prefectures/{adcode}.geojson
+#
+# Chinese administrative boundaries additionally require a valid 审图号 before
+# they may be redistributed or rendered.

@@ -17,18 +17,41 @@ export interface Location {
   bortle?: number;
 }
 
-/** Result of sampling the night-sky brightness at a coordinate. */
+/**
+ * Why a dark-sky sample does or does not carry a trustworthy value.
+ * - `ok`                 : a real pixel was read and decoded.
+ * - `nodata`             : the pixel exists but encodes nodata (value 0).
+ * - `unsupported-region` : outside the China VIIRS grid; encoding unknown.
+ * - `layer-unavailable`  : the local raster bundle is not installed at all.
+ */
+export type DarkSkyStatus =
+  | "ok"
+  | "nodata"
+  | "unsupported-region"
+  | "layer-unavailable";
+
+/**
+ * Result of sampling the night-sky brightness at a coordinate.
+ *
+ * IMPORTANT: `bortle`/`bortleName`/`mpsas` are `null` whenever `status !== "ok"`.
+ * Nodata must never be presented as a trustworthy B9 / SQM reading — see
+ * `docs/LIGHT_POLLUTION_DATA_DECISION.md` ("无数据、过期、质量差必须有独立状态，
+ * 不能默认为『暗』").
+ */
 export interface DarkSkySample {
   latitude: number;
   longitude: number;
-  /** 14..22 mag/arcsec²; null = nodata / unknown. */
+  /** 14..22 mag/arcsec²; null = nodata / unknown. Never fabricated. */
   mpsas: number | null;
-  /** 1..9 (falls back to 9 with `uncertain=true` when mpsas is null). */
-  bortle: number;
-  bortleName: string;
+  /** 1..9, or null when no trustworthy classification exists. */
+  bortle: number | null;
+  /** Class name, or null when `bortle` is null. */
+  bortleName: string | null;
   source: "viirs-2024" | "world-atlas-2015" | "none";
-  /** True for non-China samples (encoding unknown) or failed tile reads. */
-  uncertain?: boolean;
+  /** Discriminator explaining the absence of a value. */
+  status: DarkSkyStatus;
+  /** True whenever the sample must not be used as a trustworthy reading. */
+  uncertain: boolean;
 }
 
 /** A single Bortle-equivalent class. */
@@ -159,12 +182,27 @@ export interface PressureLevel {
   heightMsl?: number;
 }
 
-/** Cloud-control interactive state (Phase 1 simplified rendering). */
+/**
+ * Cloud-control interactive state (Phase 2 — three-layer independent control).
+ * The old `variable` single-select field has been replaced by three boolean
+ * toggles (`highEnabled`/`midEnabled`/`lowEnabled`) and a `playing` flag for
+ * the timeline auto-advance.
+ */
 export interface CloudState {
+  /** Master switch (controls the entire cloud feature). */
   enabled: boolean;
+  /** Forecast model. */
   model: "icon" | "gfs" | "aifs";
-  variable: "total" | "low" | "mid" | "high";
+  /** High-level cloud layer toggle. */
+  highEnabled: boolean;
+  /** Mid-level cloud layer toggle. */
+  midEnabled: boolean;
+  /** Low-level cloud layer toggle. */
+  lowEnabled: boolean;
+  /** Current timeline index (0 = 20:00, 9 = 05:00; 10 ticks total). */
   timeIndex: number;
+  /** Whether the timeline is auto-playing. */
+  playing: boolean;
 }
 
 /** A pre-computed dark-sky candidate city (from cities.json). */
@@ -180,3 +218,72 @@ export interface CityCandidate {
   kind: string;
   note: string;
 }
+
+// ---------------------------------------------------------------------------
+// v2 new types
+// ---------------------------------------------------------------------------
+
+/** A curated recommendation for stargazing (human-curated data source). */
+export interface Recommendation {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  /** Elevation in metres. */
+  elevation: number;
+  /** Bortle scale 1-9. */
+  bortle: number;
+  /** Recommendation reason / community review summary. */
+  reason: string;
+  /** Best stargazing season (e.g. "夏季 6-8月"). */
+  bestSeason: string;
+  /** Province / region. */
+  province: string;
+  /** Optional: months when the galactic core is visible. */
+  galaxyMonths?: string[];
+}
+
+/** A grid sampling point for spatial cloud coverage. */
+export interface CloudGridSample {
+  latitude: number;
+  longitude: number;
+}
+
+/** Complete data from one grid sampling pass (all time ticks included). */
+export interface CloudGridData {
+  /** Sampling point coordinates. */
+  samples: CloudGridSample[];
+  /** Bounding rectangle of the sampling area (for dashed boundary rendering). */
+  bounds: { north: number; south: number; east: number; west: number };
+  /** Hourly forecast for each sampling point (one-to-one with `samples`). */
+  forecasts: LocationForecast[];
+  /** Data fetch timestamp. */
+  fetchedAt: string;
+}
+
+/** Three-layer cloud coverage interpolation result at a single time tick. */
+export interface CloudLayerValues {
+  high: number; // 0-100
+  mid: number; // 0-100
+  low: number; // 0-100
+}
+
+/** Table cell: evaluation status for a location on a given night. */
+export interface StarWindowCell {
+  nightKey: string;
+  /** Evaluation status. */
+  status: NightStatus;
+  /** Score 0-100. */
+  score: number;
+  /** Whether the forecast is still loading. */
+  loading: boolean;
+}
+
+/** Table row: all night evaluations for one location. */
+export interface StarWindowRow {
+  location: Location;
+  cells: Map<string, StarWindowCell>;
+}
+
+/** Table sort direction. */
+export type SortDirection = "asc" | "desc";

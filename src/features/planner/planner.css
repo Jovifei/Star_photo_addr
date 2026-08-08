@@ -1,8 +1,8 @@
 :root {
   color-scheme: dark;
-  font-family: "Fira Sans", Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-family: "Noto Sans SC Variable", "Fira Sans", Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   font-synthesis: none;
-  --font-body: "Fira Sans", Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-body: "Noto Sans SC Variable", "Fira Sans", Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-data: "Fira Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --bg: #0b1024;
   --bg-deep: #060916;
@@ -98,6 +98,12 @@ a { color: var(--cyan); }
 
 .app-shell { min-height: 100vh; min-height: 100dvh; padding-bottom: 80px; }
 .topbar { position: sticky; top: 0; z-index: 30; height: 76px; display: flex; align-items: center; gap: 28px; padding: 0 max(20px, calc((100vw - 1280px) / 2)); border-bottom: 1px solid var(--line); background: rgba(18, 26, 69, 0.85); backdrop-filter: blur(16px); }
+.suite-nav { display: flex; align-items: center; gap: 4px; }
+.suite-nav a,
+.suite-nav span { min-height: 40px; display: inline-flex; align-items: center; padding: 0 13px; border: 1px solid transparent; border-radius: var(--radius-pill); color: var(--muted); font-size: 12px; text-decoration: none; white-space: nowrap; }
+.suite-nav a:hover { border-color: var(--line); color: var(--text); background: rgba(255,255,255,.04); }
+.suite-nav span[aria-current="page"] { border-color: rgba(91,216,235,.24); color: var(--cyan); background: var(--cyan-soft); }
+.planner-loading { min-height: 100dvh; display: grid; place-items: center; color: var(--muted); background: var(--bg-deep); }
 .brand-lockup { display: flex; align-items: center; gap: 12px; min-width: 210px; }
 .brand-mark { width: 36px; height: 48px; display: grid; place-items: center; border-left: 4px solid var(--cyan); color: var(--cyan); }
 .brand-mark svg { width: 24px; height: 24px; }
@@ -347,6 +353,10 @@ th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--lin
 @media (max-width: 840px) {
   .app-shell { padding-bottom: 76px; }
   .topbar { height: 66px; padding: 0 14px; }
+  .suite-nav { flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .suite-nav::-webkit-scrollbar { display: none; }
+  .suite-nav a,
+  .suite-nav span { min-height: 44px; padding-inline: 10px; }
   .brand-lockup { min-width: 0; flex: 1; }
   .brand-mark { width: 26px; height: 42px; }
   .brand-lockup h1 { font-size: 18px; }
@@ -397,6 +407,10 @@ th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--lin
 }
 
 @media (max-width: 430px) {
+  .topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; height: auto; min-height: 66px; gap: 6px 10px; padding-block: 8px; }
+  .suite-nav { grid-column: 1 / -1; width: 100%; }
+  .suite-nav a,
+  .suite-nav span { flex: 1 0 auto; justify-content: center; }
   .hero-location { align-items: flex-end; }
   .coordinate { max-width: 210px; flex-wrap: wrap; }
   .window-callout strong { font-size: 17px; }

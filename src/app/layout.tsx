@@ -1,4 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
+import { StoreProvider } from "@/lib/store";
+import ProductStateBridge from "@/components/ProductStateBridge";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,21 +25,16 @@ export const metadata: Metadata = {
     url: "https://perseids.giraffetree.cn",
     type: "website",
     locale: "zh_CN",
-    images: [
-      {
-        url: "/images/perseids/og.png",
-        width: 1200,
-        height: 630,
-        alt: "逐星：全球英仙座流星雨观测地图",
-      },
-    ],
+    // No `images`: the previous /images/perseids/og.png was never distributed
+    // with this repository (unlicensed copy, see docs/PUBLIC_ASSETS_AUDIT.md).
+    // Declaring it made every social crawler fetch a 404.
   },
   twitter: {
-    card: "summary_large_image",
+    // `summary` rather than `summary_large_image` — we have no owned OG asset.
+    card: "summary",
     title: "逐星｜全球英仙座流星雨观测地图",
     description:
       "把全球 11 晚暗夜、月光、流星活动与当地可靠天气放在一张地图上。",
-    images: ["/images/perseids/og.png"],
   },
 };
 
@@ -54,7 +52,14 @@ export default function RootLayout({
   // No web fonts are loaded — the design uses system CJK font stacks only.
   return (
     <html lang="zh-CN" className="h-full">
-      <body className="min-h-full antialiased">{children}</body>
+      <body className="min-h-full antialiased">
+        <StoreProvider>
+          <Suspense fallback={null}>
+            <ProductStateBridge />
+          </Suspense>
+          {children}
+        </StoreProvider>
+      </body>
     </html>
   );
 }
