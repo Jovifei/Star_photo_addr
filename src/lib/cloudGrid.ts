@@ -17,13 +17,12 @@
 
 import type L from "leaflet";
 import {
-  isInNight,
   isInNightRange,
-  nightRangeKeys,
 } from "@/lib/nighttime";
 import type {
   CloudGridData,
   CloudGridSample,
+  ForecastModel,
   LocationForecast,
 } from "@/lib/types";
 
@@ -90,10 +89,11 @@ export async function fetchCloudGrid(
   samples: CloudGridSample[],
   nightKeys: string[],
   days: number,
+  model: ForecastModel = "best_match",
 ): Promise<CloudGridData> {
   const latitudes = samples.map((s) => s.latitude).join(",");
   const longitudes = samples.map((s) => s.longitude).join(",");
-  const url = `/api/forecast?latitude=${latitudes}&longitude=${longitudes}&days=${days}`;
+  const url = `/api/forecast?latitude=${latitudes}&longitude=${longitudes}&days=${days}&model=${model}`;
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -127,6 +127,7 @@ export async function fetchCloudGrid(
     forecasts: filteredForecasts,
     nightKeys,
     fetchedAt: new Date().toISOString(),
+    model,
   };
 }
 

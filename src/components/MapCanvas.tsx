@@ -20,6 +20,7 @@ import WorldAtlasOverlay from "@/components/WorldAtlasOverlay";
 import ViirsTileLayer from "@/components/ViirsTileLayer";
 import BoundaryLayers from "@/components/BoundaryLayers";
 import CloudLayer from "@/components/CloudLayer";
+import SatelliteLayer from "@/components/SatelliteLayer";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 
 function ClickHandler({
@@ -166,6 +167,7 @@ export default function MapCanvas({
       {showViirs && <ViirsTileLayer />}
       {showBoundaries && <BoundaryLayers />}
       {showCloud && <CloudLayer />}
+      {showCloud && <SatelliteLayer />}
       <ClickHandler onSample={onSample} />
       <SampleMarker />
       <RecenterOnSelected enabled={recenterOnSelect} />

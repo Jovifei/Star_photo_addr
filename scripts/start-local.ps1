@@ -9,7 +9,7 @@
     captured log tail and exits with a non-zero exit code.
 
 .PARAMETER Port
-    Port used by `next dev`. Defaults to $env:PORT or 3000.
+    Port used by `next dev`. Defaults to $env:PORT or 3100.
 
 .PARAMETER TimeoutSeconds
     How long to wait for the first HTTP 200 answer. Defaults to 180 seconds.
@@ -32,7 +32,7 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = $(if ($env:PORT) { [int]$env:PORT } else { 3000 }),
+    [int]$Port = $(if ($env:PORT) { [int]$env:PORT } else { 3100 }),
     [int]$TimeoutSeconds = 180,
     [switch]$NoBrowser,
     [switch]$Reinstall,
@@ -178,10 +178,10 @@ function Get-MissingDependencyMarker {
     return $null
 }
 
-function Test-HttpOk {
+function Test-AppHealth {
     <#
-        Returns $true only for an HTTP 200 answer. Uses HttpWebRequest with the
-        proxy disabled so corporate proxy settings cannot break loopback probes.
+        Returns $true only when the response identifies this application. An
+        HTTP 200 from Grafana or another local service is not sufficient.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Url,
@@ -189,7 +189,7 @@ function Test-HttpOk {
     )
 
     try {
-        $request = [System.Net.HttpWebRequest]::Create($Url)
+        $request = [System.Net.HttpWebRequest]::Create("$Url/healthz")
         $request.Method = "GET"
         $request.Timeout = $TimeoutMs
         $request.ReadWriteTimeout = $TimeoutMs
@@ -198,12 +198,34 @@ function Test-HttpOk {
         $request.UserAgent = "start-local.ps1"
         $response = $request.GetResponse()
         $statusCode = [int]$response.StatusCode
+        $body = (New-Object System.IO.StreamReader($response.GetResponseStream())).ReadToEnd()
         $response.Close()
-        return ($statusCode -eq 200)
+        if ($statusCode -ne 200) { return $false }
+        $payload = $body | ConvertFrom-Json
+        return ($payload.status -eq "ok" -and $payload.app -eq "star-weather-planner")
     }
     catch {
         return $false
     }
+}
+
+function Get-PortOwnerDetails {
+    param([Parameter(Mandatory = $true)][int]$TcpPort)
+
+    $details = @()
+    try {
+        $connections = Get-NetTCPConnection -State Listen -LocalPort $TcpPort -ErrorAction Stop
+        foreach ($connection in $connections) {
+            $process = Get-Process -Id $connection.OwningProcess -ErrorAction SilentlyContinue
+            $name = if ($process) { $process.ProcessName } else { "unknown" }
+            $details += "PID $($connection.OwningProcess) ($name)"
+        }
+    }
+    catch {
+        $details += "Unable to read the process listening on port $TcpPort."
+    }
+    if ($details.Count -eq 0) { return "unknown process" }
+    return ($details -join ", ")
 }
 
 function Test-PortInUse {
@@ -327,15 +349,16 @@ try {
 
         # [3/5] Dev server -------------------------------------------------
         Write-Step "[3/5] Starting dev server on $BaseUrl ..."
-        if (Test-HttpOk -Url "$BaseUrl/" -TimeoutMs 2000) {
+        if (Test-AppHealth -Url $BaseUrl -TimeoutMs 2000) {
             $script:ReusedExistingServer = $true
-            Write-Ok "A server is already answering 200 on port $Port; reusing it."
+            Write-Ok "This app is already healthy on port $Port; reusing it."
         }
         else {
             # `next dev` silently switches to another port when this one is
             # taken, so fail fast instead of probing a URL that never binds.
             if (Test-PortInUse -TcpPort $Port) {
-                throw "Port $Port is already in use by another process that is not answering HTTP 200. Stop it, or start on a different port: -Port <number>."
+                $owner = Get-PortOwnerDetails -TcpPort $Port
+                throw "Port $Port is already in use by $owner, but /healthz is not the star-weather-planner app. Stop that process or start on another port: -Port <number>."
             }
 
             if (-not (Test-Path $LogDir)) {
@@ -357,14 +380,14 @@ try {
             Write-Ok "Dev server process started (PID $($script:DevProcess.Id)). Logs: $LogDir"
 
             # [4/5] Readiness probe ---------------------------------------
-            Write-Step "[4/5] Waiting for HTTP 200 from $BaseUrl/ (timeout ${TimeoutSeconds}s)..."
+            Write-Step "[4/5] Waiting for star-weather-planner health on $BaseUrl/healthz (timeout ${TimeoutSeconds}s)..."
             $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
             $ready = $false
             while ((Get-Date) -lt $deadline) {
                 if ($script:DevProcess.HasExited) {
                     throw "Dev server exited early with code $($script:DevProcess.ExitCode).`n$(Get-LogTail)"
                 }
-                if (Test-HttpOk -Url "$BaseUrl/" -TimeoutMs 5000) {
+                if (Test-AppHealth -Url $BaseUrl -TimeoutMs 5000) {
                     $ready = $true
                     break
                 }
@@ -372,9 +395,9 @@ try {
             }
 
             if (-not $ready) {
-                throw "Dev server did not answer HTTP 200 on $BaseUrl/ within ${TimeoutSeconds}s.`n$(Get-LogTail)"
+                throw "Dev server did not expose the star-weather-planner health response on $BaseUrl/healthz within ${TimeoutSeconds}s.`n$(Get-LogTail)"
             }
-            Write-Ok "Dev server is ready (HTTP 200)."
+            Write-Ok "Dev server is ready and identified as star-weather-planner."
         }
 
         # [5/5] Browser ----------------------------------------------------
@@ -389,7 +412,7 @@ try {
 
         if ($SmokeTest) {
             Write-Host ""
-            Write-Host "Smoke test passed: dev server reached HTTP 200 on $BaseUrl/." -ForegroundColor Green
+            Write-Host "Smoke test passed: $BaseUrl/healthz identifies star-weather-planner." -ForegroundColor Green
             exit 0
         }
 

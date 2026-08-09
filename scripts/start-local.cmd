@@ -2,7 +2,7 @@
 setlocal
 rem One-click local start wrapper for star-weather-planner (Next.js).
 rem Delegates to scripts\start-local.ps1 and forwards every argument.
-rem Usage: start-local.cmd [-Port 3000] [-NoBrowser] [-Reinstall] [-SmokeTest]
+rem Usage: start-local.cmd [-Port 3100] [-NoBrowser] [-Reinstall] [-SmokeTest]
 
 set "SCRIPT_DIR=%~dp0"
 set "PS_SCRIPT=%SCRIPT_DIR%start-local.ps1"

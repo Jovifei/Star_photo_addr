@@ -7,6 +7,7 @@ import {
   getValuesAtTime,
 } from "@/lib/cloudGrid";
 import { isInNight } from "@/lib/nighttime";
+import { hasDarkSkyLayer } from "@/lib/assets";
 
 const MODELS: { id: "icon" | "gfs" | "aifs"; label: string }[] = [
   { id: "icon", label: "ICON" },
@@ -67,8 +68,25 @@ export default function CloudControl() {
           {cloudState.enabled ? "已开启" : "开启"}
         </button>
       </div>
+      <div className="source-status-panel" aria-label="数据源状态">
+        <span className="source-status-title">数据源状态</span>
+        <span><i className="source-dot available" />天气 / Open-Meteo <b>可用</b></span>
+        <span><i className="source-dot available" />卫星图层 / NASA GIBS <b>切换时探测</b></span>
+        <span><i className={`source-dot ${process.env.NEXT_PUBLIC_TIANDITU_TOKEN ? "available" : "unconfigured"}`} />天地图 Token <b>{process.env.NEXT_PUBLIC_TIANDITU_TOKEN ? "可用" : "未配置"}</b></span>
+        <span><i className={`source-dot ${hasDarkSkyLayer() ? "available" : "not-installed"}`} />Bortle / SQM <b>{hasDarkSkyLayer() ? "可用" : "未安装"}</b></span>
+      </div>
 
       <div className={`cloud-body${cloudState.enabled ? "" : " disabled"}`}>
+          <div className="cloud-field">
+            <label>图层模式</label>
+            <div className="cloud-tabs" role="tablist" aria-label="云图与卫星图层">
+              {[{ id: "forecast", label: "数值云量预报" }, { id: "satellite-cloud", label: "卫星云观测" }, { id: "night-lights", label: "卫星夜光" }].map((layer) => (
+                <button key={layer.id} type="button" role="tab" aria-selected={cloudState.overlayMode === layer.id} className={cloudState.overlayMode === layer.id ? "active" : ""} onClick={() => setCloud({ overlayMode: layer.id as "forecast" | "satellite-cloud" | "night-lights" })}>{layer.label}</button>
+              ))}
+            </div>
+            {cloudState.overlayMode === "satellite-cloud" && <small className="cloud-source-note">NASA GIBS · Himawari Band 13 · 观测时次</small>}
+            {cloudState.overlayMode === "night-lights" && <small className="cloud-source-note">NASA GIBS · NOAA-20 VIIRS · 卫星夜光/辐亮度影像</small>}
+          </div>
           {/* Model selector */}
           <div className="cloud-field">
             <label>预报模型</label>

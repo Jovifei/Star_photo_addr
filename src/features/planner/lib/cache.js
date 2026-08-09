@@ -1,5 +1,5 @@
-const CACHE_KEY = "star-weather-forecast-v1";
-const LOCATIONS_KEY = "star-weather-locations-v1";
+const CACHE_KEY = "perseids-forecast-v1";
+const LOCATIONS_KEY = "perseids-locations-v1";
 const MAX_AGE_MS = 60 * 60 * 1000;
 
 export function readForecastCache() {

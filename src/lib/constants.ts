@@ -90,6 +90,8 @@ export const CUSTOM_CANDIDATES_STORAGE_KEY = "perseids-custom-candidates-v1";
 export const DEFAULT_CLOUD_STATE: CloudState = {
   enabled: true,
   model: "icon",
+  activeForecastTime: null,
+  overlayMode: "forecast",
   highEnabled: true,
   midEnabled: true,
   lowEnabled: true,

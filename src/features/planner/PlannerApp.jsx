@@ -28,6 +28,7 @@ import { readCustomLocations, readForecastCache, writeCustomLocations, writeFore
 import { fetchPressureForecast, fetchSurfaceForecasts } from "./lib/openMeteo";
 import { evaluateNight, statusMeta } from "./lib/scoring";
 import { formatHour, formatNightLabel, nextNightKeys, relativeFreshness } from "./lib/time";
+import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "今晚", icon: Binoculars },
@@ -81,8 +82,12 @@ function useDialogFocus(open, onClose) {
 
 function readProductBridge() {
   const params = new URLSearchParams(window.location.search);
-  const latitude = Number(params.get("lat"));
-  const longitude = Number(params.get("lng"));
+  const latitudeRaw = params.get("lat");
+  const longitudeRaw = params.get("lng");
+  const latitude = latitudeRaw === null || latitudeRaw.trim() === "" ? NaN : Number(latitudeRaw);
+  const longitude = longitudeRaw === null || longitudeRaw.trim() === "" ? NaN : Number(longitudeRaw);
+  const elevationRaw = params.get("elevation");
+  const elevation = elevationRaw === null || elevationRaw.trim() === "" ? 0 : Number(elevationRaw);
   const night = params.get("night");
   if (
     !Number.isFinite(latitude) ||
@@ -101,8 +106,8 @@ function readProductBridge() {
       name: params.get("name")?.trim() || "逐星联动点位",
       latitude,
       longitude,
-      elevation: Number(params.get("elevation")) || 0,
-      timezone: "Asia/Shanghai",
+      elevation: Number.isFinite(elevation) ? elevation : 0,
+      timezone: undefined,
       source: "逐星联动",
     },
   };
@@ -564,6 +569,7 @@ function DetailDrawer({ item, nightKey, onClose }) {
           {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>用户海拔：{location.elevation} m</span><span>时次：{formatHour(activeHour)}</span></div><AccessibleChart option={profileOption} height={250} label="低云垂直剖面图：云量与海拔关系" />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud weight="fill" /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
         </DetailSection>
         <div className="method-note"><Info /><p><strong>方法边界</strong> 云底/云顶由数值模型气压层推导，已过滤模型地表以下层并取整到 50 m。复杂山地仍需结合现场云图、能见度与周边谷地情况。</p></div>
+        <HourlyForecastMatrix nightKey={nightKey} hours={evaluation?.hours ?? []} selectedTime={activeHour} onSelectTime={setActiveHour} title="单夜十小时矩阵" />
       </aside>
     </div>
   );

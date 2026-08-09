@@ -28,6 +28,52 @@
     "Liberation Mono", "Courier New", monospace;
 }
 
+/* Ten-column hourly forecast matrix: metric column stays readable while the
+   hour cells scroll on narrow maps. */
+.hourly-matrix { margin-top: 10px; border: 1px solid rgba(132, 158, 221, .28); border-radius: 14px; background: rgba(14, 22, 53, .92); overflow: hidden; }
+.hourly-matrix-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px 8px; }
+.hourly-matrix-head h3 { margin: 2px 0 0; color: #eef3ff; font-size: 14px; }
+.hourly-matrix-status { color: var(--amber); font-size: 12px; }
+.hourly-matrix-scroll { overflow-x: auto; overscroll-behavior-inline: contain; }
+.hourly-matrix table { min-width: 860px; width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+.hourly-matrix th, .hourly-matrix td { border-right: 1px solid rgba(128, 151, 215, .2); border-bottom: 1px solid rgba(128, 151, 215, .2); padding: 0; text-align: center; }
+.hourly-matrix thead th { position: sticky; top: 0; z-index: 3; min-width: 72px; background: #20295b; color: #dbe5ff; }
+.hourly-matrix thead th:first-child, .hourly-matrix tbody th { position: sticky; left: 0; z-index: 4; width: 108px; min-width: 108px; padding: 8px 10px; background: #20295b; color: #dbe5ff; text-align: left; font-size: 12px; }
+.hourly-matrix tbody th { z-index: 2; background: #1a234d; font-weight: 600; }
+.hourly-matrix th small, .hourly-matrix tbody th small { display: block; margin-top: 2px; color: #8795bd; font-size: 10px; font-weight: 400; }
+.hourly-matrix-time, .hourly-matrix td button { display: flex; width: 100%; min-height: 38px; align-items: center; justify-content: center; border: 0; color: #edf2ff; background: transparent; cursor: pointer; font: inherit; }
+.hourly-matrix-time { flex-direction: column; gap: 2px; padding: 7px 3px; }
+.hourly-matrix-time small { color: #8fa2d3; font-size: 9px; }
+.hourly-matrix th.selected, .hourly-matrix td.selected { box-shadow: inset 0 0 0 2px #7ab9ff; }
+.hourly-matrix td button:hover, .hourly-matrix td button:focus-visible, .hourly-matrix-time:hover, .hourly-matrix-time:focus-visible { background: rgba(102, 161, 255, .2); outline: none; }
+.hourly-matrix td.cloud { background: linear-gradient(90deg, rgba(61, 99, 213, .12), rgba(75, 121, 247, .12)); }
+.hourly-matrix td.cloud::before, .hourly-matrix td.temperature::before, .hourly-matrix td.precipitation::before { content: ""; position: absolute; inset: auto 0 0; height: var(--matrix-value, 0%); opacity: .24; pointer-events: none; }
+.hourly-matrix td { position: relative; }
+.hourly-matrix td.cloud::before { background: #526ff0; }
+.hourly-matrix td.temperature::before { background: #f3b95f; }
+.hourly-matrix td.precipitation::before { background: #e86666; }
+.hourly-matrix td button { position: relative; z-index: 1; }
+.hourly-matrix-legend { display: flex; flex-wrap: wrap; gap: 10px 16px; padding: 9px 12px; color: #9caed6; font-size: 11px; }
+.legend-swatch { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 2px; vertical-align: -1px; }
+.legend-swatch.cloud { background: #526ff0; }
+.legend-swatch.temperature { background: #f3b95f; }
+.legend-swatch.precipitation { background: #e86666; }
+.cloud-night-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; }
+.cloud-night-tabs button { flex: 0 0 auto; border: 1px solid rgba(132, 158, 221, .35); border-radius: 999px; padding: 5px 10px; color: #aebbe0; background: rgba(20, 30, 72, .78); cursor: pointer; font-size: 11px; }
+.cloud-night-tabs button.active, .cloud-night-tabs button:hover { border-color: #7ab9ff; color: #fff; background: rgba(64, 105, 211, .5); }
+.cloud-summary-card { display: grid; grid-template-columns: repeat(5, minmax(72px, 1fr)); gap: 7px; margin: 4px 0 8px; }
+.cloud-summary-card span { display: flex; flex-direction: column; gap: 3px; border: 1px solid rgba(132, 158, 221, .22); border-radius: 9px; padding: 7px 8px; color: #eef3ff; font-size: 12px; }
+.cloud-summary-card b { color: #8795bd; font-size: 10px; font-weight: 500; }
+.cloud-source-note { display: block; margin-top: 6px; color: #91a4c5; font-size: 10px; line-height: 1.4; }
+.source-status-panel { display: grid; gap: 4px; margin: 8px 0; padding: 8px 10px; border: 1px solid rgba(132, 158, 221, .22); border-radius: 9px; color: #aebbd6; font-size: 10px; }
+.source-status-panel span { display: flex; align-items: center; gap: 5px; }
+.source-status-title { color: #eef3ff; font-weight: 600; }
+.source-status-panel b { margin-left: auto; color: #8edca9; font-weight: 500; }
+.source-dot { width: 6px; height: 6px; border-radius: 50%; background: #8edca9; }
+.source-dot.unconfigured { background: #efc46c; }
+.source-dot.not-installed { background: #8c96a8; }
+.satellite-layer-error { position: absolute; right: 18px; bottom: 285px; z-index: 900; max-width: 260px; padding: 8px 10px; border: 1px solid rgba(220, 120, 100, .45); border-radius: 8px; color: #ffd2c6; background: rgba(44, 20, 35, .9); font-size: 11px; }
+
 :root {
   --bg: #02070b;
   --text: #e7e7e0;
@@ -1648,7 +1694,12 @@
     left: 18px;
     right: 18px;
     padding: 10px 12px;
+    max-height: calc(100dvh - 112px);
+    overflow-y: auto;
+    z-index: 1000;
   }
+  .hourly-matrix-scroll { max-height: 42dvh; }
+  .cloud-summary-card { grid-template-columns: repeat(5, minmax(64px, 1fr)); overflow-x: auto; }
   .cloud-timeline-layers {
     flex-direction: column;
     gap: 6px;
@@ -2039,8 +2090,11 @@
   .map-stage:has(.cloud-timeline) .map-search-card { bottom: 246px; }
   .map-stage:has(.cloud-timeline) .cloud-control {
     right: 18px;
-    top: auto;
-    bottom: 342px;
+    top: 84px;
+    bottom: auto;
+    max-height: 30dvh;
+    overflow-y: auto;
+    z-index: 1100;
   }
   .map-stage:has(.cloud-timeline) .map-view-actions {
     top: 18px;

@@ -1,8 +1,9 @@
 export const dynamic = "force-dynamic";
 
 export function GET() {
-  return new Response("ok", {
-    status: 200,
-    headers: { "content-type": "text/plain; charset=utf-8" },
+  return Response.json({
+    status: "ok",
+    app: "star-weather-planner",
+    version: process.env.npm_package_version ?? "0.3.1",
   });
 }

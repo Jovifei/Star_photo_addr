@@ -2,7 +2,7 @@
 // Open-Meteo returns local wall-clock "YYYY-MM-DDTHH:mm" (timezone=auto).
 // `utc_offset_seconds` is in SECONDS per Open-Meteo's schema, so China +8h = 28800.
 import { describe, it, expect } from "vitest";
-import { parseProviderTime } from "@/lib/forecast";
+import { buildForecastUrl, openMeteoModelParameter, parseProviderTime } from "@/lib/forecast";
 
 describe("parseProviderTime — 本地墙钟还原真 UTC", () => {
   it("16 位输入无秒也正确补零", () => {
@@ -36,5 +36,17 @@ describe("parseProviderTime — 本地墙钟还原真 UTC", () => {
     expect(parseProviderTime("2026-08-13T04:00:00", 0).toISOString()).toBe(
       "2026-08-13T04:00:00.000Z",
     );
+  });
+});
+
+describe("forecast model routing", () => {
+  it("maps the three named models to real Open-Meteo model parameters", () => {
+    expect(openMeteoModelParameter("best_match")).toBeNull();
+    expect(openMeteoModelParameter("icon")).toBe("icon_seamless");
+    expect(openMeteoModelParameter("gfs")).toBe("gfs_seamless");
+    expect(openMeteoModelParameter("aifs")).toBe("ecmwf_aifs025");
+    const location = { id: "x", name: "", latitude: 30, longitude: 120, elevation: 0, source: "搜索" as const };
+    expect(buildForecastUrl([location], 2, "gfs")).toContain("models=gfs_seamless");
+    expect(buildForecastUrl([location], 2, "best_match")).not.toContain("models=");
   });
 });

@@ -1,18 +1,14 @@
 // Server-only Open-Meteo forecast proxy logic.
-//
-// This module is imported exclusively by `src/app/api/forecast/route.ts` (a
-// Route Handler). It must never be imported from a client component — that keeps
-// the Open-Meteo domain out of the browser bundle and satisfies the
-// "client only talks to same-origin /api/*" constraint.
 
 import type {
+  ForecastMetadata,
+  ForecastModel,
   ForecastResponse,
   HourWeather,
-  LocationForecast,
   Location,
-} from "./types";
+  LocationForecast,
+} from "./types.ts";
 
-/** Raw hourly block as returned by Open-Meteo (arrays may contain nulls). */
 interface RawHourly {
   time: string[];
   temperature_2m?: (number | null)[];
@@ -28,9 +24,10 @@ interface RawHourly {
   visibility?: (number | null)[];
   wind_speed_10m?: (number | null)[];
   wind_gusts_10m?: (number | null)[];
+  wind_direction_10m?: (number | null)[];
+  [key: string]: unknown;
 }
 
-/** Raw single-location Open-Meteo forecast response. */
 interface RawForecastResponse {
   latitude: number;
   longitude: number;
@@ -56,9 +53,35 @@ const SURFACE_VARIABLES = [
   "visibility",
   "wind_speed_10m",
   "wind_gusts_10m",
+  "wind_direction_10m",
 ];
 
-function providerUrl(locations: Location[], days: number): string {
+const MODEL_PARAMETERS: Record<ForecastModel, string | null> = {
+  best_match: null,
+  icon: "icon_seamless",
+  gfs: "gfs_seamless",
+  aifs: "ecmwf_aifs025",
+};
+
+const FORECAST_UNITS: Record<string, string> = {
+  temperature: "°C",
+  dewPoint: "°C",
+  cloudCover: "%",
+  precipitation: "mm",
+  visibility: "m",
+  windSpeed: "m/s",
+  windDirection: "°",
+};
+
+export function openMeteoModelParameter(model: ForecastModel): string | null {
+  return MODEL_PARAMETERS[model];
+}
+
+export function buildForecastUrl(
+  locations: Location[],
+  days: number,
+  model: ForecastModel = "best_match",
+): string {
   const params = new URLSearchParams({
     latitude: locations.map((item) => item.latitude).join(","),
     longitude: locations.map((item) => item.longitude).join(","),
@@ -67,6 +90,8 @@ function providerUrl(locations: Location[], days: number): string {
     forecast_days: String(Math.min(16, Math.max(1, days))),
     wind_speed_unit: "ms",
   });
+  const providerModel = MODEL_PARAMETERS[model];
+  if (providerModel) params.set("models", providerModel);
   return `${FORECAST_URL}?${params.toString()}`;
 }
 
@@ -74,85 +99,79 @@ async function requestJson(
   url: string,
   signal?: AbortSignal,
 ): Promise<RawForecastResponse | RawForecastResponse[]> {
-  const response = await fetch(url, {
-    signal,
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    throw new Error(`天气接口返回 ${response.status}`);
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        signal,
+        headers: { Accept: "application/json" },
+      });
+      if (response.ok) {
+        const data = (await response.json()) as RawForecastResponse | RawForecastResponse[];
+        const first = Array.isArray(data) ? data[0] : data;
+        if (!first || !Array.isArray(first.hourly?.time)) {
+          throw new Error("天气上游返回了无法识别的 hourly 数据");
+        }
+        return data;
+      }
+      lastError = new Error(`天气接口返回 ${response.status}`);
+      if (response.status < 500 && response.status !== 429) break;
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      lastError = error;
+    }
   }
-  return response.json();
+  throw lastError instanceof Error ? lastError : new Error("天气接口请求失败");
 }
 
 function normalizeHourly(response: RawForecastResponse): HourWeather[] {
   const hourly = response.hourly ?? { time: [] };
-  const times: string[] = hourly.time ?? [];
-  return times.map((time: string, index: number) => ({
+  return (hourly.time ?? []).map((time, index) => ({
     time,
-    temperature: hourly.temperature_2m?.[index] ?? undefined,
-    humidity: hourly.relative_humidity_2m?.[index] ?? undefined,
-    dewPoint: hourly.dew_point_2m?.[index] ?? undefined,
-    precipitationProbability: hourly.precipitation_probability?.[index] ?? undefined,
-    precipitation: hourly.precipitation?.[index] ?? undefined,
-    weatherCode: hourly.weather_code?.[index] ?? undefined,
-    cloudCover: hourly.cloud_cover?.[index] ?? undefined,
-    cloudLow: hourly.cloud_cover_low?.[index] ?? undefined,
-    cloudMid: hourly.cloud_cover_mid?.[index] ?? undefined,
-    cloudHigh: hourly.cloud_cover_high?.[index] ?? undefined,
-    visibility: hourly.visibility?.[index] ?? undefined,
-    windSpeed: hourly.wind_speed_10m?.[index] ?? undefined,
-    windGust: hourly.wind_gusts_10m?.[index] ?? undefined,
+    temperature: hourly.temperature_2m?.[index] ?? null,
+    humidity: hourly.relative_humidity_2m?.[index] ?? null,
+    dewPoint: hourly.dew_point_2m?.[index] ?? null,
+    precipitationProbability: hourly.precipitation_probability?.[index] ?? null,
+    precipitation: hourly.precipitation?.[index] ?? null,
+    weatherCode: hourly.weather_code?.[index] ?? null,
+    cloudCover: hourly.cloud_cover?.[index] ?? null,
+    cloudLow: hourly.cloud_cover_low?.[index] ?? null,
+    cloudMid: hourly.cloud_cover_mid?.[index] ?? null,
+    cloudHigh: hourly.cloud_cover_high?.[index] ?? null,
+    visibility: hourly.visibility?.[index] ?? null,
+    windSpeed: hourly.wind_speed_10m?.[index] ?? null,
+    windGust: hourly.wind_gusts_10m?.[index] ?? null,
+    windDirection: hourly.wind_direction_10m?.[index] ?? null,
   }));
 }
 
-/**
- * Convert an Open-Meteo local wall-clock time string to TRUE UTC.
- *
- * Open-Meteo (with `timezone=auto`) returns wall-clock times expressed in the
- * location's own local timezone, paired with a `utc_offset_seconds` field that
- * gives that timezone's offset from UTC in SECONDS (e.g. China +8h = 28800,
- * negative for west longitudes).
- *
- * The local time string is one of two forms:
- *   - 16 chars: `"YYYY-MM-DDTHH:mm"`
- *   - 19 chars: `"YYYY-MM-DDTHH:mm:ss"`
- *
- * We first interpret the local wall-clock as if it were UTC (`Date.parse` with a
- * trailing `Z`), then subtract the location's offset to recover the real UTC
- * instant. Inputs without a seconds part are padded to the 19-char form so the
- * parser yields a valid timestamp.
- *
- * @param localTime Wall-clock time string from the provider (no timezone info).
- * @param utcOffsetSeconds Location UTC offset in seconds (+28800 = +08:00).
- * @returns The corresponding UTC `Date`.
- */
+/** Convert an Open-Meteo local wall-clock time into the true UTC instant. */
 export function parseProviderTime(localTime: string, utcOffsetSeconds: number): Date {
-  // Pad the 16-char ("YYYY-MM-DDTHH:mm") form to 19 chars before parsing so
-  // Date.parse treats it as a complete, valid timestamp.
-  const paddedTime: string =
-    localTime.length === 16 ? `${localTime}:00` : localTime;
-
-  // Interpret the local wall-clock as UTC, then back out the offset.
-  const localAsUtcMillis: number = Date.parse(`${paddedTime}Z`);
-  const resultMillis: number = localAsUtcMillis - utcOffsetSeconds * 1000;
-  return new Date(resultMillis);
+  const paddedTime = localTime.length === 16 ? `${localTime}:00` : localTime;
+  const localAsUtcMillis = Date.parse(`${paddedTime}Z`);
+  return new Date(localAsUtcMillis - utcOffsetSeconds * 1000);
 }
 
-/**
- * Fetch surface forecasts for one or more locations and normalise them.
- * Open-Meteo returns an array when multiple coordinates are requested and a
- * single object otherwise — we always normalise to `LocationForecast[]`.
- */
 export async function fetchSurfaceForecasts(
   locations: Location[],
   days = 14,
   signal?: AbortSignal,
+  model: ForecastModel = "best_match",
 ): Promise<LocationForecast[]> {
   if (locations.length === 0) return [];
-  const data = await requestJson(providerUrl(locations, days), signal);
+  const data = await requestJson(buildForecastUrl(locations, days, model), signal);
   const responses = Array.isArray(data) ? data : [data];
+  const fetchedAt = new Date().toISOString();
+  const metadata: ForecastMetadata = {
+    source: "Open-Meteo",
+    model,
+    fetchedAt,
+    stale: false,
+    units: FORECAST_UNITS,
+  };
   return locations.map((location, index) => {
     const single = responses[index] ?? responses[0];
+    if (!single) throw new Error("天气上游缺少对应地点的响应");
     return {
       locationId: location.id,
       modelLatitude: single.latitude,
@@ -160,27 +179,28 @@ export async function fetchSurfaceForecasts(
       modelElevation: single.elevation,
       timezone: single.timezone,
       utcOffsetSeconds: single.utc_offset_seconds ?? 0,
-      fetchedAt: new Date().toISOString(),
+      fetchedAt,
+      metadata,
       hourly: normalizeHourly(single),
     };
   });
 }
 
-/** Build a `ForecastResponse` from virtual (lat/lon only) locations. */
 export async function fetchForecastByCoords(
   latitudes: number[],
   longitudes: number[],
   days: number,
   signal?: AbortSignal,
+  model: ForecastModel = "best_match",
 ): Promise<ForecastResponse> {
   const locations: Location[] = latitudes.map((latitude, index) => ({
     id: `loc-${index}`,
     name: "",
     latitude,
-    longitude: longitudes[index] ?? longitudes[0],
+    longitude: longitudes[index],
     elevation: 0,
     source: "搜索",
   }));
-  const locationsData = await fetchSurfaceForecasts(locations, days, signal);
-  return { locations: locationsData };
+  const locationsData = await fetchSurfaceForecasts(locations, days, signal, model);
+  return { locations: locationsData, metadata: locationsData[0]?.metadata };
 }

@@ -1,4 +1,10 @@
 node_modules
+.next
+node_modules/.cache
+coverage
+dist*
+*.bak
+.playwright
 dist
 .git
 *.log

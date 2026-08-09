@@ -23,7 +23,7 @@ npm ci
 npm run dev
 ```
 
-打开 `http://localhost:3000`。天气和地名搜索经 Next 同源 API 转发，不需要浏览器端 API Key。可选的天地图中文注记令牌通过 `NEXT_PUBLIC_TIANDITU_TOKEN` 配置；未配置时使用内置中文城市注记，不回退到英文地名底图。
+打开 `http://localhost:3100`。天气和地名搜索经 Next 同源 API 转发，不需要浏览器端 API Key。可选的天地图中文注记令牌通过 `NEXT_PUBLIC_TIANDITU_TOKEN` 配置；未配置时使用内置中文城市注记，不回退到英文地名底图。
 
 ## 验证
 
@@ -44,10 +44,10 @@ npx playwright install chromium
 
 ```bash
 docker compose up --build -d
-curl -fsS http://127.0.0.1:8080/healthz
+curl -fsS http://127.0.0.1:3100/healthz
 ```
 
-健康检查应返回 `ok`。容器内部运行 Next standalone 服务，宿主机端口为 8080。
+健康检查应返回包含 `status: "ok"` 和 `app: "star-weather-planner"` 的 JSON。容器内部运行 Next standalone 服务，宿主机默认端口为 3100；可通过 `APP_PORT` 覆盖。
 
 ## 数据边界
 

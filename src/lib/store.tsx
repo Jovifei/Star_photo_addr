@@ -172,8 +172,9 @@ function reducer(state: AppState, action: Action): AppState {
 
 async function fetchForecastFor(
   location: Location,
+  model: CloudState["model"] = "icon",
 ): Promise<LocationForecast | null> {
-  const url = `/api/forecast?latitude=${location.latitude}&longitude=${location.longitude}&days=14`;
+  const url = `/api/forecast?latitude=${location.latitude}&longitude=${location.longitude}&days=14&model=${model}`;
   const response = await fetch(url);
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));

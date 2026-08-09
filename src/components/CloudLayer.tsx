@@ -37,7 +37,7 @@ export default function CloudLayer() {
 
   // ----- Grid sampling logic -----
   const performSampling = async () => {
-    if (!map || !selectedNight) return;
+    if (!map || !selectedNight || cloudState.overlayMode !== "forecast") return;
 
     const bounds = map.getBounds();
     const { samples } = generateGridBounds(bounds, 5, 6);
@@ -50,8 +50,9 @@ export default function CloudLayer() {
         samples,
         nights,
         forecastDaysForRange(selectedNight, cloudState.range),
+        cloudState.model,
       );
-      gridSigRef.current = `${selectedNight}|${cloudState.range}`;
+      gridSigRef.current = `${selectedNight}|${cloudState.range}|${cloudState.model}`;
       setCloudGrid(data);
     } catch (err) {
       // Surface a small notice instead of silently leaving a blank map.
@@ -64,12 +65,12 @@ export default function CloudLayer() {
 
   // ----- Trigger initial / re-sampling when cloud is enabled or range/night changes -----
   useEffect(() => {
-    if (!cloudState.enabled || !map || !selectedNight) return;
-    const sig = `${selectedNight}|${cloudState.range}`;
+    if (!cloudState.enabled || cloudState.overlayMode !== "forecast" || !map || !selectedNight) return;
+    const sig = `${selectedNight}|${cloudState.range}|${cloudState.model}`;
     if (cloudGrid && gridSigRef.current === sig) return;
     void performSampling();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cloudState.enabled, selectedNight, cloudState.range, map]);
+  }, [cloudState.enabled, selectedNight, cloudState.range, cloudState.model, cloudState.overlayMode, map]);
 
   // ----- Map move/zoom handler with 500ms debounce -----
   useMapEvents({
@@ -97,7 +98,7 @@ export default function CloudLayer() {
   }, []);
 
   // Don't render anything if cloud is disabled.
-  if (!cloudState.enabled) return null;
+  if (!cloudState.enabled || cloudState.overlayMode !== "forecast") return null;
 
   // Render the Canvas overlay + sampling boundary.
   const bounds = cloudGrid

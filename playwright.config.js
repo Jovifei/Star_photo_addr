@@ -2,9 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
 
-// E2E port is configurable so local runs can dodge an occupied :3000 (e.g. a
-// Grafana container). CI leaves PORT unset and keeps the default 3000.
-const PORT = process.env.PORT || "3000";
+// Keep E2E on the app's reserved local port. The server is never reused: a
+// successful HTTP response alone must not make Grafana or another app look
+// like this project.
+const PORT = process.env.PORT || "3100";
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 // E2E runs against the production Next.js server. This exercises App Router
@@ -54,9 +55,7 @@ export default defineConfig({
   webServer: {
     command: "npm run build && npm run start:e2e",
     url: BASE_URL,
-    // Never reuse in CI; locally only reuse when PORT is free of unrelated
-    // services. A fixed :3000 silently attaches to a Grafana container otherwise.
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 180000,
     env: {
       NODE_OPTIONS: "--max-old-space-size=2048",

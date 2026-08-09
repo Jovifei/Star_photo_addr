@@ -65,19 +65,51 @@ export interface BortleClass {
 /** One normalised weather hour (location-local time, from Open-Meteo). */
 export interface HourWeather {
   time: string;
-  temperature?: number;
-  humidity?: number;
-  dewPoint?: number;
-  precipitationProbability?: number;
-  precipitation?: number;
-  weatherCode?: number;
-  cloudCover?: number;
-  cloudLow?: number;
-  cloudMid?: number;
-  cloudHigh?: number;
-  visibility?: number;
-  windSpeed?: number;
-  windGust?: number;
+  temperature?: number | null;
+  humidity?: number | null;
+  dewPoint?: number | null;
+  precipitationProbability?: number | null;
+  precipitation?: number | null;
+  weatherCode?: number | null;
+  cloudCover?: number | null;
+  cloudLow?: number | null;
+  cloudMid?: number | null;
+  cloudHigh?: number | null;
+  visibility?: number | null;
+  windSpeed?: number | null;
+  windGust?: number | null;
+  windDirection?: number | null;
+}
+
+export type ForecastModel = "best_match" | "icon" | "gfs" | "aifs";
+
+export interface SatelliteFrame {
+  time: string;
+  kind: "cloud" | "night-lights";
+  label: string;
+  satellite: string;
+  source: "NASA GIBS";
+  tileTemplate: string;
+  coverage: string;
+  observed: true;
+}
+
+export type SourceAvailability = "available" | "degraded" | "unconfigured" | "not-installed" | "expired";
+
+export interface SourceStatus {
+  id: string;
+  label: string;
+  status: SourceAvailability;
+  detail: string;
+  updatedAt?: string;
+}
+
+export interface ForecastMetadata {
+  source: "Open-Meteo";
+  model: ForecastModel;
+  fetchedAt: string;
+  stale: boolean;
+  units: Record<string, string>;
 }
 
 /** Server-normalised forecast for a single location. */
@@ -89,11 +121,13 @@ export interface LocationForecast {
   timezone: string;
   utcOffsetSeconds: number;
   fetchedAt: string;
+  metadata?: ForecastMetadata;
   hourly: HourWeather[];
 }
 
 export interface ForecastResponse {
   locations: LocationForecast[];
+  metadata?: ForecastMetadata;
 }
 
 /** A single geocoding suggestion (cropped Open-Meteo result). */
@@ -192,7 +226,11 @@ export interface CloudState {
   /** Master switch (controls the entire cloud feature). */
   enabled: boolean;
   /** Forecast model. */
-  model: "icon" | "gfs" | "aifs";
+  model: Exclude<ForecastModel, "best_match">;
+  /** Canonical local ISO time selected by the matrix/timeline. */
+  activeForecastTime?: string | null;
+  /** Mutually exclusive map raster mode. */
+  overlayMode?: "forecast" | "satellite-cloud" | "night-lights";
   /** High-level cloud layer toggle. */
   highEnabled: boolean;
   /** Mid-level cloud layer toggle. */
@@ -263,6 +301,7 @@ export interface CloudGridData {
   nightKeys: string[];
   /** Data fetch timestamp. */
   fetchedAt: string;
+  model?: ForecastModel;
 }
 
 /** Three-layer cloud coverage interpolation result at a single time tick. */
