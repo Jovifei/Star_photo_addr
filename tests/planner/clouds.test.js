@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveCloudLayers } from "../src/lib/clouds";
+import { deriveCloudLayers } from "../../src/features/planner/lib/clouds.js";
 
 describe("pressure-profile cloud layers", () => {
   it("groups adjacent cloudy levels and never emits negative AGL", () => {

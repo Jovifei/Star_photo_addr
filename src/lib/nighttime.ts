@@ -77,20 +77,82 @@ export function isInNight(timeString: string, nightKey: string): boolean {
   );
 }
 
-/** "8月12日" style label for a night key, in the given timezone. */
-export function formatNightLabel(dateKey: string, compact = false): string {
-  const date = new Date(`${dateKey}T12:00:00Z`);
-  return new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    month: compact ? "numeric" : "long",
-    day: "numeric",
-    weekday: compact ? undefined : "short",
-  }).format(date);
+/** The `count` consecutive night keys starting at `startKey` (inclusive). */
+export function nightRangeKeys(startKey: string, count: number): string[] {
+  return Array.from({ length: Math.max(1, count) }, (_, i) =>
+    addDays(startKey, i),
+  );
 }
 
-/** "HH:mm" from a local hourly time string. */
+/** Whether an hourly string belongs to ANY of the given night keys. */
+export function isInNightRange(timeString: string, nightKeys: string[]): boolean {
+  return nightKeys.some((key) => isInNight(timeString, key));
+}
+
+/** Number of hourly ticks in a single night window: 20→23 (4h) + 00→05 (6h) = 10. */
+export const HOURS_PER_NIGHT = (24 - NIGHT_START) + (NIGHT_END + 1);
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** Human-readable night window, e.g. "20:00–次日05:00". */
+const NIGHT_WINDOW_TEXT = `${pad2(NIGHT_START)}:00–次日${pad2(NIGHT_END)}:00`;
+
+/**
+ * Night label anchored on the EVENING date (the night of 8/7 runs 8/7 20:00 →
+ * 8/8 05:00, and is always keyed by "2026-08-07").
+ *
+ * - `compact = false` → "8月7日 周三 夜间（20:00–次日05:00）" (full, for tooltips)
+ * - `compact = true`  → "8/7 周五夜" (short, with the weekday users plan around)
+ *
+ * The explicit "夜间（…）" suffix makes the cross-midnight semantics obvious so
+ * users never mistake a 01:00 reading for the same calendar day.
+ */
+export function formatNightLabel(dateKey: string, compact = false): string {
+  const [, m, d] = dateKey.split("-");
+  const month = Number(m);
+  const day = Number(d);
+  if (!Number.isFinite(month) || !Number.isFinite(day)) return dateKey; // 兜底
+  const weekday = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    weekday: "short",
+  }).format(new Date(`${dateKey}T12:00:00Z`)); // 12:00Z = 上海 20:00，锚定傍晚日
+  if (compact) return `${month}/${day} ${weekday}夜`;
+  return `${month}月${day}日 ${weekday} 夜间（${NIGHT_WINDOW_TEXT}）`;
+}
+
+/**
+ * "HH:mm" from a local hourly time string.
+ *
+ * Kept for backwards compatibility — `scoring.ts` builds `windowLabel` with it
+ * (e.g. "20:00–02:00（6h）") and compact UI slots (timeline endpoints) rely on
+ * the un-suffixed form. Do NOT change this signature or behaviour; use
+ * `formatHourWithDate` when a next-day hint is needed.
+ */
 export function formatHour(timeString: string): string {
   return timeString.slice(11, 16);
+}
+
+/**
+ * Hour label with an explicit cross-midnight hint, relative to `nightKey`.
+ *
+ *   20:00–23:00 → "20:00"
+ *   00:00–05:00 → "01:00（次日）"
+ *
+ * Resolution order:
+ *   1. If both the time string's date part and `nightKey` are full "YYYY-MM-DD"
+ *      keys, a mismatch means the reading belongs to the morning after.
+ *   2. Otherwise fall back to the hour: anything at or before `NIGHT_END` is
+ *      treated as next-day.
+ */
+export function formatHourWithDate(timeString: string, nightKey: string): string {
+  const hhmm = timeString.slice(11, 16);
+  const datePart = timeString.slice(0, 10);
+  const hour = Number(timeString.slice(11, 13));
+  const isNextDay =
+    datePart.length === 10 && nightKey.length === 10
+      ? datePart !== nightKey
+      : Number.isFinite(hour) && hour <= NIGHT_END;
+  return isNextDay ? `${hhmm}（次日）` : hhmm;
 }
 
 export function relativeFreshness(isoString?: string | null): string {

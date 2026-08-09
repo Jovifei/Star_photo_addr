@@ -10,6 +10,7 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 import { searchChinaPlaces } from "../lib/geocoding";
 import { fetchSurfaceForecasts } from "../lib/openMeteo";
 import { evaluateNight, statusMeta } from "../lib/scoring";
@@ -82,27 +83,42 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
       && Math.abs(item.latitude - selected.latitude) < 0.00001
       && Math.abs(item.longitude - selected.longitude) < 0.00001)
   ));
+  const selectedId = selected?.id;
+  const selectedLatitude = selected?.latitude;
+  const selectedLongitude = selected?.longitude;
+  const selectedElevation = selected?.elevation;
+  const selectedTimezone = selected?.timezone;
+  const selectedSource = selected?.source;
 
   useEffect(() => {
-    if (!selected || existingForecast) {
-      setCandidateForecast(null);
-      return undefined;
-    }
+    if (!selectedId || !Number.isFinite(selectedLatitude) || !Number.isFinite(selectedLongitude) || existingForecast) return undefined;
+    const requestLocation = {
+      id: selectedId,
+      name: "地图候选点",
+      latitude: selectedLatitude,
+      longitude: selectedLongitude,
+      elevation: selectedElevation,
+      timezone: selectedTimezone,
+      source: selectedSource,
+    };
     const controller = new AbortController();
-    setForecastLoading(true);
-    setForecastError("");
-    fetchSurfaceForecasts([selected], 14, controller.signal)
+    queueMicrotask(() => {
+      setForecastLoading(true);
+      setForecastError("");
+    });
+    fetchSurfaceForecasts([requestLocation], 14, controller.signal)
       .then(([forecast]) => setCandidateForecast(forecast))
       .catch((error) => {
         if (error.name !== "AbortError") setForecastError("该坐标的天气暂时不可用，请稍后重试。");
       })
       .finally(() => setForecastLoading(false));
     return () => controller.abort();
-  }, [selected?.id, existingForecast]);
+  }, [selectedId, selectedLatitude, selectedLongitude, selectedElevation, selectedTimezone, selectedSource, existingForecast]);
 
-  useEffect(() => {
+  function selectCandidate(candidate) {
+    setSelected(candidate);
     setSaveState("");
-  }, [selected?.id]);
+  }
 
   async function runSearch(event) {
     event.preventDefault();
@@ -133,7 +149,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
       (position) => {
         const latitude = Number(position.coords.latitude.toFixed(5));
         const longitude = Number(position.coords.longitude.toFixed(5));
-        setSelected({
+        selectCandidate({
           id: `gps-${latitude}-${longitude}`,
           name: "我的当前位置",
           latitude,
@@ -168,7 +184,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
     <section className="map-workspace" aria-label="地图选点">
       <div className="map-toolbar">
         <div>
-          <span className="section-kicker">MAP OBSERVATORY</span>
+          <span className="section-kicker">地图观测台</span>
           <h2>在地图上寻找观测机位</h2>
           <p>搜索中国境内地点，或直接点击地图取点；选中后立即计算 7/14 天星空建议。</p>
         </div>
@@ -187,7 +203,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
             <div className="search-popover" aria-label="地点搜索结果">
               {searchError && <p className="search-message" role="status" aria-live="polite"><Warning />{searchError}</p>}
               {results.map((result) => (
-                <button key={result.id} type="button" onClick={() => { setSelected(result); setResults([]); setQuery(result.name); }}>
+                <button key={result.id} type="button" onClick={() => { selectCandidate(result); setResults([]); setQuery(result.name); }}>
                   <MapPin /><span><strong>{result.name}</strong><small>{result.context || `${result.latitude.toFixed(3)}, ${result.longitude.toFixed(3)}`}</small></span>
                 </button>
               ))}
@@ -196,9 +212,10 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
           <MapContainer center={DEFAULT_CENTER} zoom={7} minZoom={3} className="observation-map" aria-label="观测点位地图" zoomControl>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
             />
-            <MapClick onPick={setSelected} />
+            <ChineseLabelLayer />
+            <MapClick onPick={selectCandidate} />
             <FlyToSelection location={selected} />
             {locations.map((location) => (
               <CircleMarker
@@ -206,7 +223,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
                 center={[location.latitude, location.longitude]}
                 radius={selected?.id === location.id ? 9 : 6}
                 pathOptions={{ color: selected?.id === location.id ? "#ffffff" : "#45d8ea", fillColor: "#45d8ea", fillOpacity: 0.85, weight: 2 }}
-                eventHandlers={{ click: () => setSelected(location) }}
+                eventHandlers={{ click: () => selectCandidate(location) }}
               ><Tooltip>{location.name} · {location.elevation} m</Tooltip></CircleMarker>
             ))}
             {selected && !locations.some((location) => location.id === selected.id) && (
@@ -228,7 +245,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
                   type="button"
                   aria-pressed={selected?.id === location.id}
                   className={selected?.id === location.id ? "active" : ""}
-                  onClick={() => setSelected(location)}
+                  onClick={() => selectCandidate(location)}
                 >
                   <span>{location.name}</span><small>{location.elevation} m</small>
                 </button>
@@ -237,7 +254,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
           </div>
           <div className="inspector-heading">
             <div>
-              <span className="section-kicker">SELECTED SITE</span>
+              <span className="section-kicker">已选观测地点</span>
               {selected && !selectedIsExisting ? (
                 <input
                   className="inspector-name-input"

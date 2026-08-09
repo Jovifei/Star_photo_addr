@@ -1,8 +1,19 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { VIIRS_SCIENTIFIC_BOUNDARY } from "@/data/viirsMeta";
+import { hasDarkSkyLayer } from "@/lib/assets";
 
-/** "数据依据与局限" popover describing data sources and limitations. */
+/**
+ * "数据依据与局限" popover describing data sources and limitations.
+ *
+ * v2: Uses `createPortal` to render to `document.body`, escaping the
+ * `.topbar` containing block created by `backdrop-filter: blur(10px)`.
+ * This ensures `position: fixed; inset: 0` is relative to the viewport,
+ * not the ~54 px tall top bar.
+ */
 export default function SourcePopover({
   open,
   onClose,
@@ -10,19 +21,68 @@ export default function SourcePopover({
   open: boolean;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const dialog = dialogRef.current;
+    const focusable = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+    focusable()[0]?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [open, onClose]);
+
   if (!open) return null;
-  return (
+
+  const content = (
     <div
       className="popover-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="source-popover-title"
       onMouseDown={onClose}
     >
-      <div className="popover" onMouseDown={(event) => event.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className="popover"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
         <button className="close" type="button" onClick={onClose} aria-label="关闭">
-          ×
+          <X size={20} aria-hidden="true" />
         </button>
-        <h2>数据依据与局限</h2>
+        <h2 id="source-popover-title">数据依据与局限</h2>
         <p>
           本站点用于流星雨观测规划，预测不构成现场安全判断。主要数据来源：
         </p>
@@ -34,7 +94,8 @@ export default function SourcePopover({
             <strong>天文</strong>：Astronomy Engine 计算的太阳/月亮高度、月相与银河核心高度。
           </li>
           <li>
-            <strong>暗夜参考</strong>：全球 2015 暗夜世界地图 + 中国 2024 VIIRS（VNP46A4）增强层，客户端像素采样得到 Bortle 等效等级。
+            <strong>暗夜参考</strong>：仅在安装了来源和许可均可核验的暗夜栅格后启用。当前状态：
+            {hasDarkSkyLayer() ? "已安装" : "未安装，页面不会伪造 Bortle/SQM 数值"}。
           </li>
           <li>
             <strong>地理编码</strong>：Open-Meteo Geocoding（无密钥、全球）。
@@ -48,12 +109,16 @@ export default function SourcePopover({
         </div>
         <p>
           完整公式、参数与验证方法见{" "}
-          <a href="/viirs#bortle" onClick={onClose}>
-            /viirs#bortle
+          <a href="/sites#data-sources" onClick={onClose}>
+            数据说明
           </a>
           。
         </p>
       </div>
     </div>
   );
+
+  // Guard for SSR — document is only available in the browser.
+  if (typeof document === "undefined") return content;
+  return createPortal(content, document.body);
 }

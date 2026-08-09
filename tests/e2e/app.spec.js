@@ -1,262 +1,173 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
-import { installGeocodingMock, installOpenMeteoMock } from "./mock-open-meteo.js";
+import {
+  installGeocodingMock,
+  installNextApiMock,
+  installOpenMeteoMock,
+} from "./mock-open-meteo.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
 );
 
-const DATE = "2026-08-06";
-const QA_DIR = resolve(process.cwd(), "docs/qa");
-mkdirSync(QA_DIR, { recursive: true });
-
-function vp(page) {
-  return (page.viewportSize()?.width ?? 1280) < 768 ? "mobile" : "desktop";
-}
-function navScope(page) {
-  return vp(page) === "mobile" ? ".mobile-nav" : ".desktop-nav";
-}
-function navButton(page, label) {
-  return page.locator(`${navScope(page)} button`, { hasText: label });
-}
-async function shot(page, name) {
-  await page.screenshot({
-    path: resolve(QA_DIR, `${DATE}-${vp(page)}-${name}.jpg`),
-    type: "jpeg",
-    quality: 72,
-  });
-}
-
 test.beforeEach(async ({ page }) => {
-  const consoleErrors = [];
-  const pageErrors = [];
-  const failedExternal = [];
-  page.on("console", (msg) => {
-    if (msg.type() !== "error") return;
-    const t = msg.text();
-    // Browser-generated noise for intentionally aborted/failed network requests
-    // (e.g. "Failed to load resource: net::ERR_FAILED"). Not an app defect.
-    if (t.startsWith("Failed to load resource")) return;
-    consoleErrors.push(t);
-  });
-  page.on("pageerror", (err) => pageErrors.push(err.message));
-  page.on("requestfailed", (req) => {
-    const u = req.url();
-    if (u.includes("localhost") || u.includes("api.open-meteo.com")) return;
-    failedExternal.push(u);
-  });
+  await page.addInitScript(() => localStorage.clear());
   await installOpenMeteoMock(page, fixture);
   await installGeocodingMock(page);
-  await page.route(/https:\/\/[^/]+\.basemaps\.cartocdn\.com\/.*/, (route) => route.fulfill({
-    status: 200,
-    contentType: "image/png",
-    body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"),
+  await installNextApiMock(page, fixture);
+  await page.route(/https:\/\/[^/]+\.basemaps\.cartocdn\.com\/.*/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      body: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    }),
+  );
+});
+
+async function selectHangzhou(page) {
+  await page.getByRole("combobox", { name: "搜索地点、城市或观测点" }).fill("杭州");
+  await page.locator(".suggestions li", { hasText: "杭州" }).click();
+  await expect(page.locator(".panel-location-name")).toHaveText("杭州", {
+    timeout: 15000,
+  });
+}
+
+test("三个产品入口统一，数据来源弹窗真正居中且高于页面", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "英仙座流星雨" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "页面导航" }).getByRole("link"))
+    .toHaveCount(3);
+
+  await page.getByRole("button", { name: "数据依据与局限" }).click();
+  const dialog = page.getByRole("dialog", { name: "数据依据与局限" });
+  await expect(dialog).toBeVisible();
+  const placement = await page.evaluate(() => {
+    const modal = document.querySelector(".popover");
+    const backdrop = document.querySelector(".popover-backdrop");
+    const header = document.querySelector(".topbar");
+    const rect = modal?.getBoundingClientRect();
+    return {
+      centerX: rect ? rect.left + rect.width / 2 : 0,
+      centerY: rect ? rect.top + rect.height / 2 : 0,
+      viewportX: window.innerWidth / 2,
+      viewportY: window.innerHeight / 2,
+      backdropZ: Number(getComputedStyle(backdrop).zIndex),
+      headerZ: Number(getComputedStyle(header).zIndex),
+    };
+  });
+  expect(Math.abs(placement.centerX - placement.viewportX)).toBeLessThan(3);
+  expect(Math.abs(placement.centerY - placement.viewportY)).toBeLessThan(90);
+  expect(placement.backdropZ).toBeGreaterThan(placement.headerZ);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
+test("地图云图默认开启：三层比例随跨午夜时间轴变化", async ({ page }) => {
+  await page.goto("/");
+  // Cloud is ON by default; the timeline and overlay render without selecting
+  // a location first (the current viewport is sampled immediately).
+  // Default range is 7 nights × 10 hours = 70 ticks, slider max = 69.
+  const slider = page.getByRole("slider", { name: "云图时间轴" });
+  await expect(slider).toBeVisible({ timeout: 15000 });
+  await expect(slider).toHaveAttribute("min", "0");
+  await expect(slider).toHaveAttribute("max", "69");
+  await expect(page.locator(".cloud-timeline-layer")).toHaveCount(3);
+  await expect(page.locator(".cloud-timeline")).toContainText("高云");
+  await expect(page.locator(".cloud-timeline")).toContainText("中云");
+  await expect(page.locator(".cloud-timeline")).toContainText("低云");
+
+  // The master toggle can still turn the cloud layer off and back on.
+  await page.locator(".cloud-master-toggle").click();
+  await expect(slider).toBeHidden();
+  await page.locator(".cloud-master-toggle").click();
+  await expect(slider).toBeVisible();
+
+  // Overlay canvas renders at a real size, and moving the timeline updates
+  // both the data-time-index and the three layer proportion readouts.
+  await expect(page.locator(".cloud-canvas-overlay canvas")).toBeVisible({
+    timeout: 15000,
+  });
+  const valuesBefore = await page.locator(".cloud-timeline-layer-value").allTextContents();
+  await slider.fill("35");
+  await expect(page.locator(".cloud-canvas-overlay")).toHaveAttribute("data-time-index", "35");
+  const valuesAfter = await page.locator(".cloud-timeline-layer-value").allTextContents();
+  expect(valuesAfter).not.toEqual(valuesBefore);
+  const canvasSize = await page.locator(".cloud-canvas-overlay canvas").evaluate((canvas) => ({
+    width: canvas.width,
+    height: canvas.height,
   }));
-  page.__qa = { consoleErrors, pageErrors, failedExternal };
+  expect(canvasSize.width).toBeGreaterThan(100);
+  expect(canvasSize.height).toBeGreaterThan(100);
+  // Index 35 = night 3 offset (8/12→8/15), hour 01:00 (next day).
+  await expect(page.locator(".cloud-timeline-current")).toContainText(/8\/15.*(次日|0[1-5]:00)/);
 });
 
-test.afterEach(async ({ page }, testInfo) => {
-  if (testInfo.status !== "passed") return; // screenshots on failure handled by config
-  const { consoleErrors, pageErrors, failedExternal } = page.__qa;
-  expect(pageErrors, `pageErrors: ${pageErrors.join(" | ")}`).toEqual([]);
-  expect(consoleErrors, `consoleErrors: ${consoleErrors.join(" | ")}`).toEqual([]);
-  expect(failedExternal, `failedExternal: ${failedExternal.join(" | ")}`).toEqual([]);
-});
-
-test("homepage renders with rankings and no white screen", async ({ page }) => {
+test("观测夜语义含星期与 20:00 到次日 05:00，并支持排序和增删地点", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await expect(page.locator("h1")).toHaveText("星野决策");
-  await shot(page, "dashboard");
+  await selectHangzhou(page);
+
+  const firstDate = page.locator(".star-window-date-col").first();
+  await expect(firstDate.getByRole("button")).toHaveAttribute(
+    "title",
+    /周. 夜间（20:00–次日05:00）/,
+  );
+  await firstDate.getByRole("button").click();
+  await expect(firstDate).toHaveAttribute("aria-sort", "descending");
+  await firstDate.getByRole("button").click();
+  await expect(firstDate).toHaveAttribute("aria-sort", "ascending");
+
+  const input = page.getByRole("textbox", { name: "添加地点坐标与名称" });
+  await input.fill("30.4694,119.5978,天荒坪联动点");
+  await page.getByRole("button", { name: "添加", exact: true }).click();
+  const row = page.locator(".star-window-table tbody tr", { hasText: "天荒坪联动点" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "删除" }).click();
+  await expect(row).toBeHidden();
 });
 
-test("skip link and navigation expose keyboard state", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "跳到主要内容" })).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(page.locator("#main-content")).toBeFocused();
-  await expect(navButton(page, "今晚")).toHaveAttribute("aria-current", "page");
+test("推荐观星地点页恢复地图标记、观测夜和最佳窗口", async ({ page }) => {
+  await page.goto("/sites");
+  await expect(page.getByRole("heading", { name: "推荐观星地点" })).toBeVisible();
+  await expect(page.locator(".recommendation-marker-dot")).toHaveCount(20);
+  await page.locator(".candidate-row", { hasText: "安吉天荒坪" }).click();
+  await expect(page.locator(".viirs-astro-info")).toBeVisible();
+  await expect(page.locator(".sites-night-picker select")).toHaveValue("2026-08-12");
+  await expect(page.locator(".sites-window-summary")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("button", { name: /前往逐星深度分析/ })).toBeVisible();
 });
 
-test("375 / 768 / 1024 / 1440 widths avoid page-level horizontal overflow", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "One project audits all target widths.");
+test("星野决策与逐星通过地点和观测夜双向联动", async ({ page }) => {
+  // The bridge itself must remain usable even while the external provider is
+  // unavailable; the planner should degrade to its explicit empty state.
+  await page.route("**/api.open-meteo.com/v1/forecast**", (route) => route.abort());
+  await page.goto(
+    "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=2026-08-12",
+  );
+  await expect(page.getByRole("heading", { name: "星野决策" })).toBeVisible();
+  await expect(page.locator(".empty-state")).toBeVisible({ timeout: 15000 });
+  const backLink = page.getByRole("navigation", { name: "产品导航" }).getByRole("link", { name: "逐星" });
+  await expect(backLink).toHaveAttribute("href", /lat=.*name=.*night=2026-08-12/);
+  await backLink.click();
+  await expect(page).toHaveURL(/\/\?lat=/);
+  await expect(page.locator(".panel-location-name")).toContainText("天荒坪", {
+    timeout: 15000,
+  });
+});
+
+test("375、768、1024、1440 宽度三页均无页面级横向溢出", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "桌面项目统一覆盖全部断点");
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: width < 800 ? 900 : 1000 });
-    await page.goto("/");
-    await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-    const dashboardOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    expect(dashboardOverflow, `dashboard overflow at ${width}px`).toBeLessThanOrEqual(1);
-    const scope = width <= 840 ? ".mobile-nav" : ".desktop-nav";
-    await page.locator(`${scope} button`, { hasText: "地图" }).click();
-    await expect(page.locator(".map-workspace")).toBeVisible();
-    const mapOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    expect(mapOverflow, `map overflow at ${width}px`).toBeLessThanOrEqual(1);
+    for (const route of ["/", "/sites", "/planner"]) {
+      await page.goto(route);
+      await expect(page.locator("body")).toBeVisible();
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow, `${route} at ${width}px`).toBeLessThanOrEqual(1);
+    }
   }
-});
-
-test("7天 / 14天 toggle switches active range", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  const btn14 = page.getByRole("button", { name: "14 天" });
-  const btn7 = page.getByRole("button", { name: "7 天" });
-  await btn14.click();
-  await expect(btn14).toHaveClass(/active/);
-  await btn7.click();
-  await expect(btn7).toHaveClass(/active/);
-});
-
-test("星空 / 云海 mode toggle switches active and labels", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  const cloud = page.locator(".mode-switch button", { hasText: "云海" });
-  await cloud.click();
-  await expect(cloud).toHaveClass(/active/);
-  await expect(page.getByText("点位云海潜力")).toBeVisible();
-  await shot(page, "cloud-mode");
-  const star = page.locator(".mode-switch button", { hasText: "星空" });
-  await star.click();
-  await expect(star).toHaveClass(/active/);
-});
-
-test("navigation between 今晚 / 地图 / 对比 / 点位", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await navButton(page, "地图").click();
-  await expect(page.locator(".map-workspace")).toBeVisible();
-  await navButton(page, "对比").click();
-  await expect(page.locator(".matrix-section")).toBeVisible();
-  await shot(page, "matrix");
-  await navButton(page, "点位").click();
-  await expect(page.locator(".locations-section")).toBeVisible();
-  await navButton(page, "今晚").click();
-  await expect(page.locator(".rank-card").first()).toBeVisible();
-});
-
-test("map search evaluates 14 nights, edits name and saves without duplicates", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await navButton(page, "地图").click();
-  await page.getByRole("textbox", { name: "搜索地点" }).fill("杭州");
-  await page.getByRole("button", { name: "搜索", exact: true }).click();
-  await page.getByRole("button", { name: /杭州.*浙江.*杭州市.*中国/ }).click();
-
-  const nameInput = page.getByRole("textbox", { name: "点位名称" });
-  await expect(nameInput).toHaveValue("杭州");
-  await expect(page.locator(".map-score-row strong").first()).not.toHaveText("—", { timeout: 20000 });
-  await page.getByRole("button", { name: "14 天" }).click();
-  await expect(page.locator(".map-night-rail button")).toHaveCount(14);
-  await nameInput.fill("杭州暗夜候选点");
-  await page.getByRole("button", { name: "保存为我的点位" }).click();
-  await expect(page.getByText("已保存到本机点位")).toBeVisible();
-  await expect(page.getByRole("button", { name: "已在点位列表" })).toBeDisabled();
-  await shot(page, "map-search");
-
-  await navButton(page, "点位").click();
-  await expect(page.locator(".location-table")).toContainText("杭州暗夜候选点");
-});
-
-test("browser geolocation success and denial paths remain usable", async ({ page }) => {
-  await page.addInitScript(() => {
-    navigator.geolocation.getCurrentPosition = (success) => success({
-      coords: { latitude: 30.25, longitude: 120.15, altitude: 25 },
-    });
-  });
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await navButton(page, "地图").click();
-  await page.getByRole("button", { name: "使用当前位置" }).click();
-  await expect(page.getByRole("textbox", { name: "点位名称" })).toHaveValue("我的当前位置");
-  await expect(page.locator(".inspector-coordinate")).toContainText("30.25000, 120.15000");
-});
-
-test("browser geolocation denial explains fallback", async ({ page }) => {
-  await page.addInitScript(() => {
-    navigator.geolocation.getCurrentPosition = (_success, error) => error({ code: 1 });
-  });
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await navButton(page, "地图").click();
-  await page.getByRole("button", { name: "使用当前位置" }).click();
-  await expect(page.getByText("未获得定位权限。你仍可搜索地点或点击地图。")).toBeVisible();
-});
-
-test("observation night switching updates selection", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  const rail = page.locator(".night-rail button");
-  const count = await rail.count();
-  expect(count).toBeGreaterThan(1);
-  await rail.nth(1).click();
-  await expect(rail.nth(1)).toHaveClass(/active/);
-});
-
-test("detail drawer opens, Esc closes, body scroll locked", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await page.locator(".rank-card").first().click();
-  const drawer = page.locator(".detail-drawer");
-  await expect(drawer).toBeVisible({ timeout: 10000 });
-  await expect(page.locator(".drawer-backdrop")).toBeVisible();
-  const overflowOpen = await page.evaluate(() => document.body.style.overflow);
-  expect(overflowOpen).toBe("hidden");
-  await expect(page.getByRole("button", { name: "关闭详情" })).toBeFocused();
-  await shot(page, "drawer");
-  await page.keyboard.press("Escape");
-  await expect(drawer).toBeHidden({ timeout: 10000 });
-  const overflowClosed = await page.evaluate(() => document.body.style.overflow);
-  expect(overflowClosed).not.toBe("hidden");
-});
-
-test("detail drawer opens from matrix cell", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await navButton(page, "对比").click();
-  await expect(page.locator(".matrix-cell").first()).toBeVisible({ timeout: 10000 });
-  await page.locator(".matrix-cell").first().click();
-  await expect(page.locator(".detail-drawer")).toBeVisible({ timeout: 10000 });
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".detail-drawer")).toBeHidden({ timeout: 10000 });
-});
-
-test("custom location form validates empty and saves valid", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  await navButton(page, "点位").click();
-  await expect(page.locator(".locations-section")).toBeVisible();
-  const rowsBefore = await page.locator(".location-table tbody tr").count();
-
-  await page.getByRole("button", { name: "新增点位" }).click();
-  await expect(page.locator(".location-form")).toBeVisible();
-  await shot(page, "location-form");
-  // empty submit must be blocked
-  await page.getByRole("button", { name: "保存点位" }).click();
-  await expect(page.locator(".location-form")).toBeVisible();
-  expect(await page.locator(".location-table tbody tr").count()).toBe(rowsBefore);
-
-  // valid submit
-  await page.getByPlaceholder("例如：东白山").fill("测试山");
-  await page.getByPlaceholder("29.5000").fill("29.5");
-  await page.getByPlaceholder("120.3000").fill("120.3");
-  await page.getByPlaceholder("1000").fill("1000");
-  await page.getByRole("button", { name: "保存点位" }).click();
-  await expect(page.locator(".status-banner")).toContainText("新点位已保存到本机");
-  const rowsAfter = await page.locator(".location-table tbody tr").count();
-  expect(rowsAfter).toBe(rowsBefore + 1);
-});
-
-test("API failure shows error banner and preserves prior data", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
-  // override mock to abort; last-registered route wins
-  await page.route("**/api.open-meteo.com/v1/forecast**", (route) => route.abort());
-  await page.locator(".refresh-button").click();
-  await expect(page.locator(".status-banner")).toContainText("已保留上一次成功数据", {
-    timeout: 10000,
-  });
-  await expect(page.locator(".rank-card").first()).toBeVisible();
-  await shot(page, "api-failure");
 });

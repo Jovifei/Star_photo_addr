@@ -11,26 +11,28 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // Generated output is never source input.
+    "dist/**",
     "next-env.d.ts",
-    // Legacy Vite star-weather source (not part of the Next build; do not lint).
-    "src/App.jsx",
-    "src/main.jsx",
-    "src/styles.css",
-    "src/lib/openMeteo.js",
-    "src/lib/scoring.js",
-    "src/lib/astronomy.js",
-    "src/lib/clouds.js",
-    "src/lib/time.js",
-    "src/lib/cache.js",
-    "src/lib/geocoding.js",
-    "src/data/locations.js",
-    // Legacy / non-Next directories that generate thousands of warnings and
-    // are not part of the Next build.
+    // Tests and local orchestration have their own runtime checks.
     "tests/**",
-    "_oldsite_vite/**",
     "scripts/**",
     "_tpl/**",
     "_broken_git/**",
+    // Local AI agent / editor tool directories (mirrors .gitignore).
+    // Flat config does not read .gitignore, and these ship bundled/obfuscated
+    // scripts that are never product source — keep local lint parity with CI.
+    ".claude/**",
+    ".codex/**",
+    ".qoder/**",
+    ".agents/**",
+    ".comet/**",
+    ".workbuddy/**",
+    "openspec/**",
+    ".github/skills/**",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "skills-lock.json",
   ]),
 ]);
 
