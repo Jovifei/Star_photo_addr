@@ -69,10 +69,11 @@ test("地图云图默认开启：三层比例随跨午夜时间轴变化", async
   await page.goto("/");
   // Cloud is ON by default; the timeline and overlay render without selecting
   // a location first (the current viewport is sampled immediately).
+  // Default range is 7 nights × 10 hours = 70 ticks, slider max = 69.
   const slider = page.getByRole("slider", { name: "云图时间轴" });
   await expect(slider).toBeVisible({ timeout: 15000 });
   await expect(slider).toHaveAttribute("min", "0");
-  await expect(slider).toHaveAttribute("max", "9");
+  await expect(slider).toHaveAttribute("max", "69");
   await expect(page.locator(".cloud-timeline-layer")).toHaveCount(3);
   await expect(page.locator(".cloud-timeline")).toContainText("高云");
   await expect(page.locator(".cloud-timeline")).toContainText("中云");
@@ -90,8 +91,8 @@ test("地图云图默认开启：三层比例随跨午夜时间轴变化", async
     timeout: 15000,
   });
   const valuesBefore = await page.locator(".cloud-timeline-layer-value").allTextContents();
-  await slider.fill("5");
-  await expect(page.locator(".cloud-canvas-overlay")).toHaveAttribute("data-time-index", "5");
+  await slider.fill("35");
+  await expect(page.locator(".cloud-canvas-overlay")).toHaveAttribute("data-time-index", "35");
   const valuesAfter = await page.locator(".cloud-timeline-layer-value").allTextContents();
   expect(valuesAfter).not.toEqual(valuesBefore);
   const canvasSize = await page.locator(".cloud-canvas-overlay canvas").evaluate((canvas) => ({
@@ -100,7 +101,8 @@ test("地图云图默认开启：三层比例随跨午夜时间轴变化", async
   }));
   expect(canvasSize.width).toBeGreaterThan(100);
   expect(canvasSize.height).toBeGreaterThan(100);
-  await expect(page.locator(".cloud-timeline-current")).toContainText(/8\/12.*(次日|0[1-5]:00)/);
+  // Index 35 = night 3 offset (8/12→8/15), hour 01:00 (next day).
+  await expect(page.locator(".cloud-timeline-current")).toContainText(/8\/15.*(次日|0[1-5]:00)/);
 });
 
 test("观测夜语义含星期与 20:00 到次日 05:00，并支持排序和增删地点", async ({ page }) => {

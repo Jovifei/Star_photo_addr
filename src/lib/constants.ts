@@ -95,7 +95,7 @@ export const DEFAULT_CLOUD_STATE: CloudState = {
   lowEnabled: true,
   timeIndex: 0,
   playing: false,
-  range: 1,
+  range: 7,
 };
 
 /** Cloud-coverage colour stops for Canvas IDW rendering (value 0-100 → colour). */

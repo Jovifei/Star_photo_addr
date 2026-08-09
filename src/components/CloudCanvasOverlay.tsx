@@ -6,37 +6,22 @@ import type { CloudGridData } from "@/lib/types";
 import {
   idwInterpolate,
   getValuesAtTime,
-  cloudLayerValueToColor,
 } from "@/lib/cloudGrid";
 
 interface CloudCanvasOverlayProps {
-  /** Grid sampling data (null = no overlay). */
   gridData: CloudGridData | null;
-  /** Current time index (0-9). */
   timeIndex: number;
-  /** Layer visibility toggles. */
   highEnabled: boolean;
   midEnabled: boolean;
   lowEnabled: boolean;
 }
 
 /**
- * Leaflet canvas overlay for three-layer cloud IDW rendering.
+ * Canvas overlay that renders cloud coverage as a visible heatmap on the map.
  *
- * This component does NOT use a Leaflet L.Layer extension. Instead it creates
- * an absolutely-positioned `<canvas>` element on top of the map container and
- * redraws on prop changes AND on every map move/zoom/resize (rAF-throttled) so
- * the coverage stays aligned with the basemap while panning.
- *
- * Rendering pipeline:
- *   1. Convert all sample points to pixel coordinates via `map.latLngToContainerPoint`.
- *   2. For each enabled layer (high/mid/low), extract the cloud values at the
- *      current timeIndex.
- *   3. For each canvas pixel (downsampled by `STEP`), compute IDW interpolation
- *      from the sample pixel positions.
- *   4. Map the interpolated value to a colour and fill the pixel block.
- *   5. Layers are composited using `globalCompositeOperation: 'screen'` for
- *      additive blending.
+ * Uses IDW interpolation from the 5×6 grid sample points.  Each enabled layer
+ * (high / mid / low) is drawn in its own colour channel and blended additively
+ * so overlapping cloud layers build up naturally like a satellite cloud map.
  */
 export default function CloudCanvasOverlay({
   gridData,
@@ -49,8 +34,6 @@ export default function CloudCanvasOverlay({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
 
-  // Keep latest props in a ref so the move/zoom listener always redraws with
-  // current data without re-subscribing on every prop change.
   const propsRef = useRef({ gridData, timeIndex, highEnabled, midEnabled, lowEnabled });
   useEffect(() => {
     propsRef.current = { gridData, timeIndex, highEnabled, midEnabled, lowEnabled };
@@ -85,17 +68,22 @@ export default function CloudCanvasOverlay({
     });
 
     const values = getValuesAtTime(data, ti);
-    const STEP = 6;
+    const STEP = 5; // slightly denser grid for smoother appearance
 
+    // Layer definitions with distinct base colours.
     const layers: Array<{
       id: "high" | "mid" | "low";
       enabled: boolean;
       values: number[];
+      r: number; g: number; b: number;
     }> = [
-      { id: "low", enabled: l, values: values.low },
-      { id: "mid", enabled: m, values: values.mid },
-      { id: "high", enabled: h, values: values.high },
+      { id: "low",  enabled: l, values: values.low,  r: 169, g: 155, b: 247 },
+      { id: "mid",  enabled: m, values: values.mid,  r: 212, g: 178, b: 115 },
+      { id: "high", enabled: h, values: values.high, r: 121, g: 207, b: 226 },
     ];
+
+    // Use "lighter" (additive) blend so overlapping layers build up.
+    ctx.globalCompositeOperation = "lighter";
 
     for (const layer of layers) {
       if (!layer.enabled) continue;
@@ -106,15 +94,15 @@ export default function CloudCanvasOverlay({
         value: layer.values[i] ?? 0,
       }));
 
-      ctx.globalCompositeOperation = "screen";
-
       for (let py = 0; py < canvas.height; py += STEP) {
         for (let px = 0; px < canvas.width; px += STEP) {
           const value = idwInterpolate(px + STEP / 2, py + STEP / 2, idwPoints, 2);
-          if (value < 1) continue;
+          if (value < 0.5) continue;
 
-          const color = cloudLayerValueToColor(layer.id, value);
-          ctx.fillStyle = color;
+          // Alpha mapping: 0.5%→0.10, 100%→0.70  — bright enough to read on
+          // the dark basemap without washing out the underlying map details.
+          const alpha = 0.10 + (value / 100) * 0.60;
+          ctx.fillStyle = `rgba(${layer.r},${layer.g},${layer.b},${alpha.toFixed(3)})`;
           ctx.fillRect(px, py, STEP, STEP);
         }
       }
@@ -123,14 +111,11 @@ export default function CloudCanvasOverlay({
     ctx.globalCompositeOperation = "source-over";
   };
 
-  // Redraw whenever the relevant props change.
   useEffect(() => {
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, gridData, timeIndex, highEnabled, midEnabled, lowEnabled]);
 
-  // Redraw (rAF-throttled) while the map is moved / zoomed / resized so the
-  // cloud field tracks the basemap instead of staying at stale pixel positions.
   useEffect(() => {
     if (!map) return;
 
@@ -172,7 +157,7 @@ export default function CloudCanvasOverlay({
         right: 0,
         bottom: 0,
         pointerEvents: "none",
-        zIndex: 350,
+        zIndex: 450,
       }}
     >
       <canvas ref={canvasRef} style={{ display: "block" }} />

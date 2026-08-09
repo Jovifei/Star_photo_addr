@@ -761,68 +761,76 @@
 }
 .side-panel .panel-location-name {
   font-size: 24px;
+  line-height: 1.3;
 }
 .side-panel .panel-coords {
   font-size: 13px;
+  line-height: 1.5;
+  margin-top: 4px;
 }
 .side-panel .panel-kicker {
   font-size: 11px;
 }
 .side-panel .metric .label {
   font-size: 12px;
+  line-height: 1.4;
 }
 .side-panel .metric .value {
   font-size: 22px;
+  line-height: 1.25;
 }
 .side-panel .panel-reason {
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.7;
 }
-/* Drag handle on the left edge of the desktop panel. */
+/* Drag handle on the left edge of the desktop panel.
+   Positioned OUTSIDE the aside so overflow-y:auto doesn't clip it. */
 .side-panel-resizer {
   position: absolute;
   top: 0;
-  left: -6px; /* widen the hit area half outside the panel edge */
-  width: 16px;
+  right: 0; /* anchors to the right edge of .detail-overlay-host */
   height: 100%;
+  width: 20px;
   cursor: col-resize;
-  z-index: 6;
+  z-index: calc(var(--z-panel) + 2);
   touch-action: none;
   display: flex;
   justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+  /* translate left by the panel width so the handle sits on the panel's left edge */
+  transform: translateX(calc(-1 * var(--side-panel-width, var(--side-panel-width-default))));
+  transition: transform 0.05s linear;
 }
 .side-panel-resizer::before {
-  /* Visible grip bar */
+  /* Visible grip bar — wider and taller than before so users can find it */
   content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 56px;
-  margin-left: -2px;
-  margin-top: -28px;
+  width: 5px;
+  height: 72px;
   border-radius: var(--radius-pill);
-  background: var(--line-strong);
-  transition: background var(--transition), height var(--transition);
+  background: rgba(151, 211, 225, 0.45);
+  transition: background var(--transition), height var(--transition), box-shadow var(--transition);
 }
 .side-panel-resizer::after {
+  /* A subtle extension line that hints at the full drag range */
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 6px;
-  width: 2px;
-  background: transparent;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: rgba(151, 211, 225, 0.12);
   transition: background var(--transition);
 }
 .side-panel-resizer:hover::before,
 .side-panel-resizer:active::before {
   background: var(--green);
-  height: 88px;
-  margin-top: -44px;
+  height: 96px;
+  box-shadow: 0 0 10px rgba(121, 207, 226, 0.35);
 }
 .side-panel-resizer:active::before {
-  box-shadow: 0 0 0 4px var(--cyan-soft, rgba(121, 207, 226, 0.18));
+  box-shadow: 0 0 16px rgba(121, 207, 226, 0.55);
 }
 .detail-restore {
   position: absolute;
@@ -857,6 +865,7 @@
 .panel-section h2,
 .panel-section h3 {
   font-family: var(--font-heading);
+  line-height: 1.35;
 }
 .panel-kicker {
   font-size: 10px;
@@ -903,7 +912,8 @@
   font-size: 20px;
   font-family: var(--font-mono);
   color: var(--text);
-  margin-top: 4px;
+  margin-top: 6px;
+  line-height: 1.25;
 }
 .metric .value small {
   font-size: 11px;
@@ -1006,7 +1016,7 @@
 .decision-item {
   display: flex;
   gap: 10px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
 .decision-item:last-child {
@@ -1016,7 +1026,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-top: 5px;
+  margin-top: 6px;
   flex-shrink: 0;
   background: var(--muted);
 }
@@ -1036,11 +1046,13 @@
   font-size: 13px;
   color: var(--text);
   display: block;
+  line-height: 1.45;
 }
 .decision-item p {
   font-size: 12px;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 4px;
+  line-height: 1.55;
 }
 
 /* Candidate list */
@@ -1075,11 +1087,13 @@
 .candidate-row .name {
   font-size: 13px;
   color: var(--text);
+  line-height: 1.4;
 }
 .candidate-row .meta {
   font-size: 11px;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 .bortle-chip {
   font-family: var(--font-mono);
@@ -1568,11 +1582,12 @@
   transition: width 0.3s ease;
 }
 .cloud-timeline-layer-value {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text);
   font-family: var(--font-mono);
-  min-width: 32px;
+  min-width: 36px;
   text-align: right;
+  font-weight: 600;
 }
 
 /* ---------- Cloud layer bars (Phase 2 control panel) ---------- */

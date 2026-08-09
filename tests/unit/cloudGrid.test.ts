@@ -15,7 +15,7 @@ describe("云图网格与时间轴", () => {
     expect(cloudLayerValueToColor("mid", 50)).toContain("212, 178, 115");
     expect(cloudLayerValueToColor("low", 50)).toContain("169, 155, 247");
     expect(cloudLayerValueToColor("high", -10)).toMatch(/, 0\.000\)$/);
-    expect(cloudLayerValueToColor("high", 120)).toMatch(/, 0\.600\)$/);
+    expect(cloudLayerValueToColor("high", 120)).toMatch(/, 0\.750\)$/);
   });
 
   it("IDW 在采样点返回原值，在中点平滑插值", () => {

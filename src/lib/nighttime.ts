@@ -89,9 +89,8 @@ export function isInNightRange(timeString: string, nightKeys: string[]): boolean
   return nightKeys.some((key) => isInNight(timeString, key));
 }
 
-/** Number of hourly ticks in a night range: `count` nights × 10 hours each. */
-export const HOURS_PER_NIGHT = NIGHT_START + (24 - NIGHT_START) + (NIGHT_END + 1);
-// 20..23 (4h) + 00..05 (6h) = 10
+/** Number of hourly ticks in a single night window: 20→23 (4h) + 00→05 (6h) = 10. */
+export const HOURS_PER_NIGHT = (24 - NIGHT_START) + (NIGHT_END + 1);
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 

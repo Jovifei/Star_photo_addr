@@ -10,9 +10,7 @@ import {
 } from "@/lib/nighttime";
 import { NIGHT_START, NIGHT_END } from "@/lib/constants";
 import { getValuesAtTime, averageLayer } from "@/lib/cloudGrid";
-
-/** Hours per night: 20:00→次日05:00, inclusive = 10 ticks. */
-const HOURS_PER_NIGHT = NIGHT_START + (24 - NIGHT_START) + (NIGHT_END + 1);
+import { HOURS_PER_NIGHT } from "@/lib/nighttime";
 const RANGE_OPTIONS: Array<{ value: 1 | 5 | 7; label: string }> = [
   { value: 1, label: "今夜" },
   { value: 5, label: "5 天" },

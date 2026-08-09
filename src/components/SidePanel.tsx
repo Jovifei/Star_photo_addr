@@ -184,16 +184,16 @@ export default function SidePanel() {
 
   return (
     <div className="detail-overlay-host">
+      {!isMobile && (
+        <div
+          className="side-panel-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="拖动调整侧边栏宽度"
+          onPointerDown={onDragStart}
+        />
+      )}
       <aside className="side-panel" style={{ transform }}>
-        {!isMobile && (
-          <div
-            className="side-panel-resizer"
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="拖动调整侧边栏宽度"
-            onPointerDown={onDragStart}
-          />
-        )}
         {state.selectedLocation ? (
           <>
             <ObservationDetails

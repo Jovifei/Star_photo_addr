@@ -179,7 +179,9 @@ export function cloudLayerValueToColor(
     low: [169, 155, 247],
   } as const;
   const [r, g, b] = palette[layer];
-  const alpha = clamped === 0 ? 0 : 0.08 + (clamped / 100) * 0.52;
+  // Minimum alpha raised to 0.18 so even light cloud cover is visible on the
+  // dark basemap.  At 100 % the alpha hits 0.75 for a solid, readable overlay.
+  const alpha = clamped === 0 ? 0 : 0.18 + (clamped / 100) * 0.57;
   return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
 }
 
