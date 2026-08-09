@@ -16,15 +16,30 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
-test("3100 上运行的是项目，主地图显示十小时矩阵而不是滑块", async ({ page }, testInfo) => {
+test("3100 上运行的是项目，地图优先且小时矩阵可展开滚动", async ({ page }, testInfo) => {
   await page.goto("/");
   await expect(page.locator(".map-stage")).toBeVisible();
+  await expect(page.locator(".map-viewport")).toBeVisible();
+  const timelineToggle = page.locator(".cloud-timeline-toggle");
+  await expect(timelineToggle).toHaveAttribute("aria-expanded", "false");
+  await timelineToggle.click();
   const matrix = page.locator(".hourly-matrix").first();
   await expect(matrix).toBeVisible({ timeout: 15000 });
   await expect(matrix.locator("tbody tr")).toHaveCount(12);
   await expect(matrix.locator("thead tr th")).toHaveCount(11);
   await expect(page.locator('input[type="range"]')).toHaveCount(0);
   await expect(page.locator(".cloud-timeline")).toContainText("云");
+
+  const mapBounds = await page.locator(".map-viewport").boundingBox();
+  const timelineBounds = await page.locator(".cloud-timeline").boundingBox();
+  expect(mapBounds).not.toBeNull();
+  expect(timelineBounds).not.toBeNull();
+  expect(timelineBounds.y).toBeGreaterThanOrEqual(mapBounds.y + mapBounds.height - 1);
+  const bodyScroll = await page.locator(".cloud-timeline-body").evaluate((element) => ({
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+  }));
+  expect(bodyScroll.scrollHeight).toBeGreaterThan(bodyScroll.clientHeight);
 
   const targetCell = matrix.locator("tbody tr").nth(1).getByRole("button").nth(5);
   await targetCell.focus();

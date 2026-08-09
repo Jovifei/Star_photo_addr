@@ -22,8 +22,8 @@ const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
 /**
  * Map stage: orchestrates the Leaflet canvas and all overlay controls.
  *
- * v2: integrates CloudTimeline at the bottom of the map area.
- * The main page shows all layers (VIIRS + cloud + boundaries).
+ * v2: keeps the forecast panel below the map viewport so a large matrix never
+ * obscures the map. The panel has its own bounded scroll region.
  */
 export default function MapStage() {
   const mapRef = useRef<LeafletMap | null>(null);
@@ -32,22 +32,24 @@ export default function MapStage() {
 
   return (
     <section className="map-stage">
-      <MapCanvas
-        mapRef={mapRef}
-        onReady={() => setReady(true)}
-        onSample={(latitude, longitude) => void sampleAt(latitude, longitude)}
-        center={[34, 108]}
-        zoom={4}
-        layers={{ viirs: true, cloud: true, boundaries: true, recommendations: false }}
-      />
-      <MapHeadline />
-      <MapViewActions mapRef={mapRef} />
-      <MapSearchCard />
-      <BortleControl />
-      <CloudControl />
-      <MapLegend />
+      <div className="map-viewport">
+        <MapCanvas
+          mapRef={mapRef}
+          onReady={() => setReady(true)}
+          onSample={(latitude, longitude) => void sampleAt(latitude, longitude)}
+          center={[34, 108]}
+          zoom={4}
+          layers={{ viirs: true, cloud: true, boundaries: true, recommendations: false }}
+        />
+        <MapHeadline />
+        <MapViewActions mapRef={mapRef} />
+        <MapSearchCard />
+        <BortleControl />
+        <CloudControl />
+        <MapLegend />
+        <MapSetup hidden={ready} />
+      </div>
       <CloudTimeline />
-      <MapSetup hidden={ready} />
     </section>
   );
 }

@@ -35,3 +35,16 @@
 - `docker compose build`: PASS; `APP_PORT=3100 docker compose up -d`: PASS; `/healthz` identifies `star-weather-planner`, and the container became healthy.
 - `scripts/start-local.ps1 -Port 3101 -NoBrowser -SmokeTest`: PASS; startup probe identifies `star-weather-planner` and cleans up the temporary dev process.
 - Satellite live probes: Himawari returned 145 ten-minute observation frames; VIIRS night-light returned the nearest available date after local-date fallback.
+
+## Map-first hourly panel refinement (2026-08-09)
+
+- [x] Move the hourly panel outside the map viewport so it cannot obscure the primary map.
+- [x] Add default collapsed state, bounded expanded height, independent vertical scroll, and horizontal-only matrix scrolling.
+- [x] Normalize table typography, row height, summary cards, control touch targets, and dark-theme tokens.
+- [x] Verify desktop and mobile behavior with E2E plus a real expanded-state screenshot review.
+
+### Review
+
+- `npm run check`: PASS — lint, typecheck, 13 Vitest files / 99 tests, Next 16.3.0 build.
+- `PORT=3101 npm run test:e2e`: PASS — 7 passed, 1 skipped; matrix expansion and map viewport assertions passed on desktop and mobile.
+- Screenshot review at 1440×1000: expanded map viewport 513px high; forecast panel 420px bounded with an internal scroll region.

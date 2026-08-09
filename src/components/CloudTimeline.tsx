@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { NIGHT_END, NIGHT_START } from "@/lib/constants";
 import { formatHourWithDate, formatNightLabel, nightRangeKeys } from "@/lib/nighttime";
@@ -45,6 +45,7 @@ function cloudGridHour(grid: NonNullable<ReturnType<typeof useStore>["state"]["c
 export default function CloudTimeline() {
   const { state, setCloud, selectNight } = useStore();
   const { cloudState, selectedNight, cloudGrid, forecast, selectedLocation } = state;
+  const [expanded, setExpanded] = useState(false);
   const [aqiValue, setAqiValue] = useState<number | null>(null);
   const [kpValue, setKpValue] = useState<number | null>(null);
   const nightKeys = useMemo(
@@ -135,8 +136,12 @@ export default function CloudTimeline() {
   if (!cloudState.enabled) return null;
 
   return (
-    <div className="cloud-timeline">
+    <section className={`cloud-timeline${expanded ? " is-expanded" : " is-collapsed"}`} aria-label="逐小时预报面板">
       <div className="cloud-timeline-bar">
+        <div className="cloud-timeline-title">
+          <span className="section-kicker">逐小时预报</span>
+          <strong>单夜数据</strong>
+        </div>
         <button type="button" className="cloud-timeline-play" onClick={() => setCloud({ playing: !cloudState.playing })} aria-label={cloudState.playing ? "暂停" : "播放"}>
           {cloudState.playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
         </button>
@@ -144,26 +149,40 @@ export default function CloudTimeline() {
           {RANGE_OPTIONS.map((option) => <button key={option.value} type="button" className={cloudState.range === option.value ? "active" : ""} aria-pressed={cloudState.range === option.value} onClick={() => changeRange(option.value)}>{option.label}</button>)}
         </div>
         <span className="cloud-timeline-current" title={current ? formatHourWithDate(current.time, current.nightKey) : undefined}>{current ? `${formatNightLabel(current.nightKey, true)} ${formatHourWithDate(current.time, current.nightKey)}` : "暂无时次"}</span>
+        <button
+          type="button"
+          className="cloud-timeline-toggle"
+          aria-expanded={expanded}
+          aria-controls="hourly-forecast-panel"
+          onClick={() => setExpanded((value) => !value)}
+        >
+          {expanded ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
+          <span>{expanded ? "收起数据" : "展开数据"}</span>
+        </button>
       </div>
 
-      <div className="cloud-night-tabs" role="tablist" aria-label="观测夜选择">
-        {nightKeys.map((nightKey) => <button key={nightKey} type="button" role="tab" aria-selected={displayNight === nightKey} className={displayNight === nightKey ? "active" : ""} onClick={() => changeNight(nightKey)}>{formatNightLabel(nightKey, true)}</button>)}
-      </div>
+      {expanded && (
+        <div className="cloud-timeline-body" id="hourly-forecast-panel">
+          <div className="cloud-night-tabs" role="tablist" aria-label="观测夜选择">
+            {nightKeys.map((nightKey) => <button key={nightKey} type="button" role="tab" aria-selected={displayNight === nightKey} className={displayNight === nightKey ? "active" : ""} onClick={() => changeNight(nightKey)}>{formatNightLabel(nightKey, true)}</button>)}
+          </div>
 
-      <div className="cloud-summary-card" aria-label="当前小时摘要">
-        <span><b>观星分</b>{nightSummary?.score == null ? "—" : `${nightSummary.score}`}</span>
-        <span><b>总云量</b>{selectedHour?.cloudCover == null ? "—" : `${Math.round(selectedHour.cloudCover)}%`}</span>
-        <span><b>能见度</b>{selectedHour?.visibility == null ? "—" : `${(selectedHour.visibility / 1000).toFixed(1)} km`}</span>
-        <span><b>风</b>{selectedHour?.windSpeed == null ? "—" : `${selectedHour.windSpeed.toFixed(1)} m/s`}</span>
-        <span><b>AQI</b>{!selectedLocation || aqiValue == null ? "—" : aqiValue}</span>
-        <span><b>Kp</b>{!selectedLocation || kpValue == null ? "—" : kpValue.toFixed(1)}</span>
-        <span><b>月相</b>{nightSummary?.moonPhase ?? "—"}</span>
-        <span><b>暗夜窗口</b>{nightSummary?.windowLabel ?? "—"}</span>
-      </div>
+          <div className="cloud-summary-card" aria-label="当前小时摘要">
+            <span><b>观星分</b>{nightSummary?.score == null ? "—" : `${nightSummary.score}`}</span>
+            <span><b>总云量</b>{selectedHour?.cloudCover == null ? "—" : `${Math.round(selectedHour.cloudCover)}%`}</span>
+            <span><b>能见度</b>{selectedHour?.visibility == null ? "—" : `${(selectedHour.visibility / 1000).toFixed(1)} km`}</span>
+            <span><b>风</b>{selectedHour?.windSpeed == null ? "—" : `${selectedHour.windSpeed.toFixed(1)} m/s`}</span>
+            <span><b>AQI</b>{!selectedLocation || aqiValue == null ? "—" : aqiValue}</span>
+            <span><b>Kp</b>{!selectedLocation || kpValue == null ? "—" : kpValue.toFixed(1)}</span>
+            <span><b>月相</b>{nightSummary?.moonPhase ?? "—"}</span>
+            <span><b>暗夜窗口</b>{nightSummary?.windowLabel ?? "—"}</span>
+          </div>
 
-      <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} onSelectTime={setActiveTime} loading={state.cloudGridLoading} />
-      {state.cloudGridLoading && <div className="cloud-timeline-loading" role="status">正在采样云图数据…</div>}
-    </div>
+          <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} onSelectTime={setActiveTime} loading={state.cloudGridLoading} />
+          {state.cloudGridLoading && <div className="cloud-timeline-loading" role="status">正在采样云图数据…</div>}
+        </div>
+      )}
+    </section>
   );
 }
 

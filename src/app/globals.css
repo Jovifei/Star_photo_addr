@@ -257,7 +257,16 @@
 .map-stage {
   position: relative;
   flex: 1;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
+}
+.map-viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 240px;
 }
 .tencent-map-root,
 .map-canvas {
@@ -449,11 +458,6 @@
 }
 .map-search-card:has(.suggestions) {
   z-index: 950;
-}
-.map-stage:has(.cloud-timeline) .map-search-card,
-.map-stage:has(.cloud-timeline) .map-view-actions,
-.map-stage:has(.cloud-timeline) .map-legend {
-  bottom: 164px;
 }
 .search-only-row {
   display: flex;
@@ -2173,5 +2177,283 @@
   }
   .cell-score {
     font-size: 12px;
+  }
+}
+
+/* ============================================================
+   UI refinement: map-first forecast panel
+   The matrix lives below the map, has a bounded vertical viewport, and keeps
+   horizontal scrolling local to the ten-hour table.
+   ============================================================ */
+.map-stage:has(.cloud-timeline) .map-search-card,
+.map-stage:has(.cloud-timeline) .map-view-actions,
+.map-stage:has(.cloud-timeline) .map-legend {
+  bottom: 18px;
+}
+
+.cloud-timeline {
+  position: relative;
+  inset: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  max-width: none;
+  flex: 0 1 min(42dvh, 460px);
+  min-height: 64px;
+  max-height: min(42dvh, 460px);
+  padding: 10px 18px 12px;
+  border-width: 1px 0 0;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(180deg, rgba(6, 17, 24, .98), rgba(4, 16, 26, .96));
+  box-shadow: 0 -14px 36px rgba(0, 0, 0, .32);
+  overflow: hidden;
+  z-index: var(--z-panel);
+  transition: max-height 200ms ease, flex-basis 200ms ease;
+}
+.cloud-timeline.is-collapsed {
+  flex-basis: 64px;
+  max-height: 64px;
+}
+.cloud-timeline.is-expanded {
+  max-height: min(42dvh, 460px);
+}
+.cloud-timeline-bar {
+  min-height: 44px;
+  gap: 10px;
+  padding: 0;
+}
+.cloud-timeline-title {
+  display: flex;
+  min-width: 132px;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+  line-height: 1.35;
+}
+.cloud-timeline-title strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.cloud-timeline-toggle {
+  display: inline-flex;
+  min-width: 92px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--green-soft);
+  background: rgba(12, 30, 39, .72);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+.cloud-timeline-toggle:hover,
+.cloud-timeline-toggle:focus-visible {
+  border-color: var(--green);
+  color: var(--text);
+  background: rgba(121, 207, 226, .14);
+}
+.cloud-timeline-body {
+  min-height: 0;
+  padding: 2px 2px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.cloud-timeline-body::-webkit-scrollbar,
+.hourly-matrix-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.cloud-timeline-body::-webkit-scrollbar-thumb,
+.hourly-matrix-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(151, 211, 225, .28);
+}
+.cloud-summary-card {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+.cloud-summary-card span {
+  min-height: 58px;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 9px 10px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-summary-card b {
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.cloud-night-tabs {
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0 8px;
+}
+.cloud-night-tabs button {
+  min-height: 36px;
+  padding: 7px 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+.hourly-matrix {
+  margin-top: 10px;
+  border-color: var(--line-strong);
+  border-radius: 12px;
+  background: rgba(6, 17, 24, .76);
+}
+.hourly-matrix-head {
+  min-height: 54px;
+  gap: 16px;
+  padding: 11px 14px 9px;
+}
+.hourly-matrix-head h3 {
+  margin-top: 3px;
+  font-size: 15px;
+  line-height: 1.4;
+  letter-spacing: .03em;
+}
+.hourly-matrix-scroll {
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-inline: contain;
+}
+.hourly-matrix table {
+  min-width: 960px;
+}
+.hourly-matrix th,
+.hourly-matrix td {
+  line-height: 1.35;
+}
+.hourly-matrix thead th:first-child,
+.hourly-matrix tbody th {
+  width: 122px;
+  min-width: 122px;
+  padding: 9px 12px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.hourly-matrix tbody th {
+  font-size: 13px;
+}
+.hourly-matrix th small,
+.hourly-matrix tbody th small {
+  margin-top: 3px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.hourly-matrix-time,
+.hourly-matrix td button {
+  min-height: 44px;
+  padding: 8px 6px;
+  line-height: 1.35;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.hourly-matrix-time small {
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.hourly-matrix-legend {
+  gap: 8px 18px;
+  min-height: 38px;
+  align-items: center;
+  padding: 9px 12px;
+  line-height: 1.4;
+}
+.cloud-control {
+  line-height: 1.4;
+}
+.cloud-master-toggle {
+  min-height: 44px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.source-status-panel {
+  gap: 8px;
+  line-height: 1.45;
+}
+.source-status-panel span {
+  min-height: 22px;
+  line-height: 1.45;
+}
+.source-status-panel b {
+  white-space: nowrap;
+}
+.cloud-tabs {
+  gap: 8px;
+}
+.cloud-tabs button {
+  min-height: 36px;
+  min-width: 0;
+  padding: 7px 8px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .cloud-summary-card {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .map-viewport {
+    min-height: 240px;
+  }
+  .map-stage:has(.cloud-timeline) .map-search-card {
+    bottom: 84px;
+  }
+  .cloud-timeline {
+    flex-basis: 72px;
+    max-height: 48dvh;
+    padding: 9px 12px 10px;
+  }
+  .cloud-timeline.is-collapsed {
+    flex-basis: 72px;
+    max-height: 72px;
+  }
+  .cloud-timeline.is-expanded {
+    max-height: 48dvh;
+  }
+  .cloud-timeline-bar {
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .cloud-timeline-title {
+    min-width: 100px;
+  }
+  .cloud-timeline-current {
+    max-width: 34vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cloud-timeline-toggle {
+    min-width: 88px;
+    padding-inline: 8px;
+  }
+  .cloud-timeline-body {
+    max-height: calc(48dvh - 78px);
+  }
+  .cloud-summary-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hourly-matrix table {
+    min-width: 960px;
   }
 }
