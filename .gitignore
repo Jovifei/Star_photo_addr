@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.next/
+out/
 .env
 .env.*
 !.env.example
@@ -9,3 +11,48 @@ coverage/
 playwright-report/
 test-results/
 design-qa-assets/
+
+# Next.js generated artifacts
+next-env.d.ts
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Legacy Vite / template residue (not part of the Next.js app)
+_tpl/
+_oldsite_vite/
+_broken_git/
+
+# AI agent / editor tool directories
+.claude/
+.codex/
+.cursor/
+.augment/
+.amazonq/
+.gemini/
+.continue/
+.opencode/
+.windsurf/
+.aider.conf.yml
+.coderules
+.clinerules
+
+# WorkBuddy assistant memory (local only)
+.workbuddy/
+
+# Temporary probe/debug files
+.ps-*.txt
+.gs-tmp.txt
+.nodeopt-result.txt
+.del-check.txt
+.comet/
+.agents/
+.qoder/
+/.github/skills/comet-*/
+/openspec/
+/docs/superpowers/
+/AGENTS.md
+/CLAUDE.md
+/skills-lock.json
+dist_old_*/
+dist_prebak_*/
+dist.bak/

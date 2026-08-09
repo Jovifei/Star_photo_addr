@@ -1,0 +1,293 @@
+// Shared TypeScript interfaces for the Perseids clone.
+// These act as the single source of truth for JSON shapes exchanged
+// between the client, the server route handlers, and the scoring engine.
+
+/** A geographic location the user is inspecting or has selected. */
+export interface Location {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  /** Metres above sea level. User elevation is never silently overwritten by the model. */
+  elevation: number;
+  /** IANA timezone, filled in by the forecast proxy via `timezone=auto`. */
+  timezone?: string;
+  source: "参考点位" | "自定义" | "modeled" | "搜索";
+  /** Optional pre-computed Bortle estimate (e.g. from cities.json). */
+  bortle?: number;
+}
+
+/**
+ * Why a dark-sky sample does or does not carry a trustworthy value.
+ * - `ok`                 : a real pixel was read and decoded.
+ * - `nodata`             : the pixel exists but encodes nodata (value 0).
+ * - `unsupported-region` : outside the China VIIRS grid; encoding unknown.
+ * - `layer-unavailable`  : the local raster bundle is not installed at all.
+ */
+export type DarkSkyStatus =
+  | "ok"
+  | "nodata"
+  | "unsupported-region"
+  | "layer-unavailable";
+
+/**
+ * Result of sampling the night-sky brightness at a coordinate.
+ *
+ * IMPORTANT: `bortle`/`bortleName`/`mpsas` are `null` whenever `status !== "ok"`.
+ * Nodata must never be presented as a trustworthy B9 / SQM reading — see
+ * `docs/LIGHT_POLLUTION_DATA_DECISION.md` ("无数据、过期、质量差必须有独立状态，
+ * 不能默认为『暗』").
+ */
+export interface DarkSkySample {
+  latitude: number;
+  longitude: number;
+  /** 14..22 mag/arcsec²; null = nodata / unknown. Never fabricated. */
+  mpsas: number | null;
+  /** 1..9, or null when no trustworthy classification exists. */
+  bortle: number | null;
+  /** Class name, or null when `bortle` is null. */
+  bortleName: string | null;
+  source: "viirs-2024" | "world-atlas-2015" | "none";
+  /** Discriminator explaining the absence of a value. */
+  status: DarkSkyStatus;
+  /** True whenever the sample must not be used as a trustworthy reading. */
+  uncertain: boolean;
+}
+
+/** A single Bortle-equivalent class. */
+export interface BortleClass {
+  level: number;
+  name: string;
+  color: string;
+  lowerBoundMpsas: number;
+}
+
+/** One normalised weather hour (location-local time, from Open-Meteo). */
+export interface HourWeather {
+  time: string;
+  temperature?: number;
+  humidity?: number;
+  dewPoint?: number;
+  precipitationProbability?: number;
+  precipitation?: number;
+  weatherCode?: number;
+  cloudCover?: number;
+  cloudLow?: number;
+  cloudMid?: number;
+  cloudHigh?: number;
+  visibility?: number;
+  windSpeed?: number;
+  windGust?: number;
+}
+
+/** Server-normalised forecast for a single location. */
+export interface LocationForecast {
+  locationId: string;
+  modelLatitude: number;
+  modelLongitude: number;
+  modelElevation: number;
+  timezone: string;
+  utcOffsetSeconds: number;
+  fetchedAt: string;
+  hourly: HourWeather[];
+}
+
+export interface ForecastResponse {
+  locations: LocationForecast[];
+}
+
+/** A single geocoding suggestion (cropped Open-Meteo result). */
+export interface GeocodeResult {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  elevation?: number;
+  country?: string;
+  admin1?: string;
+  timezone?: string;
+  featureCode?: string;
+}
+
+export interface GeocodeResponse {
+  results: GeocodeResult[];
+}
+
+export type Quality = "excellent" | "candidate" | "poor" | "blocked";
+export type NightStatus = "go" | "watch" | "no" | "trend";
+export type ConfidenceKind = "high" | "medium" | "low" | "trend";
+
+export interface ScoreComponents {
+  clearSky: number;
+  precipitation: number;
+  transparency: number;
+  wind: number;
+  darkness: number;
+  moonlight: number;
+}
+
+/** One hour after astronomy + weather scoring. */
+export interface HourEvaluation extends HourWeather {
+  sunAltitude: number;
+  moonAltitude: number;
+  moonIllumination: number;
+  galacticAltitude: number;
+  score: number;
+  quality: Quality;
+  blockers: string[];
+  components: ScoreComponents;
+}
+
+export interface Confidence {
+  level: string;
+  kind: ConfidenceKind;
+  reason: string;
+}
+
+/** Full night evaluation for a single location and night key. */
+export interface NightEvaluation {
+  nightKey: string;
+  score: number;
+  cloudSeaPotential: number;
+  status: NightStatus;
+  confidence: Confidence;
+  hours: HourEvaluation[];
+  window: HourEvaluation[];
+  windowLabel: string;
+  darkHours: number;
+  galacticMax: number;
+  moonIllumination: number;
+  moonPhase: string;
+  blockers: string[];
+  reason: string;
+  scoreModelVersion: string;
+}
+
+/** Cloud layer derived from a pressure-level profile. */
+export interface CloudLayer {
+  baseMsl: number;
+  topMsl: number;
+  baseAgl: number;
+  topAgl: number;
+  relation: "云上" | "云中" | "云下";
+  confidence: "高" | "中" | "低";
+  levels: PressureLevel[];
+}
+
+export interface PressureLevel {
+  pressure: number;
+  cloudCover?: number;
+  humidity?: number;
+  temperature?: number;
+  heightMsl?: number;
+}
+
+/**
+ * Cloud-control interactive state (Phase 2 — three-layer independent control).
+ * The old `variable` single-select field has been replaced by three boolean
+ * toggles (`highEnabled`/`midEnabled`/`lowEnabled`) and a `playing` flag for
+ * the timeline auto-advance.
+ */
+export interface CloudState {
+  /** Master switch (controls the entire cloud feature). */
+  enabled: boolean;
+  /** Forecast model. */
+  model: "icon" | "gfs" | "aifs";
+  /** High-level cloud layer toggle. */
+  highEnabled: boolean;
+  /** Mid-level cloud layer toggle. */
+  midEnabled: boolean;
+  /** Low-level cloud layer toggle. */
+  lowEnabled: boolean;
+  /** Current timeline index (0 = 20:00 of the first night, 9 = 05:00; 10 ticks per night). */
+  timeIndex: number;
+  /** Whether the timeline is auto-playing. */
+  playing: boolean;
+  /** How many nights the cloud timeline covers, starting at `selectedNight`. 1 = one night (default). */
+  range: 1 | 5 | 7;
+}
+
+/** A pre-computed dark-sky candidate city (from cities.json). */
+export interface CityCandidate {
+  id: string;
+  adcode: number;
+  province: string;
+  city: string;
+  name: string;
+  longitude: number;
+  latitude: number;
+  bortle: number;
+  kind: string;
+  note: string;
+}
+
+// ---------------------------------------------------------------------------
+// v2 new types
+// ---------------------------------------------------------------------------
+
+/** A curated recommendation for stargazing (human-curated data source). */
+export interface Recommendation {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  /** Elevation in metres. */
+  elevation: number;
+  /** Bortle scale 1-9. */
+  bortle: number;
+  /** Recommendation reason / community review summary. */
+  reason: string;
+  /** Best stargazing season (e.g. "夏季 6-8月"). */
+  bestSeason: string;
+  /** Province / region. */
+  province: string;
+  /** Optional: months when the galactic core is visible. */
+  galaxyMonths?: string[];
+}
+
+/** A grid sampling point for spatial cloud coverage. */
+export interface CloudGridSample {
+  latitude: number;
+  longitude: number;
+}
+
+/** Complete data from one grid sampling pass (all time ticks included). */
+export interface CloudGridData {
+  /** Sampling point coordinates. */
+  samples: CloudGridSample[];
+  /** Bounding rectangle of the sampling area (for dashed boundary rendering). */
+  bounds: { north: number; south: number; east: number; west: number };
+  /** Hourly forecast for each sampling point (one-to-one with `samples`). */
+  forecasts: LocationForecast[];
+  /** Night keys covered by `forecasts` (multi-night ranges supported). */
+  nightKeys: string[];
+  /** Data fetch timestamp. */
+  fetchedAt: string;
+}
+
+/** Three-layer cloud coverage interpolation result at a single time tick. */
+export interface CloudLayerValues {
+  high: number; // 0-100
+  mid: number; // 0-100
+  low: number; // 0-100
+}
+
+/** Table cell: evaluation status for a location on a given night. */
+export interface StarWindowCell {
+  nightKey: string;
+  /** Evaluation status. */
+  status: NightStatus;
+  /** Score 0-100. */
+  score: number;
+  /** Whether the forecast is still loading. */
+  loading: boolean;
+}
+
+/** Table row: all night evaluations for one location. */
+export interface StarWindowRow {
+  location: Location;
+  cells: Map<string, StarWindowCell>;
+}
+
+/** Table sort direction. */
+export type SortDirection = "asc" | "desc";

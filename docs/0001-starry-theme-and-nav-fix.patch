@@ -1,0 +1,187 @@
+From 6bf690b5fce990d5226d42fe5a31ded84a1e817a Mon Sep 17 00:00:00 2001
+From: Jovi <jovi@users.noreply.github.com>
+Date: Thu, 6 Aug 2026 06:06:35 +0000
+Subject: [PATCH] =?UTF-8?q?=E4=BC=98=E5=8C=96=E5=89=8D=E7=AB=AF=E9=85=8D?=
+ =?UTF-8?q?=E8=89=B2=EF=BC=88=E6=98=9F=E7=A9=BA=E9=9D=9B=E7=B4=AB=E6=B8=90?=
+ =?UTF-8?q?=E5=8F=98+=E6=98=9F=E7=82=B9=EF=BC=8C=E6=9B=BF=E4=BB=A3?=
+ =?UTF-8?q?=E7=BA=AF=E9=BB=91=E8=83=8C=E6=99=AF=EF=BC=89=E4=B8=8E=E7=82=B9?=
+ =?UTF-8?q?=E5=87=BB=E8=B7=B3=E8=BD=AC=E4=BD=93=E9=AA=8C?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 重写 styles.css 配色变量，从近黑靛蓝改为靛蓝-紫罗兰渐变，并叠加轻量星点背景，贴合星空摄影主题但不再显黑
+- 卡片改为半透明玻璃质感，露出背景星空
+- 统一矩阵表头、弹窗遮罩等硬编码色值到新配色
+- App.jsx：切换今晚/对比/点位导航时自动滚动回顶部；打开详情抽屉时锁定背景滚动并支持 Esc 关闭，让点击跳转落点更清晰
+---
+ src/App.jsx    | 22 ++++++++++++++-
+ src/styles.css | 74 +++++++++++++++++++++++++++++++++-----------------
+ 2 files changed, 70 insertions(+), 26 deletions(-)
+
+diff --git a/src/App.jsx b/src/App.jsx
+index 481020b..a12b2e6 100644
+--- a/src/App.jsx
++++ b/src/App.jsx
+@@ -85,6 +85,26 @@ export function App() {
+     if (!nightKeys.includes(selectedNight)) setSelectedNight(nightKeys[0]);
+   }, [nightKeys, selectedNight]);
+ 
++  // 切换顶部/底部导航（今晚·对比·点位）时自动回到页面顶部，避免跳转后停留在上次滚动位置
++  useEffect(() => {
++    window.scrollTo({ top: 0, behavior: "smooth" });
++  }, [view]);
++
++  // 打开详情抽屉时锁定背景滚动，并支持 Esc 键关闭，让点击跳转的落点更明确
++  useEffect(() => {
++    if (!selectedLocationId) return undefined;
++    const previousOverflow = document.body.style.overflow;
++    document.body.style.overflow = "hidden";
++    const handleKeyDown = (event) => {
++      if (event.key === "Escape") setSelectedLocationId(null);
++    };
++    window.addEventListener("keydown", handleKeyDown);
++    return () => {
++      document.body.style.overflow = previousOverflow;
++      window.removeEventListener("keydown", handleKeyDown);
++    };
++  }, [selectedLocationId]);
++
+   const rankings = useMemo(() => {
+     return locations
+       .map((location) => {
+@@ -424,7 +444,7 @@ function baseChartStyle() {
+   return {
+     backgroundColor: "transparent",
+     textStyle: { color: "#aebbd0", fontFamily: "system-ui, sans-serif" },
+-    tooltip: { trigger: "axis", backgroundColor: "#101a2b", borderColor: "#30415f", textStyle: { color: "#f4f7fb" } },
++    tooltip: { trigger: "axis", backgroundColor: "#1a2154", borderColor: "#4a5599", textStyle: { color: "#f4f6ff" } },
+     grid: { left: 38, right: 14, top: 38, bottom: 32 },
+   };
+ }
+diff --git a/src/styles.css b/src/styles.css
+index 92b9d78..092989d 100644
+--- a/src/styles.css
++++ b/src/styles.css
+@@ -2,36 +2,60 @@
+   color-scheme: dark;
+   font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+   font-synthesis: none;
+-  --bg: #07101f;
+-  --bg-deep: #050b16;
+-  --surface: #10192a;
+-  --surface-2: #142036;
+-  --surface-3: #192841;
+-  --line: #283750;
+-  --line-strong: #354763;
+-  --text: #f4f7fb;
+-  --muted: #93a4be;
+-  --muted-2: #6f809a;
+-  --cyan: #36d2e7;
+-  --cyan-soft: rgba(54, 210, 231, 0.12);
+-  --good: #54d6a5;
+-  --warn: #f3b45a;
+-  --bad: #f27087;
++  /* 星空配色：靛蓝-紫罗兰渐变，避免纯黑，保留天文摄影主题的沉浸感 */
++  --bg: #121a45;
++  --bg-deep: #0a0e30;
++  --bg-rise: #1c2568;
++  --surface: #1a2154;
++  --surface-2: #212a64;
++  --surface-3: #283274;
++  --line: #37417f;
++  --line-strong: #4a5599;
++  --text: #f4f6ff;
++  --muted: #a3aad8;
++  --muted-2: #7d84b8;
++  --cyan: #45d8ea;
++  --cyan-soft: rgba(69, 216, 234, 0.14);
++  --violet: #9b8cf9;
++  --violet-soft: rgba(155, 140, 249, 0.14);
++  --good: #5fdcae;
++  --warn: #f5bb66;
++  --bad: #f57890;
+   background: var(--bg);
+   color: var(--text);
+   -webkit-font-smoothing: antialiased;
+ }
+ 
+ * { box-sizing: border-box; }
+-html { background: var(--bg-deep); }
+-body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--bg); }
++html { background: var(--bg-deep); scroll-behavior: smooth; }
++body {
++  margin: 0;
++  min-width: 320px;
++  min-height: 100vh;
++  color: var(--text);
++  background:
++    radial-gradient(1.6px 1.6px at 12% 18%, #ffffff 0%, transparent 60%),
++    radial-gradient(1.4px 1.4px at 78% 8%, #d9e0ff 0%, transparent 60%),
++    radial-gradient(1.2px 1.2px at 45% 32%, #ffffff 0%, transparent 60%),
++    radial-gradient(1.6px 1.6px at 88% 42%, #d9e0ff 0%, transparent 60%),
++    radial-gradient(1.2px 1.2px at 25% 62%, #ffffff 0%, transparent 60%),
++    radial-gradient(1.4px 1.4px at 60% 78%, #d9e0ff 0%, transparent 60%),
++    radial-gradient(1.2px 1.2px at 92% 88%, #ffffff 0%, transparent 60%),
++    radial-gradient(1.4px 1.4px at 8% 92%, #ffffff 0%, transparent 60%),
++    radial-gradient(1.2px 1.2px at 35% 6%, #d9e0ff 0%, transparent 60%),
++    radial-gradient(ellipse 120% 70% at 50% -10%, var(--bg-rise) 0%, transparent 60%),
++    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
++  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, no-repeat, no-repeat;
++  background-size: 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 340px 340px, 100% 100%, 100% 100%;
++  background-attachment: fixed;
++}
+ button, input { font: inherit; }
+ button { color: inherit; }
+ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+ a { color: var(--cyan); }
+ 
+-.app-shell { min-height: 100vh; background: var(--bg); padding-bottom: 80px; }
+-.topbar { position: sticky; top: 0; z-index: 30; height: 76px; display: flex; align-items: center; gap: 28px; padding: 0 max(20px, calc((100vw - 1280px) / 2)); border-bottom: 1px solid var(--line); background: rgba(7, 16, 31, 0.96); backdrop-filter: blur(16px); }
++.app-shell { min-height: 100vh; padding-bottom: 80px; }
++.topbar { position: sticky; top: 0; z-index: 30; height: 76px; display: flex; align-items: center; gap: 28px; padding: 0 max(20px, calc((100vw - 1280px) / 2)); border-bottom: 1px solid var(--line); background: rgba(18, 26, 69, 0.85); backdrop-filter: blur(16px); }
+ .brand-lockup { display: flex; align-items: center; gap: 12px; min-width: 210px; }
+ .brand-mark { width: 36px; height: 48px; display: grid; place-items: center; border-left: 4px solid var(--cyan); color: var(--cyan); }
+ .brand-mark svg { width: 24px; height: 24px; }
+@@ -62,8 +86,8 @@ a { color: var(--cyan); }
+ .status-banner.warning { border-left-color: var(--warn); color: #f3c98e; }
+ 
+ .hero-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(310px, .75fr); gap: 16px; }
+-.hero-card, .briefing-card, .night-section, .rank-section, .matrix-section, .locations-section { border: 1px solid var(--line); background: var(--surface); }
+-.hero-card { padding: 22px; border-top: 3px solid var(--cyan); }
++.hero-card, .briefing-card, .night-section, .rank-section, .matrix-section, .locations-section { border: 1px solid var(--line); background: rgba(26, 33, 84, 0.72); backdrop-filter: blur(10px); }
++.hero-card { padding: 22px; border-top: 3px solid var(--cyan); background: linear-gradient(160deg, rgba(40, 50, 116, 0.78) 0%, rgba(26, 33, 84, 0.72) 55%); }
+ .hero-header, .rank-title, .section-heading-row, .card-heading, .drawer-header, .form-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+ .status-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; height: 25px; padding: 0 9px; border-radius: 12px; font-size: 12px; font-weight: 800; }
+ .status-pill.good, .good { color: var(--good); background: rgba(84, 214, 165, .1); }
+@@ -139,8 +163,8 @@ a { color: var(--cyan); }
+ table { border-collapse: collapse; width: 100%; }
+ .matrix-wrap table { min-width: 920px; }
+ th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+-.matrix-wrap thead th { position: sticky; top: 0; z-index: 2; min-width: 90px; height: 52px; padding: 8px; background: #126777; color: #e6fbff; font-size: 12px; }
+-.matrix-wrap th:first-child { position: sticky; left: 0; z-index: 3; min-width: 116px; background: #0c5362; text-align: left; padding-left: 13px; }
++.matrix-wrap thead th { position: sticky; top: 0; z-index: 2; min-width: 90px; height: 52px; padding: 8px; background: #232c72; color: #dce6ff; font-size: 12px; }
++.matrix-wrap th:first-child { position: sticky; left: 0; z-index: 3; min-width: 116px; background: #171d54; text-align: left; padding-left: 13px; }
+ .matrix-wrap tbody th { background: var(--surface-2); font-size: 13px; }
+ .matrix-wrap tbody th small { display: block; margin-top: 2px; color: var(--muted); font-weight: 400; }
+ .matrix-cell { width: 100%; min-height: 55px; border: 0; background: transparent; cursor: pointer; }
+@@ -153,14 +177,14 @@ th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--lin
+ .primary-button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 14px; border: 0; background: var(--cyan); color: var(--bg-deep); font-weight: 850; cursor: pointer; }
+ .primary-button.wide { width: 100%; }
+ .location-table { min-width: 760px; }
+-.location-table th { padding: 12px; background: #126777; color: #e7fbff; text-align: left; font-size: 12px; }
++.location-table th { padding: 12px; background: #232c72; color: #dce6ff; text-align: left; font-size: 12px; }
+ .location-table td { padding: 12px; color: #d8e2ef; font-size: 13px; }
+ .location-table tbody tr:nth-child(even) { background: var(--surface-2); }
+ .location-table td:first-child { display: flex; align-items: center; gap: 7px; color: var(--text); }
+ .location-table td:first-child svg { color: var(--cyan); }
+ .icon-button { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+ .icon-button.danger { color: var(--bad); }
+-.modal-backdrop, .drawer-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; background: rgba(2, 6, 14, .75); backdrop-filter: blur(8px); }
++.modal-backdrop, .drawer-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; background: rgba(6, 9, 32, .78); backdrop-filter: blur(8px); }
+ .modal-backdrop { place-items: center; padding: 18px; }
+ .location-form { width: min(460px, 100%); padding: 22px; border: 1px solid var(--line-strong); border-top: 3px solid var(--cyan); background: var(--surface); }
+ .location-form h3 { margin: 0; font-size: 22px; }
+-- 
+2.43.0
+
