@@ -24,9 +24,6 @@ export const METEOR_SHOWER_NIGHTS: string[] = [
   "2026-08-17",
 ];
 
-/** Default night shown when the app opens (peak eve / "8月12日夜—13日黎明"). */
-export const DEFAULT_NIGHT_KEY = "2026-08-12";
-
 /** Local night window: 20:00 → next-day 05:00 (faithful to perseids, not 18–06). */
 export const NIGHT_START = 20;
 export const NIGHT_END = 5;
@@ -84,19 +81,23 @@ export const FORECAST_CACHE_MAX_AGE_MS = 60 * 60 * 1000;
 export const SELECTED_LOCATION_STORAGE_KEY = "perseids-selected-location-v2";
 export const CUSTOM_CANDIDATES_STORAGE_KEY = "perseids-custom-candidates-v1";
 
-/** Default interactive cloud state (three-layer independent control).
+/** Default interactive cloud state (single forecast channel + timeline).
  *  Cloud is ON by default: on load the map samples the current viewport and
  *  renders the coverage overlay immediately — no "select a location first" gate. */
 export const DEFAULT_CLOUD_STATE: CloudState = {
   enabled: true,
   model: "icon",
   activeForecastTime: null,
-  overlayMode: "forecast",
-  highEnabled: true,
-  midEnabled: true,
-  lowEnabled: true,
+  activeObservationTime: null,
+  overlayMode: "satellite-cloud",
+  cloudDisplayMode: "total",
+  highEnabled: false,
+  midEnabled: false,
+  lowEnabled: false,
   timeIndex: 0,
   playing: false,
+  windEnabled: true,
+  precipitationEnabled: true,
   range: 7,
 };
 

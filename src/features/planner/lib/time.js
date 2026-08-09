@@ -60,7 +60,9 @@ export function formatNightLabel(dateKey, compact = false) {
 }
 
 export function formatHour(timeString) {
-  return timeString.slice(11, 16);
+  if (typeof timeString !== "string" || timeString.length < 16) return "—";
+  const hour = timeString.slice(11, 16);
+  return /^\d{2}:\d{2}$/.test(hour) ? hour : "—";
 }
 
 export function relativeFreshness(isoString) {

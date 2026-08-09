@@ -1,13 +1,12 @@
 "use client";
 
-import { useStore } from "@/lib/store";
 import { Cloud } from "lucide-react";
-import {
-  averageLayer,
-  getValuesAtTime,
-} from "@/lib/cloudGrid";
-import { isInNight } from "@/lib/nighttime";
+import { useEffect, useState, type CSSProperties } from "react";
+import { useStore } from "@/lib/store";
+import { getCloudCoverAtTime, getValuesAtTime, averageLayer } from "@/lib/cloudGrid";
 import { hasDarkSkyLayer } from "@/lib/assets";
+import { isInNight } from "@/lib/nighttime";
+import type { CloudDisplayMode } from "@/lib/types";
 
 const MODELS: { id: "icon" | "gfs" | "aifs"; label: string }[] = [
   { id: "icon", label: "ICON" },
@@ -15,49 +14,62 @@ const MODELS: { id: "icon" | "gfs" | "aifs"; label: string }[] = [
   { id: "aifs", label: "AIFS" },
 ];
 
-/**
- * Cloud control panel (Phase 2 — three-layer independent switches + bars).
- *
- * v2 changes:
- *   - Replaced the single `variable` select (total/low/mid/high) with three
- *     independent checkbox toggles for high/mid/low layers.
- *   - Each layer has a 0-100 proportion bar showing the average cloud value
- *     at the current timeIndex, updating in real-time as the timeline moves.
- *   - The time slider is now in the bottom CloudTimeline component; this
- *     control panel focuses on layer toggles and model selection.
- */
+const CLOUD_MODES: Array<{ id: CloudDisplayMode; label: string; color: string }> = [
+  { id: "total", label: "总云量", color: "--green" },
+  { id: "high", label: "高云", color: "--green" },
+  { id: "mid", label: "中云", color: "--amber" },
+  { id: "low", label: "低云", color: "--cloud-low" },
+];
+
 export default function CloudControl() {
   const { state, setCloud } = useStore();
   const { cloudState, selectedNight, forecast, cloudGrid } = state;
+  const [buildInfo, setBuildInfo] = useState<{ version?: string; buildRevision?: string } | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/healthz", { cache: "no-store", signal: controller.signal })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => { if (data) setBuildInfo(data); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+  const time = cloudState.activeForecastTime ?? cloudState.timeIndex;
+  let values: Record<CloudDisplayMode, number | null> = { total: null, high: null, mid: null, low: null };
+  let valueSource = "暂无有效云量数据";
+  const forecastMatchesModel = forecast?.metadata?.model === cloudState.model;
 
-  // Compute average cloud values at the current time index.
-  let highAvg = 0;
-  let midAvg = 0;
-  let lowAvg = 0;
-
-  if (cloudGrid) {
-    const values = getValuesAtTime(cloudGrid, cloudState.timeIndex);
-    highAvg = averageLayer(values.high);
-    midAvg = averageLayer(values.mid);
-    lowAvg = averageLayer(values.low);
-  } else if (forecast) {
-    // Fallback: use single-point forecast values.
-    const nightHours = forecast.hourly.filter((hour) =>
-      isInNight(hour.time, selectedNight),
-    );
-    const hour =
-      nightHours[Math.min(cloudState.timeIndex, Math.max(0, nightHours.length - 1))];
-    if (hour) {
-      highAvg = Math.round(hour.cloudHigh ?? 0);
-      midAvg = Math.round(hour.cloudMid ?? 0);
-      lowAvg = Math.round(hour.cloudLow ?? 0);
-    }
+  // The control panel, timeline card and matrix all describe the selected
+  // point. The canvas may still use the surrounding grid for spatial context,
+  // but the numbers must not silently switch to a regional average.
+  if (cloudState.overlayMode === "forecast-cloud" && forecastMatchesModel && forecast) {
+    const hour = typeof time === "string"
+      ? forecast.hourly.find((item) => item.time === time)
+      : forecast.hourly.filter((item) => isInNight(item.time, selectedNight))[time];
+    values = {
+      total: hour?.cloudCover ?? null,
+      high: hour?.cloudHigh ?? null,
+      mid: hour?.cloudMid ?? null,
+      low: hour?.cloudLow ?? null,
+    };
+    valueSource = "取样点 · Open-Meteo";
+  } else if (cloudState.overlayMode === "forecast-cloud" && cloudGrid?.model === cloudState.model) {
+    const layers = getValuesAtTime(cloudGrid, time);
+    values = {
+      total: averageLayer(getCloudCoverAtTime(cloudGrid, time)),
+      high: averageLayer(layers.high),
+      mid: averageLayer(layers.mid),
+      low: averageLayer(layers.low),
+    };
+    valueSource = "地图采样网格平均 · Open-Meteo";
   }
 
+  const selectedMode = CLOUD_MODES.find((mode) => mode.id === cloudState.cloudDisplayMode) ?? CLOUD_MODES[0];
+  const selectedValue = values[selectedMode.id];
+
   return (
-    <div className="cloud-control compact">
+    <div className="cloud-control compact" data-testid="cloud-control">
       <div className="cloud-control-head">
-        <b>未来云图</b>
+          <b>{cloudState.overlayMode === "satellite-cloud" ? "卫星云观测" : cloudState.overlayMode === "night-lights" ? "卫星夜光" : "云量预报"}</b>
         <button
           type="button"
           className="cloud-master-toggle"
@@ -74,108 +86,65 @@ export default function CloudControl() {
         <span><i className="source-dot available" />卫星图层 / NASA GIBS <b>切换时探测</b></span>
         <span><i className={`source-dot ${process.env.NEXT_PUBLIC_TIANDITU_TOKEN ? "available" : "unconfigured"}`} />天地图 Token <b>{process.env.NEXT_PUBLIC_TIANDITU_TOKEN ? "可用" : "未配置"}</b></span>
         <span><i className={`source-dot ${hasDarkSkyLayer() ? "available" : "not-installed"}`} />Bortle / SQM <b>{hasDarkSkyLayer() ? "可用" : "未安装"}</b></span>
+        <span><i className="source-dot available" />构建 <b>{buildInfo ? `${buildInfo.version ?? "—"} · ${buildInfo.buildRevision ?? "local"}` : "读取中"}</b></span>
       </div>
 
       <div className={`cloud-body${cloudState.enabled ? "" : " disabled"}`}>
-          <div className="cloud-field">
-            <label>图层模式</label>
-            <div className="cloud-tabs" role="tablist" aria-label="云图与卫星图层">
-              {[{ id: "forecast", label: "数值云量预报" }, { id: "satellite-cloud", label: "卫星云观测" }, { id: "night-lights", label: "卫星夜光" }].map((layer) => (
-                <button key={layer.id} type="button" role="tab" aria-selected={cloudState.overlayMode === layer.id} className={cloudState.overlayMode === layer.id ? "active" : ""} onClick={() => setCloud({ overlayMode: layer.id as "forecast" | "satellite-cloud" | "night-lights" })}>{layer.label}</button>
-              ))}
-            </div>
-            {cloudState.overlayMode === "satellite-cloud" && <small className="cloud-source-note">NASA GIBS · Himawari Band 13 · 观测时次</small>}
-            {cloudState.overlayMode === "night-lights" && <small className="cloud-source-note">NASA GIBS · NOAA-20 VIIRS · 卫星夜光/辐亮度影像</small>}
+        <div className="cloud-field">
+          <label>图层模式</label>
+          <div className="cloud-tabs" role="tablist" aria-label="云图与卫星图层">
+            {[{ id: "satellite-cloud", label: "卫星实况" }, { id: "forecast-cloud", label: "云量预报" }, { id: "night-lights", label: "夜光基准" }].map((layer) => (
+              <button key={layer.id} type="button" role="tab" aria-selected={cloudState.overlayMode === layer.id} className={cloudState.overlayMode === layer.id ? "active" : ""} onClick={() => setCloud({ overlayMode: layer.id as "forecast-cloud" | "satellite-cloud" | "night-lights", playing: false })}>{layer.label}</button>
+            ))}
           </div>
-          {/* Model selector */}
-          <div className="cloud-field">
-            <label>预报模型</label>
-            <div className="cloud-tabs">
-              {MODELS.map((model) => (
-                <button
-                  key={model.id}
-                  type="button"
-                  className={cloudState.model === model.id ? "active" : ""}
-                  onClick={() => setCloud({ model: model.id })}
-                >
-                  {model.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Three-layer independent toggles + bars */}
-          <div className="cloud-field cloud-layers">
-            <label>云层控制</label>
-            <CloudLayerBar
-              label="高云"
-              enabled={cloudState.highEnabled}
-              value={highAvg}
-              colorVar="--green"
-              onToggle={() =>
-                setCloud({ highEnabled: !cloudState.highEnabled })
-              }
-            />
-            <CloudLayerBar
-              label="中云"
-              enabled={cloudState.midEnabled}
-              value={midAvg}
-              colorVar="--amber"
-              onToggle={() =>
-                setCloud({ midEnabled: !cloudState.midEnabled })
-              }
-            />
-            <CloudLayerBar
-              label="低云"
-              enabled={cloudState.lowEnabled}
-              value={lowAvg}
-              colorVar="--cloud-low"
-              onToggle={() =>
-                setCloud({ lowEnabled: !cloudState.lowEnabled })
-              }
-            />
-          </div>
+          {cloudState.overlayMode === "satellite-cloud" && <small className="cloud-source-note">NASA GIBS · Himawari AHI Band 13 · 观测时次</small>}
+          {cloudState.overlayMode === "night-lights" && <small className="cloud-source-note">NASA GIBS · VIIRS Black Marble · 2016 夜光基准</small>}
         </div>
-    </div>
-  );
-}
 
-/**
- * A single cloud layer toggle + proportion bar.
- */
-function CloudLayerBar({
-  label,
-  enabled,
-  value,
-  colorVar,
-  onToggle,
-}: {
-  label: string;
-  enabled: boolean;
-  value: number;
-  colorVar: string;
-  onToggle: () => void;
-}) {
-  return (
-    <div className={`cloud-layer-bar${enabled ? " active" : ""}`}>
-      <label className="cloud-layer-toggle">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={onToggle}
-        />
-        <span>{label}</span>
-      </label>
-      <div className="cloud-layer-track">
-        <div
-          className="cloud-layer-fill"
-          style={{
-            width: `${Math.max(0, Math.min(100, value))}%`,
-            background: `var(${colorVar})`,
-          }}
-        />
+        {cloudState.overlayMode === "forecast-cloud" && <div className="cloud-field">
+          <label>预报模型</label>
+          <div className="cloud-tabs">
+            {MODELS.map((model) => (
+              <button key={model.id} type="button" className={cloudState.model === model.id ? "active" : ""} onClick={() => setCloud({ model: model.id })}>{model.label}</button>
+            ))}
+          </div>
+        </div>}
+
+        {cloudState.overlayMode === "forecast-cloud" && <div className="cloud-field cloud-layers">
+          <label>云量通道（单选）</label>
+          <div className="cloud-mode-tabs" role="tablist" aria-label="数值云量通道">
+            {CLOUD_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                role="tab"
+                aria-selected={selectedMode.id === mode.id}
+                aria-label={`${mode.label}：${values[mode.id] == null ? "暂无数据" : `${Math.round(values[mode.id] as number)}%`}，天空覆盖百分比`}
+                className={selectedMode.id === mode.id ? "active" : ""}
+                onClick={() => setCloud({ cloudDisplayMode: mode.id })}
+              >
+                <span>{mode.label}</span>
+                <b>{values[mode.id] == null ? "—" : `${Math.round(values[mode.id] as number)}%`}</b>
+              </button>
+            ))}
+          </div>
+          <div className="cloud-channel-readout" style={{ "--channel-color": `var(${selectedMode.color})` } as CSSProperties}>
+            <span>{selectedMode.label}</span>
+            <strong>{selectedValue == null ? "—" : `${Math.round(selectedValue)}%`}</strong>
+          </div>
+          <small className="cloud-channel-note">
+            数字表示当前预报时次的{selectedMode.label}天空覆盖百分比；{valueSource} · {cloudState.model.toUpperCase()} · {typeof time === "string" ? time.replace("T", " ") : "当前夜间时次"}
+          </small>
+          <div className="cloud-legend" aria-label="云量预报色阶，0 到 100 百分比">
+            <div className="cloud-legend-bar"><i aria-hidden="true" /></div>
+            <div className="cloud-legend-ticks">{[0, 20, 40, 60, 80, 100].map((tick) => <span key={tick}>{tick}%</span>)}</div>
+          </div>
+          <div className="cloud-layer-toggles" role="group" aria-label="预报叠加层">
+            <button type="button" aria-pressed={cloudState.windEnabled} className={cloudState.windEnabled ? "active" : ""} onClick={() => setCloud({ windEnabled: !cloudState.windEnabled })}>风场预报</button>
+            <button type="button" aria-pressed={cloudState.precipitationEnabled} className={cloudState.precipitationEnabled ? "active" : ""} onClick={() => setCloud({ precipitationEnabled: !cloudState.precipitationEnabled })}>降水预报</button>
+          </div>
+        </div>}
       </div>
-      <span className="cloud-layer-value">{value}%</span>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import type { SatelliteFrame } from "./types";
 export const GIBS_CAPABILITIES_URL = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml";
 export const GIBS_LAYERS = {
   cloud: "Himawari_AHI_Band13_Clean_Infrared",
-  "night-lights": "VIIRS_NOAA20_DayNightBand_AtSensor_M15",
+  "night-lights": "VIIRS_Black_Marble",
 } as const;
 
 export function extractLayerBlock(xml: string, identifier: string): string | null {
@@ -36,13 +36,17 @@ export function buildSatelliteFrame(
 ): SatelliteFrame {
   return {
     time,
+    observedAt: time,
     kind,
-    label: kind === "cloud" ? "卫星云观测" : "卫星夜光/辐亮度影像",
-    satellite: kind === "cloud" ? "Himawari AHI Band 13" : "NOAA-20 VIIRS Day/Night Band",
+    layer: GIBS_LAYERS[kind],
+    label: kind === "cloud" ? "卫星云观测" : "卫星夜光/辐亮度影像（2016 基准）",
+    satellite: kind === "cloud" ? "Himawari AHI Band 13" : "VIIRS Black Marble",
     source: "NASA GIBS",
     tileTemplate,
-    coverage: kind === "cloud" ? "东亚静止卫星红外观测" : "全球夜间辐亮度影像",
+    coverage: kind === "cloud" ? "东亚静止卫星红外观测" : "全球夜光基准（2016）",
     observed: true,
+    isForecast: false,
+    reference: kind === "night-lights",
   };
 }
 

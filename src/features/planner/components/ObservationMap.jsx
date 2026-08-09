@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Crosshair,
   Info,
-  MagnifyingGlass,
+  Search as MagnifyingGlass,
   MapPin,
-  MoonStars,
-  NavigationArrow,
+  MoonStar as MoonStars,
+  Navigation as NavigationArrow,
   Plus,
-  Warning,
-} from "@phosphor-icons/react";
+  TriangleAlert as Warning,
+} from "lucide-react";
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 import { searchChinaPlaces } from "../lib/geocoding";
@@ -188,7 +188,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
           <h2>在地图上寻找观测机位</h2>
           <p>搜索中国境内地点，或直接点击地图取点；选中后立即计算 7/14 天星空建议。</p>
         </div>
-        <div className="event-chip"><MoonStars weight="fill" /><span><strong>2026 英仙座流星雨</strong>峰值窗口：8 月 13 日 02:00–04:00 UTC · <a href="https://www.imo.net/the-2026-meteor-shower-calendar-is-here/" target="_blank" rel="noreferrer">IMO 来源</a></span></div>
+        <div className="event-chip"><MoonStars strokeWidth={2.4} /><span><strong>最新天文事件</strong>事件信息以首页左上角已核验列表为准。</span></div>
       </div>
 
       <div className="map-layout">
@@ -232,7 +232,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
               </CircleMarker>
             )}
           </MapContainer>
-          <div className="map-hint"><NavigationArrow weight="fill" />点击地图任意位置开始评估</div>
+          <div className="map-hint"><NavigationArrow strokeWidth={2.4} />点击地图任意位置开始评估</div>
         </div>
 
         <aside className="map-inspector" aria-label="观测点位评估">

@@ -17,7 +17,7 @@ import CloudCanvasOverlay from "@/components/CloudCanvasOverlay";
  * When the cloud feature is enabled, this component:
  *   1. Samples the current map viewport as a 5×6 grid.
  *   2. Batch-fetches cloud forecasts for all grid points (reusing /api/forecast).
- *   3. Renders a Canvas IDW overlay via `CloudCanvasOverlay`.
+ *   3. Renders a continuous, null-safe regular-grid overlay via `CloudCanvasOverlay`.
  *   4. Draws a dashed rectangle marking the sampling boundary.
  *   5. Re-samples (debounced 500 ms) whenever the map moves or zooms.
  *
@@ -31,19 +31,26 @@ export default function CloudLayer() {
 
   // Debounce timer ref for re-sampling on map move.
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
   // Signature of the currently loaded grid, so we don't re-fetch on every
   // unrelated render. Includes both the start night and the range count.
   const gridSigRef = useRef<string | null>(null);
 
   // ----- Grid sampling logic -----
   const performSampling = async () => {
-    if (!map || !selectedNight || cloudState.overlayMode !== "forecast") return;
+    if (!map || !selectedNight || cloudState.overlayMode !== "forecast-cloud") return;
 
     const bounds = map.getBounds();
-    const { samples } = generateGridBounds(bounds, 5, 6);
+    const { samples, rows, cols } = generateGridBounds(bounds, 5, 6);
     const nights = nightRangeKeys(selectedNight, cloudState.range);
 
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setCloudGridLoading(true);
+    // Do not keep painting a previous model/viewport while the new sample is
+    // in flight; the active time and legend must describe the visible raster.
+    setCloudGrid(null);
     setError(null);
     try {
       const data = await fetchCloudGrid(
@@ -51,21 +58,26 @@ export default function CloudLayer() {
         nights,
         forecastDaysForRange(selectedNight, cloudState.range),
         cloudState.model,
+        rows,
+        cols,
+        controller.signal,
       );
+      if (controller.signal.aborted) return;
       gridSigRef.current = `${selectedNight}|${cloudState.range}|${cloudState.model}`;
       setCloudGrid(data);
     } catch (err) {
+      if (controller.signal.aborted) return;
       // Surface a small notice instead of silently leaving a blank map.
       setError(err instanceof Error ? err.message : "云图数据请求失败");
       setCloudGrid(null);
     } finally {
-      setCloudGridLoading(false);
+      if (!controller.signal.aborted) setCloudGridLoading(false);
     }
   };
 
   // ----- Trigger initial / re-sampling when cloud is enabled or range/night changes -----
   useEffect(() => {
-    if (!cloudState.enabled || cloudState.overlayMode !== "forecast" || !map || !selectedNight) return;
+    if (!cloudState.enabled || cloudState.overlayMode !== "forecast-cloud" || !map || !selectedNight) return;
     const sig = `${selectedNight}|${cloudState.range}|${cloudState.model}`;
     if (cloudGrid && gridSigRef.current === sig) return;
     void performSampling();
@@ -94,11 +106,12 @@ export default function CloudLayer() {
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      requestRef.current?.abort();
     };
   }, []);
 
   // Don't render anything if cloud is disabled.
-  if (!cloudState.enabled || cloudState.overlayMode !== "forecast") return null;
+  if (!cloudState.enabled || cloudState.overlayMode !== "forecast-cloud") return null;
 
   // Render the Canvas overlay + sampling boundary.
   const bounds = cloudGrid
@@ -114,9 +127,10 @@ export default function CloudLayer() {
         <CloudCanvasOverlay
           gridData={cloudGrid}
           timeIndex={cloudState.timeIndex}
-          highEnabled={cloudState.highEnabled}
-          midEnabled={cloudState.midEnabled}
-          lowEnabled={cloudState.lowEnabled}
+          activeForecastTime={cloudState.activeForecastTime}
+          displayMode={cloudState.cloudDisplayMode}
+          showPrecipitation={cloudState.precipitationEnabled}
+          showWind={cloudState.windEnabled}
         />
       )}
       {bounds && (

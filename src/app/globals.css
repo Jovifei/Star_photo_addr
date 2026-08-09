@@ -253,6 +253,9 @@
   flex: 1;
   display: flex;
   min-height: 0;
+  --side-panel-width-default: 560px;
+  --side-panel-width-requested: var(--side-panel-width-default);
+  --side-panel-width: min(var(--side-panel-width-requested), calc(100% - 360px));
 }
 .map-stage {
   position: relative;
@@ -785,12 +788,11 @@
   pointer-events: none;
 }
 .side-panel {
-  --side-panel-width-default: clamp(520px, 40vw, 760px);
   position: absolute;
   top: 0;
   right: 0;
   height: 100%;
-  width: var(--side-panel-width, var(--side-panel-width-default));
+  width: var(--side-panel-width);
   max-width: 92vw;
   background: linear-gradient(180deg, #06141bF2, #04101ae6);
   border-left: 1px solid var(--line);
@@ -833,24 +835,33 @@
   font-size: 14px;
   line-height: 1.7;
 }
-/* Drag handle on the left edge of the desktop panel.
-   Positioned OUTSIDE the aside so overflow-y:auto doesn't clip it. */
+.side-panel-rail {
+  position: absolute;
+  top: 0;
+  right: var(--side-panel-width);
+  width: 56px;
+  height: 100%;
+  z-index: calc(var(--z-panel) + 2);
+  pointer-events: none;
+  transition: right 0.05s linear;
+}
+.detail-overlay-host.is-closed .side-panel-rail {
+  right: 0;
+}
+/* The drag handle and collapse action share the panel's left edge. */
 .side-panel-resizer {
   position: absolute;
   top: 0;
-  right: 0; /* anchors to the right edge of .detail-overlay-host */
+  right: 0;
   height: 100%;
-  width: 20px;
+  width: 16px;
   cursor: col-resize;
-  z-index: calc(var(--z-panel) + 2);
   touch-action: none;
   display: flex;
   justify-content: center;
   align-items: center;
   pointer-events: auto;
-  /* translate left by the panel width so the handle sits on the panel's left edge */
-  transform: translateX(calc(-1 * var(--side-panel-width, var(--side-panel-width-default))));
-  transition: transform 0.05s linear;
+  transition: background var(--transition), width var(--transition);
 }
 .side-panel-resizer::before {
   /* Visible grip bar — wider and taller than before so users can find it */
@@ -882,30 +893,41 @@
 .side-panel-resizer:active::before {
   box-shadow: 0 0 16px rgba(121, 207, 226, 0.55);
 }
+.detail-overlay-host.is-closed .side-panel-resizer {
+  display: none;
+}
 .detail-restore {
   position: absolute;
-  right: 0;
+  right: 16px;
   top: 50%;
   transform: translateY(-50%);
-  z-index: calc(var(--z-panel) + 1);
   pointer-events: auto;
+  width: 40px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--muted);
   font-size: 11px;
-  padding: 10px 8px;
+  padding: 8px 4px;
   border-radius: var(--radius) 0 0 var(--radius);
   cursor: pointer;
-  writing-mode: vertical-rl;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   backdrop-filter: blur(8px);
-  display: block;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
-.detail-restore.open {
-  right: min(92vw, var(--side-panel-width, var(--side-panel-width-default)));
+.detail-restore:hover,
+.detail-restore:focus-visible {
+  color: var(--text);
+  border-color: var(--green);
+  background: rgba(121, 207, 226, 0.16);
 }
-.detail-restore.visible {
-  display: block;
+.detail-overlay-host.is-closed .detail-restore {
+  right: 0;
+  border-radius: var(--radius) 0 0 var(--radius);
 }
 
 .panel-section {
@@ -2122,15 +2144,355 @@
   .side-panel.drawer-open {
     transform: translateY(0);
   }
-  .detail-restore {
+  .side-panel-rail {
+    display: none;
+  }
+  .detail-restore,
+  .detail-overlay-host.is-closed .detail-restore,
+  .detail-overlay-host.is-open .detail-restore {
+    position: fixed;
     top: auto;
     bottom: 12px;
     right: 12px;
+    width: auto;
+    min-width: 44px;
+    min-height: 44px;
     transform: none;
-    writing-mode: horizontal-tb;
     border-radius: var(--radius);
   }
-  .detail-restore.open { right: 12px; }
+}
+
+/* ---------- Cloud workstation v3: observed/forecast time domains ---------- */
+.workspace:has(.detail-overlay-host.is-open) .cloud-control {
+  right: calc(var(--side-panel-width) + 18px);
+  max-width: min(320px, calc(100% - var(--side-panel-width) - 36px));
+}
+
+.cloud-control.compact {
+  width: min(320px, calc(100% - 32px));
+  max-height: min(68dvh, 700px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  container-type: inline-size;
+}
+.cloud-control .cloud-tabs,
+.cloud-control .cloud-mode-tabs {
+  min-width: 0;
+}
+.cloud-control .cloud-tabs button,
+.cloud-control .cloud-mode-tabs button {
+  min-width: 0;
+  overflow: hidden;
+}
+.cloud-control .cloud-tabs button {
+  text-overflow: ellipsis;
+}
+.cloud-control .cloud-mode-tabs button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  text-align: left;
+}
+.cloud-control .cloud-mode-tabs button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cloud-control .cloud-mode-tabs button b {
+  min-width: 3.5ch;
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-channel-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.cloud-legend {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-family: var(--font-data);
+  font-size: 10px;
+}
+.cloud-legend i {
+  display: block;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(190,213,222,.08), rgba(190,213,222,.36), rgba(190,213,222,.72));
+  border: 1px solid rgba(165, 205, 216, .18);
+}
+.cloud-layer-toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.cloud-layer-toggles button {
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.cloud-layer-toggles button.active {
+  border-color: var(--green);
+  color: var(--green-soft);
+  background: rgba(121, 207, 226, .12);
+}
+@container (max-width: 280px) {
+  .cloud-control .cloud-mode-tabs,
+  .cloud-layer-toggles {
+    grid-template-columns: 1fr;
+  }
+}
+
+.side-panel-resizer {
+  width: 24px;
+}
+.side-panel-resizer::before {
+  width: 6px;
+}
+
+.cloud-timeline {
+  flex-basis: 112px;
+  max-height: 112px;
+  padding: 10px 18px 12px;
+  gap: 8px;
+}
+.cloud-timeline.is-collapsed {
+  flex-basis: 112px;
+  max-height: 112px;
+}
+.cloud-timeline.is-expanded {
+  flex-basis: min(33dvh, 420px);
+  max-height: min(33dvh, 420px);
+}
+.cloud-timeline-bar {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) 44px minmax(160px, 1fr) auto minmax(110px, auto) auto;
+  min-height: 44px;
+  gap: 8px;
+  align-items: center;
+}
+.cloud-timeline-slider {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.cloud-timeline-slider input[type="range"] {
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.cloud-timeline-labels {
+  font-size: 9px;
+  line-height: 1.2;
+}
+.cloud-timeline-current {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-timeline-data-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid rgba(165, 205, 216, .16);
+  border-radius: var(--radius-sm);
+  background: rgba(12, 30, 39, .68);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.cloud-timeline-data-card b {
+  color: var(--green-soft);
+  font-weight: 700;
+}
+.cloud-timeline-data-card span {
+  color: var(--text);
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+.cloud-timeline-data-card small {
+  flex: 1 0 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.cloud-observation-note {
+  padding: 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  line-height: 1.5;
+}
+.cloud-canvas-overlay {
+  transition: opacity 160ms ease;
+}
+
+@media (max-width: 900px) and (min-width: 769px) {
+  .cloud-timeline-bar {
+    grid-template-columns: minmax(100px, auto) 44px minmax(120px, 1fr) minmax(92px, auto) auto;
+  }
+  .cloud-timeline-range { display: none; }
+}
+
+@media (max-width: 768px) {
+  .workspace:has(.detail-overlay-host.is-open) .cloud-control {
+    right: 18px;
+    max-width: calc(100% - 36px);
+  }
+  .cloud-control.compact {
+    width: calc(100vw - 36px);
+    max-height: 30dvh;
+  }
+  .cloud-timeline {
+    flex-basis: 112px;
+    max-height: 112px;
+    padding-inline: 12px;
+  }
+  .cloud-timeline.is-collapsed {
+    flex-basis: 112px;
+    max-height: 112px;
+  }
+  .cloud-timeline-bar {
+    grid-template-columns: auto 44px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title play current toggle"
+      "slider slider slider slider";
+    row-gap: 2px;
+  }
+  .cloud-timeline-title { grid-area: title; min-width: 82px; }
+  .cloud-timeline-play { grid-area: play; }
+  .cloud-timeline-slider { grid-area: slider; }
+  .cloud-timeline-current { grid-area: current; max-width: 31vw; }
+  .cloud-timeline-toggle { grid-area: toggle; min-width: 76px; }
+  .cloud-timeline-data-card { font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cloud-canvas-overlay,
+  .cloud-timeline,
+  .side-panel-resizer::before { transition: none; }
+}
+
+/* Final interaction pass: the rail is a single, discoverable control track.
+   Keep the pointer target large enough for trackpads and touch monitors while
+   leaving the map itself unobstructed. */
+@media (min-width: 769px) {
+  .side-panel-rail {
+    width: 88px;
+  }
+  .side-panel-resizer {
+    right: 0;
+    width: 44px;
+    min-width: 44px;
+    z-index: 2;
+  }
+  .side-panel-resizer::before {
+    width: 6px;
+  }
+  .detail-restore {
+    left: 0;
+    right: auto;
+    z-index: 3;
+  }
+  .cloud-control.compact {
+    width: min(336px, calc(100% - 32px));
+    max-width: min(336px, calc(100% - 32px));
+  }
+}
+
+.cloud-control .source-status-panel > span {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: baseline;
+  column-gap: 8px;
+  min-width: 0;
+}
+.cloud-control .source-status-panel > span b {
+  min-width: 0;
+  max-width: 18ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-control .cloud-mode-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.cloud-control .cloud-mode-tabs button {
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+}
+.cloud-control .cloud-mode-tabs button span,
+.cloud-control .cloud-mode-tabs button b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cloud-control .cloud-mode-tabs button b {
+  max-width: 6ch;
+}
+.cloud-legend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.cloud-legend-ticks {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-legend-ticks span {
+  min-width: 0;
+  white-space: nowrap;
+}
+.cloud-timeline-labels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 4px;
+}
+.cloud-timeline-labels span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cloud-timeline-labels span:not(:first-child) {
+  text-align: center;
+}
+.cloud-timeline-labels span:last-child {
+  text-align: right;
+}
+.cloud-timeline-play:disabled {
+  opacity: .48;
+  cursor: not-allowed;
 }
 
 /* ============================================================
@@ -2199,9 +2561,9 @@
   bottom: auto;
   width: 100%;
   max-width: none;
-  flex: 0 1 min(42dvh, 460px);
+  flex: 0 1 min(29dvh, 360px);
   min-height: 64px;
-  max-height: min(42dvh, 460px);
+  max-height: min(29dvh, 360px);
   padding: 10px 18px 12px;
   border-width: 1px 0 0;
   border-radius: 16px 16px 0 0;
@@ -2216,7 +2578,7 @@
   max-height: 64px;
 }
 .cloud-timeline.is-expanded {
-  max-height: min(42dvh, 460px);
+  max-height: min(29dvh, 360px);
 }
 .cloud-timeline-bar {
   min-height: 44px;
@@ -2268,6 +2630,54 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--line-strong) transparent;
+}
+
+.cloud-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.cloud-mode-tabs button {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: rgba(4, 16, 26, .56);
+  cursor: pointer;
+  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+}
+.cloud-mode-tabs button:hover,
+.cloud-mode-tabs button.active {
+  border-color: var(--green);
+  color: var(--text);
+  background: rgba(121, 207, 226, .12);
+}
+.cloud-mode-tabs button b {
+  color: var(--green-soft);
+  font-family: var(--font-data);
+  font-size: 11px;
+}
+.cloud-channel-readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--channel-color, var(--green));
+  color: var(--muted);
+  background: rgba(4, 16, 26, .42);
+}
+.cloud-channel-readout strong {
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 17px;
 }
 .cloud-timeline-body::-webkit-scrollbar,
 .hourly-matrix-scroll::-webkit-scrollbar {
@@ -2420,7 +2830,7 @@
   }
   .cloud-timeline {
     flex-basis: 72px;
-    max-height: 48dvh;
+    max-height: 29dvh;
     padding: 9px 12px 10px;
   }
   .cloud-timeline.is-collapsed {
@@ -2428,7 +2838,7 @@
     max-height: 72px;
   }
   .cloud-timeline.is-expanded {
-    max-height: 48dvh;
+    max-height: 29dvh;
   }
   .cloud-timeline-bar {
     flex-wrap: wrap;
@@ -2448,7 +2858,7 @@
     padding-inline: 8px;
   }
   .cloud-timeline-body {
-    max-height: calc(48dvh - 78px);
+    max-height: calc(29dvh - 78px);
   }
   .cloud-summary-card {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2463,13 +2873,13 @@
   flex: 1 1 0;
 }
 .cloud-timeline {
-  flex: 0 0 min(42dvh, 460px);
+  flex: 0 0 min(29dvh, 360px);
 }
 .cloud-timeline.is-collapsed {
   flex-basis: 64px;
 }
 .cloud-timeline.is-expanded {
-  flex-basis: min(42dvh, 460px);
+  flex-basis: min(29dvh, 360px);
 }
 .map-headline {
   max-width: min(430px, calc(100% - 44px));
@@ -2571,4 +2981,178 @@
     bottom: 10px;
     left: 10px;
   }
+}
+
+/* Final cascade for the interactive cloud workstation. */
+.workspace:has(.detail-overlay-host.is-open) .cloud-control {
+  right: calc(var(--side-panel-width) + 18px);
+  max-width: min(320px, calc(100% - var(--side-panel-width) - 36px));
+}
+.cloud-control.compact {
+  width: min(320px, calc(100% - 32px));
+  max-height: min(68dvh, 700px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  container-type: inline-size;
+}
+.cloud-control .cloud-mode-tabs button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+}
+.cloud-control .cloud-mode-tabs button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cloud-control .cloud-mode-tabs button b {
+  min-width: 3.5ch;
+  white-space: nowrap;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-legend {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-family: var(--font-data);
+  font-size: 10px;
+}
+.cloud-legend-bar {
+  min-width: 0;
+}
+.cloud-legend i {
+  display: block;
+  height: 7px;
+  border: 1px solid rgba(165, 205, 216, .18);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(190,213,222,.08), rgba(190,213,222,.20) 20%, rgba(190,213,222,.32) 40%, rgba(190,213,222,.46) 60%, rgba(190,213,222,.60) 80%, rgba(190,213,222,.72));
+}
+.cloud-legend-ticks {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+  line-height: 1.2;
+}
+.cloud-layer-toggles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.cloud-layer-toggles button {
+  min-height: 36px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.cloud-layer-toggles button.active {
+  border-color: var(--green);
+  background: rgba(121, 207, 226, .12);
+  color: var(--green-soft);
+}
+.side-panel-resizer { width: 24px; }
+.side-panel-resizer::before { width: 6px; }
+.cloud-timeline,
+.cloud-timeline.is-collapsed {
+  flex-basis: 112px;
+  max-height: 112px;
+}
+.cloud-timeline.is-expanded {
+  flex-basis: min(33dvh, 420px);
+  max-height: min(33dvh, 420px);
+}
+.cloud-timeline-bar {
+  display: grid;
+  grid-template-columns: minmax(110px, auto) 44px minmax(160px, 1fr) auto minmax(110px, auto) auto;
+  min-height: 44px;
+  gap: 8px;
+  align-items: center;
+}
+.cloud-timeline-slider { min-width: 0; display: grid; gap: 2px; }
+.cloud-timeline-slider input[type="range"] {
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.cloud-timeline-labels { font-size: 9px; line-height: 1.2; }
+.cloud-timeline-current {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-timeline-data-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid rgba(165, 205, 216, .16);
+  border-radius: var(--radius-sm);
+  background: rgba(12, 30, 39, .68);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.cloud-timeline-data-card b { color: var(--green-soft); font-weight: 700; }
+.cloud-timeline-data-card span { color: var(--text); font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.cloud-timeline-data-card small { flex: 1 0 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-observation-note { padding: 12px; border: 1px dashed var(--line-strong); border-radius: var(--radius-sm); color: var(--muted); line-height: 1.5; }
+.cloud-canvas-overlay { transition: opacity 160ms ease; }
+.hourly-matrix-scroll {
+  max-height: min(240px, 22dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.hourly-matrix-scroll:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: -2px;
+}
+@container (max-width: 280px) {
+  .cloud-control .cloud-mode-tabs,
+  .cloud-layer-toggles { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) and (min-width: 769px) {
+  .cloud-timeline-bar { grid-template-columns: minmax(100px, auto) 44px minmax(120px, 1fr) minmax(92px, auto) auto; }
+  .cloud-timeline-range { display: none; }
+}
+@media (max-width: 768px) {
+  .workspace:has(.detail-overlay-host.is-open) .cloud-control { right: 18px; max-width: calc(100% - 36px); }
+  .cloud-control.compact { width: calc(100vw - 36px); max-height: 30dvh; }
+  .cloud-timeline,
+  .cloud-timeline.is-collapsed { flex-basis: 112px; max-height: 112px; padding-inline: 12px; }
+  .cloud-timeline-bar {
+    grid-template-columns: auto 44px minmax(0, 1fr) auto;
+    grid-template-areas: "title play current toggle" "slider slider slider slider";
+    row-gap: 2px;
+  }
+  .cloud-timeline-title { grid-area: title; min-width: 82px; }
+  .cloud-timeline-play { grid-area: play; }
+  .cloud-timeline-slider { grid-area: slider; }
+  .cloud-timeline-current { grid-area: current; max-width: 31vw; }
+  .cloud-timeline-toggle { grid-area: toggle; min-width: 76px; }
+  .cloud-timeline-data-card { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cloud-canvas-overlay,
+  .cloud-timeline,
+  .side-panel-resizer::before { transition: none; }
 }

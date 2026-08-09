@@ -6,6 +6,8 @@ export interface AstronomyEvent {
   date: string;
   dateLabel: string;
   detail: string;
+  visibility: string;
+  verifiedAt: string;
   priority: number;
   sourceUrl: string;
 }
@@ -18,6 +20,8 @@ export const ASTRONOMY_EVENTS: AstronomyEvent[] = [
     date: "2026-08-12",
     dateLabel: "8月12—13日",
     detail: "年度流星雨峰值，适合夜间观测",
+    visibility: "北半球较佳",
+    verifiedAt: "2026-08-09",
     priority: 1,
     sourceUrl: "https://science.nasa.gov/science-research/planetary-science/26jul_perseids/",
   },
@@ -27,6 +31,8 @@ export const ASTRONOMY_EVENTS: AstronomyEvent[] = [
     date: "2026-08-12",
     dateLabel: "8月12日",
     detail: "全食带经过格陵兰、冰岛、西班牙等地",
+    visibility: "中国境内不可见",
+    verifiedAt: "2026-08-09",
     priority: 2,
     sourceUrl: "https://science.nasa.gov/eclipses/future-eclipses/total-solar-eclipse-on-august-12-2026/",
   },
@@ -36,6 +42,8 @@ export const ASTRONOMY_EVENTS: AstronomyEvent[] = [
     date: "2026-08-28",
     dateLabel: "8月28日",
     detail: "可见区域覆盖太平洋、美洲、欧洲和非洲",
+    visibility: "中国部分地区可见",
+    verifiedAt: "2026-08-09",
     priority: 3,
     sourceUrl: "https://science.nasa.gov/moon/eclipses/",
   },
@@ -49,8 +57,5 @@ export function upcomingAstronomyEvents(
   const upcoming = ASTRONOMY_EVENTS
     .filter((event) => event.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date) || a.priority - b.priority);
-  return (upcoming.length
-    ? upcoming
-    : [...ASTRONOMY_EVENTS].sort((a, b) => b.date.localeCompare(a.date)))
-    .slice(0, Math.max(1, limit));
+  return upcoming.slice(0, Math.max(1, limit));
 }

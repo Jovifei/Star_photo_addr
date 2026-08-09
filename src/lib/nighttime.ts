@@ -93,18 +93,21 @@ export function initialForecastTime(now = new Date()): string {
       hourCycle: "h23",
     }).format(now),
   );
-  if (hour >= NIGHT_START || hour <= NIGHT_END) {
-    const dateKey = today;
-    return `${dateKey}T${pad2(hour)}:00`;
-  }
-  return `${today}T${pad2(NIGHT_START)}:00`;
+  // The map is a current-conditions surface first.  The hourly matrix keeps
+  // its fixed 20:00–05:00 night window, but the map must not jump forward to
+  // 20:00 while the user is still in the daytime (or to the previous night
+  // after 05:00).  The forecast API provides daytime hours as well, so retain
+  // the current local hour and let the matrix remain an independent view.
+  return `${today}T${pad2(hour)}:00`;
 }
 
 /** Matrix position for a night-window hour (20:00..05:00). */
 export function nightHourIndex(timeString: string): number {
   const hour = Number(timeString.slice(11, 13));
   if (!Number.isFinite(hour)) return 0;
-  return hour >= NIGHT_START ? hour - NIGHT_START : 24 - NIGHT_START + hour;
+  if (hour >= NIGHT_START) return hour - NIGHT_START;
+  if (hour <= NIGHT_END) return 24 - NIGHT_START + hour;
+  return 0;
 }
 
 /** Whether a local hourly time string belongs to the night of `nightKey`. */

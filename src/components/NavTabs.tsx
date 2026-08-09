@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSyncExternalStore } from "react";
 import { useStore } from "@/lib/store";
 
 /**
@@ -14,19 +15,51 @@ import { useStore } from "@/lib/store";
 export default function NavTabs() {
   const pathname = usePathname();
   const { state } = useStore();
+  // The store's tonight/current-hour snapshot is intentionally refreshed from
+  // the browser. Keep the first client render identical to SSR so a clock tick
+  // between those renders cannot change Link href attributes during hydration.
+  const hydrated = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
+
+  const navigationState = hydrated ? state : null;
 
   const plannerParams = new URLSearchParams();
-  if (state.selectedLocation) {
-    plannerParams.set("lat", String(state.selectedLocation.latitude));
-    plannerParams.set("lng", String(state.selectedLocation.longitude));
-    plannerParams.set("name", state.selectedLocation.name);
-    plannerParams.set("elevation", String(state.selectedLocation.elevation));
+  if (navigationState?.selectedLocation) {
+    plannerParams.set("lat", String(navigationState.selectedLocation.latitude));
+    plannerParams.set("lng", String(navigationState.selectedLocation.longitude));
+    plannerParams.set("name", navigationState.selectedLocation.name);
+    plannerParams.set("elevation", String(navigationState.selectedLocation.elevation));
   }
-  plannerParams.set("night", state.selectedNight);
-  const plannerHref = `/planner?${plannerParams.toString()}`;
+  if (navigationState) {
+    plannerParams.set("night", navigationState.selectedNight);
+    plannerParams.set("model", navigationState.cloudState.model);
+    if (navigationState.cloudState.activeForecastTime) plannerParams.set("forecastTime", navigationState.cloudState.activeForecastTime);
+    if (navigationState.cloudState.activeObservationTime) plannerParams.set("observationTime", navigationState.cloudState.activeObservationTime);
+    if (navigationState.cloudState.overlayMode) plannerParams.set("overlay", navigationState.cloudState.overlayMode);
+  }
+  const plannerQuery = plannerParams.toString();
+  const plannerHref = plannerQuery ? `/planner?${plannerQuery}` : "/planner";
+
+  const homeParams = new URLSearchParams();
+  if (navigationState?.selectedLocation) {
+    homeParams.set("lat", String(navigationState.selectedLocation.latitude));
+    homeParams.set("lng", String(navigationState.selectedLocation.longitude));
+    homeParams.set("name", navigationState.selectedLocation.name);
+    homeParams.set("elevation", String(navigationState.selectedLocation.elevation));
+  }
+  if (navigationState) {
+    homeParams.set("model", navigationState.cloudState.model);
+    if (navigationState.cloudState.activeForecastTime) homeParams.set("forecastTime", navigationState.cloudState.activeForecastTime);
+    if (navigationState.cloudState.activeObservationTime) homeParams.set("observationTime", navigationState.cloudState.activeObservationTime);
+    if (navigationState.cloudState.overlayMode) homeParams.set("overlay", navigationState.cloudState.overlayMode);
+  }
+  const homeHref = homeParams.toString() ? `/?${homeParams.toString()}` : "/";
 
   const tabs: Array<{ href: string; label: string }> = [
-    { href: "/", label: "逐星" },
+    { href: homeHref, label: "逐星" },
     { href: "/sites", label: "推荐观星地点" },
     { href: plannerHref, label: "星野决策" },
   ];

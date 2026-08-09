@@ -1,5 +1,7 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
 /** Expand / collapse button for the observation detail panel. */
 export default function DetailRestore({
   open,
@@ -18,7 +20,9 @@ export default function DetailRestore({
       aria-label={open ? "收起观测详情" : `展开观测详情：${label}`}
       onClick={onToggle}
     >
-      {open ? "收起" : `观测详情 · ${label}`}
+      {open ? <ChevronRight size={16} aria-hidden="true" /> : <ChevronLeft size={16} aria-hidden="true" />}
+      <span>{open ? "收起" : "详情"}</span>
+      <span className="sr-only">{open ? "收起观测详情" : `展开观测详情：${label}`}</span>
     </button>
   );
 }

@@ -3,6 +3,8 @@
 import TopBar from "@/components/TopBar";
 import MapStage from "@/components/MapStage";
 import SidePanel from "@/components/SidePanel";
+import { useSidePanelWidth } from "@/components/useSidePanelWidth";
+import type { CSSProperties } from "react";
 
 /**
  * Top-level client shell for the Perseids clone.
@@ -12,12 +14,17 @@ import SidePanel from "@/components/SidePanel";
  * children in a StoreProvider.
  */
 export default function PerseidsApp() {
+  const sidePanel = useSidePanelWidth();
+
   return (
     <div className="app-shell no-weather-timeline details-closed">
       <TopBar />
-      <div className="workspace">
+      <div
+        className="workspace"
+        style={sidePanel.width && !sidePanel.isMobile ? { "--side-panel-width-requested": `${sidePanel.width}px` } as CSSProperties : undefined}
+      >
         <MapStage />
-        <SidePanel />
+        <SidePanel widthControls={sidePanel} />
       </div>
     </div>
   );

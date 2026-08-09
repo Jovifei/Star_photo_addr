@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
@@ -16,103 +16,8 @@ import DecisionBrief from "@/components/DecisionBrief";
 import CandidateList from "@/components/CandidateList";
 import DetailRestore from "@/components/DetailRestore";
 import StarWindowTable from "@/components/StarWindowTable";
-
-const SIDE_PANEL_WIDTH_KEY = "perseids-side-panel-width-v1";
-const MIN_PANEL_WIDTH = 420;
-const MAX_PANEL_WIDTH = 920;
-
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-  return isMobile;
-}
-
-/**
- * Persisted, drag-resizable side-panel width. On desktop it sets the
- * `--side-panel-width` CSS variable on the host; on mobile the panel is a
- * bottom sheet and width is ignored.
- */
-function useResizableWidth(enabled: boolean) {
-  // Lazy-init from localStorage on the client (this is a client component).
-  // Using an initializer avoids a setState-in-effect cascading render.
-  const [width, setWidth] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const saved = Number(localStorage.getItem(SIDE_PANEL_WIDTH_KEY));
-      if (Number.isFinite(saved) && saved >= MIN_PANEL_WIDTH) {
-        return Math.min(MAX_PANEL_WIDTH, saved);
-      }
-    } catch {
-      // localStorage unavailable — fall back to CSS default.
-    }
-    return null;
-  });
-  const draggingRef = useRef(false);
-
-  useEffect(() => {
-    if (!enabled) return;
-    const root = document.documentElement;
-    root.style.setProperty(
-      "--side-panel-width",
-      width ? `${width}px` : "var(--side-panel-width-default)",
-    );
-  }, [enabled, width]);
-
-  const onDragStart = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!enabled) return;
-      event.preventDefault();
-      draggingRef.current = true;
-      const startX = event.clientX;
-      const startWidth =
-        width ??
-        (document.documentElement.style.getPropertyValue("--side-panel-width")
-          ? parseInt(
-              document.documentElement.style.getPropertyValue(
-                "--side-panel-width",
-              ),
-              10,
-            )
-          : 560);
-
-      let liveWidth = startWidth;
-      const onMove = (moveEvent: PointerEvent) => {
-        if (!draggingRef.current) return;
-        // Panel is right-anchored: dragging left (negative deltaX) widens it.
-        liveWidth = Math.min(
-          MAX_PANEL_WIDTH,
-          Math.max(MIN_PANEL_WIDTH, startWidth + (startX - moveEvent.clientX)),
-        );
-        setWidth(liveWidth);
-      };
-      const onUp = () => {
-        draggingRef.current = false;
-        window.removeEventListener("pointermove", onMove);
-        window.removeEventListener("pointerup", onUp);
-        document.body.style.userSelect = "";
-        document.body.style.cursor = "";
-        try {
-          localStorage.setItem(SIDE_PANEL_WIDTH_KEY, String(liveWidth));
-        } catch {
-          // Ignore quota / private-mode failures.
-        }
-      };
-      window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp);
-      document.body.style.userSelect = "none";
-      document.body.style.cursor = "col-resize";
-    },
-    [enabled, width],
-  );
-
-  return { width, onDragStart };
-}
+import type { SidePanelWidthControls } from "@/components/useSidePanelWidth";
+import { DEFAULT_PANEL_WIDTH, MAX_PANEL_WIDTH, MIN_PANEL_WIDTH } from "@/components/useSidePanelWidth";
 
 /**
  * Observation detail drawer + star window table + candidate list.
@@ -121,12 +26,11 @@ function useResizableWidth(enabled: boolean) {
  * the StarWindowTable component (multi-location × multi-date scoring table
  * with sorting and add/delete).
  */
-export default function SidePanel() {
+export default function SidePanel({ widthControls }: { widthControls: SidePanelWidthControls }) {
   const { state, setCandidates, sampleAt, setDetailOpen, removeCandidate } =
     useStore();
   const router = useRouter();
-  const isMobile = useIsMobile();
-  const { onDragStart } = useResizableWidth(!isMobile);
+  const { isMobile, width, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onLostPointerCapture, onResizeKeyDown, resetWidth } = widthControls;
   const [candidateStatus, setCandidateStatus] =
     useState<CityCandidateStatus>("loading");
 
@@ -176,22 +80,55 @@ export default function SidePanel() {
           name: candidate.name,
           elevation: 0,
           night: state.selectedNight,
+          model: state.cloudState.model,
+          forecastTime: state.cloudState.activeForecastTime,
+          observationTime: state.cloudState.activeObservationTime,
+          overlayMode: state.cloudState.overlayMode,
         }),
       );
     },
-    [router, state.selectedNight],
+    [
+      router,
+      state.cloudState.activeForecastTime,
+      state.cloudState.activeObservationTime,
+      state.cloudState.model,
+      state.cloudState.overlayMode,
+      state.selectedNight,
+    ],
   );
 
   return (
-    <div className="detail-overlay-host">
+    <div
+      className={`detail-overlay-host ${state.detailOpen ? "is-open" : "is-closed"}`}
+      style={{} as CSSProperties}
+    >
       {!isMobile && (
-        <div
-          className="side-panel-resizer"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="拖动调整侧边栏宽度"
-          onPointerDown={onDragStart}
-        />
+        <div className="side-panel-rail" aria-label="观测详情面板控制">
+          <div
+            className="side-panel-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="拖动调整侧边栏宽度"
+            aria-valuemin={MIN_PANEL_WIDTH}
+            aria-valuemax={MAX_PANEL_WIDTH}
+            aria-valuenow={width ?? DEFAULT_PANEL_WIDTH}
+            aria-valuetext={`${width ?? DEFAULT_PANEL_WIDTH}px，使用左右方向键调整，回车恢复默认宽度`}
+            tabIndex={0}
+            data-testid="side-panel-resizer"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
+            onLostPointerCapture={onLostPointerCapture}
+            onKeyDown={onResizeKeyDown}
+            onDoubleClick={resetWidth}
+          />
+          <DetailRestore
+            open={state.detailOpen}
+            label={state.selectedLocation?.name ?? "未选"}
+            onToggle={() => setDetailOpen(!state.detailOpen)}
+          />
+        </div>
       )}
       <aside className="side-panel" style={{ transform }}>
         {state.selectedLocation ? (
@@ -226,11 +163,13 @@ export default function SidePanel() {
         />
       </aside>
 
-      <DetailRestore
-        open={state.detailOpen}
-        label={state.selectedLocation?.name ?? "未选"}
-        onToggle={() => setDetailOpen(!state.detailOpen)}
-      />
+      {isMobile && (
+        <DetailRestore
+          open={state.detailOpen}
+          label={state.selectedLocation?.name ?? "未选"}
+          onToggle={() => setDetailOpen(!state.detailOpen)}
+        />
+      )}
     </div>
   );
 }

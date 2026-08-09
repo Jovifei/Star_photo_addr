@@ -13,9 +13,8 @@ describe("astronomy event context", () => {
     ]);
   });
 
-  it("falls back to the most recent reviewed events after the season", () => {
+  it("does not show stale events after the reviewed season", () => {
     const events = upcomingAstronomyEvents(new Date("2027-01-01T00:00:00.000Z"), 2);
-    expect(events).toHaveLength(2);
-    expect(events[0].date).toBe("2026-08-28");
+    expect(events).toEqual([]);
   });
 });

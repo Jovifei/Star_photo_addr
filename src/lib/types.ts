@@ -83,15 +83,42 @@ export interface HourWeather {
 
 export type ForecastModel = "best_match" | "icon" | "gfs" | "aifs";
 
+export type CloudDisplayMode = "total" | "high" | "mid" | "low";
+
 export interface SatelliteFrame {
   time: string;
+  observedAt: string;
   kind: "cloud" | "night-lights";
+  layer: string;
   label: string;
   satellite: string;
   source: "NASA GIBS";
   tileTemplate: string;
   coverage: string;
   observed: true;
+  isForecast: false;
+  reference?: boolean;
+}
+
+/** Mutually exclusive map products. Observation and forecast are never mixed. */
+export type CloudOverlayMode = "satellite-cloud" | "forecast-cloud" | "night-lights";
+
+export type CloudTimeDomain = "observation" | "forecast" | "reference";
+
+/** One normalized map frame used by the forecast data card and overlays. */
+export interface ForecastMapFrame {
+  time: string;
+  cloudCover: number | null;
+  cloudHigh: number | null;
+  cloudMid: number | null;
+  cloudLow: number | null;
+  precipitation: number | null;
+  windSpeed: number | null;
+  windDirection: number | null;
+  model: Exclude<ForecastModel, "best_match">;
+  source: "Open-Meteo";
+  isForecast: true;
+  units: Record<string, string>;
 }
 
 export type SourceAvailability = "available" | "degraded" | "unconfigured" | "not-installed" | "expired";
@@ -229,8 +256,12 @@ export interface CloudState {
   model: Exclude<ForecastModel, "best_match">;
   /** Canonical local ISO time selected by the matrix/timeline. */
   activeForecastTime?: string | null;
+  /** Real observed satellite frame time. Kept separate from forecast time. */
+  activeObservationTime?: string | null;
   /** Mutually exclusive map raster mode. */
-  overlayMode?: "forecast" | "satellite-cloud" | "night-lights";
+  overlayMode?: CloudOverlayMode;
+  /** Forecast raster channel; total cloud is the safe default. */
+  cloudDisplayMode: CloudDisplayMode;
   /** High-level cloud layer toggle. */
   highEnabled: boolean;
   /** Mid-level cloud layer toggle. */
@@ -241,6 +272,10 @@ export interface CloudState {
   timeIndex: number;
   /** Whether the timeline is auto-playing. */
   playing: boolean;
+  /** Optional forecast-only wind vector overlay. */
+  windEnabled: boolean;
+  /** Optional forecast-only precipitation overlay. */
+  precipitationEnabled: boolean;
   /** How many nights the cloud timeline covers, starting at `selectedNight`. 1 = one night (default). */
   range: 1 | 5 | 7;
 }
@@ -302,6 +337,8 @@ export interface CloudGridData {
   /** Data fetch timestamp. */
   fetchedAt: string;
   model?: ForecastModel;
+  rows?: number;
+  cols?: number;
 }
 
 /** Three-layer cloud coverage interpolation result at a single time tick. */

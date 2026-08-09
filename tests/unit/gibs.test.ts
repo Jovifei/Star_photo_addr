@@ -21,8 +21,19 @@ describe("GIBS satellite capability parsing", () => {
   it("keeps satellite frames explicitly observational and substitutes tile coordinates", () => {
     const frame = buildSatelliteFrame("cloud", "2026-08-09T06:30:00Z", "https://example/{Time}/{TileMatrix}/{TileRow}/{TileCol}.png");
     expect(frame.observed).toBe(true);
+    expect(frame.isForecast).toBe(false);
+    expect(frame.layer).toBe("Himawari_AHI_Band13_Clean_Infrared");
+    expect(frame.observedAt).toBe(frame.time);
     expect(frame.label).toContain("卫星云");
     expect(tileUrl(frame.tileTemplate, frame.time, 6, 12, 21)).toContain("2026-08-09T06:30:00Z/6/21/12");
+  });
+
+  it("uses the complete 2016 Black Marble baseline for night lights", () => {
+    const frame = buildSatelliteFrame("night-lights", "2016-01-01", "https://example/{Time}/{TileMatrix}/{TileRow}/{TileCol}.png");
+    expect(frame.layer).toBe("VIIRS_Black_Marble");
+    expect(frame.reference).toBe(true);
+    expect(frame.label).toContain("2016");
+    expect(frame.isForecast).toBe(false);
   });
 
   it("clamps geographic tile lookup to the Web Mercator limits", () => {

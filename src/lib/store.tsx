@@ -45,6 +45,7 @@ import type {
   DarkSkySample,
   Location,
   LocationForecast,
+  SatelliteFrame,
 } from "@/lib/types";
 
 interface AppState {
@@ -63,6 +64,8 @@ interface AppState {
   cloudGrid: CloudGridData | null;
   /** Whether a cloud-grid fetch is in progress. */
   cloudGridLoading: boolean;
+  /** Latest satellite frame list shared by the map and the time workbench. */
+  satelliteFrames: SatelliteFrame[];
   /**
    * Multi-location forecast cache for the star-window table.
    * Key = locationId, value = LocationForecast (1 h expiry handled by caller).
@@ -94,6 +97,7 @@ const initialState: AppState = {
   error: "",
   cloudGrid: null,
   cloudGridLoading: false,
+  satelliteFrames: [],
   forecastCache: new Map(),
 };
 
@@ -112,6 +116,7 @@ type Action =
   | { type: "SET_ERROR"; error: string }
   | { type: "SET_CLOUD_GRID"; data: CloudGridData | null }
   | { type: "SET_CLOUD_GRID_LOADING"; loading: boolean }
+  | { type: "SET_SATELLITE_FRAMES"; frames: SatelliteFrame[] }
   | {
       type: "CACHE_FORECAST";
       locationId: string;
@@ -170,6 +175,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, cloudGrid: action.data };
     case "SET_CLOUD_GRID_LOADING":
       return { ...state, cloudGridLoading: action.loading };
+    case "SET_SATELLITE_FRAMES":
+      return { ...state, satelliteFrames: action.frames };
     case "CACHE_FORECAST": {
       const next = new Map(state.forecastCache);
       next.set(action.locationId, action.forecast);
@@ -198,12 +205,13 @@ async function fetchForecastFor(
 
 interface StoreContextValue {
   state: AppState;
-  selectLocation: (location: Location) => Promise<void>;
+  selectLocation: (location: Location, model?: CloudState["model"]) => Promise<void>;
   sampleAt: (
     latitude: number,
     longitude: number,
     elevation?: number,
     name?: string,
+    model?: CloudState["model"],
   ) => Promise<void>;
   selectNight: (nightKey: string) => void;
   toggleBortle: () => void;
@@ -215,6 +223,7 @@ interface StoreContextValue {
   locate: (latitude: number, longitude: number) => void;
   setCloudGrid: (data: CloudGridData | null) => void;
   setCloudGridLoading: (loading: boolean) => void;
+  setSatelliteFrames: (frames: SatelliteFrame[]) => void;
   cacheForecast: (locationId: string, forecast: LocationForecast) => void;
   clearForecastCache: () => void;
 }
@@ -223,6 +232,13 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const forecastHydrationKeyRef = useRef<string | null>(null);
+  const selectedLocationIdRef = useRef<string | null>(null);
+  const latestForecastRequestRef = useRef(0);
+
+  useEffect(() => {
+    selectedLocationIdRef.current = state.selectedLocation?.id ?? null;
+  }, [state.selectedLocation]);
 
   // ----- localStorage persistence (debounced 500 ms) -----
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -237,10 +253,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         parsed &&
         typeof parsed.latitude === "number" &&
         typeof parsed.longitude === "number" &&
+        Number.isFinite(parsed.latitude) &&
+        Number.isFinite(parsed.longitude) &&
+        parsed.latitude >= -90 &&
+        parsed.latitude <= 90 &&
+        parsed.longitude >= -180 &&
+        parsed.longitude <= 180 &&
         typeof parsed.id === "string" &&
         typeof parsed.name === "string"
       ) {
-        dispatch({ type: "HYDRATE_LOCATION", location: parsed });
+        // Remove the exact placeholder produced by the old bridge bug where
+        // Number(null) turned a coordinate-less planner link into 0,0. An
+        // explicitly entered 0,0 location remains legal and is not removed.
+        const isLegacyPlaceholder =
+          parsed.id === "planner-0.00000-0.00000" &&
+          parsed.name === "星野决策点位" &&
+          parsed.source === "搜索";
+        if (isLegacyPlaceholder) {
+          localStorage.removeItem(SELECTED_LOCATION_STORAGE_KEY);
+        } else {
+          dispatch({ type: "HYDRATE_LOCATION", location: parsed });
+        }
+      } else {
+        localStorage.removeItem(SELECTED_LOCATION_STORAGE_KEY);
       }
     } catch {
       // Ignore parse errors — stale or corrupt data.
@@ -294,13 +329,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state.candidates]);
 
-  const selectLocation = useCallback(async (location: Location) => {
+  const selectLocation = useCallback(async (location: Location, model?: CloudState["model"]) => {
+    const selectedModel = model ?? state.cloudState.model;
+    const requestId = ++latestForecastRequestRef.current;
+    selectedLocationIdRef.current = location.id;
     dispatch({ type: "SET_LOCATION", location });
     dispatch({ type: "SET_DETAIL_OPEN", open: true });
     dispatch({ type: "SET_LOADING", loading: true });
     dispatch({ type: "SET_ERROR", error: "" });
+    dispatch({ type: "SET_SAMPLE", sample: null });
+    dispatch({ type: "SET_FORECAST", forecast: null });
     try {
-      const forecast = await fetchForecastFor(location);
+      const forecast = await fetchForecastFor(location, selectedModel);
+      if (requestId !== latestForecastRequestRef.current) return;
       dispatch({ type: "SET_FORECAST", forecast });
       if (forecast) {
         dispatch({
@@ -310,12 +351,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
+      if (requestId !== latestForecastRequestRef.current) return;
       const message = error instanceof Error ? error.message : "天气请求失败";
       dispatch({ type: "SET_ERROR", error: message });
     } finally {
-      dispatch({ type: "SET_LOADING", loading: false });
+      if (requestId === latestForecastRequestRef.current) {
+        dispatch({ type: "SET_LOADING", loading: false });
+      }
     }
-  }, []);
+  }, [state.cloudState.model]);
 
   const sampleAt = useCallback(
     async (
@@ -323,7 +367,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       longitude: number,
       elevation = 0,
       name?: string,
+      model?: CloudState["model"],
     ) => {
+      const selectedModel = model ?? state.cloudState.model;
+      const requestId = ++latestForecastRequestRef.current;
       const location: Location = {
         id: `custom-${Date.now()}`,
         name: name ?? "取样点",
@@ -332,14 +379,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         elevation,
         source: name ? "搜索" : "自定义",
       };
+      selectedLocationIdRef.current = location.id;
       dispatch({ type: "SET_LOCATION", location });
       dispatch({ type: "SET_DETAIL_OPEN", open: true });
       dispatch({ type: "SET_LOADING", loading: true });
+      dispatch({ type: "SET_SAMPLE", sample: null });
+      dispatch({ type: "SET_FORECAST", forecast: null });
       try {
         const [sample, forecast] = await Promise.all([
           sampleBortle(latitude, longitude),
-          fetchForecastFor(location),
+          fetchForecastFor(location, selectedModel),
         ]);
+        if (requestId !== latestForecastRequestRef.current) return;
         dispatch({ type: "SET_SAMPLE", sample });
         dispatch({ type: "SET_FORECAST", forecast });
         if (forecast) {
@@ -350,13 +401,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           });
         }
       } catch (error) {
+        if (requestId !== latestForecastRequestRef.current) return;
         const message = error instanceof Error ? error.message : "取样或天气请求失败";
         dispatch({ type: "SET_ERROR", error: message });
       } finally {
-        dispatch({ type: "SET_LOADING", loading: false });
+        if (requestId === latestForecastRequestRef.current) {
+          dispatch({ type: "SET_LOADING", loading: false });
+        }
       }
     },
-    [],
+    [state.cloudState.model],
   );
 
   const locate = useCallback(
@@ -416,6 +470,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_CLOUD_GRID_LOADING", loading });
   }, []);
 
+  // A location restored from localStorage still needs its point forecast.
+  // Otherwise the timeline can show a grid average while the control panel
+  // has no selected-point forecast for the same active hour.
+  useEffect(() => {
+    const location = state.selectedLocation;
+    const model = state.cloudState.model;
+    const loadedModel = state.forecast?.metadata?.model;
+    const hydrationKey = location ? `${location.id}|${model}` : null;
+    if (
+      !location ||
+      state.loading ||
+      (state.forecast && loadedModel === model) ||
+      forecastHydrationKeyRef.current === hydrationKey
+    ) {
+      return;
+    }
+    forecastHydrationKeyRef.current = hydrationKey;
+    let cancelled = false;
+    void fetchForecastFor(location, model).then((forecast) => {
+      if (cancelled || !forecast || selectedLocationIdRef.current !== location.id) return;
+      dispatch({ type: "SET_FORECAST", forecast });
+      dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
+    }).catch(() => {
+      if (forecastHydrationKeyRef.current === hydrationKey) {
+        forecastHydrationKeyRef.current = null;
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [state.cloudState.model, state.forecast, state.loading, state.selectedLocation]);
+
+  const setSatelliteFrames = useCallback((frames: SatelliteFrame[]) => {
+    dispatch({ type: "SET_SATELLITE_FRAMES", frames });
+  }, []);
+
   const cacheForecast = useCallback(
     (locationId: string, forecast: LocationForecast) => {
       dispatch({ type: "CACHE_FORECAST", locationId, forecast });
@@ -442,6 +532,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       locate,
       setCloudGrid,
       setCloudGridLoading,
+      setSatelliteFrames,
       cacheForecast,
       clearForecastCache,
     }),
@@ -459,6 +550,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       locate,
       setCloudGrid,
       setCloudGridLoading,
+      setSatelliteFrames,
       cacheForecast,
       clearForecastCache,
     ],

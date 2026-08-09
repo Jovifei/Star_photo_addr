@@ -26,7 +26,7 @@ export default function MapHeadline() {
             <em>{primaryEvent.dateLabel}</em>
           </div>
           <div className="astronomy-event-list">
-            {events.map((event) => (
+            {events.slice(1).map((event) => (
               <div key={event.id} className="astronomy-event-row">
                 <b>{event.title}</b>
                 <span>{event.dateLabel}</span>

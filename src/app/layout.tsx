@@ -10,12 +10,10 @@ export const metadata: Metadata = {
     "搜索任意地点，查看今晚到未来时间节点的逐小时云量、卫星云观测与夜光影像。",
   keywords: [
     "逐星",
-    "英仙座流星雨",
-    "Perseids",
-    "暗夜地图",
-    "Bortle",
+    "今晚云量",
+    "卫星云图",
     "天文观测",
-    "流星雨",
+    "观星天气",
   ],
   authors: [{ name: "逐星 PERSEIDS OBSERVATORY" }],
   openGraph: {

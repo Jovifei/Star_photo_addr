@@ -96,7 +96,14 @@ export default function HourlyForecastMatrix({
   const times = useMemo(() => buildNightTimes(nightKey), [nightKey]);
   const hourMap = useMemo(() => new Map(hours.map((hour) => [hour.time, hour])), [hours]);
   const columns = times.map((time) => ({ time, hour: hourMap.get(time) ?? { time } }));
-  const selectedIndex = Math.max(0, times.indexOf(selectedTime ?? ""));
+  const selectedIndex = times.indexOf(selectedTime ?? "");
+  const hasGroundParameters = columns.some(({ hour }) =>
+    ["temperature", "dewPoint", "precipitation", "visibility", "windSpeed", "windDirection"]
+      .some((key) => {
+        const value = hour[key as keyof HourWeather];
+        return typeof value === "number" && Number.isFinite(value);
+      }),
+  );
 
   const selectByIndex = (index: number) => {
     const next = times[(index + times.length) % times.length];
@@ -110,9 +117,13 @@ export default function HourlyForecastMatrix({
           <span className="section-kicker">逐小时数据</span>
           <h3>{title}</h3>
         </div>
-        {loading && <span className="hourly-matrix-status" role="status">数据加载中…</span>}
+        {loading
+          ? <span className="hourly-matrix-status" role="status">数据加载中…</span>
+          : !hasGroundParameters
+            ? <span className="hourly-matrix-status" role="status">地面参数暂未返回，缺失值显示为“—”</span>
+            : null}
       </div>
-      <div className="hourly-matrix-scroll">
+      <div className="hourly-matrix-scroll" tabIndex={0} role="region" aria-label="逐小时参数，可上下及左右滚动">
         <table>
           <thead>
             <tr>
@@ -126,6 +137,11 @@ export default function HourlyForecastMatrix({
                     aria-pressed={time === selectedTime}
                     onClick={() => onSelectTime(time)}
                     onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onSelectTime(time);
+                        return;
+                      }
                       if (event.key === "ArrowLeft") { event.preventDefault(); selectByIndex(index - 1); }
                       if (event.key === "ArrowRight") { event.preventDefault(); selectByIndex(index + 1); }
                     }}
@@ -152,6 +168,11 @@ export default function HourlyForecastMatrix({
                         aria-pressed={time === selectedTime}
                         onClick={() => onSelectTime(time)}
                         onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onSelectTime(time);
+                            return;
+                          }
                           if (event.key === "ArrowLeft") { event.preventDefault(); selectByIndex(index - 1); }
                           if (event.key === "ArrowRight") { event.preventDefault(); selectByIndex(index + 1); }
                         }}

@@ -1,4 +1,6 @@
-:root {
+/* Keep planner-only tokens on the planner surface; the map product owns the
+   global document tokens in globals.css. */
+.planner-root {
   color-scheme: dark;
   font-family: "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   font-synthesis: none;
@@ -226,7 +228,11 @@ th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--lin
 .form-note { display: flex; gap: 7px; margin: 15px 0; color: var(--muted-2); font-size: 11px; line-height: 1.5; }
 
 .drawer-backdrop { justify-items: end; }
-.detail-drawer { width: min(720px, 100%); height: 100%; overflow-y: auto; padding: 22px; border-left: 1px solid var(--line-strong); }
+.detail-drawer { position: relative; width: min(var(--planner-drawer-width, 720px), 100%); min-width: 420px; height: 100%; overflow-y: auto; padding: 22px; border-left: 1px solid var(--line-strong); }
+.detail-drawer-resizer { position: absolute; left: -12px; top: 0; bottom: 0; z-index: 2; width: 24px; display: grid; place-items: center; cursor: col-resize; touch-action: none; }
+.detail-drawer-resizer::before { content: ""; width: 6px; height: 72px; border-radius: 999px; background: rgba(151, 211, 225, .48); box-shadow: 0 0 0 1px rgba(151, 211, 225, .12); transition: height var(--transition), background var(--transition), box-shadow var(--transition); }
+.detail-drawer-resizer::after { content: ""; position: absolute; inset: 0 auto 0 11px; width: 1px; background: rgba(151, 211, 225, .12); }
+.detail-drawer-resizer:hover::before, .detail-drawer-resizer:focus-visible::before, .detail-drawer-resizer:active::before { height: 108px; background: var(--cyan); box-shadow: 0 0 16px rgba(54, 210, 231, .42); }
 .drawer-header { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .drawer-header h2 { margin: 2px 0 5px; font-size: 28px; }
 .drawer-header p { margin: 0; color: var(--muted); font-size: 12px; }
@@ -373,7 +379,8 @@ th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--lin
   .rank-score strong { font-size: 20px; }
   .section-heading-row { align-items: center; }
   .section-heading-row .primary-button { min-width: 40px; padding: 0 10px; }
-  .detail-drawer { padding: 16px 12px; }
+  .detail-drawer { width: 100%; min-width: 0; padding: 16px 12px; }
+  .detail-drawer-resizer { display: none; }
   .detail-metrics { grid-template-columns: 1fr 1fr; }
   .detail-metrics .metric:nth-child(2) { border-right: 0; }
   .detail-metrics .metric:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
@@ -787,4 +794,44 @@ h1, h2, h3,
   .rank-stats { grid-template-columns: 1fr; }
   .map-search { left: 44px; right: 8px; padding-left: 9px; }
   .map-hint { max-width: calc(100% - 24px); width: max-content; }
+}
+
+/* Final planner typography and deep-link state pass. Keep the hero's text
+   stack independent from the global 21px body rhythm so large CJK headings
+   cannot inherit a compressed line box. */
+.planner-root .hero-location {
+  align-items: flex-start;
+}
+.planner-root .hero-location > div:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.planner-root .hero-overline {
+  line-height: 1.4;
+}
+.planner-root .hero-location h2 {
+  margin: 4px 0 8px;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+.planner-root .coordinate {
+  min-height: 20px;
+  line-height: 1.5;
+  flex-wrap: wrap;
+}
+.specified-night-button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius-pill);
+  color: var(--warn-strong);
+  background: rgba(212, 178, 115, .1);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color var(--transition), border-color var(--transition), color var(--transition);
+}
+.specified-night-button:hover,
+.specified-night-button:focus-visible {
+  color: var(--bg-deep);
+  background: var(--warn);
 }

@@ -1,26 +1,27 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowsClockwise,
+  RefreshCw as ArrowsClockwise,
   Binoculars,
-  CalendarBlank,
-  CaretRight,
-  ChartLineUp,
-  CheckCircle,
+  Calendar as CalendarBlank,
+  ChevronRight as CaretRight,
+  ChartLine as ChartLineUp,
+  CircleCheck as CheckCircle,
   Cloud,
   CloudRain,
   Compass,
   Info,
-  ListBullets,
+  List as ListBullets,
   MapPin,
-  MapTrifold,
+  Map as MapTrifold,
   Moon,
-  Mountains,
+  Mountain as Mountains,
   Plus,
-  Sparkle,
-  Warning,
+  Sparkles as Sparkle,
+  TriangleAlert as Warning,
+  Telescope,
   Wind,
   X,
-} from "@phosphor-icons/react";
+} from "lucide-react";
 import { ObservationMap } from "./components/ObservationMap";
 import { PRESET_LOCATIONS, createLocation } from "./data/locations";
 import { deriveCloudLayers } from "./lib/clouds";
@@ -29,6 +30,7 @@ import { fetchPressureForecast, fetchSurfaceForecasts } from "./lib/openMeteo";
 import { evaluateNight, statusMeta } from "./lib/scoring";
 import { formatHour, formatNightLabel, nextNightKeys, relativeFreshness } from "./lib/time";
 import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
+import { useStore } from "@/lib/store";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "今晚", icon: Binoculars },
@@ -38,6 +40,29 @@ const NAV_ITEMS = [
 ];
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
+
+const PLANNER_DRAWER_WIDTH_KEY = "perseids-planner-detail-width-v1";
+const PLANNER_DRAWER_MIN_WIDTH = 420;
+const PLANNER_DRAWER_MAX_WIDTH = 920;
+const PLANNER_DRAWER_DEFAULT_WIDTH = 720;
+const DRAWER_DRAG_RESET_GUARD_MS = 2000;
+
+function clampPlannerDrawerWidth(value) {
+  const viewportMax = typeof window === "undefined"
+    ? PLANNER_DRAWER_MAX_WIDTH
+    : Math.max(PLANNER_DRAWER_MIN_WIDTH, window.innerWidth - 360);
+  return Math.min(viewportMax, Math.max(PLANNER_DRAWER_MIN_WIDTH, Math.round(value)));
+}
+
+function readPlannerDrawerWidth() {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = Number(localStorage.getItem(PLANNER_DRAWER_WIDTH_KEY));
+    return Number.isFinite(saved) ? clampPlannerDrawerWidth(saved) : null;
+  } catch {
+    return null;
+  }
+}
 
 function rankValue(item, mode) {
   return mode === "cloud" ? item.evaluation?.cloudSeaPotential ?? -1 : item.evaluation?.score ?? -1;
@@ -89,6 +114,10 @@ function readProductBridge() {
   const elevationRaw = params.get("elevation");
   const elevation = elevationRaw === null || elevationRaw.trim() === "" ? 0 : Number(elevationRaw);
   const night = params.get("night");
+  const model = params.get("model");
+  const forecastTime = params.get("forecastTime");
+  const observationTime = params.get("observationTime");
+  const overlay = params.get("overlay");
   if (
     !Number.isFinite(latitude) ||
     !Number.isFinite(longitude) ||
@@ -97,10 +126,14 @@ function readProductBridge() {
     longitude < -180 ||
     longitude > 180
   ) {
-    return { location: null, night };
+    return { location: null, night, model, forecastTime, observationTime, overlay };
   }
   return {
     night,
+    model,
+    forecastTime,
+    observationTime,
+    overlay,
     location: {
       id: `perseids-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
       name: params.get("name")?.trim() || "逐星联动点位",
@@ -113,7 +146,7 @@ function readProductBridge() {
   };
 }
 
-function productHref(path, location, night) {
+function productHref(path, location, night, session = {}) {
   const params = new URLSearchParams();
   if (location) {
     params.set("lat", String(location.latitude));
@@ -122,11 +155,16 @@ function productHref(path, location, night) {
     params.set("elevation", String(location.elevation ?? 0));
   }
   if (night) params.set("night", night);
+  if (session.model) params.set("model", session.model);
+  if (session.forecastTime) params.set("forecastTime", session.forecastTime);
+  if (session.observationTime) params.set("observationTime", session.observationTime);
+  if (session.overlayMode) params.set("overlay", session.overlayMode);
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
 
 export function App() {
+  const { state: sharedState, selectLocation: selectSharedLocation, selectNight: selectSharedNight, setCloud: setSharedCloud } = useStore();
   const bridge = useMemo(() => readProductBridge(), []);
   const [customLocations, setCustomLocations] = useState(() => {
     const saved = readCustomLocations();
@@ -142,17 +180,20 @@ export function App() {
   const [selectedNight, setSelectedNight] = useState(() =>
     bridge.night && nextNightKeys(14).includes(bridge.night)
       ? bridge.night
-      : nextNightKeys(14)[0],
+      : sharedState.selectedNight,
   );
   // URL-linked locations participate in ranking immediately, but landing from
   // another product should not open a blocking detail drawer over navigation.
-  const [selectedLocationId, setSelectedLocationId] = useState(null);
+  const [selectedLocationId, setSelectedLocationId] = useState(() => bridge.location?.id ?? null);
   const [forecasts, setForecasts] = useState(() => readForecastCache()?.forecasts ?? []);
   const [savedAt, setSavedAt] = useState(() => readForecastCache()?.savedAt ?? null);
   const [stale, setStale] = useState(() => readForecastCache()?.stale ?? false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const sharedModel = sharedState.cloudState.model;
   const nightKeys = useMemo(() => nextNightKeys(days), [days]);
+  const tonightNight = nextNightKeys(14)[0];
+  const isSpecifiedNight = Boolean(bridge.night && selectedNight === bridge.night && selectedNight !== tonightNight);
 
   const refresh = useCallback(
     async (silent = false) => {
@@ -161,7 +202,7 @@ export function App() {
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 25000);
       try {
-        const data = await fetchSurfaceForecasts(locations, 14, controller.signal);
+        const data = await fetchSurfaceForecasts(locations, 14, controller.signal, sharedModel);
         const cache = writeForecastCache(data);
         setForecasts(data);
         setSavedAt(cache.savedAt);
@@ -174,8 +215,32 @@ export function App() {
         setLoading(false);
       }
     },
-    [locations, forecasts.length],
+    [locations, forecasts.length, sharedModel],
   );
+
+  useEffect(() => {
+    if (bridge.night && nextNightKeys(14).includes(bridge.night)) {
+      selectSharedNight(bridge.night);
+    }
+    if (bridge.model === "icon" || bridge.model === "gfs" || bridge.model === "aifs") {
+      setSharedCloud({ model: bridge.model });
+    }
+    if (bridge.overlay === "satellite-cloud" || bridge.overlay === "forecast-cloud" || bridge.overlay === "night-lights") {
+      setSharedCloud({ overlayMode: bridge.overlay });
+    }
+    if (bridge.forecastTime || bridge.observationTime) {
+      setSharedCloud({
+        activeForecastTime: bridge.forecastTime ?? sharedState.cloudState.activeForecastTime,
+        activeObservationTime: bridge.observationTime ?? sharedState.cloudState.activeObservationTime,
+      });
+    }
+    if (bridge.location) {
+      void selectSharedLocation(bridge.location, bridge.model);
+    }
+    // The bridge is a mount-time protocol; user edits thereafter remain local
+    // to the planner until the next explicit navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const initialRefreshStarted = useRef(false);
   useEffect(() => {
@@ -189,6 +254,13 @@ export function App() {
     }
   }, [bridge.location, forecasts, refresh, stale]);
 
+  const previousModelRef = useRef(sharedModel);
+  useEffect(() => {
+    if (previousModelRef.current === sharedModel) return;
+    previousModelRef.current = sharedModel;
+    void refresh();
+  }, [refresh, sharedModel]);
+
   useEffect(() => {
     writeCustomLocations(customLocations);
   }, [customLocations]);
@@ -196,7 +268,10 @@ export function App() {
   function changeDays(value) {
     const nextKeys = nextNightKeys(value);
     setDays(value);
-    if (!nextKeys.includes(selectedNight)) setSelectedNight(nextKeys[0]);
+    if (!nextKeys.includes(selectedNight)) {
+      setSelectedNight(nextKeys[0]);
+      selectSharedNight(nextKeys[0]);
+    }
   }
 
   // 切换顶部/底部导航（今晚·对比·点位）时自动回到页面顶部，避免跳转后停留在上次滚动位置
@@ -231,9 +306,34 @@ export function App() {
 
   const best = rankings[0];
   const detail = selectedLocationId ? rankings.find((item) => item.location.id === selectedLocationId) : null;
-  const linkedLocation = detail?.location ?? bridge.location ?? best?.location;
-  const perseidsHref = productHref("/", linkedLocation, selectedNight);
-  const sitesHref = productHref("/sites", linkedLocation, selectedNight);
+  const featured = detail ?? best;
+  // A deep-linked point is the session source of truth. A ranked detail only
+  // takes over when the planner was opened without a point in the URL.
+  const linkedLocation = bridge.location ?? detail?.location ?? best?.location;
+  const sessionLink = {
+    model: sharedModel,
+    forecastTime: sharedState.cloudState.activeForecastTime,
+    observationTime: sharedState.cloudState.activeObservationTime,
+    overlayMode: sharedState.cloudState.overlayMode,
+  };
+  const perseidsHref = productHref("/", linkedLocation, selectedNight, sessionLink);
+  const sitesHref = productHref("/sites", linkedLocation, selectedNight, sessionLink);
+
+  const handleSelectNight = useCallback((night) => {
+    setSelectedNight(night);
+    selectSharedNight(night);
+  }, [selectSharedNight]);
+
+  const handleReturnTonight = useCallback(() => {
+    setSelectedNight(tonightNight);
+    selectSharedNight(tonightNight);
+  }, [selectSharedNight, tonightNight]);
+
+  const handleOpenDetail = useCallback((locationId) => {
+    setSelectedLocationId(locationId);
+    const location = locations.find((item) => item.id === locationId);
+    if (location) void selectSharedLocation(location);
+  }, [locations, selectSharedLocation]);
 
   function addLocation(form) {
     const next = [...customLocations, createLocation(form)];
@@ -249,13 +349,13 @@ export function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="planner-root app-shell">
       <a className="skip-link" href="#main-content">跳到主要内容</a>
       <header className="topbar">
         <div className="brand-lockup">
-          <span className="brand-mark"><Sparkle weight="fill" /></span>
+            <span className="brand-mark"><Telescope strokeWidth={2.1} /></span>
           <div>
-            <p className="eyebrow">星空天气</p>
+            <p className="eyebrow">逐星</p>
             <h1>星野决策</h1>
           </div>
         </div>
@@ -297,13 +397,16 @@ export function App() {
 
         {forecasts.length > 0 && view === "dashboard" && (
           <Dashboard
-            best={best}
+            best={featured}
             rankings={rankings}
             nightKeys={nightKeys}
             selectedNight={selectedNight}
-            onSelectNight={setSelectedNight}
+            onSelectNight={handleSelectNight}
             mode={mode}
-            onOpenDetail={setSelectedLocationId}
+            onOpenDetail={handleOpenDetail}
+            isSpecifiedNight={isSpecifiedNight}
+            onReturnTonight={handleReturnTonight}
+            isLinkedLocation={Boolean(detail)}
           />
         )}
         {forecasts.length > 0 && view === "matrix" && (
@@ -313,7 +416,7 @@ export function App() {
             nightKeys={nightKeys}
             mode={mode}
             onSelect={(locationId, night) => {
-              setSelectedNight(night);
+              handleSelectNight(night);
               setSelectedLocationId(locationId);
             }}
           />
@@ -325,7 +428,7 @@ export function App() {
             days={days}
             nightKeys={nightKeys}
             selectedNight={selectedNight}
-            onSelectNight={setSelectedNight}
+            onSelectNight={handleSelectNight}
             onSave={addLocation}
           />
         )}
@@ -351,11 +454,11 @@ export function App() {
 
 function NavButton({ item, active, onClick }) {
   const Icon = item.icon;
-  return <button type="button" aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={onClick}><Icon aria-hidden="true" weight={active ? "fill" : "regular"} /><span>{item.label}</span></button>;
+  return <button type="button" aria-current={active ? "page" : undefined} className={active ? "active" : ""} onClick={onClick}><Icon aria-hidden="true" strokeWidth={active ? 2.4 : 1.7} /><span>{item.label}</span></button>;
 }
 
 function StatusBanner({ message, stale }) {
-  return <div className={`status-banner ${stale ? "warning" : "info"}`} role="status" aria-live="polite"><Warning aria-hidden="true" weight="fill" /><span>{message}</span></div>;
+  return <div className={`status-banner ${stale ? "warning" : "info"}`} role="status" aria-live="polite"><Warning aria-hidden="true" strokeWidth={2.4} /><span>{message}</span></div>;
 }
 
 function LoadingState() {
@@ -366,7 +469,7 @@ function EmptyState({ onRefresh }) {
   return <section className="empty-state"><Cloud size={36} /><h2>还没有天气数据</h2><p>连接网络后刷新，页面会保留最近一次成功数据。</p><button className="primary-button" type="button" onClick={onRefresh}>立即刷新</button></section>;
 }
 
-function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail }) {
+function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail, isSpecifiedNight, onReturnTonight, isLinkedLocation }) {
   const evaluation = best?.evaluation;
   const meta = statusMeta(evaluation?.status);
   return (
@@ -375,11 +478,12 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
         <article className="hero-card">
           <div className="hero-header">
             <span className="section-kicker">{formatNightLabel(selectedNight)} · {mode === "star" ? "星空最佳" : "云海潜力"}</span>
+            {isSpecifiedNight && <button className="specified-night-button" type="button" onClick={onReturnTonight}>回到今晚</button>}
             <span className={`status-pill ${meta.tone}`}>{meta.label}</span>
           </div>
           <div className="hero-location">
             <div>
-              <p className="hero-overline">综合最优机位</p>
+              <p className="hero-overline">{isLinkedLocation ? "指定观测点" : "综合最优机位"}</p>
               <h2>{best?.location.name ?? "计算中"}</h2>
               <p className="coordinate"><MapPin />{best?.location.elevation} m · {best?.location.latitude.toFixed(4)}, {best?.location.longitude.toFixed(4)}</p>
             </div>
@@ -531,7 +635,104 @@ function DetailDrawer({ item, nightKey, onClose }) {
   const [pressureError, setPressureError] = useState("");
   const [pressureLoading, setPressureLoading] = useState(true);
   const [activeHour, setActiveHour] = useState(evaluation?.window[0]?.time ?? evaluation?.hours?.[0]?.time);
+  const [drawerWidth, setDrawerWidth] = useState(PLANNER_DRAWER_DEFAULT_WIDTH);
+  const drawerDragRef = useRef(null);
+  const drawerDragMovedRef = useRef(false);
+  const lastDrawerDragEndRef = useRef(0);
   const drawerRef = useDialogFocus(true, onClose);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const saved = readPlannerDrawerWidth();
+      if (saved !== null) setDrawerWidth(saved);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  const persistDrawerWidth = useCallback((value) => {
+    const next = clampPlannerDrawerWidth(value);
+    setDrawerWidth(next);
+    try {
+      localStorage.setItem(PLANNER_DRAWER_WIDTH_KEY, String(next));
+    } catch {
+      // Private browsing or quota errors do not block the current drawer.
+    }
+  }, []);
+
+  const finishDrawerDrag = useCallback((event) => {
+    const drag = drawerDragRef.current;
+    if (!drag) return;
+    drawerDragRef.current = null;
+    lastDrawerDragEndRef.current = Date.now();
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+    if (event?.currentTarget?.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    }
+    persistDrawerWidth(drag.liveWidth);
+  }, [persistDrawerWidth]);
+
+  const onDrawerResizePointerDown = useCallback((event) => {
+    if (typeof window !== "undefined" && window.innerWidth <= 840) return;
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const currentWidth = drawerRef.current?.getBoundingClientRect().width ?? drawerWidth;
+    if (Date.now() - lastDrawerDragEndRef.current > DRAWER_DRAG_RESET_GUARD_MS) {
+      drawerDragMovedRef.current = false;
+    }
+    drawerDragRef.current = { startX: event.clientX, startWidth: currentWidth, liveWidth: currentWidth };
+    event.currentTarget.focus({ preventScroll: true });
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+  }, [drawerRef, drawerWidth]);
+
+  const onDrawerResizePointerMove = useCallback((event) => {
+    const drag = drawerDragRef.current;
+    if (!drag) return;
+    event.preventDefault();
+    drawerDragMovedRef.current = true;
+    // The drawer is right anchored: moving its left rail left makes it wider.
+    drag.liveWidth = clampPlannerDrawerWidth(drag.startWidth + drag.startX - event.clientX);
+    setDrawerWidth(drag.liveWidth);
+  }, []);
+
+  const resetDrawerWidth = useCallback(() => {
+    if (drawerDragMovedRef.current || Date.now() - lastDrawerDragEndRef.current < DRAWER_DRAG_RESET_GUARD_MS) return;
+    drawerDragRef.current = null;
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+    setDrawerWidth(PLANNER_DRAWER_DEFAULT_WIDTH);
+    try {
+      localStorage.removeItem(PLANNER_DRAWER_WIDTH_KEY);
+    } catch {
+      // Ignore private browsing/localStorage failures.
+    }
+  }, []);
+
+  const onDrawerResizeKeyDown = useCallback((event) => {
+    if (typeof window !== "undefined" && window.innerWidth <= 840) return;
+    const step = event.shiftKey ? 48 : 16;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      persistDrawerWidth(drawerWidth + (event.key === "ArrowLeft" ? step : -step));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      persistDrawerWidth(PLANNER_DRAWER_MIN_WIDTH);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      persistDrawerWidth(PLANNER_DRAWER_MAX_WIDTH);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      resetDrawerWidth();
+    }
+  }, [drawerWidth, persistDrawerWidth, resetDrawerWidth]);
+
+  useEffect(() => () => {
+    drawerDragRef.current = null;
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -553,7 +754,26 @@ function DetailDrawer({ item, nightKey, onClose }) {
 
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
-      <aside ref={drawerRef} className="detail-drawer" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()} aria-labelledby="detail-drawer-title">
+      <aside ref={drawerRef} className="detail-drawer" style={{ "--planner-drawer-width": `${drawerWidth}px` }} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()} aria-labelledby="detail-drawer-title">
+        <div
+          className="detail-drawer-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="拖动调整详情面板宽度"
+          aria-valuemin={PLANNER_DRAWER_MIN_WIDTH}
+          aria-valuemax={PLANNER_DRAWER_MAX_WIDTH}
+          aria-valuenow={drawerWidth}
+          aria-valuetext={`${drawerWidth}px；拖动左边缘或使用左右方向键调整，双击恢复默认宽度`}
+          tabIndex={0}
+          data-testid="planner-detail-resizer"
+          onPointerDown={onDrawerResizePointerDown}
+          onPointerMove={onDrawerResizePointerMove}
+          onPointerUp={finishDrawerDrag}
+          onPointerCancel={finishDrawerDrag}
+          onLostPointerCapture={finishDrawerDrag}
+          onKeyDown={onDrawerResizeKeyDown}
+          onDoubleClick={resetDrawerWidth}
+        />
         <div className="drawer-header"><div><span className="section-kicker">地点详情 · {formatNightLabel(nightKey)}</span><h2 id="detail-drawer-title">{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" type="button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
         <div className="detail-summary"><ScoreRing value={evaluation?.score} label="星空分" /><div><span className={`status-pill ${statusMeta(evaluation?.status).tone}`}>{statusMeta(evaluation?.status).label}</span><h3>{evaluation?.windowLabel}</h3><p>{evaluation?.reason}</p></div></div>
         <div className="detail-metrics"><Metric icon={Cloud} label="云海潜力" value={evaluation?.cloudSeaPotential} /><Metric icon={Moon} label="月面照度" value={`${Math.round((evaluation?.moonIllumination ?? 0) * 100)}%`} /><Metric icon={Sparkle} label="天文暗夜" value={`${evaluation?.darkHours ?? 0}h`} /><Metric icon={Compass} label="银河最高" value={`${evaluation?.galacticMax ?? 0}°`} /></div>
@@ -566,7 +786,7 @@ function DetailDrawer({ item, nightKey, onClose }) {
         <DetailSection title="低云海拔评估" subtitle="实验性气压层推导，不是山顶实测" icon={Mountains}>
           {pressureLoading && <div className="inline-loading"><span className="loader small" />读取垂直云层…</div>}
           {pressureError && <p className="inline-error"><Warning />{pressureError}</p>}
-          {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>用户海拔：{location.elevation} m</span><span>时次：{formatHour(activeHour)}</span></div><AccessibleChart option={profileOption} height={250} label="低云垂直剖面图：云量与海拔关系" />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud weight="fill" /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
+          {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>用户海拔：{location.elevation} m</span><span>时次：{formatHour(activeHour)}</span></div><AccessibleChart option={profileOption} height={250} label="低云垂直剖面图：云量与海拔关系" />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud strokeWidth={2.4} /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
         </DetailSection>
         <div className="method-note"><Info /><p><strong>方法边界</strong> 云底/云顶由数值模型气压层推导，已过滤模型地表以下层并取整到 50 m。复杂山地仍需结合现场云图、能见度与周边谷地情况。</p></div>
         <HourlyForecastMatrix nightKey={nightKey} hours={evaluation?.hours ?? []} selectedTime={activeHour} onSelectTime={setActiveHour} title="单夜十小时矩阵" />

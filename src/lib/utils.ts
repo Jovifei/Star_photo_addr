@@ -11,6 +11,10 @@ export interface PlannerLinkTarget {
   name?: string;
   elevation?: number;
   night?: string;
+  model?: "icon" | "gfs" | "aifs";
+  forecastTime?: string | null;
+  observationTime?: string | null;
+  overlayMode?: "satellite-cloud" | "forecast-cloud" | "night-lights";
 }
 
 /**
@@ -26,5 +30,9 @@ export function buildPlannerHref(target: PlannerLinkTarget): string {
   if (target.name) params.set("name", target.name);
   if (target.elevation != null) params.set("elevation", String(target.elevation));
   if (target.night) params.set("night", target.night);
+  if (target.model) params.set("model", target.model);
+  if (target.forecastTime) params.set("forecastTime", target.forecastTime);
+  if (target.observationTime) params.set("observationTime", target.observationTime);
+  if (target.overlayMode) params.set("overlay", target.overlayMode);
   return `/planner?${params.toString()}`;
 }

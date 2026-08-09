@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   averageLayer,
+  aggregateForecastHour,
+  bilinearInterpolate,
   cloudLayerValueToColor,
   forecastDaysForNight,
   generateGridBounds,
   getValuesAtTime,
+  getCloudCoverAtTime,
   idwInterpolate,
 } from "@/lib/cloudGrid";
 import type { CloudGridData } from "@/lib/types";
@@ -26,6 +29,12 @@ describe("云图网格与时间轴", () => {
     expect(idwInterpolate(0, 0, points)).toBe(0);
     expect(idwInterpolate(10, 0, points)).toBe(100);
     expect(idwInterpolate(5, 0, points)).toBeCloseTo(50);
+  });
+
+  it("双线性插值保持连续并跳过缺失角点", () => {
+    expect(bilinearInterpolate(0.5, 0.5, [0, 100, 100, 0], 2, 2)).toBeCloseTo(50);
+    expect(bilinearInterpolate(0.5, 0.5, [null, 100, null, null], 2, 2)).toBe(100);
+    expect(bilinearInterpolate(0.5, 0.5, [null, null, null, null], 2, 2)).toBeNull();
   });
 
   it("支持 20:00 到次日 05:00 的第 10 档，并计算三层平均值", () => {
@@ -54,9 +63,47 @@ describe("云图网格与时间轴", () => {
       fetchedAt: "2026-08-07T00:00:00Z",
     } satisfies CloudGridData;
 
-    const finalTick = getValuesAtTime(grid, 9);
+    const finalTick = getValuesAtTime(grid, "2026-08-13T05:00");
     expect(finalTick).toEqual({ high: [90], mid: [45], low: [10] });
+    expect(getCloudCoverAtTime(grid, "2026-08-13T05:00")).toEqual([null]);
     expect(averageLayer([10, 20, 30])).toBe(20);
+    expect(averageLayer([null, undefined])).toBeNull();
+  });
+
+  it("网格回退小时保留矩阵需要的全部地面参数和缺失值", () => {
+    const hour = aggregateForecastHour([
+      {
+        time: "2026-08-09T20:00",
+        temperature: 28,
+        dewPoint: 24,
+        precipitation: 0.4,
+        visibility: 18000,
+        windSpeed: 2.2,
+        windDirection: 350,
+        cloudCover: 60,
+      },
+      {
+        time: "2026-08-09T20:00",
+        temperature: 30,
+        dewPoint: 26,
+        precipitation: 0.6,
+        visibility: 22000,
+        windSpeed: 1.8,
+        windDirection: 10,
+        cloudCover: 80,
+      },
+    ], "2026-08-09T20:00");
+
+    expect(hour).toMatchObject({
+      temperature: 29,
+      dewPoint: 25,
+      precipitation: 0.5,
+      visibility: 20000,
+      windSpeed: 2,
+      cloudCover: 70,
+    });
+    expect(hour?.windDirection).toBeCloseTo(0);
+    expect(aggregateForecastHour([undefined], "2026-08-09T20:00")).toBeNull();
   });
 
   it("远期夜晚会自动请求足够天数且不超过预报上限", () => {

@@ -4,10 +4,8 @@ import {
   GIBS_LAYERS,
   buildSatelliteFrame,
   extractLayerBlock,
-  latLngToTile,
   parseTileTemplate,
   parseTimeDimension,
-  tileUrl,
 } from "@/lib/gibs";
 
 export const dynamic = "force-dynamic";
@@ -44,14 +42,20 @@ export async function GET(request: NextRequest) {
     const concreteTemplate = template.replaceAll("{TileMatrixSet}", matrixSet);
     const frameTimes = kind === "cloud"
       ? buildTenMinuteFrames(dimension.latest)
-      : await findNightLightTimes(concreteTemplate, dimension.latest, latitude, longitude, controller.signal);
+      : [dimension.latest.slice(0, 10)];
     const frames = frameTimes.map((time) => buildSatelliteFrame(kind, time, concreteTemplate));
     return NextResponse.json({
       kind,
       frames,
+      frameIntervalMinutes: kind === "cloud" ? 10 : null,
+      latestObservedAt: frames[0]?.observedAt ?? null,
+      frameRange: {
+        oldest: frames.at(-1)?.observedAt ?? null,
+        newest: frames[0]?.observedAt ?? null,
+      },
       updatedAt: new Date().toISOString(),
       status: frames.length ? "available" : "degraded",
-      message: frames.length ? undefined : "最近 7 天没有可用卫星瓦片；这不代表没有光污染",
+      message: frames.length ? undefined : "卫星夜光基准暂不可用；这不代表没有光污染",
       coverage: frames[0]?.coverage ?? "不可用",
     }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
@@ -62,24 +66,11 @@ export async function GET(request: NextRequest) {
 }
 
 function buildTenMinuteFrames(latest: string): string[] {
-  const start = new Date(latest);
+  const requested = new Date(latest);
+  const start = requested.getTime() > Date.now() ? new Date() : requested;
   return Array.from({ length: 145 }, (_, index) => {
     const time = new Date(start);
     time.setUTCMinutes(time.getUTCMinutes() - index * 10);
     return time.toISOString().replace(/\.\d{3}Z$/, "Z");
   });
-}
-
-async function findNightLightTimes(template: string, latest: string, latitude: number, longitude: number, signal: AbortSignal): Promise<string[]> {
-  const start = new Date(`${latest.slice(0, 10)}T00:00:00Z`);
-  const tile = latLngToTile(latitude, longitude, 8);
-  for (let offset = 0; offset < 7; offset += 1) {
-    const date = new Date(start);
-    date.setUTCDate(date.getUTCDate() - offset);
-    const time = date.toISOString().slice(0, 10);
-    const url = tileUrl(template, time, 8, tile.x, tile.y);
-    const response = await fetch(url, { signal, headers: { Range: "bytes=0-0" } });
-    if (response.ok) return [time];
-  }
-  return [];
 }

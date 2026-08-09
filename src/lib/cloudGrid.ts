@@ -1,4 +1,4 @@
-// Cloud grid sampling + IDW interpolation + batch forecast logic.
+// Cloud grid sampling + null-safe regular-grid interpolation + batch forecast logic.
 //
 // This module provides the spatial cloud-coverage data pipeline for the
 // Phase 2 three-layer cloud overlay:
@@ -7,22 +7,20 @@
 //   2. `fetchCloudGrid` — calls the existing `/api/forecast` route (which
 //      already supports comma-separated multi-point requests) and filters the
 //      results to the selected night's hours.
-//   3. `idwInterpolate` — standard inverse-distance-weighted interpolation for
-//      a single pixel position.
-//   4. `getValuesAtTime` — extracts the three-layer cloud values (high/mid/low)
-//      for all sample points at a given time index within the night window.
+//   3. `bilinearInterpolate` — continuous interpolation without sample-point
+//      halos or additive colour hotspots.
+//   4. `getValuesAtTime` — extracts layer values by ISO time (index remains a
+//      backwards-compatible test/helper input).
 //
 // All functions are pure (no side effects) except `fetchCloudGrid` which
 // performs an HTTP request.
 
 import type L from "leaflet";
-import {
-  isInNightRange,
-} from "@/lib/nighttime";
 import type {
   CloudGridData,
   CloudGridSample,
   ForecastModel,
+  HourWeather,
   LocationForecast,
 } from "@/lib/types";
 
@@ -38,7 +36,7 @@ export function generateGridBounds(
   bounds: L.LatLngBounds,
   rows = 5,
   cols = 6,
-): { samples: CloudGridSample[]; rect: CloudGridData["bounds"] } {
+): { samples: CloudGridSample[]; rect: CloudGridData["bounds"]; rows: number; cols: number } {
   // Clamp the viewport to a valid geographic range. Leaflet reports east > 180
   // (or west < -180) when the map is panned beyond the dateline with
   // worldCopyJump disabled; feeding those longitudes to Open-Meteo returns 502
@@ -70,6 +68,8 @@ export function generateGridBounds(
   return {
     samples,
     rect: { north, south, east, west },
+    rows,
+    cols,
   };
 }
 
@@ -77,25 +77,29 @@ export function generateGridBounds(
  * Batch-fetch cloud forecasts for a set of sample points.
  *
  * Reuses the existing `/api/forecast` route, which already supports
- * comma-separated multi-point requests. The returned forecasts are filtered
- * to only the hours belonging to any of the requested nights (20:00 → 05:00).
+ * comma-separated multi-point requests. The returned hourly series stays
+ * intact so a map opened before 20:00 can render the current hour; consumers
+ * select the fixed 20:00 → 05:00 matrix window by ISO time.
  *
  * @param samples - Grid sample coordinates.
  * @param nightKeys - Night keys (YYYY-MM-DD); the timeline covers each in turn.
  * @param days - Number of forecast days to request.
- * @returns Complete CloudGridData with filtered forecasts.
+ * @returns Complete CloudGridData with sorted hourly forecasts.
  */
 export async function fetchCloudGrid(
   samples: CloudGridSample[],
   nightKeys: string[],
   days: number,
   model: ForecastModel = "best_match",
+  rows = 5,
+  cols = 6,
+  signal?: AbortSignal,
 ): Promise<CloudGridData> {
   const latitudes = samples.map((s) => s.latitude).join(",");
   const longitudes = samples.map((s) => s.longitude).join(",");
   const url = `/api/forecast?latitude=${latitudes}&longitude=${longitudes}&days=${days}&model=${model}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.error ?? `云图网格请求失败 (${response.status})`);
@@ -103,13 +107,11 @@ export async function fetchCloudGrid(
   const data = await response.json();
   const forecasts: LocationForecast[] = (data.locations ?? []) as LocationForecast[];
 
-  // Filter each forecast's hourly array to the requested nights and keep them
-  // in chronological order so the timeline plays back correctly.
+  // Keep all returned hours. Filtering here used to turn a current 17:00 map
+  // frame into an empty/null raster until 20:00.
   const filteredForecasts = forecasts.map((forecast) => ({
     ...forecast,
-    hourly: forecast.hourly
-      .filter((hour) => isInNightRange(hour.time, nightKeys))
-      .sort((a, b) => a.time.localeCompare(b.time)),
+    hourly: forecast.hourly.sort((a, b) => a.time.localeCompare(b.time)),
   }));
 
   // Compute the bounding rectangle from the samples.
@@ -128,6 +130,8 @@ export async function fetchCloudGrid(
     nightKeys,
     fetchedAt: new Date().toISOString(),
     model,
+    rows,
+    cols,
   };
 }
 
@@ -228,6 +232,96 @@ export function idwInterpolate(
   return denominator > 0 ? numerator / denominator : 0;
 }
 
+/** Bilinear interpolation for a row-major regular grid. Null corners are
+ * ignored and only become null when every corner is missing. */
+export function bilinearInterpolate(
+  u: number,
+  v: number,
+  values: Array<number | null | undefined>,
+  rows: number,
+  cols: number,
+): number | null {
+  if (rows < 1 || cols < 1 || values.length < rows * cols) return null;
+  if (rows === 1 && cols === 1) return values[0] ?? null;
+  const x = Math.max(0, Math.min(cols - 1, u));
+  const y = Math.max(0, Math.min(rows - 1, v));
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const x1 = Math.min(cols - 1, x0 + 1);
+  const y1 = Math.min(rows - 1, y0 + 1);
+  const tx = x - x0;
+  const ty = y - y0;
+  const corners = [
+    { value: values[y0 * cols + x0], weight: (1 - tx) * (1 - ty) },
+    { value: values[y0 * cols + x1], weight: tx * (1 - ty) },
+    { value: values[y1 * cols + x0], weight: (1 - tx) * ty },
+    { value: values[y1 * cols + x1], weight: tx * ty },
+  ];
+  const valid = corners.filter(({ value }) => typeof value === "number" && Number.isFinite(value));
+  if (!valid.length) return null;
+  const totalWeight = valid.reduce((sum, corner) => sum + corner.weight, 0);
+  return totalWeight > 0
+    ? valid.reduce((sum, corner) => sum + (corner.value as number) * corner.weight, 0) / totalWeight
+    : null;
+}
+
+function hourAt(forecast: LocationForecast, timeOrIndex: string | number) {
+  if (typeof timeOrIndex === "string") {
+    return forecast.hourly.find((hour) => hour.time === timeOrIndex);
+  }
+  return forecast.hourly[Math.min(Math.max(0, timeOrIndex), Math.max(0, forecast.hourly.length - 1))];
+}
+
+function meanNumber(values: Array<number | null | undefined>, digits = 1): number | null {
+  const valid = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (!valid.length) return null;
+  const mean = valid.reduce((sum, value) => sum + value, 0) / valid.length;
+  return Number(mean.toFixed(digits));
+}
+
+function meanDirection(values: Array<number | null | undefined>): number | null {
+  const valid = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (!valid.length) return null;
+  const radians = valid.map((value) => (value * Math.PI) / 180);
+  const x = radians.reduce((sum, value) => sum + Math.cos(value), 0);
+  const y = radians.reduce((sum, value) => sum + Math.sin(value), 0);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function modeNumber(values: Array<number | null | undefined>): number | null {
+  const valid = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (!valid.length) return null;
+  const counts = new Map<number, number>();
+  for (const value of valid) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
+/** Aggregate a grid's sample-point weather into one complete matrix hour. */
+export function aggregateForecastHour(
+  hours: Array<HourWeather | undefined>,
+  time: string,
+): HourWeather | null {
+  const valid = hours.filter((hour): hour is HourWeather => Boolean(hour));
+  if (!valid.length) return null;
+  return {
+    time,
+    temperature: meanNumber(valid.map((hour) => hour.temperature)),
+    humidity: meanNumber(valid.map((hour) => hour.humidity)),
+    dewPoint: meanNumber(valid.map((hour) => hour.dewPoint)),
+    precipitationProbability: meanNumber(valid.map((hour) => hour.precipitationProbability)),
+    precipitation: meanNumber(valid.map((hour) => hour.precipitation)),
+    weatherCode: modeNumber(valid.map((hour) => hour.weatherCode)),
+    cloudCover: meanNumber(valid.map((hour) => hour.cloudCover), 0),
+    cloudLow: meanNumber(valid.map((hour) => hour.cloudLow), 0),
+    cloudMid: meanNumber(valid.map((hour) => hour.cloudMid), 0),
+    cloudHigh: meanNumber(valid.map((hour) => hour.cloudHigh), 0),
+    visibility: meanNumber(valid.map((hour) => hour.visibility), 0),
+    windSpeed: meanNumber(valid.map((hour) => hour.windSpeed)),
+    windGust: meanNumber(valid.map((hour) => hour.windGust)),
+    windDirection: meanDirection(valid.map((hour) => hour.windDirection)),
+  };
+}
+
 /**
  * Extract the three-layer cloud values for all sample points at a given
  * time index. For an N-night range each night contributes 10 hours, so the
@@ -240,26 +334,43 @@ export function idwInterpolate(
  */
 export function getValuesAtTime(
   gridData: CloudGridData,
-  timeIndex: number,
-): { high: number[]; mid: number[]; low: number[] } {
-  const high: number[] = [];
-  const mid: number[] = [];
-  const low: number[] = [];
+  timeOrIndex: string | number,
+): { high: Array<number | null>; mid: Array<number | null>; low: Array<number | null> } {
+  const high: Array<number | null> = [];
+  const mid: Array<number | null> = [];
+  const low: Array<number | null> = [];
 
   for (const forecast of gridData.forecasts) {
-    const hour = forecast.hourly[Math.min(timeIndex, forecast.hourly.length - 1)];
-    if (!hour) {
-      high.push(0);
-      mid.push(0);
-      low.push(0);
-      continue;
-    }
-    high.push(hour.cloudHigh ?? 0);
-    mid.push(hour.cloudMid ?? 0);
-    low.push(hour.cloudLow ?? 0);
+    const hour = hourAt(forecast, timeOrIndex);
+    high.push(hour?.cloudHigh ?? null);
+    mid.push(hour?.cloudMid ?? null);
+    low.push(hour?.cloudLow ?? null);
   }
 
   return { high, mid, low };
+}
+
+export function getCloudCoverAtTime(
+  gridData: CloudGridData,
+  timeOrIndex: string | number,
+): Array<number | null> {
+  return gridData.forecasts.map((forecast) => hourAt(forecast, timeOrIndex)?.cloudCover ?? null);
+}
+
+/** Surface weather values used by the forecast-only map effects. */
+export function getWeatherValuesAtTime(
+  gridData: CloudGridData,
+  timeOrIndex: string | number,
+): {
+  precipitation: Array<number | null>;
+  windSpeed: Array<number | null>;
+  windDirection: Array<number | null>;
+} {
+  return {
+    precipitation: gridData.forecasts.map((forecast) => hourAt(forecast, timeOrIndex)?.precipitation ?? null),
+    windSpeed: gridData.forecasts.map((forecast) => hourAt(forecast, timeOrIndex)?.windSpeed ?? null),
+    windDirection: gridData.forecasts.map((forecast) => hourAt(forecast, timeOrIndex)?.windDirection ?? null),
+  };
 }
 
 /**
@@ -269,9 +380,10 @@ export function getValuesAtTime(
  * @param values - Array of cloud values (0-100) for one layer.
  * @returns Average value (0-100), rounded.
  */
-export function averageLayer(values: number[]): number {
-  if (values.length === 0) return 0;
-  return Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
+export function averageLayer(values: Array<number | null | undefined>): number | null {
+  const valid = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (valid.length === 0) return null;
+  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length);
 }
 
 /**

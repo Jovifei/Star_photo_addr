@@ -52,8 +52,12 @@ function buildSurfaceRaw(fixture, lats, lons, days) {
   });
 }
 
-function buildNormalizedForecasts(fixture, lats, lons, days) {
-  const start = Date.parse("2026-08-07T00:00:00Z");
+function buildNormalizedForecasts(fixture, lats, lons, days, model = "icon") {
+  // Keep the deterministic fixture anchored to the repository's acceptance
+  // date so the 20:00–05:00 matrix and the current→72h rail share one time
+  // domain. A stale 8/7 start makes a click on tonight's columns immediately
+  // get reset by the forecast-timeline guard.
+  const start = Date.parse("2026-08-09T00:00:00Z");
   const src = Array.from({ length: days * 24 }, (_, hourIndex) => ({
     time: new Date(start + hourIndex * 3_600_000).toISOString().slice(0, 16),
     temperature: 12 + (hourIndex % 9),
@@ -77,7 +81,14 @@ function buildNormalizedForecasts(fixture, lats, lons, days) {
     modelElevation: fixture.surface.modelElevation + index * 7,
     timezone: "Asia/Shanghai",
     utcOffsetSeconds: 28800,
-    fetchedAt: "2026-08-07T08:00:00.000Z",
+    fetchedAt: "2026-08-09T08:00:00.000Z",
+    metadata: {
+      source: "Open-Meteo",
+      model,
+      fetchedAt: "2026-08-09T08:00:00.000Z",
+      stale: false,
+      units: { cloudCover: "%", precipitation: "mm", windSpeed: "m/s", windDirection: "°" },
+    },
     hourly: src.map((hour) => ({
       ...hour,
       cloudCover: perturb("cloudCover", hour.cloudCover, index * 3),
@@ -169,6 +180,35 @@ export async function installNextApiMock(page, fixture) {
   await page.route("**/api/satellite/times**", async (route) => {
     const url = new URL(route.request().url());
     const kind = url.searchParams.get("kind") === "night-lights" ? "night-lights" : "cloud";
+    const frames = kind === "cloud"
+      ? ["2026-08-09T08:20:00Z", "2026-08-09T08:10:00Z", "2026-08-09T08:00:00Z"].map((time) => ({
+          time,
+          kind,
+          observedAt: time,
+          layer: "Himawari_AHI_Band13_Clean_Infrared",
+          label: "卫星云观测",
+          satellite: "Himawari AHI Band 13",
+          source: "NASA GIBS",
+          tileTemplate: "https://gibs.test/{Time}/{TileMatrix}/{TileRow}/{TileCol}.png",
+          coverage: "测试覆盖范围",
+          observed: true,
+          isForecast: false,
+          reference: false,
+        }))
+      : [{
+          time: "2026-01-01",
+          kind,
+          observedAt: "2026-01-01",
+          layer: "VIIRS_Black_Marble",
+          label: "卫星夜光/辐亮度影像（2016 基准）",
+          satellite: "VIIRS Black Marble",
+          source: "NASA GIBS",
+          tileTemplate: "https://gibs.test/{Time}/{TileMatrix}/{TileRow}/{TileCol}.png",
+          coverage: "测试覆盖范围",
+          observed: true,
+          isForecast: false,
+          reference: true,
+        }];
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -177,16 +217,7 @@ export async function installNextApiMock(page, fixture) {
         kind,
         status: "available",
         updatedAt: "2026-08-09T08:00:00.000Z",
-        frames: [{
-          time: kind === "cloud" ? "2026-08-09T08:00:00Z" : "2026-08-09",
-          kind,
-          label: kind === "cloud" ? "卫星云观测" : "卫星夜光/辐亮度影像",
-          satellite: kind === "cloud" ? "Himawari AHI Band 13" : "NOAA-20 VIIRS Day/Night Band",
-          source: "NASA GIBS",
-          tileTemplate: "https://gibs.test/{Time}/{TileMatrix}/{TileRow}/{TileCol}.png",
-          coverage: "测试覆盖范围",
-          observed: true,
-        }],
+        frames,
       }),
     });
   });
@@ -195,7 +226,8 @@ export async function installNextApiMock(page, fixture) {
     const lats = (url.searchParams.get("latitude") || "").split(",").filter(Boolean);
     const lons = (url.searchParams.get("longitude") || "").split(",").filter(Boolean);
     const days = Math.min(16, Math.max(1, Number(url.searchParams.get("days")) || 14));
-    const locations = buildNormalizedForecasts(fixture, lats, lons, days);
+    const model = url.searchParams.get("model") || "icon";
+    const locations = buildNormalizedForecasts(fixture, lats, lons, days, model);
     await route.fulfill({
       status: 200,
       contentType: "application/json",

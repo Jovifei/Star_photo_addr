@@ -8,15 +8,16 @@ import type { SatelliteFrame } from "@/lib/types";
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 export default function SatelliteLayer() {
-  const { state } = useStore();
+  const { state, setSatelliteFrames, setCloud } = useStore();
   const mode = state.cloudState.overlayMode;
   const map = useMap();
   const [frame, setFrame] = useState<SatelliteFrame | null>(null);
+  const [frames, setFrames] = useState<SatelliteFrame[]>([]);
   const [frameMode, setFrameMode] = useState<string>("");
   const [error, setError] = useState("");
   const [viewportKey, setViewportKey] = useState(() => viewportSignature(map));
   const [refreshTick, setRefreshTick] = useState(0);
-  const activeMode = mode ?? "forecast";
+  const activeMode = mode ?? "forecast-cloud";
 
   useMapEvents({
     moveend: () => setViewportKey(viewportSignature(map)),
@@ -24,13 +25,13 @@ export default function SatelliteLayer() {
   });
 
   useEffect(() => {
-    if (activeMode === "forecast") return;
+    if (activeMode === "forecast-cloud") return;
     const timer = setInterval(() => setRefreshTick((value) => value + 1), REFRESH_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [activeMode]);
 
   useEffect(() => {
-    if (activeMode === "forecast") return;
+    if (activeMode === "forecast-cloud") return;
     const kind = activeMode === "satellite-cloud" ? "cloud" : "night-lights";
     const center = map.getCenter();
     const controller = new AbortController();
@@ -40,8 +41,14 @@ export default function SatelliteLayer() {
     })
       .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error ?? "卫星数据不可用"); return data; })
       .then((data) => {
-        const nextFrame = Array.isArray(data.frames) ? data.frames[0] as SatelliteFrame | undefined : undefined;
+        const nextFrames = Array.isArray(data.frames) ? data.frames as SatelliteFrame[] : [];
+        const nextFrame = nextFrames[0];
+        setFrames(nextFrames);
+        setSatelliteFrames(nextFrames);
         setFrame(nextFrame ?? null);
+        if (activeMode === "satellite-cloud" && nextFrame) {
+          setCloud({ activeObservationTime: nextFrame.time });
+        }
         setFrameMode(activeMode);
         setError(nextFrame ? "" : (data.message ?? "最近 7 天没有可用卫星时次"));
       })
@@ -52,21 +59,25 @@ export default function SatelliteLayer() {
         }
       });
     return () => controller.abort();
-  }, [activeMode, map, refreshTick, viewportKey]);
+  }, [activeMode, map, refreshTick, setCloud, setSatelliteFrames, viewportKey]);
 
-  if (activeMode === "forecast" || frameMode !== activeMode || !frame) {
+  const displayedFrame = activeMode === "satellite-cloud"
+    ? frames.find((item) => item.time === state.cloudState.activeObservationTime) ?? frames[0] ?? null
+    : frame;
+
+  if (activeMode === "forecast-cloud" || frameMode !== activeMode || !displayedFrame) {
     return frameMode === activeMode && error
       ? <div className="satellite-layer-error" role="status">{error}</div>
       : frameMode === activeMode
         ? <div className="satellite-layer-error satellite-layer-loading" role="status">正在刷新卫星观测…</div>
         : null;
   }
-  const url = frame.tileTemplate.replaceAll("{Time}", frame.time).replace("{TileMatrix}", "{z}").replace("{TileRow}", "{y}").replace("{TileCol}", "{x}");
+  const url = displayedFrame.tileTemplate.replaceAll("{Time}", displayedFrame.time).replace("{TileMatrix}", "{z}").replace("{TileRow}", "{y}").replace("{TileCol}", "{x}");
   return (
     <>
-      <TileLayer key={`${activeMode}:${frame.time}:${viewportKey}`} url={url} opacity={activeMode === "night-lights" ? 0.82 : 0.72} attribution={`&copy; NASA GIBS · ${frame.satellite} · ${frame.time}`} maxZoom={9} />
+      <TileLayer key={`${activeMode}:${displayedFrame.time}:${viewportKey}`} url={url} opacity={activeMode === "night-lights" ? 0.82 : 0.72} attribution={`&copy; NASA GIBS · ${displayedFrame.satellite} · ${displayedFrame.time}`} maxZoom={9} />
       <div className="satellite-frame-badge" role="status">
-        {activeMode === "satellite-cloud" ? "卫星云观测" : "卫星夜光"} · {formatFrameTime(frame.time, activeMode)} · 已刷新
+        {activeMode === "satellite-cloud" ? "卫星云观测" : "卫星夜光 · 2016 基准"} · {formatFrameTime(displayedFrame.time, activeMode)} · 已刷新
       </div>
     </>
   );

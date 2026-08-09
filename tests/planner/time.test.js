@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
+  formatHour,
   formatNightLabel,
   isInNight,
   nextNightKeys,
@@ -29,5 +30,13 @@ describe("China-local night handling", () => {
     expect(formatNightLabel("2026-08-07")).toContain("周五");
     expect(formatNightLabel("2026-08-07")).toContain("20:00–次日05:00");
     expect(formatNightLabel("2026-08-07", true)).toBe("8/7 周五夜");
+  });
+
+  it("returns an explicit empty marker for a missing or malformed hour", () => {
+    expect(formatHour(undefined)).toBe("—");
+    expect(formatHour(null)).toBe("—");
+    expect(formatHour("2026-08-07")).toBe("—");
+    expect(formatHour("invalid-time-value")).toBe("—");
+    expect(formatHour("2026-08-07T22:00")).toBe("22:00");
   });
 });
