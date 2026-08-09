@@ -67,6 +67,46 @@ export function nextNightKeys(days: number, now = new Date()): string[] {
   );
 }
 
+/** The evening-date key for the currently running night, or tonight in daytime. */
+export function currentNightKey(now = new Date()): string {
+  const timeZone = "Asia/Shanghai";
+  const today = localDateKey(now, timeZone);
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(now),
+  );
+  if (hour <= NIGHT_END) return addDays(today, -1, timeZone);
+  return today;
+}
+
+/** Pick the first useful local forecast hour for the home page. */
+export function initialForecastTime(now = new Date()): string {
+  const timeZone = "Asia/Shanghai";
+  const today = localDateKey(now, timeZone);
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(now),
+  );
+  if (hour >= NIGHT_START || hour <= NIGHT_END) {
+    const dateKey = today;
+    return `${dateKey}T${pad2(hour)}:00`;
+  }
+  return `${today}T${pad2(NIGHT_START)}:00`;
+}
+
+/** Matrix position for a night-window hour (20:00..05:00). */
+export function nightHourIndex(timeString: string): number {
+  const hour = Number(timeString.slice(11, 13));
+  if (!Number.isFinite(hour)) return 0;
+  return hour >= NIGHT_START ? hour - NIGHT_START : 24 - NIGHT_START + hour;
+}
+
 /** Whether a local hourly time string belongs to the night of `nightKey`. */
 export function isInNight(timeString: string, nightKey: string): boolean {
   const next = addDays(nightKey, 1);

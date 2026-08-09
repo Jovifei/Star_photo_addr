@@ -46,7 +46,14 @@ export async function GET(request: NextRequest) {
       ? buildTenMinuteFrames(dimension.latest)
       : await findNightLightTimes(concreteTemplate, dimension.latest, latitude, longitude, controller.signal);
     const frames = frameTimes.map((time) => buildSatelliteFrame(kind, time, concreteTemplate));
-    return NextResponse.json({ kind, frames, updatedAt: new Date().toISOString(), coverage: frames[0]?.coverage ?? "不可用" }, { headers: { "Cache-Control": "public, max-age=900" } });
+    return NextResponse.json({
+      kind,
+      frames,
+      updatedAt: new Date().toISOString(),
+      status: frames.length ? "available" : "degraded",
+      message: frames.length ? undefined : "最近 7 天没有可用卫星瓦片；这不代表没有光污染",
+      coverage: frames[0]?.coverage ?? "不可用",
+    }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "卫星时次请求失败", stale: false }, { status: controller.signal.aborted ? 504 : 502 });
   } finally {

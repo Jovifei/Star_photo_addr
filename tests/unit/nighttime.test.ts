@@ -14,11 +14,34 @@ import {
   formatHour,
   formatHourWithDate,
   formatNightLabel,
+  currentNightKey,
+  initialForecastTime,
   isInNight,
+  nightHourIndex,
+  nextNightKeys,
 } from "@/lib/nighttime";
 import { NIGHT_END, NIGHT_START } from "@/lib/constants";
 
 const NIGHT = "2026-08-12"; // evening date; window spans → 2026-08-13 05:00
+
+describe("home night defaults", () => {
+  it("uses tonight after daytime starts, not the fixed Perseids peak night", () => {
+    const now = new Date("2026-08-09T09:00:00.000Z"); // 17:00 Shanghai
+    expect(nextNightKeys(1, now)).toEqual(["2026-08-09"]);
+    expect(initialForecastTime(now)).toBe("2026-08-09T20:00");
+  });
+
+  it("keeps the current early-morning hour attached to the previous evening", () => {
+    const now = new Date("2026-08-08T19:30:00.000Z"); // 03:30 Shanghai
+    expect(initialForecastTime(now)).toBe("2026-08-09T03:00");
+    expect(nightHourIndex("2026-08-09T03:00")).toBe(7);
+  });
+
+  it("treats 06:00 as the next evening rather than the night that already ended", () => {
+    const now = new Date("2026-08-08T22:00:00.000Z"); // 06:00 Shanghai
+    expect(currentNightKey(now)).toBe("2026-08-09");
+  });
+});
 
 describe("isInNight — 当日夜间 (≥20:00)", () => {
   it("20:00 是夜间起点", () => {

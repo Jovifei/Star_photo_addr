@@ -20,6 +20,8 @@ test("3100 上运行的是项目，地图优先且小时矩阵可展开滚动", 
   await page.goto("/");
   await expect(page.locator(".map-stage")).toBeVisible();
   await expect(page.locator(".map-viewport")).toBeVisible();
+  await expect(page.locator(".map-headline h1")).toHaveText("今晚云量变化");
+  await expect(page.locator(".map-headline h1")).not.toContainText("英仙座流星雨");
   const timelineToggle = page.locator(".cloud-timeline-toggle");
   await expect(timelineToggle).toHaveAttribute("aria-expanded", "false");
   await timelineToggle.click();
@@ -73,6 +75,7 @@ test("卫星图层入口互斥，数据源状态面板可见", async ({ page }) 
   await expect(layerTabs).toHaveCount(3);
   await layerTabs.nth(1).click();
   await expect(layerTabs.nth(1)).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测");
   await layerTabs.nth(2).click();
   await expect(layerTabs.nth(2)).toHaveAttribute("aria-selected", "true");
 });

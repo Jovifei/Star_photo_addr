@@ -27,11 +27,15 @@ import {
 } from "react";
 import {
   DEFAULT_CLOUD_STATE,
-  DEFAULT_NIGHT_KEY,
   CUSTOM_CANDIDATES_STORAGE_KEY,
-  METEOR_SHOWER_NIGHTS,
   SELECTED_LOCATION_STORAGE_KEY,
 } from "@/lib/constants";
+import {
+  currentNightKey,
+  initialForecastTime,
+  nightHourIndex,
+  nightRangeKeys,
+} from "@/lib/nighttime";
 import { sampleBortle } from "@/lib/darksky";
 import { hasDarkSkyLayer } from "@/lib/assets";
 import type {
@@ -66,16 +70,24 @@ interface AppState {
   forecastCache: Map<string, LocationForecast>;
 }
 
+const homeNight = currentNightKey();
+const homeNightKeys = nightRangeKeys(homeNight, 7);
+const homeForecastTime = initialForecastTime();
+
 const initialState: AppState = {
   sample: null,
   selectedLocation: null,
   forecast: null,
-  nightKeys: [...METEOR_SHOWER_NIGHTS],
-  selectedNight: DEFAULT_NIGHT_KEY,
+  nightKeys: homeNightKeys,
+  selectedNight: homeNight,
   // Off by default when no dark-sky raster is installed, so the map never
   // mounts a layer whose tiles would all 404.
   bortleEnabled: hasDarkSkyLayer(),
-  cloudState: { ...DEFAULT_CLOUD_STATE },
+  cloudState: {
+    ...DEFAULT_CLOUD_STATE,
+    activeForecastTime: homeForecastTime,
+    timeIndex: nightHourIndex(homeForecastTime),
+  },
   candidates: [],
   detailOpen: false,
   loading: false,

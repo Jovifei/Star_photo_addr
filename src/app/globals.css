@@ -2457,3 +2457,118 @@
     min-width: 960px;
   }
 }
+
+/* ---------- Tonight context and satellite observation feedback ---------- */
+.map-viewport {
+  flex: 1 1 0;
+}
+.cloud-timeline {
+  flex: 0 0 min(42dvh, 460px);
+}
+.cloud-timeline.is-collapsed {
+  flex-basis: 64px;
+}
+.cloud-timeline.is-expanded {
+  flex-basis: min(42dvh, 460px);
+}
+.map-headline {
+  max-width: min(430px, calc(100% - 44px));
+}
+.map-headline > p {
+  line-height: 1.45;
+}
+.astronomy-events {
+  width: min(320px, calc(100vw - 64px));
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(126, 213, 232, .24);
+  border-radius: 10px;
+  background: rgba(3, 14, 22, .82);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .2);
+  pointer-events: auto;
+  backdrop-filter: blur(12px);
+}
+.astronomy-event-primary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  align-items: baseline;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(126, 213, 232, .16);
+}
+.astronomy-event-primary span {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--green-soft);
+}
+.astronomy-event-primary strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+.astronomy-event-primary em {
+  color: var(--amber);
+  font-size: 11px;
+  font-style: normal;
+  white-space: nowrap;
+}
+.astronomy-event-list {
+  display: grid;
+  gap: 6px;
+  padding-top: 8px;
+}
+.astronomy-event-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.astronomy-event-row b {
+  color: #d7e4eb;
+  font-weight: 500;
+}
+.astronomy-event-row span {
+  color: var(--muted);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.satellite-frame-badge {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 700;
+  max-width: min(300px, calc(100% - 28px));
+  padding: 7px 10px;
+  border: 1px solid rgba(126, 213, 232, .28);
+  border-radius: 8px;
+  background: rgba(3, 14, 22, .84);
+  color: #d6eef3;
+  font-size: 10px;
+  line-height: 1.35;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+.satellite-layer-loading {
+  color: var(--green-soft);
+}
+
+@media (max-width: 768px) {
+  .map-headline {
+    max-width: calc(100% - 36px);
+  }
+  .astronomy-events {
+    width: min(300px, calc(100vw - 48px));
+    margin-top: 10px;
+    padding: 8px 10px;
+  }
+  .astronomy-event-list {
+    gap: 4px;
+  }
+  .satellite-frame-badge {
+    bottom: 10px;
+    left: 10px;
+  }
+}

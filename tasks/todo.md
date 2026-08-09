@@ -48,3 +48,19 @@
 - `npm run check`: PASS — lint, typecheck, 13 Vitest files / 99 tests, Next 16.3.0 build.
 - `PORT=3101 npm run test:e2e`: PASS — 7 passed, 1 skipped; matrix expansion and map viewport assertions passed on desktop and mobile.
 - Screenshot review at 1440×1000: expanded map viewport 513px high; forecast panel 420px bounded with an internal scroll region.
+
+## Tonight-first home outlook and satellite refresh (2026-08-09)
+
+- [x] Replace the fixed 8/12 home night with the current local night and current/future forecast hour.
+- [x] Make the primary map headline describe tonight's cloud change, with astronomy events as auxiliary context.
+- [x] Add a reviewed latest-events list containing the Perseids, the August total solar eclipse, and the August partial lunar eclipse.
+- [x] Refresh satellite observations on mode change, map viewport changes, and a ten-minute timer; disable browser response caching.
+- [x] Show the selected satellite observation timestamp and a degraded state when no night-light frame is available.
+- [x] Run the full check, E2E, Docker health probe, and final screenshot review.
+
+### Review
+
+- `npm run check`: PASS — lint, typecheck, 14 Vitest files / 104 tests, Next 16.3.0 build.
+- `PORT=3101 npm run test:e2e`: PASS — 7 passed, 1 skipped; desktop/mobile homepage, planner, satellite entry, and overflow checks passed.
+- `docker compose up --build -d`: PASS — container healthy on 3100; `/healthz` returned app identity `star-weather-planner` version `0.3.1`.
+- Screenshot review at 1440×1000: PASS — primary map remains visible, event context is bounded at top-left, and the hourly panel stays below the map.

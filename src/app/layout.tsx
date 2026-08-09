@@ -5,9 +5,9 @@ import ProductStateBridge from "@/components/ProductStateBridge";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "逐星｜全球英仙座流星雨观测地图",
+  title: "逐星｜今晚云量与卫星云图",
   description:
-    "搜索全球任意地点，比较全球 2015 暗夜参考与中国 2024 VIIRS 增强层，并按地点当地时区查看 2026 英仙座流星雨逐夜天气。",
+    "搜索任意地点，查看今晚到未来时间节点的逐小时云量、卫星云观测与夜光影像。",
   keywords: [
     "逐星",
     "英仙座流星雨",
@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "逐星 PERSEIDS OBSERVATORY" }],
   openGraph: {
-    title: "逐星｜全球英仙座流星雨观测地图",
+    title: "逐星｜今晚云量与卫星云图",
     description:
-      "8 月 7—17 日共 11 晚，搜索全球地点、读取暗夜参考，并按当地时区查看可靠天气窗口。",
+      "以今晚为起点，查看未来小时云量变化、卫星观测与可用数据源状态。",
     url: "https://perseids.giraffetree.cn",
     type: "website",
     locale: "zh_CN",
@@ -32,9 +32,9 @@ export const metadata: Metadata = {
   twitter: {
     // `summary` rather than `summary_large_image` — we have no owned OG asset.
     card: "summary",
-    title: "逐星｜全球英仙座流星雨观测地图",
+    title: "逐星｜今晚云量与卫星云图",
     description:
-      "把全球 11 晚暗夜、月光、流星活动与当地可靠天气放在一张地图上。",
+      "把今晚暗夜、月光、天文事件与当地可靠天气放在一张地图上。",
   },
 };
 

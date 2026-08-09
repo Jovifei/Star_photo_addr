@@ -166,6 +166,30 @@ export async function installGeocodingMock(page) {
 
 /** Same-origin App Router contracts used by the integrated Next.js pages. */
 export async function installNextApiMock(page, fixture) {
+  await page.route("**/api/satellite/times**", async (route) => {
+    const url = new URL(route.request().url());
+    const kind = url.searchParams.get("kind") === "night-lights" ? "night-lights" : "cloud";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "Cache-Control": "no-store" },
+      body: JSON.stringify({
+        kind,
+        status: "available",
+        updatedAt: "2026-08-09T08:00:00.000Z",
+        frames: [{
+          time: kind === "cloud" ? "2026-08-09T08:00:00Z" : "2026-08-09",
+          kind,
+          label: kind === "cloud" ? "卫星云观测" : "卫星夜光/辐亮度影像",
+          satellite: kind === "cloud" ? "Himawari AHI Band 13" : "NOAA-20 VIIRS Day/Night Band",
+          source: "NASA GIBS",
+          tileTemplate: "https://gibs.test/{Time}/{TileMatrix}/{TileRow}/{TileCol}.png",
+          coverage: "测试覆盖范围",
+          observed: true,
+        }],
+      }),
+    });
+  });
   await page.route("**/api/forecast?**", async (route) => {
     const url = new URL(route.request().url());
     const lats = (url.searchParams.get("latitude") || "").split(",").filter(Boolean);
