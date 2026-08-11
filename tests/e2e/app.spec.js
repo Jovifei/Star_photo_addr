@@ -110,6 +110,36 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
   await expect(page.locator(".hero-card .section-kicker")).toContainText("8月9日");
   await expect(page.locator(".suite-nav a").first()).toHaveAttribute("href", /lat=30\.4694/);
   await expect(page.locator(".suite-nav a").first()).toHaveAttribute("href", /model=icon/);
+  const detail = page.locator(".detail-drawer");
+  await expect(detail).toBeVisible({ timeout: 15000 });
+  const rangeTabs = detail.locator(".detail-range-tabs button");
+  await expect(rangeTabs).toHaveCount(4);
+  await expect(rangeTabs.nth(0)).toHaveAttribute("aria-pressed", "true");
+  const trend = detail.getByTestId("detail-range-trend");
+  await expect(trend).toHaveAttribute("data-night-count", "1");
+  const oneNightChartKey = await trend.getAttribute("data-chart-key");
+  await rangeTabs.nth(3).click();
+  await expect(rangeTabs.nth(3)).toHaveAttribute("aria-pressed", "true");
+  await expect(trend).toHaveAttribute("data-night-count", "7");
+  await expect(trend).not.toHaveAttribute("data-chart-key", oneNightChartKey);
+  await expect(detail.locator(".detail-range-feedback")).toContainText("已加载未来 7 夜趋势");
+  await expect(detail.locator(".detail-night-strip > button")).toHaveCount(7);
+  const targetNight = detail.locator(".detail-night-strip > button").nth(2);
+  const targetNightKey = await targetNight.getAttribute("data-night-key");
+  const weatherChart = detail.getByTestId("detail-weather-chart");
+  const initialWeatherChartKey = await weatherChart.getAttribute("data-chart-key");
+  await targetNight.click();
+  await expect(targetNight).toHaveAttribute("aria-pressed", "true");
+  await expect(detail.locator(".detail-range-panel")).toHaveAttribute("data-active-night", targetNightKey);
+  await expect(weatherChart).not.toHaveAttribute("data-chart-key", initialWeatherChartKey);
+  const plannerHomeLink = page.locator(".suite-nav a").first();
+  await expect.poll(async () => new URL(await plannerHomeLink.getAttribute("href"), "http://local.test").searchParams.get("night")).toBe(targetNightKey);
+  const targetHour = detail.locator(".hour-chips button").nth(2);
+  const targetTime = await targetHour.getAttribute("data-time");
+  await targetHour.click();
+  await expect(targetHour).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(async () => new URL(await plannerHomeLink.getAttribute("href"), "http://local.test").searchParams.get("forecastTime")).toBe(targetTime);
+  await expect(detail.locator(".hourly-matrix")).toBeVisible();
 });
 
 test("卫星图层入口互斥，数据源状态面板可见", async ({ page }) => {
@@ -161,13 +191,34 @@ test("规划详情抽屉左边缘真实拖拽后宽度持久化", async ({ page 
 
 test("375、768、1024、1440 宽度无页面级横向溢出", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "桌面项目统一覆盖断点");
+  const plannerDetailUrl = "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=2026-08-09&model=icon";
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: width < 800 ? 900 : 1000 });
-    for (const route of ["/", "/sites", "/planner"]) {
+    for (const route of ["/", "/sites", plannerDetailUrl]) {
       await page.goto(route);
       await expect(page.locator("body")).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `${route} at ${width}px`).toBeLessThanOrEqual(1);
+      if (route === plannerDetailUrl) {
+        const drawer = page.locator(".detail-drawer");
+        await expect(drawer).toBeVisible({ timeout: 15000 });
+        if (width <= 768) {
+          await drawer.locator(".detail-range-tabs button").last().click();
+          const boundaries = await drawer.locator(".detail-range-panel, .detail-range-tabs, [data-testid=detail-range-trend]").evaluateAll((elements) => elements.map((element) => {
+            const rect = element.getBoundingClientRect();
+            return { left: rect.left, right: rect.right, viewport: window.innerWidth };
+          }));
+          for (const boundary of boundaries) {
+            expect(boundary.left).toBeGreaterThanOrEqual(-1);
+            expect(boundary.right).toBeLessThanOrEqual(boundary.viewport + 1);
+          }
+          const stripScroll = await drawer.locator(".detail-night-strip").evaluate((element) => ({
+            clientWidth: element.clientWidth,
+            scrollWidth: element.scrollWidth,
+          }));
+          expect(stripScroll.scrollWidth).toBeGreaterThan(stripScroll.clientWidth);
+        }
+      }
     }
   }
 });

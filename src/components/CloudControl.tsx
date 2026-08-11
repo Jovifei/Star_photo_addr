@@ -88,6 +88,15 @@ export default function CloudControl() {
         <span><i className={`source-dot ${hasDarkSkyLayer() ? "available" : "not-installed"}`} />Bortle / SQM <b>{hasDarkSkyLayer() ? "可用" : "未安装"}</b></span>
         <span><i className="source-dot available" />构建 <b>{buildInfo ? `${buildInfo.version ?? "—"} · ${buildInfo.buildRevision ?? "local"}` : "读取中"}</b></span>
       </div>
+      <details className="source-status-help">
+        <summary>配置说明</summary>
+        <ul>
+          <li><strong>天气 / Open-Meteo：</strong>已配置，无需 API Key。</li>
+          <li><strong>卫星 / NASA GIBS：</strong>已配置，使用 Himawari 和 Black Marble 公共图层。</li>
+          <li><strong>天地图 Token：</strong>可选；复制 `.env.example` 为 `.env.local`，填写 `NEXT_PUBLIC_TIANDITU_TOKEN` 后重启服务。</li>
+          <li><strong>Bortle / SQM：</strong>当前未安装合法本地栅格；需要先取得授权资源，再按 `NEXT_PUBLIC_ASSET_VIIRS_TILES` 或 `NEXT_PUBLIC_ASSET_WORLD_ATLAS` 开启。</li>
+        </ul>
+      </details>
 
       <div className={`cloud-body${cloudState.enabled ? "" : " disabled"}`}>
         <div className="cloud-field">

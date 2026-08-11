@@ -28,7 +28,7 @@ import { deriveCloudLayers } from "./lib/clouds";
 import { readCustomLocations, readForecastCache, writeCustomLocations, writeForecastCache } from "./lib/cache";
 import { fetchPressureForecast, fetchSurfaceForecasts } from "./lib/openMeteo";
 import { evaluateNight, statusMeta } from "./lib/scoring";
-import { formatHour, formatNightLabel, nextNightKeys, relativeFreshness } from "./lib/time";
+import { addDays, formatHour, formatNightLabel, nextNightKeys, relativeFreshness } from "./lib/time";
 import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
 import { useStore } from "@/lib/store";
 
@@ -46,6 +46,16 @@ const PLANNER_DRAWER_MIN_WIDTH = 420;
 const PLANNER_DRAWER_MAX_WIDTH = 920;
 const PLANNER_DRAWER_DEFAULT_WIDTH = 720;
 const DRAWER_DRAG_RESET_GUARD_MS = 2000;
+const DETAIL_RANGE_OPTIONS = [
+  { value: 1, label: "今日", hint: "当前夜" },
+  { value: 3, label: "3 天", hint: "短期" },
+  { value: 5, label: "5 天", hint: "中期" },
+  { value: 7, label: "7 天", hint: "完整周" },
+];
+
+function detailNightKeys(startKey, days) {
+  return Array.from({ length: days }, (_, index) => addDays(startKey, index));
+}
 
 function clampPlannerDrawerWidth(value) {
   const viewportMax = typeof window === "undefined"
@@ -309,7 +319,10 @@ export function App() {
   const featured = detail ?? best;
   // A deep-linked point is the session source of truth. A ranked detail only
   // takes over when the planner was opened without a point in the URL.
-  const linkedLocation = bridge.location ?? detail?.location ?? best?.location;
+  // The currently opened detail is the latest explicit user choice. The
+  // incoming bridge location is only a fallback until the user picks another
+  // place inside the planner.
+  const linkedLocation = detail?.location ?? bridge.location ?? best?.location;
   const sessionLink = {
     model: sharedModel,
     forecastTime: sharedState.cloudState.activeForecastTime,
@@ -447,7 +460,24 @@ export function App() {
         {NAV_ITEMS.map((item) => <NavButton key={item.id} item={item} active={view === item.id} onClick={() => setView(item.id)} />)}
       </nav>
 
-      {detail && <DetailDrawer key={detail.location.id} item={detail} nightKey={selectedNight} onClose={() => setSelectedLocationId(null)} />}
+      {detail && (
+        <DetailDrawer
+          key={detail.location.id}
+          item={detail}
+          nightKey={selectedNight}
+          savedAt={savedAt}
+          stale={stale}
+          refreshing={loading}
+          onRefresh={() => refresh()}
+          onSelectNight={handleSelectNight}
+          onSelectForecastTime={(time) => setSharedCloud({
+            activeForecastTime: time,
+            overlayMode: "forecast-cloud",
+            playing: false,
+          })}
+          onClose={() => setSelectedLocationId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -629,17 +659,72 @@ function LocationsView({ locations, customLocations, onAdd, onRemove }) {
   );
 }
 
-function DetailDrawer({ item, nightKey, onClose }) {
-  const { location, evaluation } = item;
+function DetailDrawer({
+  item,
+  nightKey,
+  savedAt,
+  stale,
+  refreshing,
+  onRefresh,
+  onSelectNight,
+  onSelectForecastTime,
+  onClose,
+}) {
+  const { location, evaluation, forecast } = item;
   const [pressure, setPressure] = useState(null);
   const [pressureError, setPressureError] = useState("");
   const [pressureLoading, setPressureLoading] = useState(true);
   const [activeHour, setActiveHour] = useState(evaluation?.window[0]?.time ?? evaluation?.hours?.[0]?.time);
+  const [detailDays, setDetailDays] = useState(1);
+  const [detailNightKey, setDetailNightKey] = useState(nightKey);
+  const [rangeStartNight] = useState(nightKey);
   const [drawerWidth, setDrawerWidth] = useState(PLANNER_DRAWER_DEFAULT_WIDTH);
   const drawerDragRef = useRef(null);
   const drawerDragMovedRef = useRef(false);
   const lastDrawerDragEndRef = useRef(0);
   const drawerRef = useDialogFocus(true, onClose);
+
+  const availableDetailNights = useMemo(() => detailNightKeys(rangeStartNight, detailDays), [detailDays, rangeStartNight]);
+  const detailEvaluations = useMemo(() => availableDetailNights.map((key) => {
+    const source = forecast ? evaluateNight(
+      forecast,
+      location,
+      key,
+      Math.max(0, nextNightKeys(14).indexOf(key)),
+    ) : key === nightKey ? evaluation : null;
+    return { nightKey: key, evaluation: source };
+  }), [availableDetailNights, evaluation, forecast, location, nightKey]);
+  const activeDetailNight = availableDetailNights.includes(detailNightKey) ? detailNightKey : rangeStartNight;
+  const activeEvaluation = detailEvaluations.find((item) => item.nightKey === activeDetailNight)?.evaluation ?? evaluation;
+  const activeDetailHour = activeEvaluation?.hours?.some((hour) => hour.time === activeHour)
+    ? activeHour
+    : activeEvaluation?.window[0]?.time ?? activeEvaluation?.hours?.[0]?.time;
+  const pressureModel = forecast?.metadata?.model ?? "best_match";
+  const forecastUpdatedAt = forecast?.metadata?.fetchedAt ?? savedAt;
+
+  const selectDetailNight = useCallback((key, nextEvaluation) => {
+    const nextHour = nextEvaluation?.window?.[0]?.time ?? nextEvaluation?.hours?.[0]?.time;
+    setDetailNightKey(key);
+    setActiveHour(nextHour);
+    onSelectNight?.(key);
+    onSelectForecastTime?.(nextHour ?? null);
+  }, [onSelectForecastTime, onSelectNight]);
+
+  const selectDetailHour = useCallback((time) => {
+    setActiveHour(time);
+    if (time) onSelectForecastTime?.(time);
+  }, [onSelectForecastTime]);
+
+  const changeDetailRange = useCallback((days) => {
+    const nextNights = detailNightKeys(rangeStartNight, days);
+    setDetailDays(days);
+    if (!nextNights.includes(activeDetailNight)) {
+      const nextEvaluation = forecast
+        ? evaluateNight(forecast, location, rangeStartNight, Math.max(0, nextNightKeys(14).indexOf(rangeStartNight)))
+        : evaluation;
+      selectDetailNight(rangeStartNight, nextEvaluation);
+    }
+  }, [activeDetailNight, evaluation, forecast, location, rangeStartNight, selectDetailNight]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -736,21 +821,24 @@ function DetailDrawer({ item, nightKey, onClose }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchPressureForecast(location, 7, controller.signal)
+    fetchPressureForecast(location, 14, controller.signal, pressureModel)
       .then(setPressure)
       .catch(() => setPressureError("垂直云层暂时不可用；地面天气与天文判断仍可查看。"))
       .finally(() => setPressureLoading(false));
     return () => controller.abort();
-  }, [location]);
+  }, [location, pressureModel]);
 
-  const profile = useMemo(() => pressure?.profiles?.[activeHour] ?? [], [pressure, activeHour]);
+  const profile = useMemo(() => pressure?.profiles?.[activeDetailHour] ?? [], [pressure, activeDetailHour]);
   const layers = useMemo(
     () => pressure ? deriveCloudLayers(profile, pressure.modelElevation, location.elevation) : [],
     [pressure, profile, location.elevation],
   );
-  const weatherOption = useMemo(() => buildWeatherChart(evaluation?.hours ?? []), [evaluation]);
-  const astroOption = useMemo(() => buildAstroChart(evaluation?.hours ?? []), [evaluation]);
+  const weatherOption = useMemo(() => buildWeatherChart(activeEvaluation?.hours ?? []), [activeEvaluation]);
+  const astroOption = useMemo(() => buildAstroChart(activeEvaluation?.hours ?? []), [activeEvaluation]);
   const profileOption = useMemo(() => buildProfileChart(profile, location.elevation), [profile, location.elevation]);
+  const trendOption = useMemo(() => buildNightTrendChart(detailEvaluations), [detailEvaluations]);
+  const trendChartKey = `${detailDays}-${availableDetailNights.join("-")}-${forecastUpdatedAt ?? "cache"}`;
+  const activeChartKey = `${activeDetailNight}-${activeDetailHour ?? "empty"}`;
 
   return (
     <div className="drawer-backdrop" onMouseDown={onClose}>
@@ -774,22 +862,52 @@ function DetailDrawer({ item, nightKey, onClose }) {
           onKeyDown={onDrawerResizeKeyDown}
           onDoubleClick={resetDrawerWidth}
         />
-        <div className="drawer-header"><div><span className="section-kicker">地点详情 · {formatNightLabel(nightKey)}</span><h2 id="detail-drawer-title">{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" type="button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
-        <div className="detail-summary"><ScoreRing value={evaluation?.score} label="星空分" /><div><span className={`status-pill ${statusMeta(evaluation?.status).tone}`}>{statusMeta(evaluation?.status).label}</span><h3>{evaluation?.windowLabel}</h3><p>{evaluation?.reason}</p></div></div>
-        <div className="detail-metrics"><Metric icon={Cloud} label="云海潜力" value={evaluation?.cloudSeaPotential} /><Metric icon={Moon} label="月面照度" value={`${Math.round((evaluation?.moonIllumination ?? 0) * 100)}%`} /><Metric icon={Sparkle} label="天文暗夜" value={`${evaluation?.darkHours ?? 0}h`} /><Metric icon={Compass} label="银河最高" value={`${evaluation?.galacticMax ?? 0}°`} /></div>
+        <div className="drawer-header"><div><span className="section-kicker">地点详情 · {formatNightLabel(activeDetailNight)}</span><h2 id="detail-drawer-title">{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" type="button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
+        <section className="detail-range-panel" aria-label="地点详情预报范围" data-active-night={activeDetailNight}>
+          <div className="detail-range-heading">
+            <div><span className="section-kicker">逐星地点会话 / 星野决策</span><strong>未来多夜趋势与单夜下钻</strong></div>
+            <div className="detail-range-source">
+              <span><CheckCircle aria-hidden="true" />状态已同步</span>
+              <small>{forecast?.metadata?.model?.toUpperCase() ?? "天气模型"} · {relativeFreshness(forecastUpdatedAt)}{stale ? " · 已过期" : ""}</small>
+              <button type="button" onClick={onRefresh} disabled={refreshing}><ArrowsClockwise className={refreshing ? "spin" : ""} />{refreshing ? "更新中" : "刷新数据"}</button>
+            </div>
+          </div>
+          <div className="detail-range-tabs" role="group" aria-label="地点详情时间范围">
+            {DETAIL_RANGE_OPTIONS.map((option) => <button key={option.value} type="button" aria-pressed={detailDays === option.value} className={detailDays === option.value ? "active" : ""} onClick={() => changeDetailRange(option.value)}>{option.label}<small>{option.hint}</small></button>)}
+          </div>
+          <p className="detail-range-feedback" aria-live="polite">已加载未来 {detailDays} 夜趋势；当前下钻：{formatNightLabel(activeDetailNight, true)}</p>
+          <AccessibleChart
+            option={trendOption}
+            height={236}
+            chartKey={trendChartKey}
+            testId="detail-range-trend"
+            dataNightCount={detailEvaluations.length}
+            label={`${detailDays}夜趋势图：星空分、平均总云量和连续观测窗口`}
+          />
+          <div className="detail-night-strip" role="group" aria-label={`${detailDays}天预报夜次`}>
+            {detailEvaluations.map(({ nightKey: key, evaluation: itemEvaluation }, index) => {
+              const meta = statusMeta(itemEvaluation?.status);
+              const averageCloud = averageNumeric(itemEvaluation?.hours, "cloudCover");
+              return <button key={key} type="button" data-night-key={key} className={key === activeDetailNight ? "active" : ""} aria-pressed={key === activeDetailNight} onClick={() => selectDetailNight(key, itemEvaluation)}><small>第 {index + 1} 夜</small><strong>{formatNightLabel(key, true)}</strong><span>{itemEvaluation ? `${itemEvaluation.score} 分 · 云量 ${averageCloud ?? "—"}% · 窗口 ${itemEvaluation.window.length}h` : "暂无数据"}</span><em className={meta.tone}>{itemEvaluation ? meta.label : "无数据"}</em></button>;
+            })}
+          </div>
+          <p className="detail-range-note">趋势图会随“今日 / 3 天 / 5 天 / 7 天”立即改变；星空分越高越适合观测，平均总云量越低越好，窗口表示连续可用小时。点击夜次或小时后，逐星地图会恢复同一地点、模型与时次。</p>
+        </section>
+        <div className="detail-summary"><ScoreRing value={activeEvaluation?.score} label="星空分" /><div><span className={`status-pill ${statusMeta(activeEvaluation?.status).tone}`}>{statusMeta(activeEvaluation?.status).label}</span><h3>{activeEvaluation?.windowLabel}</h3><p>{activeEvaluation?.reason}</p></div></div>
+        <div className="detail-metrics"><Metric icon={Cloud} label="云海潜力" value={activeEvaluation?.cloudSeaPotential} /><Metric icon={Moon} label="月面照度" value={`${Math.round((activeEvaluation?.moonIllumination ?? 0) * 100)}%`} /><Metric icon={Sparkle} label="天文暗夜" value={`${activeEvaluation?.darkHours ?? 0}h`} /><Metric icon={Compass} label="银河最高" value={`${activeEvaluation?.galacticMax ?? 0}°`} /></div>
 
-        <DetailSection title="逐小时天气" subtitle="云量、降水与风" icon={Cloud}>
-          <AccessibleChart option={weatherOption} height={260} label="逐小时天气图：总云量、低云量、降水概率和阵风" />
-          <div className="hour-chips">{evaluation?.hours.map((hour) => <button key={hour.time} type="button" aria-pressed={activeHour === hour.time} aria-label={`${formatHour(hour.time)}，评分 ${hour.score}`} className={activeHour === hour.time ? "active" : ""} onClick={() => setActiveHour(hour.time)}><span>{formatHour(hour.time)}</span><strong>{hour.score}</strong></button>)}</div>
+        <DetailSection title="逐小时天气" subtitle={`${formatNightLabel(activeDetailNight, true)} · 云量、降水与风`} icon={Cloud}>
+          <AccessibleChart option={weatherOption} height={260} chartKey={`weather-${activeChartKey}`} testId="detail-weather-chart" label={`${formatNightLabel(activeDetailNight, true)}逐小时天气图：总云量、低云量、降水概率和阵风`} />
+          <div className="hour-chips">{activeEvaluation?.hours.map((hour) => <button key={hour.time} type="button" data-time={hour.time} aria-pressed={activeDetailHour === hour.time} aria-label={`${formatHour(hour.time)}，评分 ${hour.score}`} className={activeDetailHour === hour.time ? "active" : ""} onClick={() => selectDetailHour(hour.time)}><span>{formatHour(hour.time)}</span><strong>{hour.score}</strong></button>)}</div>
         </DetailSection>
-        <DetailSection title="天文轨迹" subtitle="太阳、月亮与银河核心高度" icon={Moon}><AccessibleChart option={astroOption} height={230} label="天文轨迹图：太阳、月亮与银河核心高度" /></DetailSection>
+        <DetailSection title="天文轨迹" subtitle={`${formatNightLabel(activeDetailNight, true)} · 太阳、月亮与银河核心高度`} icon={Moon}><AccessibleChart option={astroOption} height={230} chartKey={`astro-${activeChartKey}`} label={`${formatNightLabel(activeDetailNight, true)}天文轨迹图：太阳、月亮与银河核心高度`} /></DetailSection>
         <DetailSection title="低云海拔评估" subtitle="实验性气压层推导，不是山顶实测" icon={Mountains}>
           {pressureLoading && <div className="inline-loading"><span className="loader small" />读取垂直云层…</div>}
           {pressureError && <p className="inline-error"><Warning />{pressureError}</p>}
-          {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>用户海拔：{location.elevation} m</span><span>时次：{formatHour(activeHour)}</span></div><AccessibleChart option={profileOption} height={250} label="低云垂直剖面图：云量与海拔关系" />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud strokeWidth={2.4} /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
+          {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>用户海拔：{location.elevation} m</span><span>时次：{formatHour(activeDetailHour)}</span></div><AccessibleChart option={profileOption} height={250} chartKey={`profile-${activeChartKey}`} label="低云垂直剖面图：云量与海拔关系" />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud strokeWidth={2.4} /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
         </DetailSection>
         <div className="method-note"><Info /><p><strong>方法边界</strong> 云底/云顶由数值模型气压层推导，已过滤模型地表以下层并取整到 50 m。复杂山地仍需结合现场云图、能见度与周边谷地情况。</p></div>
-        <HourlyForecastMatrix nightKey={nightKey} hours={evaluation?.hours ?? []} selectedTime={activeHour} onSelectTime={setActiveHour} title="单夜十小时矩阵" />
+        <HourlyForecastMatrix nightKey={activeDetailNight} hours={activeEvaluation?.hours ?? []} selectedTime={activeDetailHour} onSelectTime={selectDetailHour} title="单夜十小时矩阵" />
       </aside>
     </div>
   );
@@ -799,14 +917,19 @@ function DetailSection({ title, subtitle, icon: Icon, children }) {
   return <section className="detail-section"><div className="detail-section-heading"><div><Icon /><div><h3>{title}</h3><p>{subtitle}</p></div></div></div>{children}</section>;
 }
 
-function AccessibleChart({ option, height, label }) {
+function AccessibleChart({ option, height, label, chartKey, testId, dataNightCount }) {
   return (
-    <div className="chart-frame" role="img" aria-label={label}>
+    <div className="chart-frame" role="img" aria-label={label} data-chart-key={chartKey} data-testid={testId} data-night-count={dataNightCount}>
       <Suspense fallback={<div className="chart-loading" role="status"><span className="loader small" aria-hidden="true" />正在加载图表…</div>}>
-        <ReactECharts option={option} style={{ height }} notMerge />
+        <ReactECharts key={chartKey} option={option} style={{ height }} notMerge lazyUpdate={false} />
       </Suspense>
     </div>
   );
+}
+
+function averageNumeric(hours, field) {
+  const values = (hours ?? []).map((hour) => hour?.[field]).filter(Number.isFinite);
+  return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : null;
 }
 
 function baseChartStyle() {
@@ -816,6 +939,41 @@ function baseChartStyle() {
     textStyle: { color: "#aebbd0", fontFamily: "system-ui, sans-serif" },
     tooltip: { trigger: "axis", backgroundColor: "#1a2154", borderColor: "#4a5599", textStyle: { color: "#f4f6ff" } },
     grid: { left: 38, right: 14, top: 38, bottom: 32 },
+    animationDurationUpdate: 180,
+  };
+}
+
+function buildNightTrendChart(items) {
+  const labels = items.map((item) => {
+    const [, month, day] = item.nightKey.split("-").map(Number);
+    return `${month}/${day}`;
+  });
+  const scores = items.map((item) => item.evaluation?.score ?? null);
+  const cloud = items.map((item) => averageNumeric(item.evaluation?.hours, "cloudCover"));
+  const windows = items.map((item) => item.evaluation?.window?.length ?? null);
+  const tooltipUnits = { 星空分: "分", 平均总云量: "%", 连续窗口: "h" };
+  return {
+    ...baseChartStyle(),
+    grid: { left: 42, right: 42, top: 42, bottom: 38 },
+    tooltip: {
+      ...baseChartStyle().tooltip,
+      formatter: (params) => {
+        const rows = Array.isArray(params) ? params : [params];
+        const title = rows[0]?.axisValueLabel ?? "";
+        return [title, ...rows.map((row) => `${row.marker}${row.seriesName}：${Number.isFinite(row.value) ? row.value : "—"}${Number.isFinite(row.value) ? tooltipUnits[row.seriesName] ?? "" : ""}`)].join("<br/>");
+      },
+    },
+    legend: { top: 0, textStyle: { color: "#aebbd0" }, data: ["星空分", "平均总云量", "连续窗口"] },
+    xAxis: { type: "category", data: labels, axisLine: { lineStyle: { color: "#33425d" } }, axisLabel: { color: "#aebbd0", interval: 0 } },
+    yAxis: [
+      { type: "value", min: 0, max: 100, name: "评分 / 云量 %", nameTextStyle: { color: "#8393ad" }, axisLabel: { color: "#8393ad" }, splitLine: { lineStyle: { color: "#1d2a40" } } },
+      { type: "value", min: 0, max: 10, name: "小时", nameTextStyle: { color: "#8393ad" }, axisLabel: { color: "#8393ad", formatter: "{value}h" }, splitLine: { show: false } },
+    ],
+    series: [
+      { name: "平均总云量", type: "bar", data: cloud, barMaxWidth: 30, itemStyle: { color: "rgba(126, 148, 181, .48)", borderColor: "#aebbd0", borderWidth: 1 }, label: { show: true, position: "top", color: "#aebbd0", formatter: ({ value }) => Number.isFinite(value) ? `${value}%` : "—" } },
+      { name: "星空分", type: "line", smooth: true, data: scores, symbolSize: 8, lineStyle: { color: "#79cfe2", width: 3 }, itemStyle: { color: "#79cfe2" }, label: { show: true, position: "top", color: "#79cfe2", formatter: ({ value }) => Number.isFinite(value) ? `${value}分` : "—" } },
+      { name: "连续窗口", type: "line", yAxisIndex: 1, data: windows, symbol: "diamond", symbolSize: 8, lineStyle: { color: "#d4b273", type: "dashed", width: 2 }, itemStyle: { color: "#d4b273" }, label: { show: true, position: "bottom", color: "#d4b273", formatter: ({ value }) => Number.isFinite(value) ? `${value}h` : "—" } },
+    ],
   };
 }
 

@@ -173,3 +173,40 @@
 - `npm run check`: PASS — ESLint, TypeScript, 14 Vitest files / 108 tests, Next 16.3.0 production build.
 - `npm run test:e2e`: PASS — desktop 7/7 and mobile 5/5 passed; 2 mobile-inapplicable cases skipped by design; 0 failures.
 - `http://127.0.0.1:3100/healthz`: PASS — `star-weather-planner`, version `0.3.1`, build revision `local`.
+
+## 地点详情范围选择与数据源配置说明 (2026-08-09)
+
+- [x] 核对 Open-Meteo、NASA GIBS、天地图 Token 和 Bortle/SQM 的实际配置状态。
+- [x] 在详情页增加今日、3 天、5 天、7 天范围选择。
+- [x] 让未来夜次卡片、评分、逐小时天气、天文轨迹、云层剖面和小时矩阵同步选中夜次。
+- [x] 增加配置说明折叠面板，并明确可选 Token 与未安装授权资源的边界。
+- [x] 修复右侧详情恢复按钮遮挡地图图层控制的问题。
+- [x] 完成静态检查和浏览器范围切换验收。
+
+### Review
+
+- `npm run check`: PASS — ESLint、TypeScript、14 个 Vitest 文件 / 108 个测试、Next 生产构建。
+- 规划详情 E2E: PASS — 7 天显示 7 个未来夜次，点击第 3 夜后详情状态和小时矩阵同步切换。
+- 图层配置 E2E: PASS — 详情恢复按钮避让后，卫星实况、云量预报和夜光基准可连续切换。
+- 配置结论: Open-Meteo 与 NASA GIBS 无需用户 Token；天地图 Token 可选；Bortle/SQM 需要授权本地资源，当前保持未安装。
+
+## 星野决策多夜趋势与逐星共享状态修正 (2026-08-10)
+
+- [x] 复现“3/5/7 天标签改变但图表不变”，确认旧实现只扩大夜次卡数量。
+- [x] 增加多夜趋势图，展示星空分、平均总云量与连续窗口，并随范围改变真实数据集。
+- [x] 保留单夜逐小时下钻，明确当前夜晚与小时，避免把多夜和单夜语义混在一张图里。
+- [x] 将详情夜晚、小时、模型与地点同步回逐星共享会话和导航链接。
+- [x] 统一刷新时间、陈旧状态、语义颜色、44px 交互目标和图表数值说明。
+- [x] 完成 targeted E2E、完整 check、全量 E2E 和响应式浏览器复核。
+
+### Review
+
+- 根因修复：范围按钮现在驱动 1/3/5/7 夜趋势图的数据集合；单夜逐小时图只负责当前夜下钻，不再用同一张图混淆两个时间尺度。
+- 跨产品状态：点击夜次或小时后，地点、夜晚、模型、预报时次和预报图层写回共享会话，逐星导航链接同步更新。
+- `npm run check`: PASS — ESLint、TypeScript、14 个 Vitest 文件 / 108 个测试、Next 16.3.0 生产构建。
+- 定向 E2E: PASS — 1→7 夜使趋势图 `data-night-count` 和图表键变化；第三夜及具体小时使单夜图和逐星 URL 状态变化。
+- `npm run test:e2e`（PORT=3101，避免干扰已运行的 3100 服务）: PASS — 桌面 7/7、手机 5/5，2 项移动端不适用测试按设计跳过；0 失败。
+- 子 Agent 只读复核：无 P0；指出深链地点优先级、无数据夜晚旧时次残留和移动详情几何测试缺口，均已修正或补充定向 E2E。
+- 最终定向 E2E: PASS — 多夜数据联动与 375/768/1024/1440 深链详情抽屉几何验收 2/2 通过。
+- `npm run test:live`: PASS — Open-Meteo 返回 2 个地点、48 个地面小时和 10 个气压层。
+- `http://127.0.0.1:3100/healthz`: PASS — `star-weather-planner` 0.3.1，build revision `local`。

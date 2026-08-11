@@ -72,6 +72,11 @@
 .source-dot { width: 6px; height: 6px; border-radius: 50%; background: #8edca9; }
 .source-dot.unconfigured { background: #efc46c; }
 .source-dot.not-installed { background: #8c96a8; }
+.source-status-help { margin: 0 0 8px; color: #91a4c5; font-size: 10px; line-height: 1.5; }
+.source-status-help summary { min-height: 32px; display: flex; align-items: center; cursor: pointer; color: #79cfe2; font-weight: 700; list-style-position: inside; }
+.source-status-help summary:focus-visible { outline: 2px solid #79cfe2; outline-offset: 2px; border-radius: 4px; }
+.source-status-help ul { display: grid; gap: 5px; margin: 4px 0 0; padding: 8px 10px 8px 22px; border: 1px solid rgba(132, 158, 221, .18); border-radius: 8px; background: rgba(5, 16, 23, .55); }
+.source-status-help strong { color: #e9f2ff; font-weight: 600; }
 .satellite-layer-error { position: absolute; right: 18px; bottom: 285px; z-index: 900; max-width: 260px; padding: 8px 10px; border: 1px solid rgba(220, 120, 100, .45); border-radius: 8px; color: #ffd2c6; background: rgba(44, 20, 35, .9); font-size: 11px; }
 
 :root {
@@ -2167,6 +2172,11 @@
   right: calc(var(--side-panel-width) + 18px);
   max-width: min(320px, calc(100% - var(--side-panel-width) - 36px));
 }
+.workspace:has(.detail-overlay-host.is-closed) .cloud-control {
+  /* Keep the right-edge detail restore button clickable without covering the
+     layer tabs or source-status controls. */
+  right: 72px;
+}
 
 .cloud-control.compact {
   width: min(320px, calc(100% - 32px));
@@ -3136,6 +3146,7 @@
 }
 @media (max-width: 768px) {
   .workspace:has(.detail-overlay-host.is-open) .cloud-control { right: 18px; max-width: calc(100% - 36px); }
+  .workspace:has(.detail-overlay-host.is-closed) .cloud-control { right: 18px; }
   .cloud-control.compact { width: calc(100vw - 36px); max-height: 30dvh; }
   .cloud-timeline,
   .cloud-timeline.is-collapsed { flex-basis: 112px; max-height: 112px; padding-inline: 12px; }

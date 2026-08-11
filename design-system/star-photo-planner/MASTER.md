@@ -7,9 +7,9 @@
 ---
 
 **Project:** Star Photo Planner
-**Generated:** 2026-08-07 12:54:57
-**Category:** Smart Home/IoT Dashboard
-**Design Dials:** Variance 4/10 (Balanced / Modern) | Motion 3/10 (Subtle) | Density 7/10 (Standard)
+**Updated:** 2026-08-10
+**Category:** Astronomy Weather Decision Workspace
+**Design Dials:** Variance 3/10 (Operational / Consistent) | Motion 2/10 (Subtle) | Density 7/10 (Data Dense)
 
 ---
 
@@ -19,29 +19,32 @@
 
 | Role | Hex | CSS Variable |
 |------|-----|--------------|
-| Primary | `#1E40AF` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#3B82F6` | `--color-secondary` |
-| Accent/CTA | `#D97706` | `--color-accent` |
-| Background | `#F8FAFC` | `--color-background` |
-| Foreground | `#1E3A8A` | `--color-foreground` |
-| Muted | `#E9EEF6` | `--color-muted` |
-| Border | `#DBEAFE` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| Ring | `#1E40AF` | `--color-ring` |
+| Interaction / selected | `#79CFE2` | `--cyan` |
+| Interaction tint | `rgba(121,207,226,.12)` | `--cyan-soft` |
+| Warning / planning | `#D4B273` | `--warn` |
+| Risk / unavailable | `#CB7768` | `--bad` |
+| Background | `#02070B` | `--bg` |
+| Deep background | `#04101A` | `--bg-deep` |
+| Surface | `#0A1A23` | `--surface` |
+| Raised surface | `#112935` | `--surface-3` |
+| Foreground | `#E7E7E0` | `--text` |
+| Muted text | `#91A4AB` | `--muted` |
+| Border | `rgba(165,205,216,.16)` | `--line` |
+| Focus ring | `#79CFE2` | `--cyan` |
 
-**Color Notes:** Blue data + amber highlights [Accent adjusted from #F59E0B for WCAG 3:1]
+**Color Notes:** 逐星与星野决策共用深海蓝底、青色交互、琥珀提示和红色风险。颜色不能单独承担含义；状态同时提供文字、数值或图标。
 
 ### Typography
 
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap)
+- **Heading / Body Font:** Noto Sans SC Variable, PingFang SC, Microsoft YaHei, system-ui
+- **Data Font:** ui-monospace, SFMono-Regular, Consolas, Liberation Mono
+- **Mood:** dark observatory, weather operations, precise and calm
+- **Rule:** headings use explicit `line-height: 1.1–1.25`; numeric metrics use tabular figures.
 
-**CSS Import:**
+**CSS Tokens:**
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+--font-body: "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+--font-data: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 ```
 
 ### Spacing Variables
@@ -76,27 +79,28 @@
 ```css
 /* Primary Button */
 .btn-primary {
-  background: #D97706;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
+  min-height: 44px;
+  background: #79CFE2;
+  color: #04101A;
+  padding: 0 16px;
+  border-radius: 6px;
   font-weight: 600;
   transition: all 200ms ease;
   cursor: pointer;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
+  background: #97D7E5;
 }
 
 /* Secondary Button */
 .btn-secondary {
-  background: transparent;
-  color: #1E40AF;
-  border: 2px solid #1E40AF;
-  padding: 12px 24px;
-  border-radius: 8px;
+  min-height: 44px;
+  background: #0A1A23;
+  color: #D7E4E6;
+  border: 1px solid rgba(151,211,225,.32);
+  padding: 0 16px;
+  border-radius: 6px;
   font-weight: 600;
   transition: all 200ms ease;
   cursor: pointer;
@@ -107,17 +111,15 @@
 
 ```css
 .card {
-  background: #F8FAFC;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
+  background: #0A1A23;
+  border: 1px solid rgba(165,205,216,.16);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+  border-color: rgba(151,211,225,.32);
 }
 ```
 
@@ -125,17 +127,20 @@
 
 ```css
 .input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid rgba(151,211,225,.32);
+  border-radius: 6px;
+  background: #04101A;
+  color: #E7E7E0;
   font-size: 16px;
   transition: border-color 200ms ease;
 }
 
 .input:focus {
-  border-color: #1E40AF;
+  border-color: #79CFE2;
   outline: none;
-  box-shadow: 0 0 0 3px #1E40AF20;
+  box-shadow: 0 0 0 3px rgba(121,207,226,.12);
 }
 ```
 
@@ -143,14 +148,15 @@
 
 ```css
 .modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(2, 7, 11, 0.78);
+  backdrop-filter: blur(8px);
 }
 
 .modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
+  background: #06141B;
+  border: 1px solid rgba(151,211,225,.32);
+  border-radius: 10px;
+  padding: 22px;
   box-shadow: var(--shadow-xl);
   max-width: 500px;
   width: 90%;
@@ -163,11 +169,11 @@
 
 **Style:** Real-Time Monitoring
 
-**Keywords:** Live data updates, status indicators, alert notifications, streaming data visualization, active monitoring, streaming charts
+**Keywords:** satellite observation, numerical forecast, multi-night trend, hourly drill-down, shared location session
 
 **Best For:** System monitoring dashboards, DevOps dashboards, real-time analytics, stock market dashboards, live event tracking
 
-**Key Effects:** Real-time chart animations, alert pulse/glow, status indicator blink animation, smooth data stream updates, loading effect
+**Key Effects:** 150–180ms state transitions, visible update timestamps, numeric legends, explicit loading/stale states, reduced-motion fallback
 
 ### Page Pattern
 
@@ -181,24 +187,17 @@
 
 ## Motion
 
-**Scroll Reveal** (Subtle) — Trigger: scroll (viewport enter) | Duration: 300-400ms | Easing: `power1.out`
-
-```js
-gsap.from(el, { opacity: 0, y: 12, duration: 0.35, ease: 'power1.out', scrollTrigger: { trigger: el, start: 'top 90%', toggleActions: 'play none none reverse' } });
-```
-
-**Framework notes:** Requires the ScrollTrigger plugin registered once via gsap.registerPlugin(ScrollTrigger)
-
-- ✅ Keep the y offset small (8-16px) so it reads as a fade, not a slide
-- ❌ Don't reveal below-the-fold content needed for SEO/crawlers as invisible-by-default without a no-JS fallback
-- ⚡ toggleActions 'play none none reverse' avoids re-triggering on every scroll direction change
+- Chart and panel updates: 150–180ms opacity/color transition; do not animate geometry needed for reading data.
+- `prefers-reduced-motion: reduce`: disable animation and smooth scrolling.
+- Never use pulsing or perpetual animation for ordinary “available” status.
 
 ---
 
 ## Anti-Patterns (Do NOT Use)
 
-- ❌ Slow updates
-- ❌ No automation
+- ❌ A range tab that changes only card count while the chart dataset stays unchanged
+- ❌ Separate location/night/model/time state between 逐星 and 星野决策
+- ❌ Color-only chart meaning or charts without units, legend and exact values
 
 ### Additional Forbidden Patterns
 
