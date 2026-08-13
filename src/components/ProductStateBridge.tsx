@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
-import type { CloudOverlayMode } from "@/lib/types";
+import type { CloudOverlayMode, MapViewMode } from "@/lib/types";
 import { addDays, initialForecastTime } from "@/lib/nighttime";
 
 /**
@@ -15,7 +15,7 @@ import { addDays, initialForecastTime } from "@/lib/nighttime";
 export default function ProductStateBridge() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { state, selectLocation, selectNight, setCloud } = useStore();
+  const { state, selectLocation, selectNight, setCloud, setMapViewMode } = useStore();
   const applied = useRef<string | null>(null);
 
   useEffect(() => {
@@ -37,6 +37,7 @@ export default function ProductStateBridge() {
     const forecastTime = searchParams.get("forecastTime");
     const observationTime = searchParams.get("observationTime");
     const overlay = searchParams.get("overlay") as CloudOverlayMode | null;
+    const view = searchParams.get("view");
     if (isHome && searchParams.has("night")) {
       const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("night");
@@ -67,6 +68,19 @@ export default function ProductStateBridge() {
     if (selectedModel) setCloud({ model: selectedModel });
     if (overlay === "satellite-cloud" || overlay === "forecast-cloud" || overlay === "night-lights") {
       setCloud({ overlayMode: overlay });
+      const mapView: MapViewMode = overlay === "satellite-cloud"
+        ? "satellite"
+        : overlay === "forecast-cloud"
+          ? "combined"
+          : "light-pollution";
+      setMapViewMode(mapView);
+    }
+    if (view === "light-pollution" || view === "combined" || view === "satellite") {
+      const mapView = view as MapViewMode;
+      setMapViewMode(mapView);
+      setCloud({
+        overlayMode: mapView === "satellite" ? "satellite-cloud" : mapView === "combined" ? "forecast-cloud" : "night-lights",
+      });
     }
     if (acceptedHomeForecastTime || observationTime) {
       setCloud({
@@ -100,7 +114,7 @@ export default function ProductStateBridge() {
     // effect from retrying a night-only URL forever while, importantly, never
     // manufacturing a 0,0 location from missing query parameters.
     applied.current = signature;
-  }, [pathname, searchParams, selectLocation, selectNight, setCloud, state.cloudState.activeForecastTime, state.cloudState.activeObservationTime, state.nightKeys]);
+  }, [pathname, searchParams, selectLocation, selectNight, setCloud, setMapViewMode, state.cloudState.activeForecastTime, state.cloudState.activeObservationTime, state.nightKeys]);
 
   return null;
 }

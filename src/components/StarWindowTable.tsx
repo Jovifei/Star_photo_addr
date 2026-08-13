@@ -6,6 +6,7 @@ import { useStore } from "@/lib/store";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
 import { formatNightLabel } from "@/lib/nighttime";
 import type {
+  ForecastModel,
   Location,
   LocationForecast,
   SortDirection,
@@ -17,9 +18,10 @@ import type {
  */
 async function fetchAndCacheForecast(
   location: Location,
+  model: ForecastModel,
   cacheForecast: (id: string, forecast: LocationForecast) => void,
 ): Promise<void> {
-  const url = `/api/forecast?latitude=${location.latitude}&longitude=${location.longitude}&days=14`;
+  const url = `/api/forecast?latitude=${location.latitude}&longitude=${location.longitude}&days=14&model=${model}`;
   try {
     const response = await fetch(url);
     if (!response.ok) return;
@@ -98,7 +100,7 @@ export default function StarWindowTable() {
   // already has its forecast in state.forecast).
   useEffect(() => {
     for (const loc of tableLocations) {
-      if (loc.isCandidate && !forecastCache.has(loc.id)) {
+      if (loc.isCandidate && forecastCache.get(loc.id)?.metadata?.model !== state.cloudState.model) {
         const location: Location = {
           id: loc.id,
           name: loc.name,
@@ -108,10 +110,10 @@ export default function StarWindowTable() {
           source: "参考点位",
           bortle: loc.bortle,
         };
-        void fetchAndCacheForecast(location, cacheForecast);
+        void fetchAndCacheForecast(location, state.cloudState.model, cacheForecast);
       }
     }
-  }, [tableLocations, forecastCache, cacheForecast]);
+  }, [tableLocations, forecastCache, cacheForecast, state.cloudState.model]);
 
   // Compute scores for each location × night.
   const scoreMatrix = useMemo(() => {
@@ -125,9 +127,12 @@ export default function StarWindowTable() {
         string,
         { score: number; status: string; loading: boolean }
       >();
-      const forecast = loc.isCandidate
+      const candidateForecast = loc.isCandidate
         ? (forecastCache.get(loc.id) ?? null)
         : state.forecast;
+      const forecast = candidateForecast?.metadata?.model === state.cloudState.model
+        ? candidateForecast
+        : null;
 
       for (const night of nightKeys) {
         if (!forecast) {
@@ -158,7 +163,7 @@ export default function StarWindowTable() {
       matrix.set(loc.id, rowMap);
     }
     return matrix;
-  }, [tableLocations, nightKeys, forecastCache, state.forecast]);
+  }, [tableLocations, nightKeys, forecastCache, state.forecast, state.cloudState.model]);
 
   // Sort locations by the selected sort key.
   const sortedLocations = useMemo(() => {
@@ -218,11 +223,11 @@ export default function StarWindowTable() {
     };
 
     addCandidate(location);
-    void fetchAndCacheForecast(location, cacheForecast).finally(() => {
+    void fetchAndCacheForecast(location, state.cloudState.model, cacheForecast).finally(() => {
       setAdding(false);
       setAddInput("");
     });
-  }, [addInput, addCandidate, cacheForecast]);
+  }, [addInput, addCandidate, cacheForecast, state.cloudState.model]);
 
   const handleDelete = useCallback(
     (id: string) => {

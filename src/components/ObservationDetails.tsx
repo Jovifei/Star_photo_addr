@@ -10,10 +10,14 @@ export default function ObservationDetails({
   sample,
   evaluation,
   location,
+  isCandidate = false,
+  onAddCandidate,
 }: {
   sample: DarkSkySample | null;
   evaluation: NightEvaluation | null;
   location: Location | null;
+  isCandidate?: boolean;
+  onAddCandidate?: () => void;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
   // Never render a number the data does not support: nodata / unsupported
@@ -21,9 +25,21 @@ export default function ObservationDetails({
   const hasReading = sample != null && sample.status === "ok";
   const mpsasText =
     hasReading && sample.mpsas != null ? sample.mpsas.toFixed(2) : "无数据";
+  const snapshotBortle =
+    location?.bortle != null && Number.isFinite(location.bortle)
+      ? location.bortle
+      : null;
   const bortleText =
-    hasReading && sample.bortle != null ? `B${sample.bortle}` : "无数据";
-  const bortleName = hasReading ? (sample.bortleName ?? "") : "";
+    hasReading && sample.bortle != null
+      ? `B${sample.bortle}`
+      : snapshotBortle != null
+        ? `B${snapshotBortle}`
+        : "无数据";
+  const bortleName = hasReading
+    ? (sample.bortleName ?? "")
+    : snapshotBortle != null
+      ? "地点快照"
+      : "";
 
   return (
     <div className="panel-section">
@@ -130,6 +146,16 @@ export default function ObservationDetails({
         {evaluation?.reason ??
           "选择地点后，将按当地时区计算 20:00–次日 05:00 的天气与天文窗口。"}
       </p>
+      {location && onAddCandidate && (
+        <button
+          type="button"
+          className="candidate-add-button"
+          onClick={onAddCandidate}
+          disabled={isCandidate}
+        >
+          {isCandidate ? "已加入星野决策" : "加入星野决策候选"}
+        </button>
+      )}
     </div>
   );
 }

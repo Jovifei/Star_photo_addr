@@ -1,15 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
 import { buildPlannerHref } from "@/lib/utils";
-import {
-  fetchCityCandidates,
-  selectFeatured,
-  type CityCandidateStatus,
-} from "@/data/cities";
 import type { CityCandidate } from "@/lib/types";
 import ObservationDetails from "@/components/ObservationDetails";
 import DecisionBrief from "@/components/DecisionBrief";
@@ -27,24 +22,11 @@ import { DEFAULT_PANEL_WIDTH, MAX_PANEL_WIDTH, MIN_PANEL_WIDTH } from "@/compone
  * with sorting and add/delete).
  */
 export default function SidePanel({ widthControls }: { widthControls: SidePanelWidthControls }) {
-  const { state, setCandidates, sampleAt, setDetailOpen, removeCandidate } =
+  const { state, sampleAt, addCandidate, setDetailOpen, removeCandidate } =
     useStore();
   const router = useRouter();
   const { isMobile, width, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onLostPointerCapture, onResizeKeyDown, resetWidth } = widthControls;
-  const [candidateStatus, setCandidateStatus] =
-    useState<CityCandidateStatus>("loading");
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetchCityCandidates().then((result) => {
-      if (cancelled) return;
-      setCandidates(selectFeatured(result.candidates, 34));
-      setCandidateStatus(result.status);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [setCandidates]);
+  const candidateStatus = state.candidates.length ? "ok" : "empty";
 
   const leadIndex = Math.max(0, state.nightKeys.indexOf(state.selectedNight));
   const evaluation = useMemo(() => {
@@ -137,6 +119,8 @@ export default function SidePanel({ widthControls }: { widthControls: SidePanelW
               sample={state.sample}
               evaluation={evaluation}
               location={state.selectedLocation}
+              isCandidate={Boolean(state.selectedLocation && state.candidates.some((candidate) => candidate.id === state.selectedLocation?.id))}
+              onAddCandidate={state.selectedLocation ? () => addCandidate(state.selectedLocation as NonNullable<typeof state.selectedLocation>) : undefined}
             />
             <DecisionBrief evaluation={evaluation} />
 

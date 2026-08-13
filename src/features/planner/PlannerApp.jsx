@@ -22,8 +22,9 @@ import {
   Wind,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { ObservationMap } from "./components/ObservationMap";
-import { PRESET_LOCATIONS, createLocation } from "./data/locations";
+import { createLocation } from "./data/locations";
 import { deriveCloudLayers } from "./lib/clouds";
 import { readCustomLocations, readForecastCache, writeCustomLocations, writeForecastCache } from "./lib/cache";
 import { fetchPressureForecast, fetchSurfaceForecasts } from "./lib/openMeteo";
@@ -31,6 +32,7 @@ import { evaluateNight, statusMeta } from "./lib/scoring";
 import { addDays, formatHour, formatNightLabel, nextNightKeys, relativeFreshness } from "./lib/time";
 import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
 import { useStore } from "@/lib/store";
+import { OBSERVING_SITES, observingSiteToLocation, recommendationLabel } from "@/lib/observingSites";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "今晚", icon: Binoculars },
@@ -57,6 +59,10 @@ function detailNightKeys(startKey, days) {
   return Array.from({ length: days }, (_, index) => addDays(startKey, index));
 }
 
+function nightOffset(startKey, nightKey) {
+  return detailNightKeys(startKey, 14).indexOf(nightKey);
+}
+
 function clampPlannerDrawerWidth(value) {
   const viewportMax = typeof window === "undefined"
     ? PLANNER_DRAWER_MAX_WIDTH
@@ -75,7 +81,24 @@ function readPlannerDrawerWidth() {
 }
 
 function rankValue(item, mode) {
+  if (item.sharedScore?.score != null) {
+    return mode === "cloud"
+      ? 100 - (item.sharedScore.cloud ?? 100)
+      : item.sharedScore.score;
+  }
   return mode === "cloud" ? item.evaluation?.cloudSeaPotential ?? -1 : item.evaluation?.score ?? -1;
+}
+
+function recommendationMeta(sharedScore, evaluation) {
+  if (!sharedScore?.band) return statusMeta(evaluation?.status);
+  const tone = {
+    priority: "good",
+    recommended: "good",
+    watch: "warn",
+    "not-recommended": "bad",
+    unknown: "muted",
+  }[sharedScore.band] ?? "muted";
+  return { label: recommendationLabel(sharedScore.band), tone };
 }
 
 function useDialogFocus(open, onClose) {
@@ -174,7 +197,7 @@ function productHref(path, location, night, session = {}) {
 }
 
 export function App() {
-  const { state: sharedState, selectLocation: selectSharedLocation, selectNight: selectSharedNight, setCloud: setSharedCloud } = useStore();
+  const { state: sharedState, selectLocation: selectSharedLocation, selectNight: selectSharedNight, setCloud: setSharedCloud, addCandidate } = useStore();
   const bridge = useMemo(() => readProductBridge(), []);
   const [customLocations, setCustomLocations] = useState(() => {
     const saved = readCustomLocations();
@@ -183,10 +206,33 @@ export function App() {
     }
     return [...saved, bridge.location];
   });
-  const locations = useMemo(() => [...PRESET_LOCATIONS, ...customLocations], [customLocations]);
+  const locations = useMemo(() => {
+    const sharedLocations = sharedState.candidates.map((candidate) => {
+      const site = OBSERVING_SITES.find((item) => item.id === candidate.id);
+      if (site) return observingSiteToLocation(site);
+      return {
+        id: candidate.id,
+        name: candidate.name,
+        latitude: candidate.latitude,
+        longitude: candidate.longitude,
+        elevation: 0,
+        source: "自定义",
+        bortle: candidate.bortle,
+        province: candidate.province,
+      };
+    });
+    const inbound = bridge.location ? [bridge.location] : [];
+    return [...sharedLocations, ...inbound, ...customLocations].filter(
+      (location, index, all) => all.findIndex((item) => item.id === location.id) === index,
+    );
+  }, [bridge.location, customLocations, sharedState.candidates]);
   const [days, setDays] = useState(7);
   const [mode, setMode] = useState("star");
   const [view, setView] = useState("dashboard");
+  const tonightNight = nextNightKeys(14)[0];
+  const [rangeStartNight, setRangeStartNight] = useState(() =>
+    bridge.night && nextNightKeys(14).includes(bridge.night) ? bridge.night : sharedState.selectedNight,
+  );
   const [selectedNight, setSelectedNight] = useState(() =>
     bridge.night && nextNightKeys(14).includes(bridge.night)
       ? bridge.night
@@ -198,15 +244,27 @@ export function App() {
   const [forecasts, setForecasts] = useState(() => readForecastCache()?.forecasts ?? []);
   const [savedAt, setSavedAt] = useState(() => readForecastCache()?.savedAt ?? null);
   const [stale, setStale] = useState(() => readForecastCache()?.stale ?? false);
+  const [observationSnapshot, setObservationSnapshot] = useState(null);
+  const [snapshotStatus, setSnapshotStatus] = useState("idle");
+  const [snapshotAttemptKey, setSnapshotAttemptKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const sharedModel = sharedState.cloudState.model;
-  const nightKeys = useMemo(() => nextNightKeys(days), [days]);
-  const tonightNight = nextNightKeys(14)[0];
+  const nightKeys = useMemo(() => detailNightKeys(rangeStartNight, days), [days, rangeStartNight]);
+  const snapshotStartNight = nightKeys[0] ?? selectedNight;
+  const snapshotRequestKey = `${snapshotStartNight}|${days}|${sharedModel}`;
+  const activeObservationSnapshot = snapshotAttemptKey === snapshotRequestKey &&
+    observationSnapshot?.date === snapshotStartNight &&
+    observationSnapshot?.days === days &&
+    observationSnapshot?.model === sharedModel
+    ? observationSnapshot
+    : null;
+  const displayedSnapshotStatus = snapshotAttemptKey === snapshotRequestKey ? snapshotStatus : locations.length ? "loading" : "idle";
   const isSpecifiedNight = Boolean(bridge.night && selectedNight === bridge.night && selectedNight !== tonightNight);
 
   const refresh = useCallback(
     async (silent = false) => {
+      if (!locations.length) return;
       if (!silent) setLoading(true);
       setError("");
       const controller = new AbortController();
@@ -245,6 +303,7 @@ export function App() {
       });
     }
     if (bridge.location) {
+      addCandidate(bridge.location);
       void selectSharedLocation(bridge.location, bridge.model);
     }
     // The bridge is a mount-time protocol; user edits thereafter remain local
@@ -254,6 +313,7 @@ export function App() {
 
   const initialRefreshStarted = useRef(false);
   useEffect(() => {
+    if (!locations.length) return;
     if (initialRefreshStarted.current) return;
     initialRefreshStarted.current = true;
     const missingBridgeForecast =
@@ -262,7 +322,7 @@ export function App() {
     if (!forecasts.length || stale || missingBridgeForecast) {
       queueMicrotask(() => void refresh(true));
     }
-  }, [bridge.location, forecasts, refresh, stale]);
+  }, [bridge.location, forecasts, locations.length, refresh, stale]);
 
   const previousModelRef = useRef(sharedModel);
   useEffect(() => {
@@ -271,16 +331,45 @@ export function App() {
     void refresh();
   }, [refresh, sharedModel]);
 
+  // The ranking overview uses the same server snapshot as the map. The
+  // existing point forecast remains the detail Adapter for hourly drill-down.
+  useEffect(() => {
+    if (!locations.length) return undefined;
+    const controller = new AbortController();
+    const params = new URLSearchParams({ date: snapshotStartNight, days: String(days), model: sharedModel });
+    fetch(`/api/observing/snapshot?${params.toString()}`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(payload?.error ?? "观星评分快照不可用");
+        return payload;
+      })
+      .then((payload) => {
+        if (controller.signal.aborted) return;
+        setObservationSnapshot(payload);
+        setSnapshotAttemptKey(snapshotRequestKey);
+        setSnapshotStatus(payload?.stale ? "degraded" : "available");
+      })
+      .catch((requestError) => {
+        if (requestError?.name !== "AbortError" && !controller.signal.aborted) {
+          setSnapshotStatus("degraded");
+          setSnapshotAttemptKey(snapshotRequestKey);
+          setObservationSnapshot(null);
+        }
+      });
+    return () => controller.abort();
+  }, [days, locations.length, sharedModel, snapshotRequestKey, snapshotStartNight]);
+
   useEffect(() => {
     writeCustomLocations(customLocations);
   }, [customLocations]);
 
   function changeDays(value) {
-    const nextKeys = nextNightKeys(value);
+    const nextKeys = detailNightKeys(rangeStartNight, value);
     setDays(value);
     if (!nextKeys.includes(selectedNight)) {
-      setSelectedNight(nextKeys[0]);
-      selectSharedNight(nextKeys[0]);
+      const nextNight = nextKeys[0] ?? tonightNight;
+      setSelectedNight(nextNight);
+      selectSharedNight(nextNight);
     }
   }
 
@@ -305,14 +394,20 @@ export function App() {
   }, [selectedLocationId]);
 
   const rankings = useMemo(() => {
+    const scoreIndex = Math.max(0, nightOffset(snapshotStartNight, selectedNight));
     return locations
       .map((location) => {
         const forecast = forecasts.find((item) => item.locationId === location.id);
         const leadIndex = nextNightKeys(14).indexOf(selectedNight);
-        return { location, forecast, evaluation: forecast ? evaluateNight(forecast, location, selectedNight, leadIndex) : null };
+        return {
+          location,
+          forecast,
+          evaluation: forecast ? evaluateNight(forecast, location, selectedNight, leadIndex) : null,
+          sharedScore: activeObservationSnapshot?.sites?.[location.id]?.[scoreIndex] ?? null,
+        };
       })
       .sort((a, b) => rankValue(b, mode) - rankValue(a, mode));
-  }, [locations, forecasts, selectedNight, mode]);
+  }, [activeObservationSnapshot, forecasts, locations, mode, selectedNight, snapshotStartNight]);
 
   const best = rankings[0];
   const detail = selectedLocationId ? rankings.find((item) => item.location.id === selectedLocationId) : null;
@@ -338,6 +433,8 @@ export function App() {
   }, [selectSharedNight]);
 
   const handleReturnTonight = useCallback(() => {
+    setRangeStartNight(tonightNight);
+    setDays(7);
     setSelectedNight(tonightNight);
     selectSharedNight(tonightNight);
   }, [selectSharedNight, tonightNight]);
@@ -349,7 +446,9 @@ export function App() {
   }, [locations, selectSharedLocation]);
 
   function addLocation(form) {
-    const next = [...customLocations, createLocation(form)];
+    const nextLocation = createLocation(form);
+    addCandidate(nextLocation);
+    const next = [...customLocations, nextLocation];
     setCustomLocations(next);
     writeCustomLocations(next);
     setError("新点位已保存到本机；点击刷新获取天气数据。");
@@ -391,7 +490,7 @@ export function App() {
       <main className="main-content" id="main-content" tabIndex="-1">
         <section className="control-strip" aria-label="预测范围与摄影模式">
           <div className="segmented" aria-label="预测天数">
-            {[7, 14].map((value) => (
+            {[1, 3, 5, 7].map((value) => (
               <button key={value} type="button" aria-pressed={days === value} className={days === value ? "active" : ""} onClick={() => changeDays(value)}>{value} 天</button>
             ))}
           </div>
@@ -399,16 +498,16 @@ export function App() {
             <button type="button" aria-pressed={mode === "star"} className={mode === "star" ? "active" : ""} onClick={() => setMode("star")}><Moon />星空</button>
             <button type="button" aria-pressed={mode === "cloud"} className={mode === "cloud" ? "active" : ""} onClick={() => setMode("cloud")}><Mountains />云海</button>
           </div>
-          <div className={`freshness ${stale ? "stale" : ""}`} role="status" aria-live="polite">
-            <span className="freshness-dot" />{relativeFreshness(savedAt)}{stale ? " · 已过期" : ""}
+          <div className={`freshness ${stale || displayedSnapshotStatus === "degraded" ? "stale" : ""}`} role="status" aria-live="polite">
+            <span className="freshness-dot" />{relativeFreshness(savedAt)}{stale || displayedSnapshotStatus === "degraded" ? " · 已降级" : displayedSnapshotStatus === "loading" ? " · 评分读取中" : ""}
           </div>
         </section>
 
         {error && <StatusBanner message={error} stale={stale} />}
-        {view !== "map" && !forecasts.length && loading ? <LoadingState /> : null}
-        {view !== "map" && view !== "locations" && !forecasts.length && !loading ? <EmptyState onRefresh={() => refresh()} /> : null}
+        {view !== "map" && locations.length > 0 && !forecasts.length && loading ? <LoadingState /> : null}
+        {view !== "map" && view !== "locations" && (!locations.length || !forecasts.length) && !loading ? <EmptyState hasLocations={locations.length > 0} onRefresh={() => refresh()} /> : null}
 
-        {forecasts.length > 0 && view === "dashboard" && (
+        {locations.length > 0 && forecasts.length > 0 && view === "dashboard" && (
           <Dashboard
             best={featured}
             rankings={rankings}
@@ -420,14 +519,18 @@ export function App() {
             isSpecifiedNight={isSpecifiedNight}
             onReturnTonight={handleReturnTonight}
             isLinkedLocation={Boolean(detail)}
+            observationSnapshot={activeObservationSnapshot}
+            snapshotStartNight={snapshotStartNight}
           />
         )}
-        {forecasts.length > 0 && view === "matrix" && (
+        {locations.length > 0 && forecasts.length > 0 && view === "matrix" && (
           <MatrixView
             locations={locations}
             forecasts={forecasts}
             nightKeys={nightKeys}
             mode={mode}
+            observationSnapshot={activeObservationSnapshot}
+            snapshotStartNight={snapshotStartNight}
             onSelect={(locationId, night) => {
               handleSelectNight(night);
               setSelectedLocationId(locationId);
@@ -492,16 +595,18 @@ function StatusBanner({ message, stale }) {
 }
 
 function LoadingState() {
-  return <section className="loading-state" role="status" aria-live="polite"><div className="loader" aria-hidden="true" /><h2>正在读取 12 个山顶的天气</h2><p>首次加载会计算 14 天云量、降水和天文窗口。</p></section>;
+  return <section className="loading-state" role="status" aria-live="polite"><div className="loader" aria-hidden="true" /><h2>正在读取候选地点的天气</h2><p>首次加载会计算今晚及未来夜晚的云量、降水和观星窗口。</p></section>;
 }
 
-function EmptyState({ onRefresh }) {
-  return <section className="empty-state"><Cloud size={36} /><h2>还没有天气数据</h2><p>连接网络后刷新，页面会保留最近一次成功数据。</p><button className="primary-button" type="button" onClick={onRefresh}>立即刷新</button></section>;
+function EmptyState({ hasLocations, onRefresh }) {
+  return <section className="empty-state"><Cloud size={36} /><h2>{hasLocations ? "还没有天气数据" : "还没有候选观测点"}</h2><p>{hasLocations ? "连接网络后刷新，页面会保留最近一次成功数据。" : "请先回到逐星地图，点击地点并加入星野决策；这里会比较今晚、3/5/7 天。"}</p>{!hasLocations && <Link className="primary-button" href="/">回到观星地图</Link>}<button className="secondary-button" type="button" onClick={onRefresh}>重新读取</button></section>;
 }
 
-function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail, isSpecifiedNight, onReturnTonight, isLinkedLocation }) {
+function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail, isSpecifiedNight, onReturnTonight, isLinkedLocation, observationSnapshot, snapshotStartNight }) {
   const evaluation = best?.evaluation;
-  const meta = statusMeta(evaluation?.status);
+  const sharedScore = best?.sharedScore;
+  const meta = recommendationMeta(sharedScore, evaluation);
+  const displayScore = sharedScore?.score ?? (mode === "cloud" ? evaluation?.cloudSeaPotential : evaluation?.score);
   return (
     <>
       <section className="hero-grid">
@@ -517,7 +622,7 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
               <h2>{best?.location.name ?? "计算中"}</h2>
               <p className="coordinate"><MapPin />{best?.location.elevation} m · {best?.location.latitude.toFixed(4)}, {best?.location.longitude.toFixed(4)}</p>
             </div>
-            <ScoreRing value={mode === "cloud" ? evaluation?.cloudSeaPotential : evaluation?.score} label={mode === "cloud" ? "云海指数" : "星空分"} />
+            <ScoreRing value={displayScore} label={mode === "cloud" ? "云海指数" : "星空分"} />
           </div>
           <div className="window-callout">
             <div className="window-icon"><Binoculars /></div>
@@ -525,9 +630,9 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
           </div>
           <p className="hero-reason">{evaluation?.reason}</p>
           <div className="hero-metrics">
-            <Metric icon={Moon} label="月面照度" value={`${Math.round((evaluation?.moonIllumination ?? 0) * 100)}%`} />
-            <Metric icon={Sparkle} label="暗夜时长" value={`${evaluation?.darkHours ?? 0}h`} />
-            <Metric icon={Compass} label="银河最高" value={`${evaluation?.galacticMax ?? 0}°`} />
+            <Metric icon={Moon} label="月面照度" value={formatNullable(evaluation?.moonIllumination, "%", (value) => Math.round(value * 100))} />
+            <Metric icon={Sparkle} label="暗夜时长" value={formatNullable(evaluation?.darkHours, "h")} />
+            <Metric icon={Compass} label="银河最高" value={formatNullable(evaluation?.galacticMax, "°")} />
             <Metric icon={Info} label="置信度" value={evaluation?.confidence.level ?? "—"} />
           </div>
           <button className="detail-cta" type="button" onClick={() => best && onOpenDetail(best.location.id)}>查看逐小时详情<CaretRight /></button>
@@ -536,13 +641,13 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
         <article className="briefing-card">
           <div className="card-heading"><div><span className="section-kicker">决策摘要</span><h3>今晚判断依据</h3></div><ListBullets /></div>
           <DecisionItem tone={evaluation?.status === "go" ? "good" : "warn"} title={evaluation?.window.length >= 2 ? "连续窗口成立" : "连续窗口不足"} text={evaluation?.windowLabel} />
-          <DecisionItem tone={(evaluation?.blockers.length ?? 0) ? "bad" : "good"} title={(evaluation?.blockers.length ?? 0) ? "存在天气门禁" : "无主要安全门禁"} text={evaluation?.blockers.join("、") || "未触发雷暴、强降水、低能见度或大阵风门禁"} />
+          <DecisionItem tone={(sharedScore?.blockers?.length ?? evaluation?.blockers?.length ?? 0) ? "bad" : "good"} title={(sharedScore?.blockers?.length ?? evaluation?.blockers?.length ?? 0) ? "存在天气门禁" : "无主要安全门禁"} text={sharedScore?.blockers?.join("、") || evaluation?.blockers?.join("、") || "未触发雷暴、强降水、低能见度或大阵风门禁"} />
           <DecisionItem tone={evaluation?.confidence.kind === "trend" ? "warn" : "info"} title={`置信度：${evaluation?.confidence.level ?? "—"}`} text={evaluation?.confidence.reason ?? "等待数据"} />
           <p className="brief-note"><Info />14 天用于看趋势；最终出发前请在 72 小时内再次刷新，并核对道路和现场云况。</p>
         </article>
       </section>
 
-      <NightRail nightKeys={nightKeys} selectedNight={selectedNight} onSelect={onSelectNight} rankings={rankings} mode={mode} />
+      <NightRail nightKeys={nightKeys} selectedNight={selectedNight} onSelect={onSelectNight} rankings={rankings} mode={mode} observationSnapshot={observationSnapshot} snapshotStartNight={snapshotStartNight} />
 
       <section className="rank-section">
         <div className="section-heading-row">
@@ -566,25 +671,38 @@ function Metric({ icon: Icon, label, value }) {
   return <div className="metric"><Icon /><span>{label}</span><strong>{value}</strong></div>;
 }
 
+function formatNullable(value, suffix = "", transform = (item) => item) {
+  return value == null || !Number.isFinite(value) ? "—" : `${transform(value)}${suffix}`;
+}
+
 function DecisionItem({ tone, title, text }) {
   return <div className={`decision-item ${tone}`}><span className="decision-dot" /><div><strong>{title}</strong><p>{text}</p></div></div>;
 }
 
-function NightRail({ nightKeys, selectedNight, onSelect, rankings, mode }) {
+function NightRail({ nightKeys, selectedNight, onSelect, rankings, mode, observationSnapshot, snapshotStartNight }) {
   return (
     <section className="night-section">
       <div className="section-heading-row compact"><div><span className="section-kicker">未来观测夜</span><h2>观测夜</h2></div><CalendarBlank /></div>
       <div className="night-rail">
         {nightKeys.map((night, index) => {
+          const sharedBest = rankings
+            .map((item) => ({ item, score: observationSnapshot?.sites?.[item.location.id]?.[Math.max(0, nightOffset(snapshotStartNight, night))] ?? null }))
+            .filter((item) => item.score)
+            .sort((a, b) => (b.score?.score ?? -1) - (a.score?.score ?? -1))[0]?.score ?? null;
           const best = rankings
             .map((item) => item.forecast ? evaluateNight(item.forecast, item.location, night, index) : null)
             .filter(Boolean)
             .sort((a, b) => (mode === "cloud" ? b.cloudSeaPotential - a.cloudSeaPotential : b.score - a.score))[0];
-          const meta = statusMeta(best?.status);
+          const meta = sharedBest ? recommendationMeta(sharedBest, null) : statusMeta(best?.status);
+          const displayValue = sharedBest
+            ? mode === "cloud"
+              ? sharedBest.cloud == null ? null : Math.round(100 - sharedBest.cloud)
+              : sharedBest.score
+            : mode === "cloud" ? best?.cloudSeaPotential : best?.score;
           return (
             <button key={night} type="button" aria-pressed={selectedNight === night} className={selectedNight === night ? "active" : ""} onClick={() => onSelect(night)}>
               <span>{formatNightLabel(night, true)}</span>
-              <strong>{mode === "cloud" ? best?.cloudSeaPotential ?? "—" : best?.score ?? "—"}</strong>
+              <strong>{displayValue ?? "—"}</strong>
               <small className={meta.tone}>{index >= 7 ? "趋势" : meta.label}</small>
             </button>
           );
@@ -596,32 +714,41 @@ function NightRail({ nightKeys, selectedNight, onSelect, rankings, mode }) {
 
 function RankCard({ item, rank, mode, onOpen }) {
   const evaluation = item.evaluation;
-  const meta = statusMeta(evaluation?.status);
-  const score = mode === "cloud" ? evaluation?.cloudSeaPotential : evaluation?.score;
+  const sharedScore = item.sharedScore;
+  const meta = recommendationMeta(sharedScore, evaluation);
+  const score = sharedScore?.score ?? (mode === "cloud" ? evaluation?.cloudSeaPotential : evaluation?.score);
   const bestHour = evaluation?.window[0] ?? evaluation?.hours?.sort((a, b) => b.score - a.score)[0];
+  const cloud = sharedScore?.cloud ?? (bestHour?.cloudCover == null ? null : Math.round(bestHour.cloudCover));
+  const bestWindow = sharedScore?.bestWindow ?? evaluation?.windowLabel;
   return (
     <button className="rank-card" type="button" onClick={onOpen}>
       <span className={`rank-number ${rank <= 3 ? "top" : ""}`}>{String(rank).padStart(2, "0")}</span>
       <div className="rank-main">
         <div className="rank-title"><div><h3>{item.location.name}</h3><p>{item.location.elevation} m · {evaluation?.confidence.level ?? "—"}置信度</p></div><span className={`status-pill ${meta.tone}`}>{meta.label}</span></div>
         <div className="rank-stats">
-          <span><Cloud />云量 {Math.round(bestHour?.cloudCover ?? 0)}%</span>
-          <span><CloudRain />降水 {Math.round(bestHour?.precipitationProbability ?? 0)}%</span>
-          <span><Wind />阵风 {Math.round(bestHour?.windGust ?? 0)} m/s</span>
-          <span><Moon />照度 {Math.round((evaluation?.moonIllumination ?? 0) * 100)}%</span>
+          <span><Cloud />云量 {cloud == null ? "—" : `${cloud}%`}</span>
+          <span><CloudRain />降水 {formatNullable(bestHour?.precipitationProbability, "%", Math.round)}</span>
+          <span><Wind />阵风 {formatNullable(bestHour?.windGust, " m/s", Math.round)}</span>
+          <span><Moon />照度 {formatNullable(evaluation?.moonIllumination, "%", (value) => Math.round(value * 100))}</span>
         </div>
-        <p className="rank-window"><Binoculars />{evaluation?.windowLabel ?? "暂无连续窗口"}</p>
+        <p className="rank-window"><Binoculars />{bestWindow ?? "暂无连续窗口"}</p>
       </div>
-      <div className="rank-score"><strong>{score ?? "—"}</strong><span>{mode === "cloud" ? "云海" : "星空"}</span><CaretRight /></div>
+      <div className="rank-score"><strong>{score ?? "—"}</strong><span>{sharedScore ? "综合" : mode === "cloud" ? "云海" : "星空"}</span><CaretRight /></div>
     </button>
   );
 }
 
-function MatrixView({ locations, forecasts, nightKeys, mode, onSelect }) {
+function MatrixView({ locations, forecasts, nightKeys, mode, onSelect, observationSnapshot, snapshotStartNight }) {
   const matrix = useMemo(() => locations.map((location) => {
     const forecast = forecasts.find((item) => item.locationId === location.id);
-    return { location, values: nightKeys.map((night, index) => forecast ? evaluateNight(forecast, location, night, index) : null) };
-  }), [locations, forecasts, nightKeys]);
+    return {
+      location,
+      values: nightKeys.map((night, index) => {
+        const sharedScore = observationSnapshot?.sites?.[location.id]?.[Math.max(0, nightOffset(snapshotStartNight, night))] ?? null;
+        return { evaluation: forecast ? evaluateNight(forecast, location, night, index) : null, sharedScore };
+      }),
+    };
+  }), [forecasts, locations, nightKeys, observationSnapshot, snapshotStartNight]);
   return (
     <section className="matrix-section">
       <div className="section-heading-row"><div><span className="section-kicker">核心窗口</span><h2>{mode === "star" ? "星空核心窗口" : "云海潜力矩阵"}</h2><p>单元格显示{mode === "star" ? "优质连续小时 / 星空分" : "云海潜力指数"}；点击查看详情。</p></div></div>
@@ -629,8 +756,14 @@ function MatrixView({ locations, forecasts, nightKeys, mode, onSelect }) {
         <table>
           <thead><tr><th>点位</th>{nightKeys.map((night) => <th key={night}>{formatNightLabel(night, true)}</th>)}</tr></thead>
           <tbody>{matrix.map((row) => <tr key={row.location.id}><th>{row.location.name}<small>{row.location.elevation}m</small></th>{row.values.map((value, index) => {
-            const meta = statusMeta(value?.status);
-            return <td key={nightKeys[index]}><button type="button" aria-label={`${row.location.name} ${formatNightLabel(nightKeys[index], true)} ${mode === "star" ? `${value?.window.length ?? 0} 小时，${value?.score ?? "无"} 分` : `${value?.cloudSeaPotential ?? "无"} 分`}`} className={`matrix-cell ${meta.tone}`} onClick={() => onSelect(row.location.id, nightKeys[index])}>{mode === "star" ? <><strong>{value?.window.length ?? 0}h</strong><span>/ {value?.score ?? "—"}</span></> : <strong>{value?.cloudSeaPotential ?? "—"}</strong>}</button></td>;
+            const sharedScore = value?.sharedScore;
+            const evaluation = value?.evaluation;
+            const meta = sharedScore ? recommendationMeta(sharedScore, null) : statusMeta(evaluation?.status);
+            const score = sharedScore?.score ?? (mode === "star" ? evaluation?.score : evaluation?.cloudSeaPotential);
+            const cloudPotential = sharedScore?.cloud == null ? evaluation?.cloudSeaPotential : Math.round(100 - sharedScore.cloud);
+            const windowLength = sharedScore?.bestWindow?.match(/(\d+)h/)?.[1] ?? evaluation?.window?.length ?? 0;
+            const cellValue = mode === "star" ? `${windowLength} 小时，${score ?? "无"} 分` : `${cloudPotential ?? "无"} 分`;
+            return <td key={nightKeys[index]}><button type="button" aria-label={`${row.location.name} ${formatNightLabel(nightKeys[index], true)} ${cellValue}`} className={`matrix-cell ${meta.tone}`} onClick={() => onSelect(row.location.id, nightKeys[index])}>{mode === "star" ? <><strong>{windowLength}h</strong><span>/ {score ?? "—"}</span></> : <strong>{cloudPotential ?? "—"}</strong>}</button></td>;
           })}</tr>)}</tbody>
         </table>
       </div>
@@ -894,7 +1027,7 @@ function DetailDrawer({
           <p className="detail-range-note">趋势图会随“今日 / 3 天 / 5 天 / 7 天”立即改变；星空分越高越适合观测，平均总云量越低越好，窗口表示连续可用小时。点击夜次或小时后，逐星地图会恢复同一地点、模型与时次。</p>
         </section>
         <div className="detail-summary"><ScoreRing value={activeEvaluation?.score} label="星空分" /><div><span className={`status-pill ${statusMeta(activeEvaluation?.status).tone}`}>{statusMeta(activeEvaluation?.status).label}</span><h3>{activeEvaluation?.windowLabel}</h3><p>{activeEvaluation?.reason}</p></div></div>
-        <div className="detail-metrics"><Metric icon={Cloud} label="云海潜力" value={activeEvaluation?.cloudSeaPotential} /><Metric icon={Moon} label="月面照度" value={`${Math.round((activeEvaluation?.moonIllumination ?? 0) * 100)}%`} /><Metric icon={Sparkle} label="天文暗夜" value={`${activeEvaluation?.darkHours ?? 0}h`} /><Metric icon={Compass} label="银河最高" value={`${activeEvaluation?.galacticMax ?? 0}°`} /></div>
+        <div className="detail-metrics"><Metric icon={Cloud} label="云海潜力" value={activeEvaluation?.cloudSeaPotential ?? "—"} /><Metric icon={Moon} label="月面照度" value={formatNullable(activeEvaluation?.moonIllumination, "%", (value) => Math.round(value * 100))} /><Metric icon={Sparkle} label="天文暗夜" value={formatNullable(activeEvaluation?.darkHours, "h")} /><Metric icon={Compass} label="银河最高" value={formatNullable(activeEvaluation?.galacticMax, "°")} /></div>
 
         <DetailSection title="逐小时天气" subtitle={`${formatNightLabel(activeDetailNight, true)} · 云量、降水与风`} icon={Cloud}>
           <AccessibleChart option={weatherOption} height={260} chartKey={`weather-${activeChartKey}`} testId="detail-weather-chart" label={`${formatNightLabel(activeDetailNight, true)}逐小时天气图：总云量、低云量、降水概率和阵风`} />

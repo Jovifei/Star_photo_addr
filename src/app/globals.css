@@ -2975,6 +2975,98 @@
   color: var(--green-soft);
 }
 
+/* Unified observing-site markers: the map remains spatially legible while
+   rating semantics stay available through the control legend and drawer. */
+.observing-site-marker {
+  background: transparent;
+  border: 0;
+}
+.observing-site-dot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  transform: scale(var(--site-scale, 1));
+  border: 2px solid rgba(4, 16, 26, .92);
+  border-radius: 50%;
+  background: var(--site-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--site-color) 42%, transparent), 0 3px 9px rgba(0, 0, 0, .58);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.observing-site-label {
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px #000;
+}
+.leaflet-tooltip.observing-site-label,
+.observing-site-marker + .leaflet-tooltip {
+  border: 1px solid rgba(126, 213, 232, .24);
+  background: rgba(3, 14, 22, .78);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .3);
+}
+.observing-map-control {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 710;
+  display: grid;
+  gap: 9px;
+  width: min(330px, calc(100% - 36px));
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(4, 16, 26, .88);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .35);
+  backdrop-filter: blur(12px);
+  color: var(--text);
+  pointer-events: auto;
+}
+.observing-map-control-title,
+.observing-filter-row,
+.observing-threshold-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.observing-map-control-title span { display: inline-flex; align-items: center; gap: 7px; color: var(--green-soft); font-weight: 700; }
+.observing-map-control-title b { color: var(--green-soft); font-family: var(--font-data); font-size: 12px; }
+.observing-mode-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.observing-mode-tabs button,
+.observing-filter-row select {
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(11, 31, 41, .84);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.observing-mode-tabs button.active { border-color: var(--green); color: var(--green-soft); background: rgba(18, 55, 64, .88); }
+.observing-map-control > small { color: var(--muted); font-size: 10px; line-height: 1.35; }
+.observing-filter-row select { width: 150px; padding: 0 8px; }
+.observing-filter-row span,
+.observing-threshold-row span { color: var(--muted); font-size: 11px; }
+.observing-threshold-row b { color: var(--text); font-family: var(--font-data); }
+.observing-threshold-row input { width: 150px; accent-color: var(--green); }
+.observing-score-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 8px; color: var(--muted); font-size: 10px; }
+.observing-score-legend span { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; }
+.observing-score-legend i { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.observing-map-control-note { color: var(--muted); }
+.observing-check-row { display: flex; align-items: center; gap: 8px; min-height: 32px; color: var(--muted); font-size: 11px; cursor: pointer; }
+.observing-check-row input { width: 16px; height: 16px; accent-color: var(--green); }
+.candidate-add-button { width: 100%; min-height: 44px; margin-top: 14px; border: 1px solid var(--green); border-radius: var(--radius-sm); color: var(--green-soft); background: rgba(20, 62, 67, .7); font-size: 12px; font-weight: 700; cursor: pointer; }
+.candidate-add-button:disabled { border-color: var(--line); color: var(--muted); background: var(--panel-2); cursor: default; }
+
+@media (max-width: 1100px) and (min-width: 769px) {
+  .observing-map-control { width: 286px; }
+  .cloud-control { top: 18px; }
+}
+
 @media (max-width: 768px) {
   .map-headline {
     max-width: calc(100% - 36px);
@@ -2990,6 +3082,13 @@
   .satellite-frame-badge {
     bottom: 10px;
     left: 10px;
+  }
+  .observing-map-control {
+    top: 74px;
+    left: 18px;
+    width: min(300px, calc(100% - 36px));
+    max-height: 36dvh;
+    overflow-y: auto;
   }
 }
 

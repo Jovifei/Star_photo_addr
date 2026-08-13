@@ -1,3 +1,21 @@
+# Website clone: stargazing-finder-dark (2026-08-12)
+
+- [x] Install and read the `clone-website` skill from `JCodesMore/ai-website-cloner-template`.
+- [x] Capture desktop/mobile reference screenshots and extract the target page behavior/topology.
+- [x] Build the isolated `/stargazing-finder-dark` route without replacing existing product routes.
+- [x] Implement the map/filter/list interactions, responsive layout, and route-scoped visual system.
+- [x] Verify the clone with desktop/mobile browser checks, `npm run check`, and existing E2E coverage.
+
+## Review
+
+- Clone skill installed at `C:\Users\Admin\.codex\skills\clone-website` from `JCodesMore/ai-website-cloner-template` (`master`, `3040f9c`).
+- Target reconnaissance and screenshots are stored under `docs/research/stargazing-finder-dark-com-a038da11/root-8a5edab2/` and `docs/design-references/stargazing-finder-dark-com-a038da11/root-8a5edab2/`.
+- New surface is isolated at `/stargazing-finder-dark`; existing `/`, `/planner`, `/sites`, and `/viirs` product routes were not replaced.
+- Browser acceptance: PASS at 1440×1000 and 390×844 — 18 markers, search 2→18, legend resize, photo/visual mode switch, marker detail open/close, VIIRS toggle, no page overflow, no console errors.
+- `npm run check`: PASS — ESLint, TypeScript, 14 Vitest files / 108 tests, and Next 16.3.0 production build.
+- `npm run test:e2e` on an isolated 3101 server: PARTIAL — 8 passed, 4 failed, 2 skipped. The failures are existing dynamic-date/matrix assertions on the original product (`8月9日` fixture drift and current-hour selection reset); no clone-route test failed because the clone route is outside the existing suite.
+- Boundary: the clone uses the project-owned recommendation records and CARTO dark basemap with a route-scoped VIIRS-style demo presentation; it does not copy the target site's backend, analytics, or private/proprietary raster service.
+
 # Branch consolidation correction
 
 - [x] Compare every visible development branch by tree, ancestry, and unique commits
@@ -210,3 +228,82 @@
 - 最终定向 E2E: PASS — 多夜数据联动与 375/768/1024/1440 深链详情抽屉几何验收 2/2 通过。
 - `npm run test:live`: PASS — Open-Meteo 返回 2 个地点、48 个地面小时和 10 个气压层。
 - `http://127.0.0.1:3100/healthz`: PASS — `star-weather-planner` 0.3.1，build revision `local`。
+
+## 观星地点查询站点完整复刻与数据补全（2026-08-12，最新）
+
+- [x] 将 `/stargazing-finder-dark` 地点快照扩展为 242 个稳定地点，默认 Bortle 3 显示 222 个，Bortle 4 显示 242 个。
+- [x] 保存目标站 35 个省级边界为本地 GeoJSON，并统一地图、筛选、详情、复查和导出的地点数据源。
+- [x] 移除访问量字段、接口、弹窗、统计逻辑和分析脚本，不把非业务统计带入复刻。
+- [x] 新增同源 `/api/stargazing-finder/weather?date=YYYY-MM-DD`，按地点批量请求 Open-Meteo，返回 33 小时序列、状态、陈旧标记和空值。
+- [x] 接入目标站 VIIRS 2023 WMTS，失败时降级 CARTO 暗色底图；地图明确显示光污染底图来源，不误称云图或实时天气。
+- [x] 完成 Bortle、标签模式、VIIRS 开关、观星/摄影、地点搜索、今晚及未来 4 天、复查和 Excel 兼容导出。
+- [x] 完成地点详情底部工作台：评分、风险、33 小时图表/表格、夜间高亮、风雨标记、上下拖动和内部横向/纵向滚动。
+- [x] 用同一评分/风险/空值规则驱动地图标记、详情、复查和导出；缺失数据显示 `—` 或“暂无天气数据”。
+- [x] 更新观星快照单测、动态上海日期 E2E 断言和 ui-ux-pro-max 设计系统文档。
+
+### Review
+
+- `npm run check`: PASS — ESLint、TypeScript、15 个 Vitest 文件 / 113 个测试、Next 16.3.0 生产构建。
+- `PORT=3101 npm run test:e2e`: PASS — 12 passed、2 个移动端不适用用例按设计跳过；首次失败的旧 `8月9日` 硬编码断言已改为 Asia/Shanghai 动态日期后全绿。
+- 浏览器桌面 1440×900: PASS — 默认摄影模式、无访问量内容、Bortle 3 地点标记 222、Bortle 4 地点标记 242、详情面板 520→673px 真实拖动、复查弹窗和 `.xls` 下载。
+- 浏览器移动 390×844: PASS — 地点标记 222、页面宽度 390/390，打开 33 小时详情后仍无页面级横向溢出。
+- API: PASS — `/healthz` 返回 `star-weather-planner`、`0.3.1`、`local`；天气接口返回 242 个地点和 33 个小时；非法日期返回 400。
+- 数据语义: PASS — Open-Meteo 天气、darkmap.cn/IUCN/中国绿发会/VIIRS 地点来源、CARTO 降级状态均在界面标注；访问量和 Cloudflare 分析不接入。
+
+## 地图信息降噪与跨产品合并方案（2026-08-12）
+
+- [x] 删除地图永久天气详情，地点标记只保留名称；雨量、云量、评级和风险统一放入点击后的地点详情。
+- [x] 从地点查询头部删除作者与版本号展示。
+- [x] 对照目标站当前公开页面，记录已覆盖、主动排除和下一步细节，避免把“核心功能覆盖”误报为“逐像素完全复制”。
+- [x] 新增 `/integration-plan` 方案页，展示三入口职责、共享观测会话、功能审计和分阶段合并路径。
+- [x] 在地点查询页增加进入合并方案的入口，保留 `/`、`/planner`、`/stargazing-finder-dark` 原有深链。
+
+### Review
+
+- 浏览器复核目标站：确认其业务表面包括地图/VIIRS、Bortle、标签、摄影/肉眼、搜索、日期、详情、复查和导出；访问量属于按需求排除项。
+- 当前实现结论：核心业务功能已覆盖；目标站搜索弹窗微交互和原生 `.xlsx` 工作簿属于下一步，不伪装成已经完全一致。
+
+## 地点名称标签最终收敛（2026-08-12）
+
+- [x] 保留筛选范围内每个地点的常驻名称标签，例如“牵牛岗”“太子尖”。
+- [x] 删除地点标签旁的天气详情、下雨时刻、评级说明、风险说明和警告徽标。
+- [x] 保留小型颜色点作为空间定位和当前评级的轻量语义，完整数据仍只在点击详情中展示。
+
+## 中国观星地图与星野决策统一闭环（2026-08-13）
+
+- [x] 建立共享 `ObservingSite` 适配器、推荐评分类型和 1/3/5/7 天 `/api/observing/snapshot` 接口。
+- [x] 地图默认卫星云图，并提供光污染、综合决策三种互斥模式；保留 242 个地点，默认 Bortle 1–3 为 222 个。
+- [x] 地图常驻点位收敛为名称 + 评分点，天气/雨量/风险详情只进入选中地点抽屉。
+- [x] 候选清单限制 12 个并持久化完整共享候选，跨 `/` 与 `/planner` 保持地点、模型、夜晚和时次。
+- [x] 决策页范围切换真正改变共享快照天数、夜晚列和评分索引，矩阵/夜间轨/排行卡绑定对应夜晚。
+- [x] 增加快照磁盘缓存、原子写入和 30 分钟 worker，失败时回退陈旧快照并标记降级。
+- [x] 按 `sites-building` 能力路径完成生产构建和 Chrome 浏览器回归；修复移动端矩阵点击与首帧保护竞争。
+
+### Review
+
+- `npm.cmd run lint`: PASS。
+- `npm.cmd run typecheck`: PASS。
+- `npm.cmd run test:unit`: PASS，15 个测试文件 / 114 个测试。
+- `npm.cmd run build`: PASS，Next 16.3.0 生产构建，`/api/observing/snapshot` 与 worker 脚本已纳入产物路径。
+- Chrome E2E targeted: PASS，默认卫星、卫星帧播放、预报/光污染互斥、规划器共享网关、真实侧栏拖宽持久化、375/768/1024/1440 无页面横向溢出。
+- Chrome E2E full: PARTIAL，桌面 7 项和移动端其余业务项通过；修复后的移动端矩阵用例已单独复测 PASS。Playwright 生产服务器子进程在全量结束阶段未自动退出，需后续清理测试 runner 生命周期，不能据此声明全量命令为完整绿灯。
+- `http://127.0.0.1:3100/healthz`: PASS，应用标识 `star-weather-planner`、版本 `0.3.1`、构建修订 `local`。
+# 夜间发布候选审计与收敛（2026-08-13）
+
+- [x] 修复 Playwright 生产服务器的进程生命周期，确保全量 E2E 正常退出并返回真实状态码。
+- [x] 补充“地图加入候选 → 星野决策保留候选”的跨页面闭环验收。
+- [x] 将 README 与 `/integration-plan` 从旧三入口方案更新为当前两页产品闭环和真实完成状态。
+- [x] 复核生产依赖安全公告、真实数据链、Docker web/worker 构建及健康状态。
+- [x] 汇总 Luna Max 独立审计发现，修复 P0/P1 问题并记录最终发布候选结论。
+
+### Review
+
+- `npm.cmd run check`: PASS — ESLint、TypeScript、16 个 Vitest 文件 / 119 个测试、Next 16.3.0 生产构建。
+- `npm.cmd run test:e2e`: PASS — 14 passed、2 skipped（移动端不适用的桌面拖宽与桌面断点循环）；新增地图候选跨页闭环在 desktop/mobile 均通过，runner exit 0 且 3187 无遗留监听。
+- `npm.cmd run test:live`: PASS — Open-Meteo 返回 2 个地点、48 小时地面数据和 10 个气压层。
+- `npm.cmd audit --omit=dev`: PASS — 0 high / 0 critical；Docker 缓存中的旧安装提示不代表当前锁文件审计结果。
+- Docker：PASS — `APP_PORT=3190 docker compose up --build -d` 后 Web 与 worker 均 healthy；worker 输出 `2026-08-13 icon 7d fresh`。
+- NASA GIBS 现场探针：PASS — Himawari AHI Band 13 返回 143 个唯一真实观测帧，覆盖 24 小时；能力清单中的缺帧被保留，不再机械伪造 145 帧。
+- Luna Max 独立审计后已修复：缺失云量仍评分、候选模型缓存串用、批量响应复制首地点、损坏快照浅校验、临时文件碰撞和空值显示为 0。其余架构增强（评分加入月亮权重、VIIRS tileerror 状态联动、worker 重叠锁）进入下一阶段，不阻塞当前可验收功能。
+- 阶段说明：README 与 `/integration-plan` 已从旧“三入口/下一步共享 session”更新为当前“观星地图 + 星野决策”两页闭环，旧地址仅保留兼容重定向。
+- Obsidian：`codex-memory load` 返回 `NO_PROJECT_MEMORY`，本轮未凭空创建知识库项目；仓库文档、当前树和测试作为阶段事实来源。

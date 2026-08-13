@@ -21,6 +21,17 @@ const SURFACE_RAW = [
 
 const CLOUD_FIELDS = new Set(["cloudCover", "cloudLow", "cloudMid", "cloudHigh"]);
 
+function shanghaiDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function perturb(field, value, offset) {
   if (value == null) return value;
   if (CLOUD_FIELDS.has(field)) {
@@ -57,7 +68,7 @@ function buildNormalizedForecasts(fixture, lats, lons, days, model = "icon") {
   // date so the 20:00–05:00 matrix and the current→72h rail share one time
   // domain. A stale 8/7 start makes a click on tonight's columns immediately
   // get reset by the forecast-timeline guard.
-  const start = Date.parse("2026-08-09T00:00:00Z");
+  const start = Date.parse(`${shanghaiDateKey()}T00:00:00Z`);
   const src = Array.from({ length: days * 24 }, (_, hourIndex) => ({
     time: new Date(start + hourIndex * 3_600_000).toISOString().slice(0, 16),
     temperature: 12 + (hourIndex % 9),
@@ -177,6 +188,27 @@ export async function installGeocodingMock(page) {
 
 /** Same-origin App Router contracts used by the integrated Next.js pages. */
 export async function installNextApiMock(page, fixture) {
+  await page.route("**/api/observing/snapshot**", async (route) => {
+    const url = new URL(route.request().url());
+    const date = url.searchParams.get("date") || "2026-08-09";
+    const days = [1, 3, 5, 7].includes(Number(url.searchParams.get("days"))) ? Number(url.searchParams.get("days")) : 1;
+    const model = url.searchParams.get("model") || "icon";
+    const sites = {};
+    for (let index = 0; index < 242; index += 1) {
+      sites[`finder-${String(index + 1).padStart(3, "0")}-location`] = Array.from({ length: days }, (_, night) => ({
+        score: Math.max(0, 92 - ((index + night * 9) % 44)),
+        band: index % 5 === 0 ? "priority" : index % 3 === 0 ? "recommended" : "watch",
+        cloud: (index * 7 + night * 11) % 100,
+        darkness: index % 4 === 0 ? 100 : 78,
+        weatherRisk: 82,
+        bestWindow: "21:00–00:00（3h）",
+        blockers: [],
+        confidence: "high",
+        validHours: 10,
+      }));
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ date, days, model, generatedAt: "2026-08-09T08:00:00.000Z", source: "E2E snapshot", stale: false, sites }) });
+  });
   await page.route("**/api/satellite/times**", async (route) => {
     const url = new URL(route.request().url());
     const kind = url.searchParams.get("kind") === "night-lights" ? "night-lights" : "cloud";

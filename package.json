@@ -20,6 +20,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:live": "node scripts/live-smoke.mjs",
+    "snapshot:worker": "node scripts/observing-snapshot-worker.mjs",
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run build",
     "check:full": "npm run check && npm run test:e2e"
   },

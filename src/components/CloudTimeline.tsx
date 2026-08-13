@@ -71,7 +71,10 @@ export default function CloudTimeline() {
     [forecastHours, selectedNight],
   );
   const observationTimeline = state.satelliteFrames;
-  const timelineItems = isSatelliteMode ? observationTimeline : forecastTimeline;
+  const timelineItems = useMemo(
+    () => isNightLightsMode ? [] : isSatelliteMode ? observationTimeline : forecastTimeline,
+    [forecastTimeline, isNightLightsMode, isSatelliteMode, observationTimeline],
+  );
   const timelineTicks = useMemo(() => {
     if (!timelineItems.length) return [];
     const tickCount = isSatelliteMode ? 5 : 4;
@@ -150,6 +153,7 @@ export default function CloudTimeline() {
   }, [cloudState.activeForecastTime, selectedLocation, selectedMatrixTime]);
 
   useEffect(() => {
+    if (isNightLightsMode) return;
     if (isSatelliteMode) {
       const frame = observationTimeline[safeTimelineIndex];
       if (frame && frame.time !== cloudState.activeObservationTime) {
@@ -159,19 +163,20 @@ export default function CloudTimeline() {
     }
     if (!forecastTimeline.length) return;
     const forecastIndex = forecastTimeline.findIndex((item) => item.time === cloudState.activeForecastTime);
-    if (forecastIndex < 0) {
+    const selectedMatrixTimeIsInNight = matrixTimes.includes(cloudState.activeForecastTime ?? "");
+    if (forecastIndex < 0 && !selectedMatrixTimeIsInNight) {
       setCloud({ activeForecastTime: forecastTimeline[0].time });
     }
-  }, [cloudState.activeForecastTime, cloudState.activeObservationTime, forecastTimeline, isSatelliteMode, observationTimeline, safeTimelineIndex, setCloud]);
+  }, [cloudState.activeForecastTime, cloudState.activeObservationTime, forecastTimeline, isNightLightsMode, isSatelliteMode, matrixTimes, observationTimeline, safeTimelineIndex, setCloud]);
 
   useEffect(() => {
-    if (isSatelliteMode || !schedule.length) return;
+    if (isSatelliteMode || isNightLightsMode || !schedule.length) return;
     const nextTime = schedule[safeIndex]?.time ?? schedule[0].time;
     const activeIsNightTime = schedule.some((item) => item.time === cloudState.activeForecastTime);
     if (!cloudState.activeForecastTime || (activeIsNightTime && cloudState.timeIndex !== safeIndex)) {
       setCloud({ activeForecastTime: nextTime, timeIndex: safeIndex });
     }
-  }, [cloudState.activeForecastTime, cloudState.timeIndex, isSatelliteMode, safeIndex, schedule, setCloud]);
+  }, [cloudState.activeForecastTime, cloudState.timeIndex, isNightLightsMode, isSatelliteMode, safeIndex, schedule, setCloud]);
 
   useEffect(() => {
     if (!cloudState.playing || !timelineItems.length || isNightLightsMode) return;
@@ -216,16 +221,16 @@ export default function CloudTimeline() {
   if (!cloudState.enabled) return null;
 
   return (
-    <section className={`cloud-timeline${expanded ? " is-expanded" : " is-collapsed"}`} aria-label={isSatelliteMode ? "卫星云图时间工作台" : "逐小时预报时间工作台"} data-time-domain={isSatelliteMode ? "observation" : isNightLightsMode ? "reference" : "forecast"} data-active-time={activeTimelineTime ?? ""}>
+    <section className={`cloud-timeline${expanded ? " is-expanded" : " is-collapsed"}`} aria-label={isSatelliteMode ? "卫星云图时间工作台" : isNightLightsMode ? "光污染参考图层" : "逐小时预报时间工作台"} data-time-domain={isSatelliteMode ? "observation" : isNightLightsMode ? "reference" : "forecast"} data-active-time={activeTimelineTime ?? ""}>
       <div className="cloud-timeline-bar">
         <div className="cloud-timeline-title">
-          <span className="section-kicker">{isSatelliteMode ? "卫星观测" : "逐小时预报"}</span>
-          <strong>{isSatelliteMode ? "24 小时观测" : "当前至未来 72 小时"}</strong>
+          <span className="section-kicker">{isSatelliteMode ? "卫星观测" : isNightLightsMode ? "光污染基准" : "逐小时预报"}</span>
+          <strong>{isSatelliteMode ? "24 小时观测" : isNightLightsMode ? "VIIRS 2023 静态图层" : "当前至未来 72 小时"}</strong>
         </div>
-        <button type="button" className={`cloud-timeline-play${cloudState.playing ? " playing" : ""}`} onClick={() => setCloud({ playing: !cloudState.playing })} aria-label={cloudState.playing ? "暂停" : "播放"} disabled={isNightLightsMode || !timelineItems.length}>
+        {!isNightLightsMode && <button type="button" className={`cloud-timeline-play${cloudState.playing ? " playing" : ""}`} onClick={() => setCloud({ playing: !cloudState.playing })} aria-label={cloudState.playing ? "暂停" : "播放"} disabled={!timelineItems.length}>
           {cloudState.playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
-        </button>
-          <div className="cloud-timeline-slider">
+        </button>}
+          {!isNightLightsMode && <div className="cloud-timeline-slider">
             <input
               type="range"
               min={0}
@@ -239,11 +244,11 @@ export default function CloudTimeline() {
             <div className="cloud-timeline-labels" aria-hidden="true">
               {timelineTicks.map((item, index) => <span key={`${item.time}-${index}`}>{item?.time ? formatTimelineTime(item.time) : "暂无"}</span>)}
             </div>
-          </div>
-          {!isSatelliteMode && <div className="cloud-timeline-range" role="group" aria-label="预报夜数">
+          </div>}
+          {!isSatelliteMode && !isNightLightsMode && <div className="cloud-timeline-range" role="group" aria-label="预报夜数">
            {RANGE_OPTIONS.map((option) => <button key={option.value} type="button" className={cloudState.range === option.value ? "active" : ""} aria-pressed={cloudState.range === option.value} onClick={() => changeRange(option.value)}>{option.label}</button>)}
           </div>}
-          <span className="cloud-timeline-current" title={activeTimelineTime ?? undefined}>{activeTimelineTime ? (isSatelliteMode ? formatTimelineTime(activeTimelineTime) : `${formatNightLabel(current.nightKey, true)} ${formatHourWithDate(activeTimelineTime, current.nightKey)}`) : "暂无时次"}</span>
+          <span className="cloud-timeline-current" title={activeTimelineTime ?? undefined}>{isNightLightsMode ? "静态参考，无时间轴" : activeTimelineTime ? (isSatelliteMode ? formatTimelineTime(activeTimelineTime) : `${formatNightLabel(current.nightKey, true)} ${formatHourWithDate(activeTimelineTime, current.nightKey)}`) : "暂无时次"}</span>
         <button
           type="button"
           className="cloud-timeline-toggle"
@@ -257,7 +262,9 @@ export default function CloudTimeline() {
       </div>
 
       <div className="cloud-timeline-data-card" aria-live="polite">
-        {activeSatelliteFrame ? <>
+        {isNightLightsMode ? <>
+          <b>光污染基准</b><span>VIIRS 2023</span><span>静态参考图层</span><small>来源：darkmap.cn · 不代表实时光污染、Bortle 或 SQM 实测</small>
+        </> : activeSatelliteFrame ? <>
           <b>卫星观测</b><span>{activeSatelliteFrame.satellite}</span><span>{activeSatelliteFrame.label}</span><span>{formatTimelineTime(activeSatelliteFrame.time)}</span><small>来源：{activeSatelliteFrame.source} · {activeSatelliteFrame.coverage}</small>
         </> : <>
           <b>数值预报 · {cloudState.model.toUpperCase()}</b>
@@ -270,11 +277,11 @@ export default function CloudTimeline() {
 
       {expanded && (
         <div className="cloud-timeline-body" id="hourly-forecast-panel">
-          {!isSatelliteMode && <div className="cloud-night-tabs" role="tablist" aria-label="观测夜选择">
+          {!isSatelliteMode && !isNightLightsMode && <div className="cloud-night-tabs" role="tablist" aria-label="观测夜选择">
             {nightKeys.map((nightKey) => <button key={nightKey} type="button" role="tab" aria-selected={displayNight === nightKey} className={displayNight === nightKey ? "active" : ""} onClick={() => changeNight(nightKey)}>{formatNightLabel(nightKey, true)}</button>)}
           </div>}
 
-          {!isSatelliteMode && <div className="cloud-summary-card" aria-label="当前小时摘要">
+          {!isSatelliteMode && !isNightLightsMode && <div className="cloud-summary-card" aria-label="当前小时摘要">
             <span><b>观星分</b>{nightSummary?.score == null ? "—" : `${nightSummary.score}`}</span>
             <span><b>总云量</b>{selectedHour?.cloudCover == null ? "—" : `${Math.round(selectedHour.cloudCover)}%`}</span>
             <span><b>能见度</b>{selectedHour?.visibility == null ? "—" : `${(selectedHour.visibility / 1000).toFixed(1)} km`}</span>
@@ -285,7 +292,7 @@ export default function CloudTimeline() {
             <span><b>暗夜窗口</b>{nightSummary?.windowLabel ?? "—"}</span>
           </div>}
 
-           {isSatelliteMode ? <div className="cloud-observation-note">当前为卫星观测时间轴；切换到“云量预报”后查看未来 72 小时逐小时矩阵。</div> : <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} onSelectTime={setActiveTime} loading={state.cloudGridLoading} />}
+           {isSatelliteMode ? <div className="cloud-observation-note">当前为卫星观测时间轴；切换到“云量预报”后查看未来 72 小时逐小时矩阵。</div> : isNightLightsMode ? <div className="cloud-observation-note">当前为 VIIRS 2023 光污染静态参考图层；它没有逐小时时间域，不参与天气评分。</div> : <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} onSelectTime={setActiveTime} loading={state.cloudGridLoading} />}
           {state.cloudGridLoading && <div className="cloud-timeline-loading" role="status">正在采样云图数据…</div>}
         </div>
       )}

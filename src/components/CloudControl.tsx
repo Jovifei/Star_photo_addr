@@ -22,7 +22,7 @@ const CLOUD_MODES: Array<{ id: CloudDisplayMode; label: string; color: string }>
 ];
 
 export default function CloudControl() {
-  const { state, setCloud } = useStore();
+  const { state, setCloud, setMapViewMode } = useStore();
   const { cloudState, selectedNight, forecast, cloudGrid } = state;
   const [buildInfo, setBuildInfo] = useState<{ version?: string; buildRevision?: string } | null>(null);
   useEffect(() => {
@@ -102,8 +102,8 @@ export default function CloudControl() {
         <div className="cloud-field">
           <label>图层模式</label>
           <div className="cloud-tabs" role="tablist" aria-label="云图与卫星图层">
-            {[{ id: "satellite-cloud", label: "卫星实况" }, { id: "forecast-cloud", label: "云量预报" }, { id: "night-lights", label: "夜光基准" }].map((layer) => (
-              <button key={layer.id} type="button" role="tab" aria-selected={cloudState.overlayMode === layer.id} className={cloudState.overlayMode === layer.id ? "active" : ""} onClick={() => setCloud({ overlayMode: layer.id as "forecast-cloud" | "satellite-cloud" | "night-lights", playing: false })}>{layer.label}</button>
+            {[{ id: "satellite-cloud", label: "卫星云图", map: "satellite" as const }, { id: "forecast-cloud", label: "综合决策", map: "combined" as const }, { id: "night-lights", label: "光污染", map: "light-pollution" as const }].map((layer) => (
+              <button key={layer.id} type="button" role="tab" aria-selected={cloudState.overlayMode === layer.id} className={cloudState.overlayMode === layer.id ? "active" : ""} onClick={() => { setMapViewMode(layer.map); setCloud({ overlayMode: layer.id as "forecast-cloud" | "satellite-cloud" | "night-lights", playing: false }); }}>{layer.label}</button>
             ))}
           </div>
           {cloudState.overlayMode === "satellite-cloud" && <small className="cloud-source-note">NASA GIBS · Himawari AHI Band 13 · 观测时次</small>}

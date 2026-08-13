@@ -23,11 +23,16 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type ReactNode,
 } from "react";
 import {
   DEFAULT_CLOUD_STATE,
   CUSTOM_CANDIDATES_STORAGE_KEY,
+  OBSERVING_BORTLE_LIMIT_STORAGE_KEY,
+  OBSERVING_MAP_VIEW_STORAGE_KEY,
+  OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY,
+  OBSERVING_THRESHOLD_STORAGE_KEY,
   SELECTED_LOCATION_STORAGE_KEY,
 } from "@/lib/constants";
 import {
@@ -45,8 +50,10 @@ import type {
   DarkSkySample,
   Location,
   LocationForecast,
+  MapViewMode,
   SatelliteFrame,
 } from "@/lib/types";
+import { MAX_SHORTLIST_SIZE } from "@/lib/observingSites";
 
 interface AppState {
   sample: DarkSkySample | null;
@@ -71,6 +78,10 @@ interface AppState {
    * Key = locationId, value = LocationForecast (1 h expiry handled by caller).
    */
   forecastCache: Map<string, LocationForecast>;
+  mapViewMode: MapViewMode;
+  recommendationThreshold: number;
+  observingBortleLimit: 3 | 4;
+  recommendedOnly: boolean;
 }
 
 const homeNight = currentNightKey();
@@ -99,6 +110,10 @@ const initialState: AppState = {
   cloudGridLoading: false,
   satelliteFrames: [],
   forecastCache: new Map(),
+  mapViewMode: "satellite",
+  recommendationThreshold: 70,
+  observingBortleLimit: 3,
+  recommendedOnly: false,
 };
 
 type Action =
@@ -123,6 +138,10 @@ type Action =
       forecast: LocationForecast;
     }
   | { type: "CLEAR_FORECAST_CACHE" }
+  | { type: "SET_MAP_VIEW_MODE"; mode: MapViewMode }
+  | { type: "SET_RECOMMENDATION_THRESHOLD"; threshold: number }
+  | { type: "SET_OBSERVING_BORTLE_LIMIT"; limit: 3 | 4 }
+  | { type: "SET_RECOMMENDED_ONLY"; enabled: boolean }
   | { type: "HYDRATE_LOCATION"; location: Location };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -145,20 +164,24 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         candidates: [
-          ...action.candidates,
+          ...action.candidates.slice(0, MAX_SHORTLIST_SIZE),
           ...state.candidates.filter(
             (candidate) =>
-              candidate.kind === "自定义" &&
               !action.candidates.some((incoming) => incoming.id === candidate.id),
           ),
-        ],
+        ].slice(0, MAX_SHORTLIST_SIZE),
       };
     case "ADD_CANDIDATE": {
       // Avoid duplicate IDs.
       if (state.candidates.some((c) => c.id === action.candidate.id)) {
         return state;
       }
-      return { ...state, candidates: [...state.candidates, action.candidate] };
+      return {
+        ...state,
+        candidates: state.candidates.length >= MAX_SHORTLIST_SIZE
+          ? state.candidates
+          : [...state.candidates, action.candidate],
+      };
     }
     case "REMOVE_CANDIDATE":
       return {
@@ -184,6 +207,14 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case "CLEAR_FORECAST_CACHE":
       return { ...state, forecastCache: new Map() };
+    case "SET_MAP_VIEW_MODE":
+      return { ...state, mapViewMode: action.mode };
+    case "SET_RECOMMENDATION_THRESHOLD":
+      return { ...state, recommendationThreshold: Math.min(90, Math.max(50, Math.round(action.threshold))) };
+    case "SET_OBSERVING_BORTLE_LIMIT":
+      return { ...state, observingBortleLimit: action.limit };
+    case "SET_RECOMMENDED_ONLY":
+      return { ...state, recommendedOnly: action.enabled };
     default:
       return state;
   }
@@ -226,12 +257,17 @@ interface StoreContextValue {
   setSatelliteFrames: (frames: SatelliteFrame[]) => void;
   cacheForecast: (locationId: string, forecast: LocationForecast) => void;
   clearForecastCache: () => void;
+  setMapViewMode: (mode: MapViewMode) => void;
+  setRecommendationThreshold: (threshold: number) => void;
+  setObservingBortleLimit: (limit: 3 | 4) => void;
+  setRecommendedOnly: (enabled: boolean) => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [candidatesHydrated, setCandidatesHydrated] = useState(false);
   const forecastHydrationKeyRef = useRef<string | null>(null);
   const selectedLocationIdRef = useRef<string | null>(null);
   const latestForecastRequestRef = useRef(0);
@@ -282,6 +318,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      const mode = localStorage.getItem(OBSERVING_MAP_VIEW_STORAGE_KEY);
+      if (mode === "satellite" || mode === "light-pollution" || mode === "combined") {
+        dispatch({ type: "SET_MAP_VIEW_MODE", mode });
+      }
+      const threshold = Number(localStorage.getItem(OBSERVING_THRESHOLD_STORAGE_KEY));
+      if (Number.isFinite(threshold)) dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });
+      const limit = Number(localStorage.getItem(OBSERVING_BORTLE_LIMIT_STORAGE_KEY));
+      if (limit === 3 || limit === 4) dispatch({ type: "SET_OBSERVING_BORTLE_LIMIT", limit });
+      const recommendedOnly = localStorage.getItem(OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY);
+      if (recommendedOnly === "true" || recommendedOnly === "false") {
+        dispatch({ type: "SET_RECOMMENDED_ONLY", enabled: recommendedOnly === "true" });
+      }
+    } catch {
+      // Local preferences are optional; the default observation session remains usable.
+    }
+  }, []);
+
   // Restore user-added comparison locations independently from provider data.
   useEffect(() => {
     try {
@@ -292,6 +347,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       // Ignore stale/corrupt local data.
+    } finally {
+      setCandidatesHydrated(true);
     }
   }, []);
 
@@ -317,17 +374,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state.selectedLocation]);
 
   useEffect(() => {
+    if (!candidatesHydrated) return;
     try {
-      localStorage.setItem(
-        CUSTOM_CANDIDATES_STORAGE_KEY,
-        JSON.stringify(
-          state.candidates.filter((candidate) => candidate.kind === "自定义"),
-        ),
-      );
+        localStorage.setItem(
+          CUSTOM_CANDIDATES_STORAGE_KEY,
+          JSON.stringify(state.candidates),
+        );
     } catch {
       // Quota exceeded/private mode — the current session remains usable.
     }
-  }, [state.candidates]);
+  }, [candidatesHydrated, state.candidates]);
 
   const selectLocation = useCallback(async (location: Location, model?: CloudState["model"]) => {
     const selectedModel = model ?? state.cloudState.model;
@@ -439,20 +495,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addCandidate = useCallback((location: Location) => {
+    if (state.candidates.length >= MAX_SHORTLIST_SIZE) return;
     const candidate: CityCandidate = {
       id: location.id,
       adcode: 0,
-      province: "",
+      province: location.province ?? "",
       city: location.name,
       name: location.name,
       longitude: location.longitude,
       latitude: location.latitude,
       bortle: location.bortle ?? 0,
       kind: "自定义",
-      note: "",
+      note: location.description ?? location.area ?? "",
     };
     dispatch({ type: "ADD_CANDIDATE", candidate });
-  }, []);
+  }, [state.candidates.length]);
 
   const removeCandidate = useCallback((id: string) => {
     dispatch({ type: "REMOVE_CANDIDATE", id });
@@ -517,6 +574,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "CLEAR_FORECAST_CACHE" });
   }, []);
 
+  const setMapViewMode = useCallback((mode: MapViewMode) => {
+    dispatch({ type: "SET_MAP_VIEW_MODE", mode });
+    try { localStorage.setItem(OBSERVING_MAP_VIEW_STORAGE_KEY, mode); } catch { /* optional preference */ }
+  }, []);
+
+  const setRecommendationThreshold = useCallback((threshold: number) => {
+    dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });
+    try { localStorage.setItem(OBSERVING_THRESHOLD_STORAGE_KEY, String(threshold)); } catch { /* optional preference */ }
+  }, []);
+
+  const setObservingBortleLimit = useCallback((limit: 3 | 4) => {
+    dispatch({ type: "SET_OBSERVING_BORTLE_LIMIT", limit });
+    try { localStorage.setItem(OBSERVING_BORTLE_LIMIT_STORAGE_KEY, String(limit)); } catch { /* optional preference */ }
+  }, []);
+
+  const setRecommendedOnly = useCallback((enabled: boolean) => {
+    dispatch({ type: "SET_RECOMMENDED_ONLY", enabled });
+    try { localStorage.setItem(OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY, String(enabled)); } catch { /* optional preference */ }
+  }, []);
+
   const value = useMemo<StoreContextValue>(
     () => ({
       state,
@@ -535,6 +612,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSatelliteFrames,
       cacheForecast,
       clearForecastCache,
+      setMapViewMode,
+      setRecommendationThreshold,
+      setObservingBortleLimit,
+      setRecommendedOnly,
     }),
     [
       state,
@@ -553,6 +634,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSatelliteFrames,
       cacheForecast,
       clearForecastCache,
+      setMapViewMode,
+      setRecommendationThreshold,
+      setObservingBortleLimit,
+      setRecommendedOnly,
     ],
   );
 

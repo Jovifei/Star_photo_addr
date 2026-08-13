@@ -18,6 +18,7 @@ export default function SatelliteLayer() {
   const [viewportKey, setViewportKey] = useState(() => viewportSignature(map));
   const [refreshTick, setRefreshTick] = useState(0);
   const activeMode = mode ?? "forecast-cloud";
+  const usesUnifiedViirs = activeMode === "night-lights" && state.mapViewMode === "light-pollution";
 
   useMapEvents({
     moveend: () => setViewportKey(viewportSignature(map)),
@@ -25,13 +26,13 @@ export default function SatelliteLayer() {
   });
 
   useEffect(() => {
-    if (activeMode === "forecast-cloud") return;
+    if (activeMode === "forecast-cloud" || usesUnifiedViirs) return;
     const timer = setInterval(() => setRefreshTick((value) => value + 1), REFRESH_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [activeMode]);
+  }, [activeMode, usesUnifiedViirs]);
 
   useEffect(() => {
-    if (activeMode === "forecast-cloud") return;
+    if (activeMode === "forecast-cloud" || usesUnifiedViirs) return;
     const kind = activeMode === "satellite-cloud" ? "cloud" : "night-lights";
     const center = map.getCenter();
     const controller = new AbortController();
@@ -59,13 +60,14 @@ export default function SatelliteLayer() {
         }
       });
     return () => controller.abort();
-  }, [activeMode, map, refreshTick, setCloud, setSatelliteFrames, viewportKey]);
+  }, [activeMode, map, refreshTick, setCloud, setSatelliteFrames, usesUnifiedViirs, viewportKey]);
 
   const displayedFrame = activeMode === "satellite-cloud"
     ? frames.find((item) => item.time === state.cloudState.activeObservationTime) ?? frames[0] ?? null
     : frame;
 
-  if (activeMode === "forecast-cloud" || frameMode !== activeMode || !displayedFrame) {
+  if (activeMode === "forecast-cloud" || usesUnifiedViirs) return null;
+  if (frameMode !== activeMode || !displayedFrame) {
     return frameMode === activeMode && error
       ? <div className="satellite-layer-error" role="status">{error}</div>
       : frameMode === activeMode

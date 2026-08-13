@@ -1,5 +1,5 @@
 import { cpSync, existsSync } from "node:fs";
-import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
 const root = process.cwd();
@@ -15,17 +15,13 @@ cpSync(resolve(root, "public"), resolve(standalone, "public"), {
   recursive: true,
 });
 
-const child = spawn(process.execPath, [resolve(standalone, "server.js")], {
-  cwd: standalone,
-  stdio: "inherit",
-  env: {
-    ...process.env,
-    HOSTNAME: process.env.HOSTNAME || "127.0.0.1",
-    PORT: process.env.PORT || "3100",
-  },
-});
+process.env.HOSTNAME ||= "127.0.0.1";
+process.env.PORT ||= "3100";
 
-const stop = (signal) => child.kill(signal);
-process.on("SIGINT", () => stop("SIGINT"));
-process.on("SIGTERM", () => stop("SIGTERM"));
-child.on("exit", (code) => process.exit(code ?? 0));
+// Run the standalone server in this process. On Windows, Playwright stopping a
+// shell command does not reliably terminate a grandchild spawned by this
+// script, which used to leave the E2E port occupied and keep the runner alive.
+// Keeping Next in the webServer process gives Playwright one process tree to
+// own and makes the command exit status authoritative.
+const require = createRequire(import.meta.url);
+require(resolve(standalone, "server.js"));

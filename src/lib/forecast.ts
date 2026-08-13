@@ -161,6 +161,9 @@ export async function fetchSurfaceForecasts(
   if (locations.length === 0) return [];
   const data = await requestJson(buildForecastUrl(locations, days, model), signal);
   const responses = Array.isArray(data) ? data : [data];
+  if (responses.length !== locations.length) {
+    throw new Error(`天气上游响应数量不匹配：请求 ${locations.length} 个地点，收到 ${responses.length} 个响应`);
+  }
   const fetchedAt = new Date().toISOString();
   const metadata: ForecastMetadata = {
     source: "Open-Meteo",
@@ -170,7 +173,7 @@ export async function fetchSurfaceForecasts(
     units: FORECAST_UNITS,
   };
   return locations.map((location, index) => {
-    const single = responses[index] ?? responses[0];
+    const single = responses[index];
     if (!single) throw new Error("天气上游缺少对应地点的响应");
     return {
       locationId: location.id,

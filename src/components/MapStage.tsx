@@ -12,6 +12,7 @@ import MapLegend from "@/components/MapLegend";
 import BortleControl from "@/components/BortleControl";
 import CloudControl from "@/components/CloudControl";
 import CloudTimeline from "@/components/CloudTimeline";
+import ObservingMapControl from "@/components/ObservingMapControl";
 
 // Leaflet touches `window`, so the map is client-only.
 const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
@@ -46,6 +47,7 @@ export default function MapStage() {
         <MapSearchCard />
         <BortleControl />
         <CloudControl />
+        <ObservingMapControl />
         <MapLegend />
         <MapSetup hidden={ready} />
       </div>

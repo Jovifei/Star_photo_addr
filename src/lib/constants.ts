@@ -80,6 +80,10 @@ export const FORECAST_CACHE_MAX_AGE_MS = 60 * 60 * 1000;
 /** localStorage key for persisted selected location (v2, versioned). */
 export const SELECTED_LOCATION_STORAGE_KEY = "perseids-selected-location-v2";
 export const CUSTOM_CANDIDATES_STORAGE_KEY = "perseids-custom-candidates-v1";
+export const OBSERVING_MAP_VIEW_STORAGE_KEY = "jovi-observing-map-view-v1";
+export const OBSERVING_THRESHOLD_STORAGE_KEY = "jovi-observing-threshold-v1";
+export const OBSERVING_BORTLE_LIMIT_STORAGE_KEY = "jovi-observing-bortle-limit-v1";
+export const OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY = "jovi-observing-recommended-only-v1";
 
 /** Default interactive cloud state (single forecast channel + timeline).
  *  Cloud is ON by default: on load the map samples the current viewport and

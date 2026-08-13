@@ -15,6 +15,10 @@ export interface Location {
   source: "参考点位" | "自定义" | "modeled" | "搜索";
   /** Optional pre-computed Bortle estimate (e.g. from cities.json). */
   bortle?: number;
+  /** Finder metadata retained when a curated site crosses into the planner. */
+  province?: string;
+  area?: string;
+  description?: string;
 }
 
 /**
@@ -102,6 +106,55 @@ export interface SatelliteFrame {
 
 /** Mutually exclusive map products. Observation and forecast are never mixed. */
 export type CloudOverlayMode = "satellite-cloud" | "forecast-cloud" | "night-lights";
+
+/** The three user-facing map products. Kept separate from the legacy overlay
+ * values so old deep links remain readable while the new shell has a small,
+ * stable interface. */
+export type MapViewMode = "satellite" | "light-pollution" | "combined";
+
+export type RecommendationBand =
+  | "priority"
+  | "recommended"
+  | "watch"
+  | "not-recommended"
+  | "unknown";
+
+export type RecommendationConfidence = "high" | "medium" | "low" | "unknown";
+
+/** Normalized point used by both the map and the decision workspace. */
+export interface ObservingSite {
+  id: string;
+  name: string;
+  province: string;
+  area: string;
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  bortle: 1 | 2 | 3 | 4;
+  description?: string;
+}
+
+export interface RecommendationScore {
+  score: number | null;
+  band: RecommendationBand;
+  cloud: number | null;
+  darkness: number | null;
+  weatherRisk: number | null;
+  bestWindow: string | null;
+  blockers: string[];
+  confidence: RecommendationConfidence;
+  validHours: number;
+}
+
+export interface ObservationSnapshot {
+  date: string;
+  days: 1 | 3 | 5 | 7;
+  model: ForecastModel;
+  generatedAt: string;
+  source: string;
+  stale: boolean;
+  sites: Record<string, RecommendationScore[]>;
+}
 
 export type CloudTimeDomain = "observation" | "forecast" | "reference";
 

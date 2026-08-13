@@ -17,11 +17,12 @@ import {
   CARTO_DARK_NOLABELS_URL,
 } from "@/lib/constants";
 import WorldAtlasOverlay from "@/components/WorldAtlasOverlay";
-import ViirsTileLayer from "@/components/ViirsTileLayer";
 import BoundaryLayers from "@/components/BoundaryLayers";
 import CloudLayer from "@/components/CloudLayer";
 import SatelliteLayer from "@/components/SatelliteLayer";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
+import ObservingViirsLayer from "@/components/ObservingViirsLayer";
+import ObservingSitesLayer from "@/components/ObservingSitesLayer";
 
 function ClickHandler({
   onSample,
@@ -164,10 +165,11 @@ export default function MapCanvas({
       {/* z-index 10: Chinese annotation labels (Tianditu cia_w) */}
       <ChineseLabelLayer />
       <WorldAtlasOverlay />
-      {showViirs && <ViirsTileLayer />}
+      {showViirs && <ObservingViirsLayer />}
       {showBoundaries && <BoundaryLayers />}
       {showCloud && <CloudLayer />}
       {showCloud && <SatelliteLayer />}
+      {showCloud && <ObservingSitesLayer />}
       <ClickHandler onSample={onSample} />
       <SampleMarker />
       <RecenterOnSelected enabled={recenterOnSelect} />

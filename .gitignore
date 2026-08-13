@@ -8,6 +8,7 @@ out/
 *.log
 .DS_Store
 coverage/
+data/snapshots/
 playwright-report/
 test-results/
 design-qa-assets/

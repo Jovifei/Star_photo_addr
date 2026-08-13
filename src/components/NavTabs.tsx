@@ -60,7 +60,6 @@ export default function NavTabs() {
 
   const tabs: Array<{ href: string; label: string }> = [
     { href: homeHref, label: "逐星" },
-    { href: "/sites", label: "推荐观星地点" },
     { href: plannerHref, label: "星野决策" },
   ];
 

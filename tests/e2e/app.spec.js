@@ -103,11 +103,13 @@ test("取样点数据跟随指定模型刷新并说明数据语义", async ({ pa
 });
 
 test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) => {
-  await page.goto("/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=2026-08-09&model=icon");
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const [, month, day] = today.split("-");
+  await page.goto(`/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=${today}&model=icon`);
   await expect(page.locator(".app-shell")).toBeVisible();
   await expect(page.locator(".hero-card")).toBeVisible({ timeout: 15000 });
   await expect(page.locator(".hero-card h2")).toHaveCount(1);
-  await expect(page.locator(".hero-card .section-kicker")).toContainText("8月9日");
+  await expect(page.locator(".hero-card .section-kicker")).toContainText(`${Number(month)}月${Number(day)}日`);
   await expect(page.locator(".suite-nav a").first()).toHaveAttribute("href", /lat=30\.4694/);
   await expect(page.locator(".suite-nav a").first()).toHaveAttribute("href", /model=icon/);
   const detail = page.locator(".detail-drawer");
@@ -140,6 +142,35 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
   await expect(targetHour).toHaveAttribute("aria-pressed", "true");
   await expect.poll(async () => new URL(await plannerHomeLink.getAttribute("href"), "http://local.test").searchParams.get("forecastTime")).toBe(targetTime);
   await expect(detail.locator(".hourly-matrix")).toBeVisible();
+});
+
+test("地图加入候选后星野决策保留同一地点", async ({ page }) => {
+  await page.goto("/");
+  const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
+  const visibleMarkerIndex = () => markers.evaluateAll((elements) => elements.findIndex((element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0
+      && rect.height > 0
+      && rect.left >= 0
+      && rect.top >= 0
+      && rect.right <= window.innerWidth
+      && rect.bottom <= window.innerHeight;
+  }));
+  await expect.poll(visibleMarkerIndex, { timeout: 15000 }).toBeGreaterThanOrEqual(0);
+  const markerIndex = await visibleMarkerIndex();
+  const marker = markers.nth(markerIndex);
+  await expect(marker).toBeVisible({ timeout: 15000 });
+  await marker.click();
+  const selectedName = (await page.locator(".panel-location-name").textContent())?.trim();
+  expect(selectedName).toBeTruthy();
+  const addButton = page.getByRole("button", { name: "加入星野决策候选" });
+  await expect(addButton).toBeVisible({ timeout: 15000 });
+  await addButton.click();
+  await expect(page.getByRole("button", { name: "已加入星野决策" })).toBeDisabled();
+
+  await page.getByRole("link", { name: "星野决策" }).click();
+  await expect(page).toHaveURL(/\/planner/);
+  await expect(page.locator(".planner-root")).toContainText(selectedName, { timeout: 15000 });
 });
 
 test("卫星图层入口互斥，数据源状态面板可见", async ({ page }) => {

@@ -1,5 +1,8 @@
 # Lessons
 
+- 2026-08-12: A cloned Leaflet route needs a real browser screenshot after CSS changes; a descendant selector can miss the same MapContainer element and leave Leaflet's default gray background in place. Verify the computed background and use a same-element scoped rule before accepting a dark map.
+- 2026-08-12: Keep a public-site clone on an isolated route when the repository already has an authored product homepage; route isolation preserves the existing product contract and makes visual regression evidence attributable.
+
 - When asked to merge work into the latest branch, verify both tree content and commit topology. Do not create a publication branch from an older base merely because a squash produces the latest tree; that leaves a parallel history line.
 - Before publishing a consolidated branch, show the intended surviving ref, whether old refs will remain or be deleted, and the expected post-push graph. Treat branch preservation and branch consolidation as different requirements.
 - For map-first interfaces, a dense time-series panel must not be an unconstrained absolute overlay: keep the primary canvas in its own viewport, progressively disclose the detail panel, and give only the panel a bounded vertical scroll region.
@@ -22,3 +25,19 @@
 - 2026-08-09: A right-edge restore control must be tested together with top-right map controls; when their hit areas overlap, reserve a layout gap instead of relying on z-index or force-clicking tests.
 - 2026-08-10: A 1/3/5/7-day selector is not linked merely because it renders more cards. Acceptance must assert the chart dataset/category count changes, the active night changes the single-night chart key, and the selected night/hour propagates to the shared cross-product URL state.
 - 2026-08-10: An inbound deep-link location is only the initial selection, not permanent authority. After the user selects another planner location, cross-product links must prefer the current detail; selecting a no-data night must also clear the previous forecast ISO time.
+
+- 2026-08-12: A public-site clone is not complete when the shell only has demo markers. Import the verified location and boundary snapshots first, then assert the exact Bortle-filter counts and stable IDs across map, detail, review, and export.
+- 2026-08-12: Never leave a full weather description as a permanent tooltip on every dense map marker. Keep permanent labels to the target site's compact name label and move rating, source, and risk detail to hover/click/detail surfaces; always review a real screenshot after marker fan-out.
+- 2026-08-12: A refresh button must reach the cache boundary. Passing a changing query parameter to a route is insufficient if the server cache key ignores it; thread an explicit force-refresh flag through route, client, and fetcher, then verify a real API response.
+- 2026-08-12: Dynamic local dates must also be used by E2E assertions. A stale `2026-08-09` expectation failed correctly on the current `2026-08-12` Shanghai date; update the test to compute the runtime date instead of weakening the product's tonight-first behavior.
+- 2026-08-12: For wide data exports, an “Excel” button should include the actual hourly fields and status semantics, not only a summary CSV. An Excel-compatible HTML workbook with full hourly columns is a useful dependency-free fallback when no XLSX library is installed.
+- 2026-08-12: Dense map labels must never permanently expose per-location rain/cloud/rating prose. The map is for spatial orientation; move weather detail to the selected-location panel and keep the permanent label name-only.
+- 2026-08-12: “只显示地点”也包括地点旁的风险徽标；如果用户要看牵牛岗、太子尖等名称，地图常驻层只保留名称和非文字定位点，警告与天气解释必须进入详情面板。
+- 2026-08-12: “Complete clone” needs an explicit audit, not a blanket claim. Compare the live target's controls and states, mark intentional exclusions separately, and expose the remaining fidelity gaps in a reviewable route such as `/integration-plan`.
+- 2026-08-13: A mobile matrix click can expose a time-domain race that desktop timing hides. Keep the E2E forecast fixture anchored to the runtime Asia/Shanghai date and do not let the forecast first-frame guard overwrite a valid selected night-hour ISO time.
+- 2026-08-13: A Playwright web server wrapper must not spawn a second long-lived Node process on Windows. Run the Next standalone server inside the wrapper process so Playwright can terminate it and the full-suite exit code remains authoritative.
+- 2026-08-13: A Docker worker built from the Web image inherits its HTTP healthcheck unless Compose overrides it. Give background workers a process-appropriate healthcheck and verify both services become healthy, not merely that the worker printed one successful refresh.
+- 2026-08-13: Cross-page shortlist acceptance should select a marker that is actually inside the current map viewport, then assert the selected location name survives navigation. DOM order and Leaflet-generated accessibility attributes are not stable proxies for a user's clickable map point.
+- 2026-08-13: GIBS time dimensions are identified by an OWS child element, not necessarily a `name="time"` attribute. Expand only the published ISO ranges and preserve gaps; subtracting fixed intervals from the latest timestamp fabricates observations.
+- 2026-08-13: Recommendation validity must be gated by the field that drives the score. Wind or precipitation availability cannot make a night scoreable when most cloud-cover samples are missing.
+- 2026-08-13: A location-only forecast cache can silently cross model boundaries. Every consumer must verify metadata.model or use a model-qualified key before displaying or scoring cached data.

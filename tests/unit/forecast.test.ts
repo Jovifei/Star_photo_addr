@@ -1,8 +1,10 @@
 // Unit tests for forecast.ts pure helpers (time normalization / UTC recovery).
 // Open-Meteo returns local wall-clock "YYYY-MM-DDTHH:mm" (timezone=auto).
 // `utc_offset_seconds` is in SECONDS per Open-Meteo's schema, so China +8h = 28800.
-import { describe, it, expect } from "vitest";
-import { buildForecastUrl, openMeteoModelParameter, parseProviderTime } from "@/lib/forecast";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import { buildForecastUrl, fetchSurfaceForecasts, openMeteoModelParameter, parseProviderTime } from "@/lib/forecast";
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("parseProviderTime — 本地墙钟还原真 UTC", () => {
   it("16 位输入无秒也正确补零", () => {
@@ -48,5 +50,17 @@ describe("forecast model routing", () => {
     const location = { id: "x", name: "", latitude: 30, longitude: 120, elevation: 0, source: "搜索" as const };
     expect(buildForecastUrl([location], 2, "gfs")).toContain("models=gfs_seamless");
     expect(buildForecastUrl([location], 2, "best_match")).not.toContain("models=");
+  });
+
+  it("rejects incomplete multi-location responses instead of duplicating the first location", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ latitude: 30, longitude: 120, elevation: 0, timezone: "Asia/Shanghai", utc_offset_seconds: 28800, hourly: { time: [] } }),
+    }));
+    const locations = [
+      { id: "a", name: "A", latitude: 30, longitude: 120, elevation: 0, source: "搜索" as const },
+      { id: "b", name: "B", latitude: 31, longitude: 121, elevation: 0, source: "搜索" as const },
+    ];
+    await expect(fetchSurfaceForecasts(locations, 1)).rejects.toThrow("响应数量不匹配");
   });
 });

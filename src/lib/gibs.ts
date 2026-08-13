@@ -18,10 +18,61 @@ export function extractLayerBlock(xml: string, identifier: string): string | nul
 
 export function parseTimeDimension(xml: string, identifier: string): { latest: string | null; values: string[] } {
   const block = extractLayerBlock(xml, identifier) ?? "";
-  const dimension = block.match(/<Dimension[^>]*name=["']time["'][^>]*>([\s\S]*?)<\/Dimension>/i)?.[1] ?? block;
+  const dimension = extractTimeDimension(block) ?? block;
   const values = (dimension.match(/\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2})?Z)?/g) ?? []).sort();
   const latestDefault = block.match(/<Default>(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z)<\/Default>/i)?.[1] ?? null;
   return { latest: latestDefault ?? values.at(-1) ?? null, values };
+}
+
+export function parseRecentTimeDimension(
+  xml: string,
+  identifier: string,
+  windowHours = 24,
+  nowMs = Date.now(),
+): string[] {
+  const block = extractLayerBlock(xml, identifier) ?? "";
+  const dimension = extractTimeDimension(block) ?? "";
+  const rawValues = [...dimension.matchAll(/<Value>([\s\S]*?)<\/Value>/gi)].map((match) => match[1].trim());
+  const fallbackValues = rawValues.length ? rawValues : [dimension];
+  const latest = parseTimeDimension(xml, identifier).latest;
+  const latestMs = latest ? Math.min(Date.parse(latest), nowMs) : nowMs;
+  const oldestMs = latestMs - windowHours * 60 * 60 * 1000;
+  const times = new Set<string>();
+
+  for (const value of fallbackValues) {
+    for (const item of value.split(",").map((part) => part.trim()).filter(Boolean)) {
+      const range = item.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z)\/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?Z)\/PT(\d+)M$/i);
+      if (range) {
+        const startMs = Date.parse(range[1]);
+        const endMs = Math.min(Date.parse(range[2]), latestMs);
+        const stepMs = Number(range[3]) * 60 * 1000;
+        if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || !stepMs || endMs < oldestMs) continue;
+        const firstMs = Math.max(startMs, oldestMs);
+        const alignedMs = startMs + Math.ceil((firstMs - startMs) / stepMs) * stepMs;
+        for (let timeMs = alignedMs; timeMs <= endMs; timeMs += stepMs) times.add(toGibsTime(timeMs));
+        continue;
+      }
+      const timeMs = Date.parse(item);
+      if (Number.isFinite(timeMs) && timeMs >= oldestMs && timeMs <= latestMs) times.add(toGibsTime(timeMs));
+    }
+  }
+
+  return [...times].sort((left, right) => Date.parse(right) - Date.parse(left));
+}
+
+function extractTimeDimension(block: string): string | null {
+  for (const match of block.matchAll(/<Dimension([^>]*)>([\s\S]*?)<\/Dimension>/gi)) {
+    const attributes = match[1];
+    const body = match[2];
+    if (/name=["']time["']/i.test(attributes) || /<(?:(?:ows:)?)Identifier>Time<\/(?:(?:ows:)?)Identifier>/i.test(body)) {
+      return body;
+    }
+  }
+  return null;
+}
+
+function toGibsTime(timeMs: number): string {
+  return new Date(timeMs).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 export function parseTileTemplate(block: string): string | null {

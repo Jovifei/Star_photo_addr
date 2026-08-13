@@ -4,6 +4,7 @@ import {
   extractLayerBlock,
   latLngToTile,
   parseTileTemplate,
+  parseRecentTimeDimension,
   parseTimeDimension,
   tileUrl,
 } from "@/lib/gibs";
@@ -26,6 +27,25 @@ describe("GIBS satellite capability parsing", () => {
     expect(frame.observedAt).toBe(frame.time);
     expect(frame.label).toContain("卫星云");
     expect(tileUrl(frame.tileTemplate, frame.time, 6, 12, 21)).toContain("2026-08-09T06:30:00Z/6/21/12");
+  });
+
+  it("expands only real capability ranges and preserves observation gaps", () => {
+    const xml = `<Capabilities><Contents><Layer><Identifier>Himawari_AHI_Band13_Clean_Infrared</Identifier><Dimension name="Time"><Default>2026-08-09T06:30:00Z</Default><Value>2026-08-09T05:30:00Z/2026-08-09T05:50:00Z/PT10M</Value><Value>2026-08-09T06:20:00Z/2026-08-09T06:30:00Z/PT10M</Value></Dimension></Layer></Contents></Capabilities>`;
+    expect(parseRecentTimeDimension(xml, "Himawari_AHI_Band13_Clean_Infrared", 24, Date.parse("2026-08-09T07:00:00Z"))).toEqual([
+      "2026-08-09T06:30:00Z",
+      "2026-08-09T06:20:00Z",
+      "2026-08-09T05:50:00Z",
+      "2026-08-09T05:40:00Z",
+      "2026-08-09T05:30:00Z",
+    ]);
+  });
+
+  it("supports WMTS time dimensions identified by an OWS child element", () => {
+    const xml = `<Capabilities><Contents><Layer><ows:Identifier>Himawari_AHI_Band13_Clean_Infrared</ows:Identifier><Dimension><ows:Identifier>Time</ows:Identifier><Default>2026-08-09T06:30:00Z</Default><Value>2026-08-09T06:20:00Z/2026-08-09T06:30:00Z/PT10M</Value></Dimension></Layer></Contents></Capabilities>`;
+    expect(parseRecentTimeDimension(xml, "Himawari_AHI_Band13_Clean_Infrared", 24, Date.parse("2026-08-09T07:00:00Z"))).toEqual([
+      "2026-08-09T06:30:00Z",
+      "2026-08-09T06:20:00Z",
+    ]);
   });
 
   it("uses the complete 2016 Black Marble baseline for night lights", () => {

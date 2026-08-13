@@ -5,6 +5,7 @@ import {
   buildSatelliteFrame,
   extractLayerBlock,
   parseTileTemplate,
+  parseRecentTimeDimension,
   parseTimeDimension,
 } from "@/lib/gibs";
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
     const matrixSet = kind === "cloud" ? "GoogleMapsCompatible_Level6" : "GoogleMapsCompatible_Level8";
     const concreteTemplate = template.replaceAll("{TileMatrixSet}", matrixSet);
     const frameTimes = kind === "cloud"
-      ? buildTenMinuteFrames(dimension.latest)
+      ? parseRecentTimeDimension(xml, identifier)
       : [dimension.latest.slice(0, 10)];
     const frames = frameTimes.map((time) => buildSatelliteFrame(kind, time, concreteTemplate));
     return NextResponse.json({
@@ -63,14 +64,4 @@ export async function GET(request: NextRequest) {
   } finally {
     clearTimeout(timeout);
   }
-}
-
-function buildTenMinuteFrames(latest: string): string[] {
-  const requested = new Date(latest);
-  const start = requested.getTime() > Date.now() ? new Date() : requested;
-  return Array.from({ length: 145 }, (_, index) => {
-    const time = new Date(start);
-    time.setUTCMinutes(time.getUTCMinutes() - index * 10);
-    return time.toISOString().replace(/\.\d{3}Z$/, "Z");
-  });
 }
