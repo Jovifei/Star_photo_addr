@@ -144,6 +144,40 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
   await expect(detail.locator(".hourly-matrix")).toBeVisible();
 });
 
+test("地图评分颜色筛选只改变点位，不生成密集永久文字气泡", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".observing-map-control")).toBeVisible();
+  await expect(page.locator(".observing-score-legend input")).toHaveCount(4);
+  await expect(page.locator(".observing-site-label")).toHaveCount(0);
+  const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
+  await expect.poll(() => markers.count(), { timeout: 15000 }).toBeGreaterThan(0);
+  const before = await markers.count();
+  await page.getByRole("checkbox", { name: "显示优先地点" }).uncheck();
+  await expect.poll(() => markers.count(), { timeout: 5000 }).toBeLessThan(before);
+  await expect(page.getByRole("checkbox", { name: "显示优先地点" })).not.toBeChecked();
+});
+
+test("评分时间滑窗会改变当前时次、档位数量和地图筛选基准", async ({ page }) => {
+  await page.goto("/");
+  const control = page.locator(".observing-map-control");
+  const slider = page.getByRole("slider", { name: "观星评分时间滑窗" });
+  await expect(control).toBeVisible();
+  await expect(slider).toHaveAttribute("max", "72");
+  await expect(control).toHaveAttribute("data-score-status", "available", { timeout: 15000 });
+
+  const initialTime = await control.getAttribute("data-score-time");
+  const initialCounts = await page.locator(".observing-score-counts").innerText();
+  await slider.fill("24");
+  await expect.poll(() => control.getAttribute("data-score-time"), { timeout: 5000 }).not.toBe(initialTime);
+  await expect(control).toContainText("明天");
+  await expect(control).toHaveAttribute("data-score-status", "available");
+  await expect.poll(() => page.locator(".observing-score-counts").innerText(), { timeout: 5000 }).not.toBe(initialCounts);
+
+  await slider.fill("48");
+  await expect(control).toContainText("后天");
+  await expect(control).toHaveAttribute("data-score-status", "available");
+});
+
 test("地图加入候选后星野决策保留同一地点", async ({ page }) => {
   await page.goto("/");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");

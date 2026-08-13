@@ -6,8 +6,8 @@ export default function MapSetup({ hidden }: { hidden: boolean }) {
     <div className={`map-setup${hidden ? " hidden" : ""}`} role="status">
       <div>
         <div className="loader" />
-        <b>正在展开全球暗夜地图</b>
-        <span>同时准备全球 2015 参考层与中国 2024 增强层…</span>
+        <b>正在加载地图图层</b>
+        <span>暗色底图、地点与可用数据源准备中…</span>
       </div>
     </div>
   );

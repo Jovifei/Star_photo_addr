@@ -10,7 +10,11 @@ function horizontal(body, date, observer) {
 }
 
 export function astronomyAt(date, location) {
-  const observer = new Astronomy.Observer(location.latitude, location.longitude, location.elevation);
+  // Map-picked and geocoded locations may not have a terrain elevation yet.
+  // Astronomy Engine requires a finite observer height; use sea level for
+  // geometry without mutating the location displayed to the user.
+  const elevation = Number.isFinite(location.elevation) ? location.elevation : 0;
+  const observer = new Astronomy.Observer(location.latitude, location.longitude, elevation);
   const sun = horizontal(Astronomy.Body.Sun, date, observer);
   const moon = horizontal(Astronomy.Body.Moon, date, observer);
   const galacticCenter = horizontal(Astronomy.Body.Star1, date, observer);

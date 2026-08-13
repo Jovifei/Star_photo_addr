@@ -95,6 +95,76 @@ function scoreConfidence(validHours: number, totalHours: number): Recommendation
   return "low";
 }
 
+function unknownHourScore(
+  site: ObservingSite,
+  blockers: string[],
+): RecommendationScore {
+  return {
+    score: null,
+    band: "unknown",
+    cloud: null,
+    darkness: darknessScore(site.bortle),
+    weatherRisk: null,
+    bestWindow: null,
+    blockers,
+    confidence: "unknown",
+    validHours: 0,
+  };
+}
+
+/**
+ * Compute the same 0–100 score for one exact forecast hour.
+ *
+ * The full-night score remains the ranking score. This focused score exists
+ * for the map time window so point colours and distribution counts can follow
+ * the selected hour without pretending a one-hour reading is a full-night
+ * recommendation.
+ */
+export function scoreObservingSiteAtTime(
+  site: ObservingSite,
+  record: FinderWeatherRecord | undefined,
+  time: string,
+): RecommendationScore {
+  const hourly = record?.hourly;
+  const index = hourly?.time?.indexOf(time) ?? -1;
+  if (!hourly || index < 0) return unknownHourScore(site, ["此时暂无天气数据"]);
+
+  const cloud = numberAt(hourly.cloud_cover, index);
+  if (cloud === null) return unknownHourScore(site, ["此时云量数据缺失"]);
+
+  const precipitation = numberAt(hourly.precipitation, index);
+  const wind = numberAt(hourly.wind_speed_10m, index);
+  const gust = numberAt(hourly.wind_gusts_10m, index);
+  const weatherCode = numberAt(hourly.weather_code, index);
+  const cloudScore = clamp(100 - cloud);
+  const weatherRisk = clamp(
+    100 -
+      (precipitation != null && precipitation >= 0.5 ? 75 : 0) -
+      Math.max(0, (wind ?? 0) - 4) * 3 -
+      Math.max(0, (gust ?? 0) - 8) * 2,
+  );
+  const blockers = [
+    ...(weatherCode != null && weatherCode >= 95 ? ["雷暴风险"] : []),
+    ...(precipitation != null && precipitation >= 0.5 ? ["小时降水达到 0.5 mm"] : []),
+    ...(gust != null && gust >= 15 ? ["阵风达到 15 m/s"] : []),
+  ];
+  const score = Math.round(
+    cloudScore * 0.55 + darknessScore(site.bortle) * 0.3 + weatherRisk * 0.15,
+  );
+
+  return {
+    score,
+    band: bandFor(score, blockers.length > 0),
+    cloud,
+    darkness: darknessScore(site.bortle),
+    weatherRisk: Math.round(weatherRisk),
+    bestWindow: null,
+    blockers,
+    confidence: "high",
+    validHours: 1,
+  };
+}
+
 /**
  * Compute the shared 0–100 recommendation score from one night's raw data.
  * Missing values never become zero: they reduce confidence and can produce an
@@ -207,6 +277,7 @@ export function buildObservationSnapshot(
   days: 1 | 3 | 5 | 7,
   model: ForecastModel,
   weatherByDate: Record<string, Record<string, FinderWeatherRecord>>,
+  focusTime?: string,
 ): ObservationSnapshot {
   const sites: Record<string, RecommendationScore[]> = {};
   const dates = Array.from({ length: days }, (_, index) => addDays(date, index));
@@ -214,6 +285,14 @@ export function buildObservationSnapshot(
     sites[site.id] = dates.map((night) => scoreObservingSite(site, weatherByDate[night]?.[site.id], night));
   }
   const records = Object.values(weatherByDate).flatMap((value) => Object.values(value));
+  const focusScores = focusTime
+    ? Object.fromEntries(
+        OBSERVING_SITES.map((site) => [
+          site.id,
+          scoreObservingSiteAtTime(site, weatherByDate[date]?.[site.id], focusTime),
+        ]),
+      )
+    : undefined;
   return {
     date,
     days,
@@ -222,7 +301,18 @@ export function buildObservationSnapshot(
     source: "Open-Meteo Forecast API + VIIRS 2023 site snapshot",
     stale: records.some((record) => record.status === "stale" || record.status === "error"),
     sites,
+    ...(focusTime ? { focusTime, focusScores } : {}),
   };
+}
+
+export function snapshotScoreAtTime(
+  snapshot: ObservationSnapshot | null | undefined,
+  id: string,
+): RecommendationScore | null {
+  if (!snapshot) return null;
+  return snapshot.focusTime
+    ? snapshot.focusScores?.[id] ?? null
+    : snapshot.sites?.[id]?.[0] ?? null;
 }
 
 export function recommendationLabel(band: RecommendationBand): string {

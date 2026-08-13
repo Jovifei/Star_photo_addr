@@ -7,7 +7,13 @@ import {
 } from "@/lib/stargazingFinder";
 import { addFinderDays, FINDER_LOCATIONS, getShanghaiDate } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
 import type { FinderHourlyData } from "@/lib/stargazingFinderTypes";
-import { buildObservationSnapshot, scoreObservingSite, OBSERVING_SITES } from "@/lib/observingSites";
+import {
+  buildObservationSnapshot,
+  scoreObservingSite,
+  scoreObservingSiteAtTime,
+  snapshotScoreAtTime,
+  OBSERVING_SITES,
+} from "@/lib/observingSites";
 
 function fixture(overrides: Partial<FinderHourlyData> = {}): FinderHourlyData {
   const time = Array.from({ length: 33 }, (_, index) => {
@@ -129,5 +135,21 @@ describe("观星地点查询快照与评分", () => {
     expect(score.score).toBeNull();
     expect(score.band).toBe("unknown");
     expect(score.cloud).toBeNull();
+  });
+
+  it("uses the exact forecast hour for map distribution counts", () => {
+    const site = OBSERVING_SITES[0]!;
+    const clear = fixture({ cloud_cover: Array.from({ length: 33 }, () => 5) });
+    const cloudy = fixture({ cloud_cover: Array.from({ length: 33 }, () => 95) });
+    const clearScore = scoreObservingSiteAtTime(site, { hourly: clear, status: "available" }, "2026-08-09T20:00");
+    const cloudyScore = scoreObservingSiteAtTime(site, { hourly: cloudy, status: "available" }, "2026-08-09T20:00");
+    expect(clearScore.score).not.toBe(cloudyScore.score);
+    expect(clearScore.validHours).toBe(1);
+
+    const snapshot = buildObservationSnapshot("2026-08-09", 1, "icon", {
+      "2026-08-09": { [site.id]: { hourly: clear, status: "available" } },
+    }, "2026-08-09T20:00");
+    expect(snapshot.focusTime).toBe("2026-08-09T20:00");
+    expect(snapshotScoreAtTime(snapshot, site.id)?.score).toBe(clearScore.score);
   });
 });

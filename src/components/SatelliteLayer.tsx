@@ -7,6 +7,14 @@ import type { SatelliteFrame } from "@/lib/types";
 
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
+function describeSatelliteError(error: unknown): string {
+  if (error instanceof TypeError && /fetch/i.test(error.message)) {
+    return "卫星时次接口不可达，请确认 3100 服务已启动后刷新";
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "卫星时次暂不可用";
+}
+
 export default function SatelliteLayer() {
   const { state, setSatelliteFrames, setCloud } = useStore();
   const mode = state.cloudState.overlayMode;
@@ -56,7 +64,7 @@ export default function SatelliteLayer() {
       .catch((requestError) => {
         if (requestError.name !== "AbortError") {
           setFrameMode(activeMode);
-          setError(requestError.message);
+          setError(describeSatelliteError(requestError));
         }
       });
     return () => controller.abort();

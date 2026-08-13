@@ -44,9 +44,11 @@ export async function GET(request: NextRequest) {
     return jsonError("请求的夜晚范围超出可用预报窗口", 400);
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120_000);
-  const key = observationSnapshotKey(date, days, model);
+  const focusTime = params.get("time");
+  const validFocusTime = focusTime && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(focusTime)
+    ? focusTime
+    : undefined;
+  const key = observationSnapshotKey(date, days, model, validFocusTime);
   const forceRefresh = params.get("refresh") === "1";
   let activeTask: Promise<ObservationSnapshot> | null = null;
   try {
@@ -63,11 +65,19 @@ export async function GET(request: NextRequest) {
     activeTask = inFlight.get(key) ?? null;
     if (!activeTask) {
       activeTask = (async () => {
-        const weather = await fetchFinderWeatherRange(dates, controller.signal, forceRefresh, model);
-        const weatherByDate = Object.fromEntries(
-          Object.entries(weather).map(([night, response]) => [night, response.data]),
-        );
-        return buildObservationSnapshot(date, days, model, weatherByDate);
+        // A shared task owns its controller. One browser navigation must not
+        // abort the same snapshot for every caller that joined this key.
+        const sharedController = new AbortController();
+        const sharedTimeout = setTimeout(() => sharedController.abort(), 120_000);
+        try {
+          const weather = await fetchFinderWeatherRange(dates, sharedController.signal, forceRefresh, model);
+          const weatherByDate = Object.fromEntries(
+            Object.entries(weather).map(([night, response]) => [night, response.data]),
+          );
+          return buildObservationSnapshot(date, days, model, weatherByDate, validFocusTime);
+        } finally {
+          clearTimeout(sharedTimeout);
+        }
       })();
       inFlight.set(key, activeTask);
     }
@@ -91,9 +101,8 @@ export async function GET(request: NextRequest) {
       });
     }
     const message = error instanceof Error ? error.message : "观星快照请求失败";
-    return jsonError(controller.signal.aborted ? "观星快照请求超时" : message, controller.signal.aborted ? 504 : 502);
+    return jsonError(message, /aborted|timeout/i.test(message) ? 504 : 502);
   } finally {
-    clearTimeout(timeout);
     if (activeTask && inFlight.get(key) === activeTask) inFlight.delete(key);
   }
 }

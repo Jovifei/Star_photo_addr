@@ -127,6 +127,38 @@ export function nightRangeKeys(startKey: string, count: number): string[] {
   );
 }
 
+/** Add hours to a provider wall-clock value without using the browser timezone. */
+export function addForecastHours(timeString: string, hours: number): string {
+  const value = timeString.slice(0, 16);
+  const date = new Date(`${value}:00Z`);
+  if (!Number.isFinite(date.getTime())) return timeString;
+  date.setUTCHours(date.getUTCHours() + hours);
+  return date.toISOString().slice(0, 16);
+}
+
+/** Build a contiguous hourly window for the score-time control. */
+export function forecastTimeWindow(startTime: string, hours = 72): string[] {
+  return Array.from({ length: Math.max(1, hours + 1) }, (_, index) =>
+    addForecastHours(startTime, index),
+  );
+}
+
+/**
+ * Return the evening-date key whose 07:00–next-day 15:00 provider slice
+ * contains a selected forecast hour. Hours before 07:00 belong to the
+ * previous evening's slice so 00:00–06:00 can still be scored.
+ */
+export function scoreDateForForecastTime(
+  timeString: string | null | undefined,
+  fallback: string,
+): string {
+  if (!timeString || timeString.length < 13) return fallback;
+  const date = timeString.slice(0, 10);
+  const hour = Number(timeString.slice(11, 13));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(hour)) return fallback;
+  return hour < 7 ? addDays(date, -1) : date;
+}
+
 /** Whether an hourly string belongs to ANY of the given night keys. */
 export function isInNightRange(timeString: string, nightKeys: string[]): boolean {
   return nightKeys.some((key) => isInNight(timeString, key));

@@ -29,6 +29,7 @@ import {
 import {
   DEFAULT_CLOUD_STATE,
   CUSTOM_CANDIDATES_STORAGE_KEY,
+  OBSERVING_BANDS_STORAGE_KEY,
   OBSERVING_BORTLE_LIMIT_STORAGE_KEY,
   OBSERVING_MAP_VIEW_STORAGE_KEY,
   OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY,
@@ -51,6 +52,7 @@ import type {
   Location,
   LocationForecast,
   MapViewMode,
+  RecommendationBand,
   SatelliteFrame,
 } from "@/lib/types";
 import { MAX_SHORTLIST_SIZE } from "@/lib/observingSites";
@@ -82,6 +84,7 @@ interface AppState {
   recommendationThreshold: number;
   observingBortleLimit: 3 | 4;
   recommendedOnly: boolean;
+  visibleRecommendationBands: RecommendationBand[];
 }
 
 const homeNight = currentNightKey();
@@ -114,6 +117,7 @@ const initialState: AppState = {
   recommendationThreshold: 70,
   observingBortleLimit: 3,
   recommendedOnly: false,
+  visibleRecommendationBands: ["priority", "recommended", "watch", "not-recommended"],
 };
 
 type Action =
@@ -142,6 +146,7 @@ type Action =
   | { type: "SET_RECOMMENDATION_THRESHOLD"; threshold: number }
   | { type: "SET_OBSERVING_BORTLE_LIMIT"; limit: 3 | 4 }
   | { type: "SET_RECOMMENDED_ONLY"; enabled: boolean }
+  | { type: "SET_RECOMMENDATION_BANDS"; bands: RecommendationBand[] }
   | { type: "HYDRATE_LOCATION"; location: Location };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -215,6 +220,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, observingBortleLimit: action.limit };
     case "SET_RECOMMENDED_ONLY":
       return { ...state, recommendedOnly: action.enabled };
+    case "SET_RECOMMENDATION_BANDS":
+      return { ...state, visibleRecommendationBands: action.bands };
     default:
       return state;
   }
@@ -261,6 +268,7 @@ interface StoreContextValue {
   setRecommendationThreshold: (threshold: number) => void;
   setObservingBortleLimit: (limit: 3 | 4) => void;
   setRecommendedOnly: (enabled: boolean) => void;
+  setRecommendationBands: (bands: RecommendationBand[]) => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -331,6 +339,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const recommendedOnly = localStorage.getItem(OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY);
       if (recommendedOnly === "true" || recommendedOnly === "false") {
         dispatch({ type: "SET_RECOMMENDED_ONLY", enabled: recommendedOnly === "true" });
+      }
+      const bands = localStorage.getItem(OBSERVING_BANDS_STORAGE_KEY);
+      if (bands) {
+        const parsed = JSON.parse(bands) as unknown;
+        if (Array.isArray(parsed) && parsed.every((band) =>
+          band === "priority" || band === "recommended" || band === "watch" || band === "not-recommended",
+        )) {
+          dispatch({ type: "SET_RECOMMENDATION_BANDS", bands: parsed as RecommendationBand[] });
+        }
       }
     } catch {
       // Local preferences are optional; the default observation session remains usable.
@@ -594,6 +611,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem(OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY, String(enabled)); } catch { /* optional preference */ }
   }, []);
 
+  const setRecommendationBands = useCallback((bands: RecommendationBand[]) => {
+    const next = bands.filter((band, index) => bands.indexOf(band) === index);
+    dispatch({ type: "SET_RECOMMENDATION_BANDS", bands: next });
+    try { localStorage.setItem(OBSERVING_BANDS_STORAGE_KEY, JSON.stringify(next)); } catch { /* optional preference */ }
+  }, []);
+
   const value = useMemo<StoreContextValue>(
     () => ({
       state,
@@ -616,6 +639,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setRecommendationThreshold,
       setObservingBortleLimit,
       setRecommendedOnly,
+      setRecommendationBands,
     }),
     [
       state,
@@ -638,6 +662,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setRecommendationThreshold,
       setObservingBortleLimit,
       setRecommendedOnly,
+      setRecommendationBands,
     ],
   );
 

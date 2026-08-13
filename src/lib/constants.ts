@@ -84,6 +84,7 @@ export const OBSERVING_MAP_VIEW_STORAGE_KEY = "jovi-observing-map-view-v1";
 export const OBSERVING_THRESHOLD_STORAGE_KEY = "jovi-observing-threshold-v1";
 export const OBSERVING_BORTLE_LIMIT_STORAGE_KEY = "jovi-observing-bortle-limit-v1";
 export const OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY = "jovi-observing-recommended-only-v1";
+export const OBSERVING_BANDS_STORAGE_KEY = "jovi-observing-recommendation-bands-v1";
 
 /** Default interactive cloud state (single forecast channel + timeline).
  *  Cloud is ON by default: on load the map samples the current viewport and

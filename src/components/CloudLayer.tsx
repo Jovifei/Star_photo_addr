@@ -11,6 +11,14 @@ import {
 import { nightRangeKeys } from "@/lib/nighttime";
 import CloudCanvasOverlay from "@/components/CloudCanvasOverlay";
 
+function describeCloudError(error: unknown): string {
+  if (error instanceof TypeError && /fetch/i.test(error.message)) {
+    return "本地天气接口不可达，请确认 3100 服务已启动后刷新";
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "天气网格接口返回异常";
+}
+
 /**
  * Three-layer cloud coverage overlay (Phase 2).
  *
@@ -68,16 +76,23 @@ export default function CloudLayer() {
     } catch (err) {
       if (controller.signal.aborted) return;
       // Surface a small notice instead of silently leaving a blank map.
-      setError(err instanceof Error ? err.message : "云图数据请求失败");
+      setError(describeCloudError(err));
       setCloudGrid(null);
     } finally {
-      if (!controller.signal.aborted) setCloudGridLoading(false);
+      // Only the request that is still current may close the loading state.
+      // This also clears the spinner when a layer switch aborts the request,
+      // while protecting a newer sampling request from an older finally.
+      if (requestRef.current === controller) setCloudGridLoading(false);
     }
   };
 
   // ----- Trigger initial / re-sampling when cloud is enabled or range/night changes -----
   useEffect(() => {
-    if (!cloudState.enabled || cloudState.overlayMode !== "forecast-cloud" || !map || !selectedNight) return;
+    if (!cloudState.enabled || cloudState.overlayMode !== "forecast-cloud" || !map || !selectedNight) {
+      requestRef.current?.abort();
+      gridSigRef.current = null;
+      return;
+    }
     const sig = `${selectedNight}|${cloudState.range}|${cloudState.model}`;
     if (cloudGrid && gridSigRef.current === sig) return;
     void performSampling();
@@ -151,7 +166,8 @@ export default function CloudLayer() {
       )}
       {error && !cloudGrid && (
         <div className="cloud-overlay-error" role="status">
-          云图加载失败：{error}
+          <span>云图加载失败：{error}</span>
+          <button type="button" onClick={() => void performSampling()}>重试</button>
         </div>
       )}
     </>

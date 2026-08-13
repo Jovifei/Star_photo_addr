@@ -1,5 +1,7 @@
 # Lessons
 
+- 2026-08-13: 地图点击或地理搜索的地点可能没有海拔；天文引擎不能接收 `null`。计算边界应使用海平面作为几何兜底，但不能把未知海拔写回地点显示或评分来源。
+
 - 2026-08-12: A cloned Leaflet route needs a real browser screenshot after CSS changes; a descendant selector can miss the same MapContainer element and leave Leaflet's default gray background in place. Verify the computed background and use a same-element scoped rule before accepting a dark map.
 - 2026-08-12: Keep a public-site clone on an isolated route when the repository already has an authored product homepage; route isolation preserves the existing product contract and makes visual regression evidence attributable.
 
@@ -41,3 +43,8 @@
 - 2026-08-13: GIBS time dimensions are identified by an OWS child element, not necessarily a `name="time"` attribute. Expand only the published ISO ranges and preserve gaps; subtracting fixed intervals from the latest timestamp fabricates observations.
 - 2026-08-13: Recommendation validity must be gated by the field that drives the score. Wind or precipitation availability cannot make a night scoreable when most cloud-cover samples are missing.
 - 2026-08-13: A location-only forecast cache can silently cross model boundaries. Every consumer must verify metadata.model or use a model-qualified key before displaying or scoring cached data.
+- 2026-08-13: 全国地图在 200+ 个点位上不能使用永久 Leaflet Tooltip；即使 Tooltip 文本只有名称，也会形成白色气泡墙。默认只显示小型评分点，选中点才显示名称，评分档位必须连接真实过滤状态。
+- 2026-08-13: “无法刷新”必须同时核对浏览器目标端口和 `/healthz` 应用身份；3100 正常而 3190 无监听时，先修复启动入口或提示用户，不要把连接失败归因于组件渲染。
+
+- 2026-08-13: 评分门槛的数量不能只绑定整晚快照；地图时间滑窗必须传递完整 ISO 时次，使用独立缓存键和 focusScores，并在请求切换期间拒绝沿用上一时次的颜色与数量。
+- 2026-08-13: 多个组件同时请求同一时次时，AbortError 或旧请求失败可能晚于新请求返回；加载/降级状态必须绑定请求代次（时次、模型、夜晚），不能只看最后一次响应是否曾失败。

@@ -125,3 +125,15 @@ describe("evaluateNight — 空窗口兜底", () => {
     expect(evaluateNight(empty, location, NIGHT)).toBeNull();
   });
 });
+
+describe("evaluateNight — 未知海拔", () => {
+  it("地图取点没有海拔时仍可完成天文评测", () => {
+    const locationWithoutElevation = {
+      ...location,
+      elevation: null,
+    } as unknown as Location;
+
+    expect(() => evaluateNight(forecast, locationWithoutElevation, NIGHT)).not.toThrow();
+    expect(evaluateNight(forecast, locationWithoutElevation, NIGHT)).not.toBeNull();
+  });
+});

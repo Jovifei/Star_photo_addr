@@ -39,7 +39,13 @@ export function isObservationSnapshot(value: unknown): value is ObservationSnaps
     candidate.sites !== null &&
     Object.values(candidate.sites).every((scores) =>
       Array.isArray(scores) && scores.length === candidate.days && scores.every(validScore),
-    )
+    ) &&
+    (candidate.focusTime === undefined || typeof candidate.focusTime === "string") &&
+    (candidate.focusScores === undefined || (
+      typeof candidate.focusScores === "object" &&
+      candidate.focusScores !== null &&
+      Object.values(candidate.focusScores).every(validScore)
+    ))
   );
 }
 
@@ -47,8 +53,9 @@ export function observationSnapshotKey(
   date: string,
   days: 1 | 3 | 5 | 7,
   model: string,
+  focusTime?: string,
 ): string {
-  return `observing-${date}-${days}-${model}`;
+  return `observing-${date}-${days}-${model}${focusTime ? `-${focusTime}` : ""}`;
 }
 
 export async function readObservationSnapshot(

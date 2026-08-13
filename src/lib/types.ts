@@ -154,6 +154,9 @@ export interface ObservationSnapshot {
   source: string;
   stale: boolean;
   sites: Record<string, RecommendationScore[]>;
+  /** Optional score for the exact forecast hour selected on the map. */
+  focusTime?: string;
+  focusScores?: Record<string, RecommendationScore>;
 }
 
 export type CloudTimeDomain = "observation" | "forecast" | "reference";

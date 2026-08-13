@@ -34,4 +34,8 @@ describe("star photography score", () => {
     expect(result.quality).toBe("blocked");
     expect(result.blockers).toEqual(expect.arrayContaining(["雷暴风险", "降水风险", "阵风过大"]));
   });
+
+  it("still evaluates a map-picked point whose elevation is unknown", () => {
+    expect(() => evaluateHour(good, { ...location, elevation: null })).not.toThrow();
+  });
 });

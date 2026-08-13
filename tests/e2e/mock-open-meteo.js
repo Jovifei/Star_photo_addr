@@ -193,11 +193,17 @@ export async function installNextApiMock(page, fixture) {
     const date = url.searchParams.get("date") || "2026-08-09";
     const days = [1, 3, 5, 7].includes(Number(url.searchParams.get("days"))) ? Number(url.searchParams.get("days")) : 1;
     const model = url.searchParams.get("model") || "icon";
+    const focusTime = url.searchParams.get("time") || undefined;
+    const focusHour = focusTime ? Number(focusTime.slice(11, 13)) : 0;
+    const focusDay = focusTime ? Number(focusTime.slice(8, 10)) : 0;
     const sites = {};
+    const focusScores = {};
     for (let index = 0; index < 242; index += 1) {
-      sites[`finder-${String(index + 1).padStart(3, "0")}-location`] = Array.from({ length: days }, (_, night) => ({
+      const id = `finder-${String(index + 1).padStart(3, "0")}-location`;
+      const scoreBand = (score) => score >= 85 ? "priority" : score >= 70 ? "recommended" : score >= 55 ? "watch" : "not-recommended";
+      sites[id] = Array.from({ length: days }, (_, night) => ({
         score: Math.max(0, 92 - ((index + night * 9) % 44)),
-        band: index % 5 === 0 ? "priority" : index % 3 === 0 ? "recommended" : "watch",
+        band: scoreBand(Math.max(0, 92 - ((index + night * 9) % 44))),
         cloud: (index * 7 + night * 11) % 100,
         darkness: index % 4 === 0 ? 100 : 78,
         weatherRisk: 82,
@@ -206,8 +212,37 @@ export async function installNextApiMock(page, fixture) {
         confidence: "high",
         validHours: 10,
       }));
+      if (focusTime) {
+        // Move the distribution by hour/day so the slider has an observable
+        // effect instead of returning the same counts for every time.
+        const score = 35 + ((index * 11 + focusHour * 17 + focusDay * 3) % 66);
+        focusScores[id] = {
+          score,
+          band: scoreBand(score),
+          cloud: 100 - score,
+          darkness: index % 4 === 0 ? 100 : 78,
+          weatherRisk: 82,
+          bestWindow: null,
+          blockers: [],
+          confidence: "high",
+          validHours: 1,
+        };
+      }
     }
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ date, days, model, generatedAt: "2026-08-09T08:00:00.000Z", source: "E2E snapshot", stale: false, sites }) });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        days,
+        model,
+        generatedAt: "2026-08-09T08:00:00.000Z",
+        source: "E2E snapshot",
+        stale: false,
+        sites,
+        ...(focusTime ? { focusTime, focusScores } : {}),
+      }),
+    });
   });
   await page.route("**/api/satellite/times**", async (route) => {
     const url = new URL(route.request().url());

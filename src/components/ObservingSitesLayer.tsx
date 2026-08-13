@@ -2,24 +2,16 @@
 
 import L from "leaflet";
 import { Marker, Tooltip, useMap } from "react-leaflet";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   OBSERVING_SITES,
   observingSiteToLocation,
   recommendationColor,
+  snapshotScoreAtTime,
 } from "@/lib/observingSites";
-import type { ObservationSnapshot, RecommendationScore } from "@/lib/types";
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  })[character] ?? character);
-}
+import { scoreDateForForecastTime } from "@/lib/nighttime";
+import type { ObservationSnapshot } from "@/lib/types";
 
 function markerIcon(color: string, selected: boolean): L.DivIcon {
   return L.divIcon({
@@ -30,23 +22,30 @@ function markerIcon(color: string, selected: boolean): L.DivIcon {
   });
 }
 
-function snapshotScore(snapshot: ObservationSnapshot | null, id: string): RecommendationScore | null {
-  return snapshot?.sites[id]?.[0] ?? null;
-}
-
 export default function ObservingSitesLayer() {
   const { state, selectLocation } = useStore();
   const map = useMap();
   const [snapshot, setSnapshot] = useState<ObservationSnapshot | null>(null);
   const [snapshotStatus, setSnapshotStatus] = useState<"loading" | "available" | "degraded">("loading");
+  const [snapshotErrorKey, setSnapshotErrorKey] = useState<string | null>(null);
+  const snapshotRequestId = useRef(0);
+  const activeForecastTime = state.cloudState.activeForecastTime;
+  const model = state.cloudState.model;
+  const selectedNight = state.selectedNight;
+  const requestKey = `${activeForecastTime ?? ""}|${model}|${selectedNight}`;
 
   useEffect(() => {
+    const requestId = snapshotRequestId.current + 1;
+    snapshotRequestId.current = requestId;
     const controller = new AbortController();
     const params = new URLSearchParams({
-      date: state.selectedNight,
+      date: scoreDateForForecastTime(activeForecastTime, selectedNight),
       days: "1",
-      model: state.cloudState.model,
+      model,
     });
+    if (activeForecastTime) {
+      params.set("time", activeForecastTime);
+    }
     fetch(`/api/observing/snapshot?${params.toString()}`, { signal: controller.signal, cache: "no-store" })
       .then(async (response) => {
         const payload = await response.json().catch(() => null);
@@ -54,34 +53,45 @@ export default function ObservingSitesLayer() {
         return payload as ObservationSnapshot;
       })
       .then((payload) => {
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || requestId !== snapshotRequestId.current) return;
         setSnapshot(payload);
         setSnapshotStatus(payload.stale ? "degraded" : "available");
+        setSnapshotErrorKey(null);
       })
       .catch((error) => {
-        if (error?.name !== "AbortError" && !controller.signal.aborted) {
+        if (error?.name !== "AbortError" && !controller.signal.aborted && requestId === snapshotRequestId.current) {
           setSnapshotStatus("degraded");
+          setSnapshotErrorKey(requestKey);
         }
       });
     return () => controller.abort();
-  }, [state.cloudState.model, state.selectedNight]);
+  }, [activeForecastTime, model, requestKey, selectedNight]);
+
+  const activeSnapshot = snapshot !== null && snapshot.focusTime === activeForecastTime && snapshot.model === model
+    ? snapshot
+    : null;
 
   const visibleSites = useMemo(() => OBSERVING_SITES.filter((site) => {
     if (site.bortle > state.observingBortleLimit) return false;
-    const score = snapshotScore(snapshot, site.id);
+    const score = snapshotScoreAtTime(activeSnapshot, site.id);
     if (state.recommendedOnly && (score?.score == null || score.score < state.recommendationThreshold)) return false;
+    if (score?.band && score.band !== "unknown" && !state.visibleRecommendationBands.includes(score.band)) return false;
     return true;
-  }), [snapshot, state.observingBortleLimit, state.recommendedOnly, state.recommendationThreshold]);
+  }), [activeSnapshot, state.observingBortleLimit, state.recommendedOnly, state.recommendationThreshold, state.visibleRecommendationBands]);
+
+  const effectiveSnapshotStatus = activeSnapshot
+    ? snapshotStatus
+    : snapshotErrorKey === requestKey ? "degraded" : "loading";
 
   useEffect(() => {
     map.getContainer().dataset.observingSiteCount = String(visibleSites.length);
-    map.getContainer().dataset.observingSnapshotStatus = snapshotStatus;
-  }, [map, snapshotStatus, visibleSites.length]);
+    map.getContainer().dataset.observingSnapshotStatus = effectiveSnapshotStatus;
+  }, [effectiveSnapshotStatus, map, visibleSites.length]);
 
   return (
     <>
       {visibleSites.map((site) => {
-        const score = snapshotScore(snapshot, site.id);
+        const score = snapshotScoreAtTime(activeSnapshot, site.id);
         const band = score?.band ?? "unknown";
         const selected = state.selectedLocation?.id === site.id;
         return (
@@ -97,9 +107,11 @@ export default function ObservingSitesLayer() {
               },
             }}
           >
-            <Tooltip permanent direction="top" offset={[0, -12]} opacity={0.94}>
-              <span className="observing-site-label">{escapeHtml(site.name)}</span>
-            </Tooltip>
+            {selected && (
+              <Tooltip permanent direction="top" offset={[0, -12]} opacity={0.94}>
+                <span className="observing-site-label">{site.name}</span>
+              </Tooltip>
+            )}
           </Marker>
         );
       })}
