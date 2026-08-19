@@ -190,13 +190,9 @@ try {
     await page.locator(".map-stage").waitFor({ state: "visible" });
     await page.locator(".cloud-control").waitFor({ state: "visible" });
     await page.locator(".source-status-panel").waitFor({ state: "visible" });
-    const timelineToggle = page.locator(".cloud-timeline-toggle");
-    if (
-      (await timelineToggle.count()) > 0 &&
-      (await timelineToggle.getAttribute("aria-expanded")) === "false"
-    ) {
-      await timelineToggle.click();
-    }
+    // A location passed through the URL intentionally opens the detail panel.
+    // Do not click controls behind that panel; the screenshot should show the
+    // real map/detail composition without forcing pointer events through it.
     await stabilize(page);
     await save(page, "01-tonight-observation.jpg");
     await context.close();
@@ -215,7 +211,7 @@ try {
     );
     const tabs = page.locator('.cloud-tabs[role="tablist"] [role="tab"]');
     if ((await tabs.count()) >= 3) {
-      await tabs.nth(2).click();
+      await tabs.nth(2).click({ force: true });
       await tabs.nth(2).waitFor({ state: "visible" });
     }
     await stabilize(page);
