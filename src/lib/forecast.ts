@@ -37,7 +37,9 @@ interface RawForecastResponse {
   hourly?: RawHourly;
 }
 
-const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+export const OPEN_METEO_FORECAST_URL =
+  process.env.OPEN_METEO_FORECAST_URL?.trim() ||
+  "https://api.open-meteo.com/v1/forecast";
 
 const SURFACE_VARIABLES = [
   "temperature_2m",
@@ -63,6 +65,15 @@ const MODEL_PARAMETERS: Record<ForecastModel, string | null> = {
   aifs: "ecmwf_aifs025",
 };
 
+/** Provider horizons used to prevent invalid `forecast_days` requests. */
+export const FORECAST_MODEL_MAX_DAYS: Readonly<Record<ForecastModel, number>> =
+  Object.freeze({
+    best_match: 16,
+    icon: 8,
+    gfs: 16,
+    aifs: 15,
+  });
+
 const FORECAST_UNITS: Record<string, string> = {
   temperature: "°C",
   dewPoint: "°C",
@@ -77,6 +88,18 @@ export function openMeteoModelParameter(model: ForecastModel): string | null {
   return MODEL_PARAMETERS[model];
 }
 
+export function maxForecastDaysForModel(model: ForecastModel): number {
+  return FORECAST_MODEL_MAX_DAYS[model];
+}
+
+export function clampForecastDays(
+  days: number,
+  model: ForecastModel = "best_match",
+): number {
+  const normalized = Number.isFinite(days) ? Math.floor(days) : 1;
+  return Math.min(maxForecastDaysForModel(model), Math.max(1, normalized));
+}
+
 export function buildForecastUrl(
   locations: Location[],
   days: number,
@@ -87,12 +110,39 @@ export function buildForecastUrl(
     longitude: locations.map((item) => item.longitude).join(","),
     hourly: SURFACE_VARIABLES.join(","),
     timezone: "auto",
-    forecast_days: String(Math.min(16, Math.max(1, days))),
+    forecast_days: String(clampForecastDays(days, model)),
     wind_speed_unit: "ms",
   });
   const providerModel = MODEL_PARAMETERS[model];
   if (providerModel) params.set("models", providerModel);
-  return `${FORECAST_URL}?${params.toString()}`;
+  return `${OPEN_METEO_FORECAST_URL}?${params.toString()}`;
+}
+
+function validateRawForecast(item: RawForecastResponse | undefined): void {
+  if (!item || !Array.isArray(item.hourly?.time)) {
+    throw new Error("天气上游返回了无法识别的 hourly 数据");
+  }
+  if (
+    item.hourly.time.length > 0 &&
+    (!Array.isArray(item.hourly.cloud_cover) ||
+      !item.hourly.cloud_cover.some(
+        (value) => typeof value === "number" && Number.isFinite(value),
+      ))
+  ) {
+    throw new Error("天气上游没有返回有效总云量数据");
+  }
+}
+
+async function providerError(response: Response): Promise<Error> {
+  const body = await response.json().catch(() => null) as
+    | { reason?: string; error?: boolean }
+    | null;
+  const detail = body?.reason?.trim();
+  return new Error(
+    detail
+      ? `天气接口返回 ${response.status}：${detail}`
+      : `天气接口返回 ${response.status}`,
+  );
 }
 
 async function requestJson(
@@ -104,24 +154,27 @@ async function requestJson(
     try {
       const response = await fetch(url, {
         signal,
+        cache: "no-store",
         headers: { Accept: "application/json" },
       });
       if (response.ok) {
-        const data = (await response.json()) as RawForecastResponse | RawForecastResponse[];
-        const first = Array.isArray(data) ? data[0] : data;
-        if (!first || !Array.isArray(first.hourly?.time)) {
-          throw new Error("天气上游返回了无法识别的 hourly 数据");
-        }
+        const data = (await response.json()) as
+          | RawForecastResponse
+          | RawForecastResponse[];
+        const forecasts = Array.isArray(data) ? data : [data];
+        forecasts.forEach(validateRawForecast);
         return data;
       }
-      lastError = new Error(`天气接口返回 ${response.status}`);
+      lastError = await providerError(response);
       if (response.status < 500 && response.status !== 429) break;
     } catch (error) {
       if (signal?.aborted) throw error;
       lastError = error;
     }
   }
-  throw lastError instanceof Error ? lastError : new Error("天气接口请求失败");
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("天气接口请求失败");
 }
 
 function normalizeHourly(response: RawForecastResponse): HourWeather[] {
@@ -131,7 +184,8 @@ function normalizeHourly(response: RawForecastResponse): HourWeather[] {
     temperature: hourly.temperature_2m?.[index] ?? null,
     humidity: hourly.relative_humidity_2m?.[index] ?? null,
     dewPoint: hourly.dew_point_2m?.[index] ?? null,
-    precipitationProbability: hourly.precipitation_probability?.[index] ?? null,
+    precipitationProbability:
+      hourly.precipitation_probability?.[index] ?? null,
     precipitation: hourly.precipitation?.[index] ?? null,
     weatherCode: hourly.weather_code?.[index] ?? null,
     cloudCover: hourly.cloud_cover?.[index] ?? null,
@@ -146,7 +200,10 @@ function normalizeHourly(response: RawForecastResponse): HourWeather[] {
 }
 
 /** Convert an Open-Meteo local wall-clock time into the true UTC instant. */
-export function parseProviderTime(localTime: string, utcOffsetSeconds: number): Date {
+export function parseProviderTime(
+  localTime: string,
+  utcOffsetSeconds: number,
+): Date {
   const paddedTime = localTime.length === 16 ? `${localTime}:00` : localTime;
   const localAsUtcMillis = Date.parse(`${paddedTime}Z`);
   return new Date(localAsUtcMillis - utcOffsetSeconds * 1000);
@@ -159,10 +216,16 @@ export async function fetchSurfaceForecasts(
   model: ForecastModel = "best_match",
 ): Promise<LocationForecast[]> {
   if (locations.length === 0) return [];
-  const data = await requestJson(buildForecastUrl(locations, days, model), signal);
+  const requestedDays = clampForecastDays(days, model);
+  const data = await requestJson(
+    buildForecastUrl(locations, requestedDays, model),
+    signal,
+  );
   const responses = Array.isArray(data) ? data : [data];
   if (responses.length !== locations.length) {
-    throw new Error(`天气上游响应数量不匹配：请求 ${locations.length} 个地点，收到 ${responses.length} 个响应`);
+    throw new Error(
+      `天气上游响应数量不匹配：请求 ${locations.length} 个地点，收到 ${responses.length} 个响应`,
+    );
   }
   const fetchedAt = new Date().toISOString();
   const metadata: ForecastMetadata = {
@@ -204,6 +267,11 @@ export async function fetchForecastByCoords(
     elevation: 0,
     source: "搜索",
   }));
-  const locationsData = await fetchSurfaceForecasts(locations, days, signal, model);
+  const locationsData = await fetchSurfaceForecasts(
+    locations,
+    days,
+    signal,
+    model,
+  );
   return { locations: locationsData, metadata: locationsData[0]?.metadata };
 }

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { addFinderDays, getShanghaiDate } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
+import {
+  addFinderDays,
+  getShanghaiDate,
+} from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
 import { buildObservationSnapshot } from "@/lib/observingSites";
 import {
   markSnapshotStale,
@@ -8,18 +11,30 @@ import {
   snapshotAgeMs,
   writeObservationSnapshot,
 } from "@/lib/observingSnapshotStore";
-import { fetchFinderWeatherRange, isFinderDateAllowed } from "@/lib/stargazingFinderWeather";
+import {
+  fetchFinderWeatherRange,
+  isFinderDateAllowed,
+  isFinderRangeAllowedForModel,
+} from "@/lib/stargazingFinderWeather";
 import type { ForecastModel, ObservationSnapshot } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const VALID_MODELS = new Set<ForecastModel>(["best_match", "icon", "gfs", "aifs"]);
+const VALID_MODELS = new Set<ForecastModel>([
+  "best_match",
+  "icon",
+  "gfs",
+  "aifs",
+]);
 const VALID_DAYS = new Set<1 | 3 | 5 | 7>([1, 3, 5, 7]);
 const SNAPSHOT_TTL_MS = 30 * 60 * 1000;
 const inFlight = new Map<string, Promise<ObservationSnapshot>>();
 
 function jsonError(message: string, status: number) {
-  return NextResponse.json({ error: message }, { status, headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(
+    { error: message },
+    { status, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export async function GET(request: NextRequest) {
@@ -39,24 +54,38 @@ export async function GET(request: NextRequest) {
   }
 
   const days = daysValue as 1 | 3 | 5 | 7;
-  const dates = Array.from({ length: days }, (_, index) => addFinderDays(date, index));
+  const dates = Array.from({ length: days }, (_, index) =>
+    addFinderDays(date, index),
+  );
   if (dates.some((item) => !isFinderDateAllowed(item))) {
     return jsonError("请求的夜晚范围超出可用预报窗口", 400);
   }
+  if (!isFinderRangeAllowedForModel(dates, model)) {
+    return jsonError(
+      `${model.toUpperCase()} 预报时效不足以覆盖所选夜晚；请缩短范围或切换 GFS / Best Match`,
+      400,
+    );
+  }
 
   const focusTime = params.get("time");
-  const validFocusTime = focusTime && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(focusTime)
-    ? focusTime
-    : undefined;
+  const validFocusTime =
+    focusTime && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(focusTime)
+      ? focusTime
+      : undefined;
   const key = observationSnapshotKey(date, days, model, validFocusTime);
   const forceRefresh = params.get("refresh") === "1";
   let activeTask: Promise<ObservationSnapshot> | null = null;
   try {
     const cached = await readObservationSnapshot(key);
-    if (!forceRefresh && cached && snapshotAgeMs(cached) < SNAPSHOT_TTL_MS) {
+    if (
+      !forceRefresh &&
+      cached &&
+      snapshotAgeMs(cached) < SNAPSHOT_TTL_MS
+    ) {
       return NextResponse.json(cached, {
         headers: {
-          "Cache-Control": "public, max-age=300, stale-while-revalidate=900",
+          "Cache-Control":
+            "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
           "X-Observation-Cache": "disk",
         },
       });
@@ -65,16 +94,31 @@ export async function GET(request: NextRequest) {
     activeTask = inFlight.get(key) ?? null;
     if (!activeTask) {
       activeTask = (async () => {
-        // A shared task owns its controller. One browser navigation must not
-        // abort the same snapshot for every caller that joined this key.
         const sharedController = new AbortController();
-        const sharedTimeout = setTimeout(() => sharedController.abort(), 120_000);
+        const sharedTimeout = setTimeout(
+          () => sharedController.abort(),
+          120_000,
+        );
         try {
-          const weather = await fetchFinderWeatherRange(dates, sharedController.signal, forceRefresh, model);
-          const weatherByDate = Object.fromEntries(
-            Object.entries(weather).map(([night, response]) => [night, response.data]),
+          const weather = await fetchFinderWeatherRange(
+            dates,
+            sharedController.signal,
+            forceRefresh,
+            model,
           );
-          return buildObservationSnapshot(date, days, model, weatherByDate, validFocusTime);
+          const weatherByDate = Object.fromEntries(
+            Object.entries(weather).map(([night, response]) => [
+              night,
+              response.data,
+            ]),
+          );
+          return buildObservationSnapshot(
+            date,
+            days,
+            model,
+            weatherByDate,
+            validFocusTime,
+          );
         } finally {
           clearTimeout(sharedTimeout);
         }
@@ -85,8 +129,11 @@ export async function GET(request: NextRequest) {
     await writeObservationSnapshot(key, snapshot);
     return NextResponse.json(snapshot, {
       headers: {
-        "Cache-Control": "public, max-age=300, stale-while-revalidate=900",
-        "X-Observation-Source": "Open-Meteo + VIIRS 2023 site snapshot",
+        "Cache-Control": forceRefresh
+          ? "no-store, max-age=0"
+          : "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
+        "X-Observation-Source":
+          "Open-Meteo + curated dark-sky site metadata",
         "X-Observation-Cache": "refresh",
       },
     });
@@ -97,12 +144,15 @@ export async function GET(request: NextRequest) {
         headers: {
           "Cache-Control": "no-store, max-age=0",
           "X-Observation-Cache": "stale-disk",
+          "X-Data-Stale": "true",
         },
       });
     }
     const message = error instanceof Error ? error.message : "观星快照请求失败";
-    return jsonError(message, /aborted|timeout/i.test(message) ? 504 : 502);
+    return jsonError(message, /aborted|timeout|超时/i.test(message) ? 504 : 502);
   } finally {
-    if (activeTask && inFlight.get(key) === activeTask) inFlight.delete(key);
+    if (activeTask && inFlight.get(key) === activeTask) {
+      inFlight.delete(key);
+    }
   }
 }
