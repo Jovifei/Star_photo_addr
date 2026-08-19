@@ -103,6 +103,14 @@ body {
     box-shadow var(--transition);
 }
 
+.source-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
 .source-button:hover,
 .map-view-actions > button:hover,
 .cloud-layer-toggles button:hover,
@@ -297,8 +305,7 @@ body {
   }
 
   .brand-block > div:last-child,
-  .event-status,
-  .source-button {
+  .event-status {
     display: none;
   }
 
@@ -317,6 +324,16 @@ body {
     flex: 1 0 auto;
     min-width: max-content;
     padding-inline: 11px;
+  }
+
+  .source-button {
+    width: var(--control-height);
+    min-width: var(--control-height);
+    padding: 0;
+  }
+
+  .source-button-label {
+    display: none;
   }
 }
 
