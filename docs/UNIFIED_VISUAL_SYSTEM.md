@@ -48,6 +48,7 @@
 
 三个工作区固定为：`逐星 / 推荐观星地点 / 星野决策`。当前项采用青色半透明胶囊，
 跳转时保留地点、模型、观测夜和时次。移动端允许横向滚动，不压缩成不可读缩写。
+“数据依据与局限”属于安全与可信度入口，窄屏可收敛为 `36px` 信息图标，但不得隐藏。
 
 ### 面板与卡片
 
@@ -88,8 +89,11 @@
 - `/`：逐星地图，默认坚持“今晚优先”；
 - `/sites`：兼容入口，重定向到 `/?view=light-pollution&panel=sites`；
 - `/planner`：多地点、多夜晚决策工作区；
-- `/sites` 重定向必须保留 `lat/lng/name/elevation/night/model/forecastTime/observationTime/overlay`；
-- 主地图可主动丢弃历史夜晚和过期小时，但不得丢失地点、模型或用户明确选择的工作区。
+- `/viirs` 与 `/stargazing-finder-dark`：旧收藏兼容入口，重定向到统一光污染视图；
+- 所有兼容重定向必须保留 `lat/lng/name/elevation/night/model/forecastTime/observationTime/overlay`；
+- 所有工作区链接必须通过 `buildProductHref()` 构造，禁止页面内继续手写一套参数拼接；
+- 主地图可主动丢弃历史夜晚和过期小时，但不得丢失地点、模型或用户明确选择的工作区；
+- URL 状态桥接的幂等键必须包含路径；相同查询参数在不同工作区可能具有不同语义。
 
 ## 7. 交付检查
 
@@ -100,4 +104,4 @@
 3. 键盘焦点、Esc 关闭、对话框焦点回归；
 4. 小时矩阵、卡片、按钮、状态色是否仍遵守统一语义；
 5. `npm run check`；
-6. Chromium E2E，尤其是 `/sites` 兼容跳转和移动端面板。
+6. Chromium E2E，尤其是兼容路由、数据说明弹窗、移动端来源入口和推荐面板。
