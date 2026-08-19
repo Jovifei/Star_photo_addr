@@ -1,10 +1,27 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import Link from "next/link";
+import { Suspense, useCallback, useState } from "react";
 import { Telescope } from "lucide-react";
 import EventStatus from "@/components/EventStatus";
 import SourcePopover from "@/components/SourcePopover";
 import NavTabs from "@/components/NavTabs";
+
+function NavTabsFallback() {
+  return (
+    <nav className="nav-tabs" aria-label="页面导航">
+      <Link href="/" className="nav-tab active" aria-current="page">
+        逐星
+      </Link>
+      <Link href="/sites" className="nav-tab">
+        推荐观星地点
+      </Link>
+      <Link href="/planner" className="nav-tab">
+        星野决策
+      </Link>
+    </nav>
+  );
+}
 
 /**
  * Top bar: one shared brand, three product workspaces, live event status and
@@ -25,7 +42,9 @@ export default function TopBar() {
           <span>星空摄影观测平台</span>
         </div>
       </div>
-      <NavTabs />
+      <Suspense fallback={<NavTabsFallback />}>
+        <NavTabs />
+      </Suspense>
       <EventStatus />
       <button
         type="button"

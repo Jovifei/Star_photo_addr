@@ -48,6 +48,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // No web fonts are loaded — the design uses system CJK font stacks only.
   return (
     <html lang="zh-CN" className="h-full">
       <body className="min-h-full antialiased">
