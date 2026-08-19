@@ -58,6 +58,38 @@ test("legacy light-pollution entry points preserve bookmark context", async ({
   }
 });
 
+test("historical home links are normalized without loading the location twice", async ({
+  page,
+}) => {
+  let selectedLocationRequests = 0;
+  await page.route("**/api/forecast?**", async (route) => {
+    const requestUrl = new URL(route.request().url());
+    if (
+      requestUrl.searchParams.get("latitude") === "30.1234" &&
+      requestUrl.searchParams.get("longitude") === "120.5678"
+    ) {
+      selectedLocationRequests += 1;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ locations: [] }),
+    });
+  });
+
+  await page.goto(
+    "/?lat=30.1234&lng=120.5678&name=%E4%B8%9C%E7%99%BD%E5%B1%B1&" +
+      "night=2000-01-01&forecastTime=2000-01-01T22%3A00&model=gfs",
+  );
+
+  await expect.poll(() => {
+    const target = new URL(page.url());
+    return `${target.searchParams.has("night")}|${target.searchParams.has("forecastTime")}`;
+  }).toBe("false|false");
+  await expect(page.locator(".detail-overlay-host")).toHaveClass(/is-open/);
+  await expect.poll(() => selectedLocationRequests).toBe(1);
+});
+
 test("source disclosure keeps the current observation context when opening recommendations", async ({
   page,
 }) => {
