@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { useStore } from "@/lib/store";
+import { buildProductHref } from "@/lib/productRoutes";
 
 /**
  * Shared product navigation. All three product entry points preserve the
@@ -23,52 +24,22 @@ export default function NavTabs() {
   );
 
   const navigationState = hydrated ? state : null;
+  const navigationContext = navigationState
+    ? {
+        location: navigationState.selectedLocation,
+        night: navigationState.selectedNight,
+        model: navigationState.cloudState.model,
+        forecastTime: navigationState.cloudState.activeForecastTime,
+        observationTime: navigationState.cloudState.activeObservationTime,
+        overlay: navigationState.cloudState.overlayMode,
+      }
+    : {};
 
-  const plannerParams = new URLSearchParams();
-  if (navigationState?.selectedLocation) {
-    plannerParams.set("lat", String(navigationState.selectedLocation.latitude));
-    plannerParams.set("lng", String(navigationState.selectedLocation.longitude));
-    plannerParams.set("name", navigationState.selectedLocation.name);
-    plannerParams.set("elevation", String(navigationState.selectedLocation.elevation));
-  }
-  if (navigationState) {
-    plannerParams.set("night", navigationState.selectedNight);
-    plannerParams.set("model", navigationState.cloudState.model);
-    if (navigationState.cloudState.activeForecastTime) {
-      plannerParams.set("forecastTime", navigationState.cloudState.activeForecastTime);
-    }
-    if (navigationState.cloudState.activeObservationTime) {
-      plannerParams.set("observationTime", navigationState.cloudState.activeObservationTime);
-    }
-    if (navigationState.cloudState.overlayMode) {
-      plannerParams.set("overlay", navigationState.cloudState.overlayMode);
-    }
-  }
-  const plannerQuery = plannerParams.toString();
-  const plannerHref = plannerQuery ? `/planner?${plannerQuery}` : "/planner";
-  const sitesHref = plannerQuery ? `/sites?${plannerQuery}` : "/sites";
-
-  const homeParams = new URLSearchParams();
-  if (navigationState?.selectedLocation) {
-    homeParams.set("lat", String(navigationState.selectedLocation.latitude));
-    homeParams.set("lng", String(navigationState.selectedLocation.longitude));
-    homeParams.set("name", navigationState.selectedLocation.name);
-    homeParams.set("elevation", String(navigationState.selectedLocation.elevation));
-  }
-  if (navigationState) {
-    homeParams.set("model", navigationState.cloudState.model);
-    if (navigationState.cloudState.activeForecastTime) {
-      homeParams.set("forecastTime", navigationState.cloudState.activeForecastTime);
-    }
-    if (navigationState.cloudState.activeObservationTime) {
-      homeParams.set("observationTime", navigationState.cloudState.activeObservationTime);
-    }
-    if (navigationState.cloudState.overlayMode) {
-      homeParams.set("overlay", navigationState.cloudState.overlayMode);
-    }
-  }
-  const homeQuery = homeParams.toString();
-  const homeHref = homeQuery ? `/?${homeQuery}` : "/";
+  const plannerHref = buildProductHref("/planner", navigationContext);
+  const sitesHref = buildProductHref("/sites", navigationContext);
+  const homeHref = buildProductHref("/", navigationContext, {
+    includeNight: false,
+  });
 
   const recommendationActive =
     pathname === "/sites" ||
