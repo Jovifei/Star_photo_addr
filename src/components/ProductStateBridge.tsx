@@ -48,10 +48,12 @@ export default function ProductStateBridge() {
     const overlay = searchParams.get("overlay") as CloudOverlayMode | null;
     const view = searchParams.get("view");
     const panel = searchParams.get("panel");
+    const cleanUrl = new URL(window.location.href);
+    let shouldReplaceUrl = false;
+
     if (isHome && searchParams.has("night")) {
-      const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("night");
-      window.history.replaceState(null, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+      shouldReplaceUrl = true;
     }
 
     // Home is tonight-first. A copied planner URL may contain a historical
@@ -71,9 +73,22 @@ export default function ProductStateBridge() {
         ? forecastTime
         : null;
     if (isHome && forecastTime && !acceptedHomeForecastTime) {
-      const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("forecastTime");
-      window.history.replaceState(null, "", `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`);
+      shouldReplaceUrl = true;
+    }
+
+    // Replace the address once, then mark the normalized URL as handled. This
+    // prevents useSearchParams from causing a second location/forecast request
+    // when it observes the cleaned query string.
+    const canonicalApplicationKey = shouldReplaceUrl
+      ? `${pathname}?${cleanUrl.searchParams.toString()}`
+      : applicationKey;
+    if (shouldReplaceUrl) {
+      window.history.replaceState(
+        null,
+        "",
+        `${cleanUrl.pathname}${cleanUrl.search}${cleanUrl.hash}`,
+      );
     }
 
     if (night && state.nightKeys.includes(night)) {
@@ -152,7 +167,7 @@ export default function ProductStateBridge() {
     // Include the route in the idempotency key. The same query string can have
     // different semantics on another workspace, so a pathname transition must
     // not be skipped merely because its parameters are unchanged.
-    applied.current = applicationKey;
+    applied.current = canonicalApplicationKey;
   }, [
     pathname,
     searchParams,
