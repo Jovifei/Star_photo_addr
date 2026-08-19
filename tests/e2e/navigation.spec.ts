@@ -1,5 +1,63 @@
 import { expect, test } from "@playwright/test";
 
+function buildForecastResponse(requestUrl: string) {
+  const url = new URL(requestUrl);
+  const latitude = Number(url.searchParams.get("latitude") ?? 0);
+  const longitude = Number(url.searchParams.get("longitude") ?? 0);
+  const model = url.searchParams.get("model") ?? "icon";
+  const date = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const start = Date.parse(`${date}T00:00:00Z`);
+  const fetchedAt = new Date().toISOString();
+  const hourly = Array.from({ length: 48 }, (_, index) => ({
+    time: new Date(start + index * 3_600_000).toISOString().slice(0, 16),
+    temperature: 12 + (index % 8),
+    humidity: 62,
+    dewPoint: 8,
+    precipitationProbability: 0,
+    precipitation: 0,
+    weatherCode: 0,
+    cloudCover: 18,
+    cloudLow: 10,
+    cloudMid: 8,
+    cloudHigh: 12,
+    visibility: 25_000,
+    windSpeed: 2,
+    windGust: 4,
+  }));
+
+  return {
+    locations: [
+      {
+        locationId: `e2e-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
+        modelLatitude: latitude,
+        modelLongitude: longitude,
+        modelElevation: 0,
+        timezone: "Asia/Shanghai",
+        utcOffsetSeconds: 28_800,
+        fetchedAt,
+        metadata: {
+          source: "E2E",
+          model,
+          fetchedAt,
+          stale: false,
+          units: {
+            cloudCover: "%",
+            precipitation: "mm",
+            windSpeed: "m/s",
+            windDirection: "°",
+          },
+        },
+        hourly,
+      },
+    ],
+  };
+}
+
 test("sites compatibility route preserves context and opens the recommendation panel", async ({
   page,
   request,
@@ -58,7 +116,7 @@ test("legacy light-pollution entry points preserve bookmark context", async ({
   }
 });
 
-test("historical home links are normalized without loading the location twice", async ({
+test("historical home links are normalized without re-running the bridge", async ({
   page,
 }) => {
   let selectedLocationRequests = 0;
@@ -73,7 +131,7 @@ test("historical home links are normalized without loading the location twice", 
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ locations: [] }),
+      body: JSON.stringify(buildForecastResponse(route.request().url())),
     });
   });
 
@@ -97,7 +155,7 @@ test("source disclosure keeps the current observation context when opening recom
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ locations: [] }),
+      body: JSON.stringify(buildForecastResponse(route.request().url())),
     });
   });
 
