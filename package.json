@@ -21,6 +21,7 @@
     "test:e2e": "playwright test",
     "test:live": "node scripts/live-smoke.mjs",
     "check:data-sources": "node scripts/check-data-sources.mjs",
+    "capture:readme": "node scripts/capture-readme-screenshots.mjs",
     "snapshot:worker": "node scripts/observing-snapshot-worker.mjs",
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run build",
     "check:full": "npm run check && npm run test:e2e"

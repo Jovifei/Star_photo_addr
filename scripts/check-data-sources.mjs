@@ -6,9 +6,18 @@
  * Unlike scripts/live-smoke.mjs (which calls providers directly), this script
  * verifies the deployed Next.js routes, cache/refresh path and response
  * contracts that browsers actually use.
+ *
+ * Base URL precedence:
+ *   1. First positional CLI argument
+ *   2. DATA_SOURCE_BASE_URL
+ *   3. http://127.0.0.1:${APP_PORT:-3100}
  */
 
+const positionalBaseUrl = process.argv
+  .slice(2)
+  .find((argument) => /^https?:\/\//i.test(argument));
 const baseUrl = (
+  positionalBaseUrl ||
   process.env.DATA_SOURCE_BASE_URL ||
   `http://127.0.0.1:${process.env.APP_PORT || "3100"}`
 ).replace(/\/$/, "");
