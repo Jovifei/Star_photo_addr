@@ -1,12 +1,7 @@
 // Server-only Open-Meteo geocoding proxy logic.
-//
-// Imported only by `src/app/api/geocode/route.ts`. No Tencent key is used —
-// Open-Meteo geocoding is keyless and global. This keeps all external domains
-// server-side and same-origin to the client.
 
 import type { GeocodeResponse, GeocodeResult } from "./types";
 
-/** Raw single geocoding result as returned by Open-Meteo geocoding. */
 interface RawGeocodeResult {
   id?: number;
   name?: string;
@@ -19,12 +14,46 @@ interface RawGeocodeResult {
   feature_code?: string;
 }
 
-/** Raw Open-Meteo geocoding response. */
 interface RawGeocodingResponse {
   results?: RawGeocodeResult[];
 }
 
-const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
+export const OPEN_METEO_GEOCODE_URL =
+  process.env.OPEN_METEO_GEOCODE_URL?.trim() ||
+  "https://geocoding-api.open-meteo.com/v1/search";
+
+export function normalizeGeocodeResults(
+  rawResults: RawGeocodeResult[] | undefined,
+): GeocodeResult[] {
+  return (rawResults ?? [])
+    .filter(
+      (raw) =>
+        typeof raw.name === "string" &&
+        raw.name.trim().length > 0 &&
+        typeof raw.latitude === "number" &&
+        Number.isFinite(raw.latitude) &&
+        raw.latitude >= -90 &&
+        raw.latitude <= 90 &&
+        typeof raw.longitude === "number" &&
+        Number.isFinite(raw.longitude) &&
+        raw.longitude >= -180 &&
+        raw.longitude <= 180,
+    )
+    .map((raw, index) => ({
+      id: raw.id ?? -(index + 1),
+      name: raw.name!.trim(),
+      latitude: raw.latitude!,
+      longitude: raw.longitude!,
+      elevation:
+        typeof raw.elevation === "number" && Number.isFinite(raw.elevation)
+          ? raw.elevation
+          : undefined,
+      country: raw.country,
+      admin1: raw.admin1,
+      timezone: raw.timezone,
+      featureCode: raw.feature_code,
+    }));
+}
 
 export async function searchPlaces(
   query: string,
@@ -38,24 +67,30 @@ export async function searchPlaces(
     language,
     format: "json",
   });
-  const response = await fetch(`${GEOCODE_URL}?${params.toString()}`, {
-    signal,
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    throw new Error(`地理编码接口返回 ${response.status}`);
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(
+        `${OPEN_METEO_GEOCODE_URL}?${params.toString()}`,
+        {
+          signal,
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (!response.ok) {
+        lastError = new Error(`地理编码接口返回 ${response.status}`);
+        if (response.status < 500 && response.status !== 429) break;
+        continue;
+      }
+      const data = (await response.json()) as RawGeocodingResponse;
+      return { results: normalizeGeocodeResults(data.results) };
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      lastError = error;
+    }
   }
-  const data = (await response.json()) as RawGeocodingResponse;
-  const results: GeocodeResult[] = (data.results ?? []).map((raw) => ({
-    id: raw.id ?? 0,
-    name: raw.name ?? "",
-    latitude: raw.latitude ?? 0,
-    longitude: raw.longitude ?? 0,
-    elevation: raw.elevation,
-    country: raw.country,
-    admin1: raw.admin1,
-    timezone: raw.timezone,
-    featureCode: raw.feature_code,
-  }));
-  return { results };
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("地理编码请求失败");
 }

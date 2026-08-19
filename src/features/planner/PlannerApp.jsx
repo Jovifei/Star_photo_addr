@@ -169,12 +169,12 @@ function readProductBridge() {
     overlay,
     location: {
       id: `perseids-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
-      name: params.get("name")?.trim() || "逐星联动点位",
+      name: params.get("name")?.trim() || "今夜观测联动点位",
       latitude,
       longitude,
       elevation: Number.isFinite(elevation) ? elevation : 0,
       timezone: undefined,
-      source: "逐星联动",
+      source: "今夜观测联动",
     },
   };
 }
@@ -468,13 +468,13 @@ export function App() {
             <span className="brand-mark"><Telescope strokeWidth={2.1} /></span>
           <div>
             <p className="eyebrow">逐星</p>
-            <h1>星野决策</h1>
+            <h1>观星计划</h1>
           </div>
         </div>
         <nav className="suite-nav" aria-label="产品导航">
-          <a href={perseidsHref}>逐星</a>
-          <a href={sitesHref}>推荐观星地点</a>
-          <span aria-current="page">星野决策</span>
+          <a href={perseidsHref}>今夜观测</a>
+          <a href={sitesHref}>暗夜选址</a>
+          <span aria-current="page">观星计划</span>
         </nav>
         <nav className="desktop-nav" aria-label="主导航">
           {NAV_ITEMS.map((item) => (
@@ -599,7 +599,7 @@ function LoadingState() {
 }
 
 function EmptyState({ hasLocations, onRefresh }) {
-  return <section className="empty-state"><Cloud size={36} /><h2>{hasLocations ? "还没有天气数据" : "还没有候选观测点"}</h2><p>{hasLocations ? "连接网络后刷新，页面会保留最近一次成功数据。" : "请先回到逐星地图，点击地点并加入星野决策；这里会比较今晚、3/5/7 天。"}</p>{!hasLocations && <Link className="primary-button" href="/">回到观星地图</Link>}<button className="secondary-button" type="button" onClick={onRefresh}>重新读取</button></section>;
+  return <section className="empty-state"><Cloud size={36} /><h2>{hasLocations ? "还没有天气数据" : "还没有候选观测点"}</h2><p>{hasLocations ? "连接网络后刷新，页面会保留最近一次成功数据。" : "请先回到今夜观测地图，点击地点并加入观星计划；这里会比较今晚、3/5/7 天。"}</p>{!hasLocations && <Link className="primary-button" href="/">回到今夜观测</Link>}<button className="secondary-button" type="button" onClick={onRefresh}>重新读取</button></section>;
 }
 
 function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail, isSpecifiedNight, onReturnTonight, isLinkedLocation, observationSnapshot, snapshotStartNight }) {
@@ -998,7 +998,7 @@ function DetailDrawer({
         <div className="drawer-header"><div><span className="section-kicker">地点详情 · {formatNightLabel(activeDetailNight)}</span><h2 id="detail-drawer-title">{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" type="button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
         <section className="detail-range-panel" aria-label="地点详情预报范围" data-active-night={activeDetailNight}>
           <div className="detail-range-heading">
-            <div><span className="section-kicker">逐星地点会话 / 星野决策</span><strong>未来多夜趋势与单夜下钻</strong></div>
+            <div><span className="section-kicker">今夜观测地点会话 / 观星计划</span><strong>未来多夜趋势与单夜下钻</strong></div>
             <div className="detail-range-source">
               <span><CheckCircle aria-hidden="true" />状态已同步</span>
               <small>{forecast?.metadata?.model?.toUpperCase() ?? "天气模型"} · {relativeFreshness(forecastUpdatedAt)}{stale ? " · 已过期" : ""}</small>
@@ -1024,7 +1024,7 @@ function DetailDrawer({
               return <button key={key} type="button" data-night-key={key} className={key === activeDetailNight ? "active" : ""} aria-pressed={key === activeDetailNight} onClick={() => selectDetailNight(key, itemEvaluation)}><small>第 {index + 1} 夜</small><strong>{formatNightLabel(key, true)}</strong><span>{itemEvaluation ? `${itemEvaluation.score} 分 · 云量 ${averageCloud ?? "—"}% · 窗口 ${itemEvaluation.window.length}h` : "暂无数据"}</span><em className={meta.tone}>{itemEvaluation ? meta.label : "无数据"}</em></button>;
             })}
           </div>
-          <p className="detail-range-note">趋势图会随“今日 / 3 天 / 5 天 / 7 天”立即改变；星空分越高越适合观测，平均总云量越低越好，窗口表示连续可用小时。点击夜次或小时后，逐星地图会恢复同一地点、模型与时次。</p>
+          <p className="detail-range-note">趋势图会随“今日 / 3 天 / 5 天 / 7 天”立即改变；星空分越高越适合观测，平均总云量越低越好，窗口表示连续可用小时。点击夜次或小时后，今夜观测地图会恢复同一地点、模型与时次。</p>
         </section>
         <div className="detail-summary"><ScoreRing value={activeEvaluation?.score} label="星空分" /><div><span className={`status-pill ${statusMeta(activeEvaluation?.status).tone}`}>{statusMeta(activeEvaluation?.status).label}</span><h3>{activeEvaluation?.windowLabel}</h3><p>{activeEvaluation?.reason}</p></div></div>
         <div className="detail-metrics"><Metric icon={Cloud} label="云海潜力" value={activeEvaluation?.cloudSeaPotential ?? "—"} /><Metric icon={Moon} label="月面照度" value={formatNullable(activeEvaluation?.moonIllumination, "%", (value) => Math.round(value * 100))} /><Metric icon={Sparkle} label="天文暗夜" value={formatNullable(activeEvaluation?.darkHours, "h")} /><Metric icon={Compass} label="银河最高" value={formatNullable(activeEvaluation?.galacticMax, "°")} /></div>

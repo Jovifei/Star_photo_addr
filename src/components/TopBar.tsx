@@ -1,16 +1,31 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { Telescope } from "lucide-react";
+import Link from "next/link";
+import { Suspense, useCallback, useState } from "react";
+import { Info, Telescope } from "lucide-react";
 import EventStatus from "@/components/EventStatus";
 import SourcePopover from "@/components/SourcePopover";
 import NavTabs from "@/components/NavTabs";
 
+function NavTabsFallback() {
+  return (
+    <nav className="nav-tabs" aria-label="页面导航">
+      <Link href="/" className="nav-tab active" aria-current="page">
+        今夜观测
+      </Link>
+      <Link href="/sites" className="nav-tab">
+        暗夜选址
+      </Link>
+      <Link href="/planner" className="nav-tab">
+        观星计划
+      </Link>
+    </nav>
+  );
+}
+
 /**
- * Top bar: brand, navigation tabs, live event status, and the data-source
- * entry point.
- *
- * v2: integrates NavTabs for switching between "逐星" and "星野决策" pages.
+ * Top bar: one shared brand, three product workspaces, live event status and
+ * the data-source disclosure entry point.
  */
 export default function TopBar() {
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -27,14 +42,21 @@ export default function TopBar() {
           <span>星空摄影观测平台</span>
         </div>
       </div>
-      <NavTabs />
+      <Suspense fallback={<NavTabsFallback />}>
+        <NavTabs />
+      </Suspense>
       <EventStatus />
       <button
         type="button"
         className="source-button"
+        aria-label="数据依据与局限"
+        aria-haspopup="dialog"
+        aria-expanded={sourceOpen}
+        aria-controls="source-popover"
         onClick={() => setSourceOpen(true)}
       >
-        数据依据与局限
+        <Info size={16} strokeWidth={1.9} aria-hidden="true" />
+        <span className="source-button-label">数据依据与局限</span>
       </button>
       <SourcePopover open={sourceOpen} onClose={closeSource} />
     </header>

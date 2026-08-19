@@ -1,0 +1,348 @@
+/*
+ * Canonical visual layer for the 逐星 product family.
+ *
+ * globals.css still owns structural layout and map-specific positioning. This
+ * file is imported after it and deliberately concentrates the shared visual
+ * language: ink-black night surfaces, observation teal, moonlight amber and
+ * restrained warning red. Keep new visual work token-driven here instead of
+ * adding another page-local palette.
+ */
+
+:root {
+  --night-0: #02070b;
+  --night-1: #041018;
+  --night-2: #071821;
+  --night-3: #0b222c;
+  --night-glass: rgba(6, 20, 27, 0.88);
+  --night-glass-strong: rgba(5, 16, 23, 0.96);
+  --observation: #79cfe2;
+  --observation-strong: #b0e6ef;
+  --moonlight: #d4b273;
+  --danger-soft: #cb7768;
+  --surface-border: rgba(165, 205, 216, 0.16);
+  --surface-border-strong: rgba(151, 211, 225, 0.34);
+  --surface-highlight: rgba(121, 207, 226, 0.1);
+  --shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.34);
+  --shadow-float: 0 14px 34px rgba(0, 0, 0, 0.42);
+  --radius-panel: 14px;
+  --radius-control: 8px;
+  --control-height: 36px;
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% -10%, rgba(121, 207, 226, 0.08), transparent 34%),
+    radial-gradient(circle at 82% -18%, rgba(212, 178, 115, 0.06), transparent 28%),
+    var(--night-0);
+}
+
+/* Product shell and top navigation ------------------------------------------------ */
+.app-shell:not(.planner-root) .topbar {
+  min-height: 58px;
+  gap: 14px;
+  padding: 9px 18px;
+  background: linear-gradient(180deg, rgba(6, 20, 27, 0.97), rgba(4, 16, 24, 0.91));
+  border-bottom-color: var(--surface-border-strong);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2);
+}
+
+.nav-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 3px;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: rgba(2, 9, 14, 0.72);
+}
+
+.nav-tab {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.nav-tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.nav-tab.active {
+  border-color: rgba(121, 207, 226, 0.28);
+  color: var(--observation-strong);
+  background: linear-gradient(180deg, rgba(121, 207, 226, 0.15), rgba(121, 207, 226, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(121, 207, 226, 0.04);
+}
+
+.source-button,
+.map-view-actions > button,
+.cloud-layer-toggles button,
+.cloud-night-tabs button {
+  min-height: var(--control-height);
+  border-radius: var(--radius-control);
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.source-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.source-button:hover,
+.map-view-actions > button:hover,
+.cloud-layer-toggles button:hover,
+.cloud-night-tabs button:hover {
+  border-color: var(--surface-border-strong);
+  background-color: rgba(121, 207, 226, 0.08);
+  color: var(--observation-strong);
+}
+
+/* Shared glass surfaces ---------------------------------------------------------- */
+:is(
+  .side-panel,
+  .cloud-control,
+  .observing-map-control,
+  .cloud-timeline,
+  .popover,
+  .boundary-legend,
+  .source-status-panel,
+  .cloud-summary-card span
+) {
+  border-color: var(--surface-border);
+}
+
+.side-panel,
+.cloud-control,
+.observing-map-control,
+.popover {
+  background:
+    linear-gradient(180deg, rgba(8, 27, 36, 0.96), rgba(4, 15, 22, 0.94));
+  box-shadow: var(--shadow-panel);
+}
+
+.cloud-timeline {
+  background:
+    linear-gradient(180deg, rgba(7, 24, 33, 0.96), rgba(3, 12, 18, 0.98));
+  box-shadow: 0 -16px 44px rgba(0, 0, 0, 0.24);
+}
+
+.panel-kicker,
+.cloud-control-head b,
+.observing-map-control-title,
+.source-status-title {
+  color: var(--moonlight);
+  letter-spacing: 0.12em;
+}
+
+/* Hourly matrix: remove the legacy indigo dashboard palette --------------------- */
+.hourly-matrix {
+  border-color: var(--surface-border-strong);
+  background: linear-gradient(180deg, rgba(8, 26, 35, 0.96), rgba(4, 15, 22, 0.96));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.hourly-matrix-head h3,
+.hourly-matrix-time,
+.hourly-matrix td button {
+  color: var(--text);
+}
+
+.hourly-matrix-status {
+  color: var(--moonlight);
+}
+
+.hourly-matrix th,
+.hourly-matrix td {
+  border-right-color: var(--surface-border);
+  border-bottom-color: var(--surface-border);
+}
+
+.hourly-matrix thead th,
+.hourly-matrix thead th:first-child {
+  background: #0b222c;
+  color: var(--observation-strong);
+}
+
+.hourly-matrix tbody th {
+  background: #071821;
+  color: #dbe9eb;
+}
+
+.hourly-matrix th small,
+.hourly-matrix tbody th small,
+.hourly-matrix-time small,
+.hourly-matrix-legend {
+  color: var(--muted);
+}
+
+.hourly-matrix th.selected,
+.hourly-matrix td.selected {
+  box-shadow: inset 0 0 0 2px var(--observation);
+}
+
+.hourly-matrix td button:hover,
+.hourly-matrix td button:focus-visible,
+.hourly-matrix-time:hover,
+.hourly-matrix-time:focus-visible {
+  background: var(--surface-highlight);
+}
+
+.hourly-matrix td.cloud {
+  background: linear-gradient(90deg, rgba(121, 207, 226, 0.06), rgba(121, 207, 226, 0.12));
+}
+
+.hourly-matrix td.cloud::before,
+.legend-swatch.cloud {
+  background: var(--observation);
+}
+
+.hourly-matrix td.temperature::before,
+.legend-swatch.temperature {
+  background: var(--moonlight);
+}
+
+.hourly-matrix td.precipitation::before,
+.legend-swatch.precipitation {
+  background: var(--danger-soft);
+}
+
+.cloud-night-tabs button {
+  border-color: var(--surface-border);
+  color: var(--muted);
+  background: rgba(7, 24, 33, 0.82);
+}
+
+.cloud-night-tabs button.active,
+.cloud-night-tabs button:hover {
+  border-color: var(--observation);
+  color: var(--observation-strong);
+  background: var(--surface-highlight);
+}
+
+.cloud-summary-card span,
+.source-status-panel {
+  background: rgba(4, 16, 23, 0.56);
+}
+
+/* Form and modal consistency ----------------------------------------------------- */
+.popover-backdrop,
+.modal-backdrop,
+.drawer-backdrop {
+  backdrop-filter: blur(8px);
+}
+
+.popover {
+  border-radius: var(--radius-panel);
+}
+
+.popover .note {
+  border-color: rgba(212, 178, 115, 0.3);
+  background: rgba(212, 178, 115, 0.07);
+}
+
+:is(input, select, textarea) {
+  accent-color: var(--observation);
+}
+
+/* Status semantics: cyan = usable/active, amber = caution, red = blocker. */
+.source-dot,
+.freshness-dot,
+.event-status .live-dot {
+  background: var(--observation);
+}
+
+.source-dot.unconfigured {
+  background: var(--moonlight);
+}
+
+/* Responsive top navigation ------------------------------------------------------ */
+@media (max-width: 1080px) {
+  .app-shell:not(.planner-root) .topbar {
+    gap: 10px;
+  }
+
+  .brand-block span,
+  .event-status span {
+    display: none;
+  }
+
+  .nav-tab {
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell:not(.planner-root) .topbar {
+    min-height: 56px;
+    padding: 8px 10px;
+  }
+
+  .brand-block {
+    flex: 0 0 auto;
+  }
+
+  .brand-block > div:last-child,
+  .event-status {
+    display: none;
+  }
+
+  .nav-tabs {
+    flex: 1;
+    justify-content: stretch;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab {
+    flex: 1 0 auto;
+    min-width: max-content;
+    padding-inline: 11px;
+  }
+
+  .source-button {
+    width: var(--control-height);
+    min-width: var(--control-height);
+    padding: 0;
+  }
+
+  .source-button-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-tab,
+  .source-button,
+  .map-view-actions > button,
+  .cloud-layer-toggles button,
+  .cloud-night-tabs button {
+    transition: none;
+  }
+}

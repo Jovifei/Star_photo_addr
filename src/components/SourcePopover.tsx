@@ -1,18 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { VIIRS_SCIENTIFIC_BOUNDARY } from "@/data/viirsMeta";
 import { hasDarkSkyLayer } from "@/lib/assets";
+import { buildProductHref } from "@/lib/productRoutes";
+import { useStore } from "@/lib/store";
 
 /**
- * "数据依据与局限" popover describing data sources and limitations.
+ * "数据依据与局限" dialog describing data sources and limitations.
  *
- * v2: Uses `createPortal` to render to `document.body`, escaping the
- * `.topbar` containing block created by `backdrop-filter: blur(10px)`.
- * This ensures `position: fixed; inset: 0` is relative to the viewport,
- * not the ~54 px tall top bar.
+ * It is portalled to document.body so the fixed backdrop is relative to the
+ * viewport rather than the backdrop-filter containing block in the top bar.
  */
 export default function SourcePopover({
   open,
@@ -22,6 +23,15 @@ export default function SourcePopover({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const { state } = useStore();
+  const sitesHref = buildProductHref("/sites", {
+    location: state.selectedLocation,
+    night: state.selectedNight,
+    model: state.cloudState.model,
+    forecastTime: state.cloudState.activeForecastTime,
+    observationTime: state.cloudState.activeObservationTime,
+    overlay: state.cloudState.overlayMode,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -67,16 +77,14 @@ export default function SourcePopover({
   if (!open) return null;
 
   const content = (
-    <div
-      className="popover-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="source-popover-title"
-      onMouseDown={onClose}
-    >
+    <div className="popover-backdrop" onMouseDown={onClose}>
       <div
+        id="source-popover"
         ref={dialogRef}
         className="popover"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="source-popover-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <button className="close" type="button" onClick={onClose} aria-label="关闭">
@@ -108,17 +116,16 @@ export default function SourcePopover({
           </p>
         </div>
         <p>
-          完整公式、参数与验证方法见{" "}
-          <a href="/sites#data-sources" onClick={onClose}>
-            数据说明
-          </a>
-          。
+          继续前往{" "}
+          <Link href={sitesHref} onClick={onClose}>
+            暗夜选址
+          </Link>
+          ，在同一地图中查看光污染图层与候选点位。
         </p>
       </div>
     </div>
   );
 
-  // Guard for SSR — document is only available in the browser.
   if (typeof document === "undefined") return content;
   return createPortal(content, document.body);
 }

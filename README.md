@@ -1,17 +1,12 @@
-# 逐星 × 星野决策｜星空摄影观测平台
+# 逐星｜星空摄影观测平台
 
-这是一个统一到 Next.js 16 的中文星空摄影决策产品。产品已收敛为“全国选点 → 多夜决策”两页闭环，共用地点、候选清单、观测夜、模型、时次和天气评分状态：
+这是一个统一到 Next.js 16 的中文星空摄影决策产品。总品牌为 **逐星**，产品由三个连续工作区构成，共用地点、候选清单、观测夜、天气模型、时次与评分状态：
 
-- `/`：观星地图。浏览 242 个中国观星地点，切换卫星云图、VIIRS 光污染和综合决策图层，筛选评分并将最多 12 个地点加入候选。
-- `/planner`：星野决策。比较候选地点在今晚及未来 3/5/7 夜的评分、最佳连续窗口、云量、降水、风和月光条件。
+- `/`：**今夜观测**。浏览中国观星地点，切换卫星云图、逐小时云量与综合决策图层，快速判断今晚是否适合观测。
+- `/sites`：**暗夜选址**。进入统一地图的光污染与候选地点工作区，结合 VIIRS、Bortle 条件和天气筛选观测点。
+- `/planner`：**观星计划**。比较候选地点在今晚及未来 3/5/7 夜的评分、最佳连续窗口、云量、降水、风和月光条件。
 
-两页通过共享观测会话和 URL 参数联动：`lat`、`lng`、`name`、`elevation`、`night`、`model`、`forecastTime`、`overlay`。例如：
-
-```text
-/planner?lat=30.4694&lng=119.5978&name=天荒坪&elevation=958.4&night=2026-08-12
-```
-
-观测夜以“傍晚所在日期”命名：`2026-08-07` 表示 8 月 7 日 20:00 至 8 月 8 日 05:00；所有日期界面均显示星期。
+三个工作区形成“判断今夜条件 → 筛选暗夜地点 → 制定观星计划”的使用闭环。它们通过共享观测会话和 URL 参数联动：`lat`、`lng`、`name`、`elevation`、`night`、`model`、`forecastTime`、`observationTime`、`overlay`。
 
 ## 本地运行
 
@@ -22,14 +17,47 @@ npm ci
 npm run dev
 ```
 
-打开 `http://localhost:3100`。天气和地名搜索经 Next 同源 API 转发，不需要浏览器端 API Key。可选的天地图中文注记令牌通过 `NEXT_PUBLIC_TIANDITU_TOKEN` 配置；未配置时使用内置中文城市注记，不回退到英文地名底图。
+打开 `http://localhost:3100`。天气、地理编码、空气质量、卫星时次和评分快照均通过 Next 同源 API 访问，浏览器不直接持有上游密钥。
 
-### 数据源配置状态
+## 数据源与刷新
 
-- Open-Meteo 天气、NASA GIBS Himawari 卫星云图、VIIRS Black Marble 夜光基准均通过服务端/公共图层直接使用，不需要在浏览器填写 Key。
-- 天地图中文注记是可选项：复制 `.env.example` 为 `.env.local`，填写 `NEXT_PUBLIC_TIANDITU_TOKEN`，然后重启 `npm run dev` 或重新构建 Docker。
-- Bortle/SQM 暂不默认启用。它需要已经确认许可的本地 VIIRS/World Atlas 资源，并同时设置对应的 `NEXT_PUBLIC_ASSET_VIIRS_TILES` 或 `NEXT_PUBLIC_ASSET_WORLD_ATLAS`；没有资源时页面会明确显示“未安装”，不会伪造天空亮度。
-- 地点详情中的“今日 / 3 天 / 5 天 / 7 天”使用同一次地点预报请求的未来夜间数据；它不是重新创建地点，也不会改变主地图当前时次。
+- **云量/天气**：Open-Meteo 总云量、高云、中云、低云、降水、风和能见度；ICON、GFS、AIFS 会按各自预报时效限制请求。
+- **卫星云图**：NASA GIBS Himawari AHI Band 13，使用实际卫星观测时间域，不与天气预报时次混用。
+- **光污染视觉参考**：默认 VIIRS 2023 第三方 WMTS；只用于空间参考，不等同于现场 Bortle 或 SQM 实测。
+- **Bortle/SQM**：只有安装并显式启用授权本地栅格后才显示；未安装时明确标记，不伪造数值。
+- **空气质量**：Open-Meteo CAMS。
+- **空间天气**：NOAA SWPC 全球行星 Kp；不等同于当地极光概率。
+
+应用内“刷新数据”会绕过 10 分钟新鲜缓存，重新读取天气、云量网格、推荐点评分快照、卫星目录和数据源状态。上游暂时失败时，只会回退到明确标记的旧数据，不会用空数组或固定值冒充成功。
+
+运维接口：
+
+```bash
+curl -fsS http://127.0.0.1:3100/healthz
+curl -fsS http://127.0.0.1:3100/api/data-sources/health
+curl -fsS 'http://127.0.0.1:3100/api/data-sources/health?refresh=1'
+```
+
+- `/healthz`：应用进程存活检查；
+- `/api/data-sources/health`：Open-Meteo、NASA GIBS、光污染瓦片与本地资产状态；
+- `refresh=1`：绕过诊断缓存重新探测。
+
+## 配置
+
+复制环境模板：
+
+```bash
+cp .env.example .env.local
+```
+
+常用配置：
+
+- `NEXT_PUBLIC_TIANDITU_TOKEN`：可选的天地图中文注记；
+- `NEXT_PUBLIC_LIGHT_POLLUTION_TILE_URL`：自有/授权光污染瓦片模板；
+- `NEXT_PUBLIC_ASSET_*`：授权本地暗夜资产开关；
+- `OPEN_METEO_*`、`GIBS_CAPABILITIES_URL`、`NOAA_KP_URL`：运行时上游地址或企业代理。
+
+`NEXT_PUBLIC_*` 是构建时变量，修改后必须重新构建。
 
 ## 验证
 
@@ -37,8 +65,10 @@ npm run dev
 npm run check       # lint + typecheck + unit + production build
 npm run test:e2e    # production server 上的 desktop/mobile 浏览器流程
 npm run check:full  # 上述全部
-npm run test:live   # 可选：真实 Open-Meteo 联网冒烟
+npm run test:live   # 真实天气、云层、卫星、AQI、Kp、地理编码冒烟
 ```
+
+真实冒烟测试会把官方数据源失败作为错误；第三方光污染视觉瓦片会单独报告 `degraded`，便于生产环境改用自建/授权源。
 
 首次执行 E2E 前如缺浏览器：
 
@@ -46,29 +76,33 @@ npm run test:live   # 可选：真实 Open-Meteo 联网冒烟
 npx playwright install chromium
 ```
 
-## Docker
+## Docker 与阿里云
 
 ```bash
+cp .env.example .env
+export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose up --build -d
 curl -fsS http://127.0.0.1:3100/healthz
 ```
 
-健康检查应返回包含 `status: "ok"` 和 `app: "star-weather-planner"` 的 JSON。容器内部运行 Next standalone 服务，宿主机默认端口为 3100；可通过 `APP_PORT` 覆盖。
+默认只监听 `127.0.0.1:3100`，适合由 Nginx/Caddy 反向代理并对公网只开放 `80/443`。完整 ECS、安全组、HTTPS、上游排障、更新与回滚步骤见：
+
+- [`docs/ALIYUN_DEPLOYMENT.md`](docs/ALIYUN_DEPLOYMENT.md)
+
+容器内部运行 Next standalone 服务；观测点评分快照保存在 named volume `observing-snapshots`，镜像更新不会自动删除。
 
 ## 数据边界
 
-- 天气与地理编码：[Open-Meteo](https://open-meteo.com/)。
-- 天文位置：Astronomy Engine 本地计算。
-- 地图：CARTO 无地名深色底图 + 天地图或内置中文注记。
-- 暗夜：没有可核验栅格时明确显示“未安装/无数据”，不伪造 SQM 或 Bortle。
-- 云图：数值预报使用 Open-Meteo 网格采样和规则网格插值，不是卫星实况；高、中、低云颜色和 0–100% 比例分别呈现。卫星模式独立使用 NASA GIBS Himawari 观测。
-- 推荐地点：人工整理的参考点，不等于官方安全背书；出发前仍需核对道路、雷电、地质灾害和现场管制。
+- 数值云量不是卫星实况；卫星观测也不是未来预报。
+- 光污染视觉瓦片不是实时光污染，也不能直接推导现场 Bortle/SQM。
+- 推荐地点是人工整理的参考点，不等于官方安全背书。
+- 出发前仍需核对道路、雷电、地质灾害、现场管制和当地实时云况。
 
 ## 代码结构
 
 - `src/app/`：Next 路由与同源 API。
-- `src/components/`：逐星与推荐地点共用组件。
-- `src/features/planner/`：迁入 Next 的星野决策功能。
-- `src/lib/`：全局状态、评分、天文、云图与时间语义。
-- `tests/unit/`、`tests/planner/`、`tests/e2e/`：算法、旧产品迁移与跨产品流程测试。
-- `docs/gpt_plan/`：交付状态、风险与后续 Codex 接管提示词。
+- `src/components/`：今夜观测与暗夜选址共用组件。
+- `src/features/planner/`：观星计划功能。
+- `src/lib/`：全局状态、评分、天文、云图、缓存与数据源诊断。
+- `tests/unit/`、`tests/planner/`、`tests/e2e/`：算法、接口语义和跨工作区流程测试。
+- `scripts/live-smoke.mjs`：真实上游冒烟测试。

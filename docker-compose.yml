@@ -1,39 +1,84 @@
 services:
   star-weather:
-    build: .
+    image: ${APP_IMAGE:-star-photo-addr:local}
+    build:
+      context: .
+      args:
+        BUILD_REVISION: ${BUILD_REVISION:-local}
+        NEXT_PUBLIC_TIANDITU_TOKEN: ${NEXT_PUBLIC_TIANDITU_TOKEN:-}
+        NEXT_PUBLIC_LIGHT_POLLUTION_TILE_URL: ${NEXT_PUBLIC_LIGHT_POLLUTION_TILE_URL:-}
+        NEXT_PUBLIC_ASSET_VIIRS_TILES: ${NEXT_PUBLIC_ASSET_VIIRS_TILES:-false}
+        NEXT_PUBLIC_ASSET_WORLD_ATLAS: ${NEXT_PUBLIC_ASSET_WORLD_ATLAS:-false}
+        NEXT_PUBLIC_ASSET_CITY_CANDIDATES: ${NEXT_PUBLIC_ASSET_CITY_CANDIDATES:-false}
+        NEXT_PUBLIC_ASSET_BOUNDARIES: ${NEXT_PUBLIC_ASSET_BOUNDARIES:-false}
     ports:
-      - "${APP_PORT:-3100}:3000"
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3100}:3000"
     environment:
       OBSERVING_SNAPSHOT_DIR: /app/data/snapshots
+      OPEN_METEO_FORECAST_URL: ${OPEN_METEO_FORECAST_URL:-https://api.open-meteo.com/v1/forecast}
+      OPEN_METEO_GEOCODE_URL: ${OPEN_METEO_GEOCODE_URL:-https://geocoding-api.open-meteo.com/v1/search}
+      OPEN_METEO_AIR_QUALITY_URL: ${OPEN_METEO_AIR_QUALITY_URL:-https://air-quality-api.open-meteo.com/v1/air-quality}
+      GIBS_CAPABILITIES_URL: ${GIBS_CAPABILITIES_URL:-https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml}
+      NOAA_KP_URL: ${NOAA_KP_URL:-https://services.swpc.noaa.gov/products/noaa-planetary-k-index-forecast.json}
+      DATA_SOURCE_HEALTH_TTL_MS: ${DATA_SOURCE_HEALTH_TTL_MS:-300000}
+      DATA_SOURCE_PROBE_TIMEOUT_MS: ${DATA_SOURCE_PROBE_TIMEOUT_MS:-15000}
+      DATA_SOURCE_FORCE_REFRESH_COOLDOWN_MS: ${DATA_SOURCE_FORCE_REFRESH_COOLDOWN_MS:-60000}
+      FORECAST_CACHE_TTL_MS: ${FORECAST_CACHE_TTL_MS:-600000}
+      FORECAST_STALE_TTL_MS: ${FORECAST_STALE_TTL_MS:-21600000}
+      FORECAST_REQUEST_TIMEOUT_MS: ${FORECAST_REQUEST_TIMEOUT_MS:-25000}
+      FORECAST_FORCE_REFRESH_COOLDOWN_MS: ${FORECAST_FORCE_REFRESH_COOLDOWN_MS:-60000}
+      FORECAST_MAX_LOCATIONS: ${FORECAST_MAX_LOCATIONS:-64}
+      GIBS_CACHE_TTL_MS: ${GIBS_CACHE_TTL_MS:-900000}
+      GIBS_STALE_TTL_MS: ${GIBS_STALE_TTL_MS:-86400000}
+      GIBS_REQUEST_TIMEOUT_MS: ${GIBS_REQUEST_TIMEOUT_MS:-15000}
+      GIBS_FORCE_REFRESH_COOLDOWN_MS: ${GIBS_FORCE_REFRESH_COOLDOWN_MS:-60000}
+      OBSERVATION_SNAPSHOT_TTL_MS: ${OBSERVATION_SNAPSHOT_TTL_MS:-1800000}
+      OBSERVATION_SNAPSHOT_STALE_TTL_MS: ${OBSERVATION_SNAPSHOT_STALE_TTL_MS:-21600000}
+      OBSERVATION_SNAPSHOT_TIMEOUT_MS: ${OBSERVATION_SNAPSHOT_TIMEOUT_MS:-120000}
+      OBSERVATION_SNAPSHOT_FORCE_REFRESH_COOLDOWN_MS: ${OBSERVATION_SNAPSHOT_FORCE_REFRESH_COOLDOWN_MS:-60000}
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-old-space-size=768}
     volumes:
       - observing-snapshots:/app/data/snapshots
     restart: unless-stopped
+    stop_grace_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
       interval: 30s
-      timeout: 3s
+      timeout: 5s
+      start_period: 20s
       retries: 5
+
   star-weather-worker:
-    build: .
+    image: ${APP_IMAGE:-star-photo-addr:local}
     command: ["node", "scripts/observing-snapshot-worker.mjs"]
     environment:
       OBSERVING_SNAPSHOT_DIR: /app/data/snapshots
       SNAPSHOT_BASE_URL: http://star-weather:3000
-      SNAPSHOT_INTERVAL_MS: 1800000
-      SNAPSHOT_DAYS: 7
-      SNAPSHOT_MODEL: icon
+      SNAPSHOT_INTERVAL_MS: ${SNAPSHOT_INTERVAL_MS:-1800000}
+      SNAPSHOT_DAYS: ${SNAPSHOT_DAYS:-7}
+      SNAPSHOT_MODEL: ${SNAPSHOT_MODEL:-gfs}
+      NODE_OPTIONS: ${WORKER_NODE_OPTIONS:---max-old-space-size=512}
     volumes:
       - observing-snapshots:/app/data/snapshots
     depends_on:
       star-weather:
         condition: service_healthy
+    restart: unless-stopped
+    stop_grace_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD-SHELL", "ps -o args | grep -q '[o]bserving-snapshot-worker.mjs'"]
       interval: 30s
-      timeout: 3s
-      start_period: 5s
+      timeout: 5s
+      start_period: 10s
       retries: 3
-    restart: unless-stopped
 
 volumes:
   observing-snapshots:

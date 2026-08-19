@@ -18,7 +18,9 @@ export const DEFAULT_RECOMMENDATION_THRESHOLD = 70;
 export const MAX_SHORTLIST_SIZE = 12;
 
 /** The one Adapter used by both product routes. */
-export function finderLocationToObservingSite(location: FinderLocation): ObservingSite {
+export function finderLocationToObservingSite(
+  location: FinderLocation,
+): ObservingSite {
   return {
     id: location.id,
     name: location.name,
@@ -32,7 +34,9 @@ export function finderLocationToObservingSite(location: FinderLocation): Observi
   };
 }
 
-export const OBSERVING_SITES: ObservingSite[] = FINDER_LOCATIONS.map(finderLocationToObservingSite);
+export const OBSERVING_SITES: ObservingSite[] = FINDER_LOCATIONS.map(
+  finderLocationToObservingSite,
+);
 
 export function observingSiteToLocation(site: ObservingSite) {
   return {
@@ -53,7 +57,10 @@ function clamp(value: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function numberAt(values: Array<number | null> | undefined, index: number): number | null {
+function numberAt(
+  values: Array<number | null> | undefined,
+  index: number,
+): number | null {
   const value = values?.[index];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -61,7 +68,10 @@ function numberAt(values: Array<number | null> | undefined, index: number): numb
 function isNightHour(time: string, date: string): boolean {
   const nextDate = addDays(date, 1);
   const hour = Number(time.slice(11, 13));
-  return (time.startsWith(date) && hour >= 20) || (time.startsWith(nextDate) && hour <= 5);
+  return (
+    (time.startsWith(date) && hour >= 20) ||
+    (time.startsWith(nextDate) && hour <= 5)
+  );
 }
 
 function addDays(date: string, amount: number): string {
@@ -87,7 +97,10 @@ function darknessScore(bortle: ObservingSite["bortle"]): number {
   return ({ 1: 100, 2: 90, 3: 78, 4: 62 } as const)[bortle];
 }
 
-function scoreConfidence(validHours: number, totalHours: number): RecommendationConfidence {
+function scoreConfidence(
+  validHours: number,
+  totalHours: number,
+): RecommendationConfidence {
   if (!validHours) return "unknown";
   const ratio = validHours / Math.max(1, totalHours);
   if (ratio >= 0.8) return "high";
@@ -112,14 +125,67 @@ function unknownHourScore(
   };
 }
 
+interface ClearWindowRow {
+  time: string;
+  cloud: number | null;
+}
+
+function wallClockMillis(time: string): number {
+  const normalized = time.length === 16 ? `${time}:00Z` : `${time}Z`;
+  return Date.parse(normalized);
+}
+
 /**
- * Compute the same 0–100 score for one exact forecast hour.
+ * Find the clearest truly contiguous window.
  *
- * The full-night score remains the ranking score. This focused score exists
- * for the map time window so point colours and distribution counts can follow
- * the selected hour without pretending a one-hour reading is a full-night
- * recommendation.
+ * The previous implementation filtered cloudy hours first and then sliced the
+ * filtered list, which could falsely join 20:00, 22:00 and 23:00 into a “3h”
+ * window. This helper groups exact one-hour neighbours before considering any
+ * candidate window.
  */
+export function findBestContiguousWindow(
+  rows: ClearWindowRow[],
+  minimumHours = 3,
+): string[] {
+  if (minimumHours < 1) return [];
+  const sorted = [...rows]
+    .filter((row) => Number.isFinite(wallClockMillis(row.time)))
+    .sort((left, right) =>
+      left.time.localeCompare(right.time),
+    );
+  const groups: ClearWindowRow[][] = [];
+  for (const row of sorted) {
+    const group = groups.at(-1);
+    const previous = group?.at(-1);
+    if (
+      !group ||
+      !previous ||
+      wallClockMillis(row.time) - wallClockMillis(previous.time) !== 3_600_000
+    ) {
+      groups.push([row]);
+    } else {
+      group.push(row);
+    }
+  }
+
+  const candidates = groups.flatMap((group) => {
+    if (group.length < minimumHours) return [];
+    return Array.from(
+      { length: group.length - minimumHours + 1 },
+      (_, index) => group.slice(index, index + minimumHours),
+    );
+  });
+  candidates.sort((left, right) => {
+    const average = (items: ClearWindowRow[]) =>
+      items.reduce((sum, item) => sum + (item.cloud ?? 100), 0) /
+      items.length;
+    return average(left) - average(right) ||
+      left[0]!.time.localeCompare(right[0]!.time);
+  });
+  return candidates[0]?.map((row) => row.time) ?? [];
+}
+
+/** Compute the shared score for one exact forecast hour. */
 export function scoreObservingSiteAtTime(
   site: ObservingSite,
   record: FinderWeatherRecord | undefined,
@@ -127,10 +193,14 @@ export function scoreObservingSiteAtTime(
 ): RecommendationScore {
   const hourly = record?.hourly;
   const index = hourly?.time?.indexOf(time) ?? -1;
-  if (!hourly || index < 0) return unknownHourScore(site, ["此时暂无天气数据"]);
+  if (!hourly || index < 0) {
+    return unknownHourScore(site, ["此时暂无天气数据"]);
+  }
 
   const cloud = numberAt(hourly.cloud_cover, index);
-  if (cloud === null) return unknownHourScore(site, ["此时云量数据缺失"]);
+  if (cloud === null) {
+    return unknownHourScore(site, ["此时云量数据缺失"]);
+  }
 
   const precipitation = numberAt(hourly.precipitation, index);
   const wind = numberAt(hourly.wind_speed_10m, index);
@@ -145,11 +215,15 @@ export function scoreObservingSiteAtTime(
   );
   const blockers = [
     ...(weatherCode != null && weatherCode >= 95 ? ["雷暴风险"] : []),
-    ...(precipitation != null && precipitation >= 0.5 ? ["小时降水达到 0.5 mm"] : []),
+    ...(precipitation != null && precipitation >= 0.5
+      ? ["小时降水达到 0.5 mm"]
+      : []),
     ...(gust != null && gust >= 15 ? ["阵风达到 15 m/s"] : []),
   ];
   const score = Math.round(
-    cloudScore * 0.55 + darknessScore(site.bortle) * 0.3 + weatherRisk * 0.15,
+    cloudScore * 0.55 +
+      darknessScore(site.bortle) * 0.3 +
+      weatherRisk * 0.15,
   );
 
   return {
@@ -165,11 +239,7 @@ export function scoreObservingSiteAtTime(
   };
 }
 
-/**
- * Compute the shared 0–100 recommendation score from one night's raw data.
- * Missing values never become zero: they reduce confidence and can produce an
- * unknown score when too little of the night is usable.
- */
+/** Compute the shared 0–100 recommendation score from one night's raw data. */
 export function scoreObservingSite(
   site: ObservingSite,
   record: FinderWeatherRecord | undefined,
@@ -220,11 +290,21 @@ export function scoreObservingSite(
     };
   }
 
-  const cloudValues = validRows.flatMap((row) => row.cloud == null ? [] : [row.cloud]);
-  const rainValues = rows.flatMap((row) => row.precipitation == null ? [] : [row.precipitation]);
-  const windValues = rows.flatMap((row) => row.wind == null ? [] : [row.wind]);
-  const gustValues = rows.flatMap((row) => row.gust == null ? [] : [row.gust]);
-  const averageCloud = cloudValues.length ? cloudValues.reduce((sum, value) => sum + value, 0) / cloudValues.length : null;
+  const cloudValues = validRows.flatMap((row) =>
+    row.cloud == null ? [] : [row.cloud],
+  );
+  const rainValues = rows.flatMap((row) =>
+    row.precipitation == null ? [] : [row.precipitation],
+  );
+  const windValues = rows.flatMap((row) =>
+    row.wind == null ? [] : [row.wind],
+  );
+  const gustValues = rows.flatMap((row) =>
+    row.gust == null ? [] : [row.gust],
+  );
+  const averageCloud = cloudValues.length
+    ? cloudValues.reduce((sum, value) => sum + value, 0) / cloudValues.length
+    : null;
   const maxWind = windValues.length ? Math.max(...windValues) : null;
   const maxGust = gustValues.length ? Math.max(...gustValues) : null;
   const rainCount = rainValues.filter((value) => value >= 0.5).length;
@@ -236,28 +316,33 @@ export function scoreObservingSite(
       Math.max(0, (maxGust ?? 0) - 8) * 2,
   );
   const hardBlockers = [
-    ...(rows.some((row) => row.weatherCode != null && row.weatherCode >= 95) ? ["雷暴风险"] : []),
-    ...(rows.some((row) => row.precipitation != null && row.precipitation >= 0.5) ? ["小时降水达到 0.5 mm"] : []),
-    ...(rows.some((row) => row.gust != null && row.gust >= 15) ? ["阵风达到 15 m/s"] : []),
+    ...(rows.some(
+      (row) => row.weatherCode != null && row.weatherCode >= 95,
+    )
+      ? ["雷暴风险"]
+      : []),
+    ...(rows.some(
+      (row) => row.precipitation != null && row.precipitation >= 0.5,
+    )
+      ? ["小时降水达到 0.5 mm"]
+      : []),
+    ...(rows.some((row) => row.gust != null && row.gust >= 15)
+      ? ["阵风达到 15 m/s"]
+      : []),
   ];
   const rawScore = Math.round(
-    (cloudScore ?? 0) * 0.55 + darknessScore(site.bortle) * 0.3 + weatherRisk * 0.15,
+    (cloudScore ?? 0) * 0.55 +
+      darknessScore(site.bortle) * 0.3 +
+      weatherRisk * 0.15,
   );
-  const clearRows = rows.filter((row) =>
-    row.cloud != null && row.cloud <= (mode === "visual" ? 60 : 50) &&
-    (row.precipitation == null || row.precipitation < 0.5) &&
-    (row.gust == null || row.gust < 15),
+  const clearRows = rows.filter(
+    (row) =>
+      row.cloud != null &&
+      row.cloud <= (mode === "visual" ? 60 : 50) &&
+      (row.precipitation == null || row.precipitation < 0.5) &&
+      (row.gust == null || row.gust < 15),
   );
-  const windows: string[][] = [];
-  for (let index = 0; index <= clearRows.length - 3; index += 1) {
-    const candidate = clearRows.slice(index, index + 3);
-    if (candidate.length === 3) windows.push(candidate.map((row) => row.time));
-  }
-  const bestWindow = windows.sort((a, b) => {
-    const aCloud = a.reduce((sum, time) => sum + (rows.find((row) => row.time === time)?.cloud ?? 100), 0);
-    const bCloud = b.reduce((sum, time) => sum + (rows.find((row) => row.time === time)?.cloud ?? 100), 0);
-    return aCloud - bCloud;
-  })[0];
+  const bestWindow = findBestContiguousWindow(clearRows, 3);
 
   return {
     score: rawScore,
@@ -265,7 +350,7 @@ export function scoreObservingSite(
     cloud: cloudScore == null ? null : Math.round(averageCloud ?? 0),
     darkness: darknessScore(site.bortle),
     weatherRisk: Math.round(weatherRisk),
-    bestWindow: formatWindow(bestWindow ?? []),
+    bestWindow: formatWindow(bestWindow),
     blockers: hardBlockers,
     confidence,
     validHours,
@@ -280,16 +365,26 @@ export function buildObservationSnapshot(
   focusTime?: string,
 ): ObservationSnapshot {
   const sites: Record<string, RecommendationScore[]> = {};
-  const dates = Array.from({ length: days }, (_, index) => addDays(date, index));
+  const dates = Array.from({ length: days }, (_, index) =>
+    addDays(date, index),
+  );
   for (const site of OBSERVING_SITES) {
-    sites[site.id] = dates.map((night) => scoreObservingSite(site, weatherByDate[night]?.[site.id], night));
+    sites[site.id] = dates.map((night) =>
+      scoreObservingSite(site, weatherByDate[night]?.[site.id], night),
+    );
   }
-  const records = Object.values(weatherByDate).flatMap((value) => Object.values(value));
+  const records = Object.values(weatherByDate).flatMap((value) =>
+    Object.values(value),
+  );
   const focusScores = focusTime
     ? Object.fromEntries(
         OBSERVING_SITES.map((site) => [
           site.id,
-          scoreObservingSiteAtTime(site, weatherByDate[date]?.[site.id], focusTime),
+          scoreObservingSiteAtTime(
+            site,
+            weatherByDate[date]?.[site.id],
+            focusTime,
+          ),
         ]),
       )
     : undefined;
@@ -298,8 +393,11 @@ export function buildObservationSnapshot(
     days,
     model,
     generatedAt: new Date().toISOString(),
-    source: "Open-Meteo Forecast API + VIIRS 2023 site snapshot",
-    stale: records.some((record) => record.status === "stale" || record.status === "error"),
+    source:
+      "Open-Meteo Forecast API + curated dark-sky site metadata",
+    stale: records.some(
+      (record) => record.status === "stale" || record.status === "error",
+    ),
     sites,
     ...(focusTime ? { focusTime, focusScores } : {}),
   };

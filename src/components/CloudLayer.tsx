@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Rectangle, useMap, useMapEvents } from "react-leaflet";
 import { useStore } from "@/lib/store";
 import {
@@ -13,122 +13,156 @@ import CloudCanvasOverlay from "@/components/CloudCanvasOverlay";
 
 function describeCloudError(error: unknown): string {
   if (error instanceof TypeError && /fetch/i.test(error.message)) {
-    return "本地天气接口不可达，请确认 3100 服务已启动后刷新";
+    return "本地天气接口不可达，请确认服务已启动后刷新";
   }
   if (error instanceof Error && error.message) return error.message;
   return "天气网格接口返回异常";
 }
 
-/**
- * Three-layer cloud coverage overlay (Phase 2).
- *
- * When the cloud feature is enabled, this component:
- *   1. Samples the current map viewport as a 5×6 grid.
- *   2. Batch-fetches cloud forecasts for all grid points (reusing /api/forecast).
- *   3. Renders a continuous, null-safe regular-grid overlay via `CloudCanvasOverlay`.
- *   4. Draws a dashed rectangle marking the sampling boundary.
- *   5. Re-samples (debounced 500 ms) whenever the map moves or zooms.
- *
- * The timeIndex and layer toggles are read from the store's `cloudState`.
- */
 export default function CloudLayer() {
   const { state, setCloudGrid, setCloudGridLoading } = useStore();
-  const { cloudState, selectedNight, cloudGrid, cloudGridLoading } = state;
+  const {
+    cloudState,
+    selectedNight,
+    cloudGrid,
+    dataRefreshRevision,
+  } = state;
   const map = useMap();
   const [error, setError] = useState<string | null>(null);
-
-  // Debounce timer ref for re-sampling on map move.
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestRef = useRef<AbortController | null>(null);
-  // Signature of the currently loaded grid, so we don't re-fetch on every
-  // unrelated render. Includes both the start night and the range count.
   const gridSigRef = useRef<string | null>(null);
 
-  // ----- Grid sampling logic -----
-  const performSampling = async () => {
-    if (!map || !selectedNight || cloudState.overlayMode !== "forecast-cloud") return;
-
-    const bounds = map.getBounds();
-    const { samples, rows, cols } = generateGridBounds(bounds, 5, 6);
-    const nights = nightRangeKeys(selectedNight, cloudState.range);
-
-    requestRef.current?.abort();
-    const controller = new AbortController();
-    requestRef.current = controller;
-    setCloudGridLoading(true);
-    // Do not keep painting a previous model/viewport while the new sample is
-    // in flight; the active time and legend must describe the visible raster.
-    setCloudGrid(null);
-    setError(null);
-    try {
-      const data = await fetchCloudGrid(
-        samples,
-        nights,
-        forecastDaysForRange(selectedNight, cloudState.range),
-        cloudState.model,
-        rows,
-        cols,
-        controller.signal,
+  const performSampling = useCallback(
+    async (forceRefresh = false) => {
+      if (
+        !map ||
+        !selectedNight ||
+        cloudState.overlayMode !== "forecast-cloud"
+      ) {
+        return;
+      }
+      const { samples, rows, cols } = generateGridBounds(
+        map.getBounds(),
+        5,
+        6,
       );
-      if (controller.signal.aborted) return;
-      gridSigRef.current = `${selectedNight}|${cloudState.range}|${cloudState.model}`;
-      setCloudGrid(data);
-    } catch (err) {
-      if (controller.signal.aborted) return;
-      // Surface a small notice instead of silently leaving a blank map.
-      setError(describeCloudError(err));
+      const nights = nightRangeKeys(selectedNight, cloudState.range);
+      requestRef.current?.abort();
+      const controller = new AbortController();
+      requestRef.current = controller;
+      setCloudGridLoading(true);
       setCloudGrid(null);
-    } finally {
-      // Only the request that is still current may close the loading state.
-      // This also clears the spinner when a layer switch aborts the request,
-      // while protecting a newer sampling request from an older finally.
-      if (requestRef.current === controller) setCloudGridLoading(false);
-    }
-  };
+      setError(null);
+      try {
+        const data = await fetchCloudGrid(
+          samples,
+          nights,
+          forecastDaysForRange(
+            selectedNight,
+            cloudState.range,
+            new Date(),
+            cloudState.model,
+          ),
+          cloudState.model,
+          rows,
+          cols,
+          controller.signal,
+          forceRefresh,
+        );
+        if (controller.signal.aborted) return;
+        gridSigRef.current = `${selectedNight}|${cloudState.range}|${cloudState.model}|${dataRefreshRevision}`;
+        setCloudGrid(data);
+      } catch (caught) {
+        if (controller.signal.aborted) return;
+        setError(describeCloudError(caught));
+        setCloudGrid(null);
+      } finally {
+        if (requestRef.current === controller) {
+          setCloudGridLoading(false);
+        }
+      }
+    },
+    [
+      cloudState.model,
+      cloudState.overlayMode,
+      cloudState.range,
+      dataRefreshRevision,
+      map,
+      selectedNight,
+      setCloudGrid,
+      setCloudGridLoading,
+    ],
+  );
 
-  // ----- Trigger initial / re-sampling when cloud is enabled or range/night changes -----
   useEffect(() => {
-    if (!cloudState.enabled || cloudState.overlayMode !== "forecast-cloud" || !map || !selectedNight) {
+    if (
+      !cloudState.enabled ||
+      cloudState.overlayMode !== "forecast-cloud" ||
+      !map ||
+      !selectedNight
+    ) {
       requestRef.current?.abort();
       gridSigRef.current = null;
       return;
     }
-    const sig = `${selectedNight}|${cloudState.range}|${cloudState.model}`;
-    if (cloudGrid && gridSigRef.current === sig) return;
-    void performSampling();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cloudState.enabled, selectedNight, cloudState.range, cloudState.model, cloudState.overlayMode, map]);
+    const signature = `${selectedNight}|${cloudState.range}|${cloudState.model}|${dataRefreshRevision}`;
+    if (cloudGrid && gridSigRef.current === signature) return;
+    void performSampling(dataRefreshRevision > 0);
+  }, [
+    cloudGrid,
+    cloudState.enabled,
+    cloudState.model,
+    cloudState.overlayMode,
+    cloudState.range,
+    dataRefreshRevision,
+    map,
+    performSampling,
+    selectedNight,
+  ]);
 
-  // ----- Map move/zoom handler with 500ms debounce -----
   useMapEvents({
     moveend() {
-      if (!cloudState.enabled) return;
+      if (
+        !cloudState.enabled ||
+        cloudState.overlayMode !== "forecast-cloud"
+      ) {
+        return;
+      }
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        void performSampling();
-      }, 500);
+        void performSampling(false);
+      }, 700);
     },
     zoomend() {
-      if (!cloudState.enabled) return;
+      if (
+        !cloudState.enabled ||
+        cloudState.overlayMode !== "forecast-cloud"
+      ) {
+        return;
+      }
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        void performSampling();
-      }, 500);
+        void performSampling(false);
+      }, 700);
     },
   });
 
-  // ----- Cleanup -----
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       requestRef.current?.abort();
-    };
-  }, []);
+    },
+    [],
+  );
 
-  // Don't render anything if cloud is disabled.
-  if (!cloudState.enabled || cloudState.overlayMode !== "forecast-cloud") return null;
+  if (
+    !cloudState.enabled ||
+    cloudState.overlayMode !== "forecast-cloud"
+  ) {
+    return null;
+  }
 
-  // Render the Canvas overlay + sampling boundary.
   const bounds = cloudGrid
     ? ([
         [cloudGrid.bounds.south, cloudGrid.bounds.west],
@@ -160,14 +194,12 @@ export default function CloudLayer() {
           }}
         />
       )}
-      {cloudGridLoading && !cloudGrid && (
-        // Loading indicator will be handled by the timeline/control UI.
-        null
-      )}
       {error && !cloudGrid && (
         <div className="cloud-overlay-error" role="status">
           <span>云图加载失败：{error}</span>
-          <button type="button" onClick={() => void performSampling()}>重试</button>
+          <button type="button" onClick={() => void performSampling(true)}>
+            强制重试
+          </button>
         </div>
       )}
     </>
