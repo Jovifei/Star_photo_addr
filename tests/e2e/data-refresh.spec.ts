@@ -121,7 +121,7 @@ test("manual refresh bypasses application caches for weather, health and site sc
       }),
     }),
   );
-  await page.route("**/api/data-sources/health**", (route) => {
+  await page.route("**/api/data-status**", (route) => {
     if (new URL(route.request().url()).searchParams.get("refresh") === "1") {
       forcedHealthRequests += 1;
     }
