@@ -53,9 +53,10 @@ SNAPSHOT_MODEL=gfs
 - `NEXT_PUBLIC_TIANDITU_TOKEN`：天地图中文注记；
 - `NEXT_PUBLIC_LIGHT_POLLUTION_TILE_URL`：自有/授权光污染瓦片模板；
 - `NEXT_PUBLIC_ASSET_*`：只有真实资产已放入 `public/images/perseids/` 后才设为 `true`；
-- `OPEN_METEO_*`、`GIBS_CAPABILITIES_URL`、`NOAA_KP_URL`：用于企业代理或内部缓存。
+- `OPEN_METEO_*`、`GIBS_CAPABILITIES_URL`、`NOAA_KP_URL`：用于企业代理或内部缓存；
+- `*_TTL_MS`、`*_TIMEOUT_MS`、`*_FORCE_REFRESH_COOLDOWN_MS`：数据缓存、请求超时和公开刷新保护。小流量 ECS 建议先使用 `.env.example` 默认值。
 
-`NEXT_PUBLIC_*` 会在 `next build` 阶段写入前端包。修改这类值后必须重新构建镜像，而不是只重启容器。
+`NEXT_PUBLIC_*` 会在 `next build` 阶段写入前端包。修改这类值后必须重新构建镜像，而不是只重启容器。其余运行时变量由 `docker-compose.yml` 传给 Next.js 容器，可通过重建/重启服务生效。
 
 ## 4. 构建前的真实数据源检查
 
@@ -77,31 +78,47 @@ npm run test:live
 
 如果服务器无法访问这些上游，优先检查 DNS、ECS 出方向规则、代理和跨境链路；不要通过伪造空数组或固定值让页面看起来“正常”。
 
-## 5. 启动
+## 5. 启动与发布后验收
 
 ```bash
 export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose up --build -d
 ```
 
-验证：
+基础验证：
 
 ```bash
 docker compose ps
 curl -fsS http://127.0.0.1:3100/healthz | jq
-curl -fsS http://127.0.0.1:3100/api/data-sources/health | jq
+curl -fsS http://127.0.0.1:3100/api/data-status | jq
 ```
 
-两个端点职责不同：
-
-- `/healthz`：容器和 Next.js 进程是否存活；供 Docker/Nginx 使用；
-- `/api/data-sources/health`：天气、卫星、光污染等上游是否可用；上游故障只让业务降级，不应触发容器重启循环。
-
-需要绕过诊断缓存时：
+完整发布后接口验收：
 
 ```bash
-curl -fsS 'http://127.0.0.1:3100/api/data-sources/health?refresh=1' | jq
+DATA_SOURCE_BASE_URL=http://127.0.0.1:3100 npm run check:data-sources
 ```
+
+该命令会通过实际应用路由检查：
+
+- `/healthz` 的应用身份与进程存活；
+- `/api/forecast?refresh=1` 是否返回总云量、低云、中云、高云；
+- `/api/data-status?refresh=1` 的天气、卫星和 VIIRS 2023 光污染状态；
+- `/api/satellite/times` 的 Himawari 云图与 Black Marble 夜光帧、瓦片模板。
+
+端点职责不同：
+
+- `/healthz`：容器和 Next.js 进程是否存活；供 Docker/Nginx 使用；
+- `/api/data-status`：天气、卫星、光污染等上游是否可用；上游故障只让业务降级，不应触发容器重启循环；
+- `/api/data-sources/health`：为已有客户端保留的兼容别名，返回与 `/api/data-status` 相同的结果。
+
+需要人工复检时：
+
+```bash
+curl -fsS 'http://127.0.0.1:3100/api/data-status?refresh=1' | jq
+```
+
+公开的 `refresh=1` 受到冷却保护。在冷却窗口内仍会返回最近结果，并通过 `refreshSuppressed`、`X-Refresh-Suppressed` 和 `X-*-Cache` 标识，不会为每次点击重复冲击上游。
 
 ## 6. Nginx 示例
 
@@ -146,17 +163,21 @@ server {
 ### 天气与云量
 
 - Open-Meteo 上游请求不使用 Next fetch 的隐式缓存；
-- 应用内新鲜缓存为 10 分钟；
-- 用户点“刷新数据”会发送 `refresh=1`；
-- 上游失败时，最多回退到 6 小时内的旧值，并通过 `stale`、`X-Data-Stale` 和页面状态明确标记；
+- 应用内新鲜缓存默认 10 分钟，可用 `FORECAST_CACHE_TTL_MS` 调整；
+- 用户点“刷新数据”会发送 `refresh=1`，同一坐标/模型的并发请求会合并；
+- 强制刷新默认有 60 秒冷却，防止公开页面被连续点击或爬虫滥用；
+- 上游失败时，默认最多回退到 6 小时内的旧值，并通过 `stale`、`X-Data-Stale` 和页面状态明确标记；
+- Open-Meteo 响应只有在总云、低云、中云、高云都与时间轴对齐且含数值时才会进入缓存；
 - ICON、GFS、AIFS 的最大预报范围不同，代码会按模型限制请求，不再发送无效 `forecast_days`。
 
 ### 卫星云图
 
-- NASA GIBS capabilities 目录缓存 15 分钟；
-- 地图平移不会重复拉取全球目录；
-- 目录暂时不可达时，可使用 24 小时内最近成功目录，并标记为降级；
-- Himawari 观测时间与 Open-Meteo 预报时间不能混用。
+- NASA GIBS capabilities 目录默认缓存 15 分钟；
+- 地图平移不会重复拉取全球目录，同一时刻的并发目录请求会合并；
+- `refresh=1` 同样受到冷却保护；
+- 目录暂时不可达时，可使用默认 24 小时内最近成功目录，并标记为降级；
+- Himawari 观测时间与 Open-Meteo 预报时间不能混用；
+- `lat` 和 `lng` 是兼容参数，必须同时提供，缺少一项不会再被误解析为经度或纬度 0。
 
 ### 光污染
 
@@ -164,6 +185,13 @@ server {
 - 单张边缘瓦片失败不会卸载整个图层；连续失败才标记为降级，后续成功会自动恢复；
 - Bortle/SQM 只有安装授权本地栅格后才显示，不能根据视觉瓦片伪造数值；
 - 长期生产环境建议把光污染数据迁到 OSS/CDN 或自建 WMTS，并通过 `NEXT_PUBLIC_LIGHT_POLLUTION_TILE_URL` 切换。
+
+### 观星点评分快照
+
+- 磁盘快照默认 30 分钟新鲜、6 小时可降级回退；
+- 相同日期、模型、时次的并发请求只生成并写入一次；
+- `refresh=1` 受到冷却保护；
+- `time` 必须是 `YYYY-MM-DDTHH:mm`，格式错误会返回 400，不再静默忽略。
 
 ## 8. 日志与排障
 
@@ -177,11 +205,11 @@ docker inspect --format '{{json .State.Health}}' star-photo-addr-star-weather-1 
 
 | 现象 | 优先检查 |
 | --- | --- |
-| 云量全部为空 | `/api/data-sources/health` 中 weather；Open-Meteo 出网；模型时效 |
+| 云量全部为空 | `/api/data-status` 中 weather；Open-Meteo 出网；模型时效 |
 | 云图时间轴为空 | satellite 状态；GIBS capabilities；服务器时间与 DNS |
 | 光污染图层空白 | `light-pollution` 状态；浏览器对瓦片域名的访问；自定义模板占位符 |
 | 推荐点一直“读取中” | worker 日志；`data/snapshots` 卷权限；所选模型是否覆盖该日期 |
-| 手动刷新无变化 | 浏览器 Network 中是否出现 `refresh=1`；响应 `X-*-Cache` 与 `X-Data-Stale` |
+| 手动刷新无变化 | 浏览器 Network 中 `refresh=1`、`X-Refresh-Suppressed`、`X-*-Cache` 与 `X-Data-Stale` |
 | 容器反复重启 | 先看 `/healthz`；上游数据故障不应成为 liveness 失败条件 |
 
 ## 9. 更新与回滚
@@ -196,6 +224,7 @@ export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose build --pull
 docker compose up -d
 curl -fsS http://127.0.0.1:3100/healthz
+DATA_SOURCE_BASE_URL=http://127.0.0.1:3100 npm run check:data-sources
 ```
 
 回滚到已知提交：

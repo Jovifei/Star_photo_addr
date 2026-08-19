@@ -4,6 +4,7 @@ import { Cloud, RefreshCw } from "lucide-react";
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type CSSProperties,
 } from "react";
@@ -52,6 +53,12 @@ function SourceStatusRow({ source }: { source?: DataSourceProbe }) {
   );
 }
 
+function healthModeLabel(health: DataSourceHealthResponse): string {
+  if (health.refreshSuppressed) return "刷新冷却";
+  if (health.coalesced) return "合并检测";
+  return health.cached ? "缓存检测" : "实时检测";
+}
+
 export default function CloudControl() {
   const { state, setCloud, setMapViewMode, refreshData } = useStore();
   const { cloudState, selectedNight, forecast, cloudGrid } = state;
@@ -62,35 +69,54 @@ export default function CloudControl() {
   const [health, setHealth] = useState<DataSourceHealthResponse | null>(null);
   const [healthError, setHealthError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const healthRequestRef = useRef<AbortController | null>(null);
 
   const loadHealth = useCallback(async (force = false) => {
+    healthRequestRef.current?.abort();
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 20_000);
+    healthRequestRef.current = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 20_000);
     try {
       const response = await fetch(
-        `/api/data-sources/health${force ? "?refresh=1" : ""}`,
+        `/api/data-status${force ? "?refresh=1" : ""}`,
         {
           cache: force ? "no-store" : "default",
           signal: controller.signal,
           headers: { Accept: "application/json" },
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error ?? `数据源检测失败 (${response.status})`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data) {
+        throw new Error(
+          data?.error ?? `数据源检测失败 (${response.status})`,
+        );
+      }
+      if (
+        controller.signal.aborted ||
+        healthRequestRef.current !== controller
+      ) {
+        return;
       }
       setHealth(data as DataSourceHealthResponse);
       setHealthError("");
     } catch (error) {
-      if (controller.signal.aborted) {
-        setHealthError("数据源检测超时");
-      } else {
+      if (healthRequestRef.current !== controller) return;
+      if (timedOut) {
+        setHealthError("数据源检测超时；保留上一次状态");
+      } else if (!controller.signal.aborted) {
         setHealthError(
           error instanceof Error ? error.message : "数据源检测失败",
         );
       }
     } finally {
       window.clearTimeout(timeout);
+      if (healthRequestRef.current === controller) {
+        healthRequestRef.current = null;
+      }
     }
   }, []);
 
@@ -99,15 +125,20 @@ export default function CloudControl() {
     fetch("/healthz", { cache: "no-store", signal: controller.signal })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (data) setBuildInfo(data);
+        if (data && !controller.signal.aborted) setBuildInfo(data);
       })
       .catch(() => undefined);
     const initialHealthTimer = window.setTimeout(() => {
       void loadHealth(false);
     }, 0);
-    const timer = window.setInterval(() => void loadHealth(false), 5 * 60_000);
+    const timer = window.setInterval(
+      () => void loadHealth(false),
+      5 * 60_000,
+    );
     return () => {
       controller.abort();
+      healthRequestRef.current?.abort();
+      healthRequestRef.current = null;
       window.clearTimeout(initialHealthTimer);
       window.clearInterval(timer);
     };
@@ -171,6 +202,11 @@ export default function CloudControl() {
     CLOUD_MODES[0];
   const selectedValue = values[selectedMode.id];
   const sources = health?.sources;
+  const healthSummary = healthError
+    ? `最近复检失败：${healthError}`
+    : health
+      ? `${healthModeLabel(health)} · ${new Date(health.checkedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`
+      : "检测中";
 
   return (
     <div className="cloud-control compact" data-testid="cloud-control">
@@ -212,11 +248,7 @@ export default function CloudControl() {
       <div className="source-status-panel" aria-label="数据源状态">
         <span className="source-status-title">
           数据源状态
-          <small>
-            {health
-              ? `${health.cached ? "缓存检测" : "实时检测"} · ${new Date(health.checkedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`
-              : healthError || "检测中"}
-          </small>
+          <small title={health?.nextRefreshAt}>{healthSummary}</small>
         </span>
         <SourceStatusRow source={sources?.weather} />
         <SourceStatusRow source={sources?.satellite} />

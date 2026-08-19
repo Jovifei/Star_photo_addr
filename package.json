@@ -3,7 +3,7 @@
   "version": "0.3.1",
   "type": "module",
   "private": true,
-  "description": "逐星｜今晚云量、卫星云图与观星天气规划平台",
+  "description": "逐星｜今夜观测、暗夜选址与观星计划平台",
   "author": "JCodesMore",
   "license": "MIT",
   "engines": {
@@ -20,6 +20,7 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "test:live": "node scripts/live-smoke.mjs",
+    "check:data-sources": "node scripts/check-data-sources.mjs",
     "snapshot:worker": "node scripts/observing-snapshot-worker.mjs",
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run build",
     "check:full": "npm run check && npm run test:e2e"

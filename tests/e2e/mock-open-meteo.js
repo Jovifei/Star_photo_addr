@@ -195,7 +195,10 @@ export async function installNextApiMock(page, fixture) {
     const model = url.searchParams.get("model") || "icon";
     const focusTime = url.searchParams.get("time") || undefined;
     const focusHour = focusTime ? Number(focusTime.slice(11, 13)) : 0;
-    const focusDay = focusTime ? Number(focusTime.slice(8, 10)) : 0;
+    const focusDayNumber = focusTime
+      ? Math.floor(Date.parse(`${focusTime.slice(0, 10)}T00:00:00Z`) / 86_400_000)
+      : 0;
+    const focusDayShift = (focusDayNumber % 4) * 8;
     const sites = {};
     const focusScores = {};
     for (let index = 0; index < 242; index += 1) {
@@ -213,9 +216,17 @@ export async function installNextApiMock(page, fixture) {
         validHours: 10,
       }));
       if (focusTime) {
-        // Move the distribution by hour/day so the slider has an observable
-        // effect instead of returning the same counts for every time.
-        const score = 35 + ((index * 11 + focusHour * 17 + focusDay * 3) % 66);
+        // Shift the score bands outside the per-site modulo so moving the
+        // 72-hour slider always changes the aggregate counts as well as the
+        // individual marker colours. This removes a false E2E equality caused
+        // by a perfectly uniform modular distribution.
+        const score = Math.max(
+          0,
+          Math.min(
+            100,
+            94 - ((index * 7 + focusHour * 3) % 40) - focusDayShift,
+          ),
+        );
         focusScores[id] = {
           score,
           band: scoreBand(score),

@@ -58,6 +58,13 @@ const SURFACE_VARIABLES = [
   "wind_direction_10m",
 ];
 
+const REQUIRED_CLOUD_SERIES = [
+  ["cloud_cover", "总云量"],
+  ["cloud_cover_low", "低云"],
+  ["cloud_cover_mid", "中云"],
+  ["cloud_cover_high", "高云"],
+] as const;
+
 const MODEL_PARAMETERS: Record<ForecastModel, string | null> = {
   best_match: null,
   icon: "icon_seamless",
@@ -118,31 +125,47 @@ export function buildForecastUrl(
   return `${OPEN_METEO_FORECAST_URL}?${params.toString()}`;
 }
 
-function validateRawForecast(item: RawForecastResponse | undefined): void {
+function validAlignedSeries(
+  values: unknown,
+  expectedLength: number,
+): boolean {
+  return (
+    Array.isArray(values) &&
+    values.length === expectedLength &&
+    values.some(
+      (value) => typeof value === "number" && Number.isFinite(value),
+    )
+  );
+}
+
+export function validateRawForecast(
+  item: RawForecastResponse | undefined,
+): void {
   if (!item || !Array.isArray(item.hourly?.time)) {
     throw new Error("天气上游返回了无法识别的 hourly 数据");
   }
-  if (
-    item.hourly.time.length > 0 &&
-    (!Array.isArray(item.hourly.cloud_cover) ||
-      !item.hourly.cloud_cover.some(
-        (value) => typeof value === "number" && Number.isFinite(value),
-      ))
-  ) {
-    throw new Error("天气上游没有返回有效总云量数据");
+  const times = item.hourly.time;
+  if (times.length === 0) {
+    throw new Error("天气上游没有返回逐小时数据");
+  }
+  for (const [field, label] of REQUIRED_CLOUD_SERIES) {
+    if (!validAlignedSeries(item.hourly[field], times.length)) {
+      throw new Error(`天气上游没有返回有效${label}数据`);
+    }
   }
 }
 
 async function providerError(response: Response): Promise<Error> {
-  const body = await response.json().catch(() => null) as
-    | { reason?: string; error?: boolean }
+  const body = (await response.json().catch(() => null)) as
+    | { reason?: string }
     | null;
   const detail = body?.reason?.trim();
-  return new Error(
-    detail
-      ? `天气接口返回 ${response.status}：${detail}`
-      : `天气接口返回 ${response.status}`,
-  );
+  if (detail) {
+    console.warn(
+      `[forecast] Open-Meteo HTTP ${response.status}: ${detail.slice(0, 180)}`,
+    );
+  }
+  return new Error(`天气接口返回 HTTP ${response.status}`);
 }
 
 async function requestJson(
@@ -170,6 +193,9 @@ async function requestJson(
     } catch (error) {
       if (signal?.aborted) throw error;
       lastError = error;
+    }
+    if (attempt === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
   throw lastError instanceof Error

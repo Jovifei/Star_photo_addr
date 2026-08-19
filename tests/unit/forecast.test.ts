@@ -10,6 +10,14 @@ import {
 
 afterEach(() => vi.restoreAllMocks());
 
+const VALID_CLOUD_HOURLY = {
+  time: ["2026-08-19T20:00"],
+  cloud_cover: [15],
+  cloud_cover_low: [8],
+  cloud_cover_mid: [12],
+  cloud_cover_high: [20],
+};
+
 describe("parseProviderTime — 本地墙钟还原真 UTC", () => {
   it("16 位输入无秒也正确补零", () => {
     expect(parseProviderTime("2026-08-13T04:00", 0).toISOString()).toBe(
@@ -95,7 +103,7 @@ describe("forecast model routing", () => {
           elevation: 0,
           timezone: "Asia/Shanghai",
           utc_offset_seconds: 28800,
-          hourly: { time: [] },
+          hourly: VALID_CLOUD_HOURLY,
         }),
       }),
     );
@@ -119,12 +127,32 @@ describe("forecast model routing", () => {
           elevation: 0,
           timezone: "Asia/Shanghai",
           utc_offset_seconds: 28800,
-          hourly: { time: ["2026-08-19T20:00"], cloud_cover: [null] },
+          hourly: { ...VALID_CLOUD_HOURLY, cloud_cover: [null] },
         }),
       }),
     );
     await expect(fetchSurfaceForecasts([location], 1)).rejects.toThrow(
       "有效总云量",
+    );
+  });
+
+  it("rejects partial cloud payloads instead of presenting missing layers as zero", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          latitude: 30,
+          longitude: 120,
+          elevation: 0,
+          timezone: "Asia/Shanghai",
+          utc_offset_seconds: 28800,
+          hourly: { ...VALID_CLOUD_HOURLY, cloud_cover_low: [] },
+        }),
+      }),
+    );
+    await expect(fetchSurfaceForecasts([location], 1)).rejects.toThrow(
+      "有效低云",
     );
   });
 
@@ -137,10 +165,7 @@ describe("forecast model routing", () => {
         elevation: 0,
         timezone: "Asia/Shanghai",
         utc_offset_seconds: 28800,
-        hourly: {
-          time: ["2026-08-19T20:00"],
-          cloud_cover: [15],
-        },
+        hourly: VALID_CLOUD_HOURLY,
       }),
     });
     vi.stubGlobal("fetch", fetchMock);

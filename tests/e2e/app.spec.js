@@ -225,7 +225,8 @@ test("卫星图层入口互斥，数据源状态面板可见", async ({ page }) 
   await expect(page.locator(".cloud-canvas-overlay canvas")).toHaveCount(0);
   await layerTabs.nth(2).click();
   await expect(layerTabs.nth(2)).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator(".cloud-source-note")).toContainText("2016 夜光基准");
+  await expect(page.locator(".cloud-source-note")).toContainText("VIIRS 2023");
+  await expect(page.locator(".cloud-source-note")).toContainText("非现场 Bortle/SQM");
   await expect(page.locator(".cloud-canvas-overlay canvas")).toHaveCount(0);
 });
 

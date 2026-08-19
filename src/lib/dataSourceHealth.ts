@@ -1,137 +1,215 @@
 import { hasDarkSkyLayer } from "@/lib/assets";
-import type {
-  DataSourceHealthResponse,
-  DataSourceProbe,
-} from "@/lib/dataSourceStatus";
 import {
-  OPEN_METEO_FORECAST_URL,
-} from "@/lib/forecast";
-import { GIBS_CAPABILITIES_URL, GIBS_LAYERS } from "@/lib/gibs";
+  GIBS_CAPABILITIES_URL,
+  GIBS_LAYERS,
+} from "@/lib/gibs";
 import {
   LIGHT_POLLUTION_TILE_URL,
   materializeLightPollutionTile,
 } from "@/lib/lightPollution";
+import { OPEN_METEO_FORECAST_URL } from "@/lib/forecast";
 import { TimedCache } from "@/lib/serverCache";
+import type {
+  DataSourceHealthResponse,
+  DataSourceProbe,
+} from "@/lib/dataSourceStatus";
 
-const HEALTH_CACHE_TTL_MS = 5 * 60 * 1000;
-const healthCache = new TimedCache<DataSourceHealthResponse>(2);
+const REQUIRED_CLOUD_FIELDS = [
+  { key: "cloud_cover", label: "总云量" },
+  { key: "cloud_cover_low", label: "低云" },
+  { key: "cloud_cover_mid", label: "中云" },
+  { key: "cloud_cover_high", label: "高云" },
+] as const;
 
-function probeResult(
-  id: DataSourceProbe["id"],
-  label: string,
-  status: DataSourceProbe["status"],
-  detail: string,
-  checkedAt: string,
-  latencyMs?: number,
-): DataSourceProbe {
-  return { id, label, status, detail, checkedAt, latencyMs };
+function boundedInteger(
+  name: string,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+): number {
+  const parsed = Number(process.env[name]);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(maximum, Math.max(minimum, Math.round(parsed)));
 }
 
-async function withProbeTimeout<T>(
-  task: (signal: AbortSignal) => Promise<T>,
-  timeoutMs = 10_000,
-): Promise<{ value: T; latencyMs: number }> {
+const HEALTH_CACHE_TTL_MS = boundedInteger(
+  "DATA_SOURCE_HEALTH_TTL_MS",
+  5 * 60_000,
+  30_000,
+  60 * 60_000,
+);
+const PROBE_TIMEOUT_MS = boundedInteger(
+  "DATA_SOURCE_PROBE_TIMEOUT_MS",
+  15_000,
+  2_000,
+  60_000,
+);
+const FORCE_REFRESH_COOLDOWN_MS = boundedInteger(
+  "DATA_SOURCE_FORCE_REFRESH_COOLDOWN_MS",
+  60_000,
+  5_000,
+  15 * 60_000,
+);
+
+const healthCache = new TimedCache<DataSourceHealthResponse>(2);
+let healthInFlight: Promise<DataSourceHealthResponse> | null = null;
+let lastProbeStartedAt = 0;
+
+function numericSeries(values: unknown, expectedLength: number): boolean {
+  return (
+    Array.isArray(values) &&
+    values.length === expectedLength &&
+    values.some(
+      (value) => typeof value === "number" && Number.isFinite(value),
+    )
+  );
+}
+
+/**
+ * Returns human-readable missing/invalid cloud channels. A health probe is not
+ * considered successful unless the same payload contains total, low, mid and
+ * high cloud arrays aligned to the hourly time axis.
+ */
+export function missingCloudFields(
+  hourly: Record<string, unknown> | undefined,
+): string[] {
+  const times = hourly?.time;
+  if (!Array.isArray(times) || times.length === 0) {
+    return ["逐小时时间"];
+  }
+  return REQUIRED_CLOUD_FIELDS.filter(
+    ({ key }) => !numericSeries(hourly?.[key], times.length),
+  ).map(({ label }) => label);
+}
+
+/** Keep provider details useful without reflecting URLs or upstream bodies. */
+export function sanitizeProbeError(
+  error: unknown,
+  sourceLabel: string,
+): string {
+  if (error instanceof Error) {
+    if (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message)) {
+      return `${sourceLabel}请求超时`;
+    }
+    const httpStatus = error.message.match(/HTTP\s+(\d{3})/i)?.[1];
+    if (httpStatus) return `${sourceLabel}返回 HTTP ${httpStatus}`;
+    if (
+      /字段不可用|格式无法识别|图层目录缺少|瓦片响应不是图片|瓦片内容过小/.test(
+        error.message,
+      )
+    ) {
+      return error.message.slice(0, 180);
+    }
+  }
+  return `${sourceLabel}暂时不可用`;
+}
+
+async function timedFetch(
+  input: string,
+  accept: string,
+): Promise<Response> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const startedAt = Date.now();
+  const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
   try {
-    return {
-      value: await task(controller.signal),
-      latencyMs: Date.now() - startedAt,
-    };
+    return await fetch(input, {
+      signal: controller.signal,
+      cache: "no-store",
+      headers: {
+        Accept: accept,
+        "User-Agent": "star-weather-planner-data-health/0.3.1",
+      },
+    });
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function weatherProbe(checkedAt: string): Promise<DataSourceProbe> {
+async function probeWeather(checkedAt: string): Promise<DataSourceProbe> {
+  const startedAt = Date.now();
   try {
     const url = new URL(OPEN_METEO_FORECAST_URL);
     url.searchParams.set("latitude", "30.2741");
     url.searchParams.set("longitude", "120.1551");
-    url.searchParams.set("hourly", "cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high");
+    url.searchParams.set(
+      "hourly",
+      REQUIRED_CLOUD_FIELDS.map(({ key }) => key).join(","),
+    );
     url.searchParams.set("timezone", "Asia/Shanghai");
     url.searchParams.set("forecast_days", "1");
-    const result = await withProbeTimeout(async (signal) => {
-      const response = await fetch(url, {
-        signal,
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json() as {
-        hourly?: Record<string, unknown[]>;
-      };
-      if (
-        !Array.isArray(payload.hourly?.time) ||
-        !Array.isArray(payload.hourly?.cloud_cover) ||
-        !payload.hourly.cloud_cover.some(
-          (value) => typeof value === "number" && Number.isFinite(value),
-        )
-      ) {
-        throw new Error("云量字段缺失");
-      }
-      return payload.hourly.time.length;
-    });
-    return probeResult(
-      "weather",
-      "天气 / Open-Meteo",
-      "available",
-      `总云量及高、中、低云字段可用 · ${result.value} 个小时`,
+    const response = await timedFetch(url.toString(), "application/json");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = (await response.json()) as {
+      hourly?: Record<string, unknown>;
+    };
+    const missing = missingCloudFields(payload.hourly);
+    if (missing.length) {
+      throw new Error(`天气字段不可用：${missing.join("、")}`);
+    }
+    const hours = Array.isArray(payload.hourly?.time)
+      ? payload.hourly.time.length
+      : 0;
+    return {
+      id: "weather",
+      label: "Open-Meteo 云量",
+      status: "available",
+      detail: `总云量、低云、中云和高云均可用 · ${hours} 个逐小时时次`,
       checkedAt,
-      result.latencyMs,
-    );
+      latencyMs: Date.now() - startedAt,
+    };
   } catch (error) {
-    return probeResult(
-      "weather",
-      "天气 / Open-Meteo",
-      "degraded",
-      error instanceof Error ? error.message : "天气源不可达",
+    return {
+      id: "weather",
+      label: "Open-Meteo 云量",
+      status: "degraded",
+      detail: sanitizeProbeError(error, "天气上游"),
       checkedAt,
-    );
+      latencyMs: Date.now() - startedAt,
+    };
   }
 }
 
-async function satelliteProbe(checkedAt: string): Promise<DataSourceProbe> {
+async function probeSatellite(checkedAt: string): Promise<DataSourceProbe> {
+  const startedAt = Date.now();
   try {
-    const result = await withProbeTimeout(async (signal) => {
-      const response = await fetch(GIBS_CAPABILITIES_URL, {
-        signal,
-        cache: "no-store",
-        headers: { Accept: "application/xml,text/xml" },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const xml = await response.text();
-      const missing = Object.values(GIBS_LAYERS).filter(
-        (identifier) => !xml.includes(identifier),
-      );
-      if (missing.length) {
-        throw new Error(`图层目录缺少 ${missing.join("、")}`);
-      }
-      return Object.keys(GIBS_LAYERS).length;
-    }, 15_000);
-    return probeResult(
-      "satellite",
-      "卫星 / NASA GIBS",
-      "available",
-      `Himawari 云图与 VIIRS Black Marble 目录可用`,
-      checkedAt,
-      result.latencyMs,
+    const response = await timedFetch(
+      GIBS_CAPABILITIES_URL,
+      "application/xml,text/xml",
     );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const xml = await response.text();
+    if (!xml.includes("<Capabilities") || !xml.includes("ResourceURL")) {
+      throw new Error("NASA GIBS 图层目录格式无法识别");
+    }
+    const missing = Object.values(GIBS_LAYERS).filter(
+      (identifier) => !xml.includes(identifier),
+    );
+    if (missing.length) {
+      throw new Error(`NASA GIBS 图层目录缺少 ${missing.join("、")}`);
+    }
+    return {
+      id: "satellite",
+      label: "NASA GIBS",
+      status: "available",
+      detail: "Himawari 云图与 VIIRS Black Marble 图层目录可用",
+      checkedAt,
+      latencyMs: Date.now() - startedAt,
+    };
   } catch (error) {
-    return probeResult(
-      "satellite",
-      "卫星 / NASA GIBS",
-      "degraded",
-      error instanceof Error ? error.message : "卫星目录不可达",
+    return {
+      id: "satellite",
+      label: "NASA GIBS",
+      status: "degraded",
+      detail: sanitizeProbeError(error, "卫星图层目录"),
       checkedAt,
-    );
+      latencyMs: Date.now() - startedAt,
+    };
   }
 }
 
-async function lightPollutionProbe(
+async function probeLightPollution(
   checkedAt: string,
 ): Promise<DataSourceProbe> {
+  const startedAt = Date.now();
   try {
     const tileUrl = materializeLightPollutionTile(
       LIGHT_POLLUTION_TILE_URL,
@@ -139,96 +217,142 @@ async function lightPollutionProbe(
       12,
       6,
     );
-    const result = await withProbeTimeout(async (signal) => {
-      const response = await fetch(tileUrl, {
-        signal,
-        cache: "no-store",
-        headers: {
-          Accept: "image/avif,image/webp,image/png,image/*,*/*;q=0.8",
-          "User-Agent": "star-weather-planner/0.3.1 data-source-health",
-        },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const contentType = response.headers.get("content-type") ?? "";
-      const body = await response.arrayBuffer();
-      if (!contentType.startsWith("image/") || body.byteLength < 64) {
-        throw new Error("瓦片响应不是有效图片");
-      }
-      return body.byteLength;
-    }, 15_000);
-    return probeResult(
-      "light-pollution",
-      "光污染参考 / VIIRS 2023",
-      "available",
-      `第三方视觉瓦片可用 · ${result.value} B；不等同于现场 Bortle/SQM`,
+    const response = await timedFetch(tileUrl, "image/*,*/*;q=0.8");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().startsWith("image/")) {
+      throw new Error("光污染瓦片响应不是图片");
+    }
+    const body = await response.arrayBuffer();
+    if (body.byteLength < 64) throw new Error("光污染瓦片内容过小");
+    return {
+      id: "light-pollution",
+      label: "VIIRS 2023 光污染",
+      status: "available",
+      detail: "第三方视觉 WMTS 可用；仅供空间参考，非 Bortle/SQM 实测",
       checkedAt,
-      result.latencyMs,
-    );
+      latencyMs: Date.now() - startedAt,
+    };
   } catch (error) {
-    return probeResult(
-      "light-pollution",
-      "光污染参考 / VIIRS 2023",
-      "degraded",
-      error instanceof Error ? error.message : "光污染瓦片不可达",
+    return {
+      id: "light-pollution",
+      label: "VIIRS 2023 光污染",
+      status: "degraded",
+      detail: sanitizeProbeError(error, "光污染瓦片"),
       checkedAt,
-    );
+      latencyMs: Date.now() - startedAt,
+    };
   }
 }
 
-export async function getDataSourceHealth(
-  forceRefresh = false,
-): Promise<DataSourceHealthResponse> {
-  const cached = healthCache.readFresh("all", HEALTH_CACHE_TTL_MS);
-  if (!forceRefresh && cached) {
-    return { ...cached.value, cached: true };
-  }
-
-  const checkedAt = new Date().toISOString();
-  const [weather, satellite, lightPollution] = await Promise.all([
-    weatherProbe(checkedAt),
-    satelliteProbe(checkedAt),
-    lightPollutionProbe(checkedAt),
-  ]);
+function staticConfigurationProbes(
+  checkedAt: string,
+): Pick<
+  DataSourceHealthResponse["sources"],
+  "tianditu" | "local-dark-sky"
+> {
   const tiandituConfigured = Boolean(
     process.env.NEXT_PUBLIC_TIANDITU_TOKEN?.trim(),
   );
-  const tianditu = probeResult(
-    "tianditu",
-    "中文注记 / 天地图",
-    tiandituConfigured ? "available" : "unconfigured",
-    tiandituConfigured
-      ? "构建时 Token 已配置"
-      : "未配置时使用内置中文城市注记",
-    checkedAt,
-  );
-  const localDarkSkyInstalled = hasDarkSkyLayer();
-  const localDarkSky = probeResult(
-    "local-dark-sky",
-    "Bortle / SQM 本地栅格",
-    localDarkSkyInstalled ? "available" : "not-installed",
-    localDarkSkyInstalled
-      ? "已显式启用授权本地资产"
-      : "未安装授权栅格，不会伪造 Bortle/SQM 数值",
-    checkedAt,
-  );
+  const darkSkyInstalled = hasDarkSkyLayer();
+  return {
+    tianditu: {
+      id: "tianditu",
+      label: "天地图中文注记",
+      status: tiandituConfigured ? "available" : "unconfigured",
+      detail: tiandituConfigured
+        ? "构建时已配置令牌"
+        : "未配置令牌，使用内置中文城市注记",
+      checkedAt,
+    },
+    "local-dark-sky": {
+      id: "local-dark-sky",
+      label: "本地 Bortle/SQM 栅格",
+      status: darkSkyInstalled ? "available" : "not-installed",
+      detail: darkSkyInstalled
+        ? "已安装并显式启用授权栅格"
+        : "未安装；页面不会根据视觉瓦片伪造 Bortle/SQM 数值",
+      checkedAt,
+    },
+  };
+}
+
+async function runHealthProbes(): Promise<DataSourceHealthResponse> {
+  const checkedAt = new Date().toISOString();
+  const [weather, satellite, lightPollution] = await Promise.all([
+    probeWeather(checkedAt),
+    probeSatellite(checkedAt),
+    probeLightPollution(checkedAt),
+  ]);
+  const staticSources = staticConfigurationProbes(checkedAt);
   const sources: DataSourceHealthResponse["sources"] = {
     weather,
     satellite,
     "light-pollution": lightPollution,
-    tianditu,
-    "local-dark-sky": localDarkSky,
+    ...staticSources,
   };
-  const status = [weather, satellite, lightPollution].every(
-    (source) => source.status === "available",
-  )
-    ? "ok"
-    : "degraded";
   const response: DataSourceHealthResponse = {
-    status,
+    status: [weather, satellite, lightPollution].every(
+      (source) => source.status === "available",
+    )
+      ? "ok"
+      : "degraded",
     checkedAt,
     cached: false,
     sources,
   };
   healthCache.write("all", response);
   return response;
+}
+
+function cachedResponse(
+  cached: NonNullable<ReturnType<typeof healthCache.read>>,
+  extras: Partial<DataSourceHealthResponse> = {},
+): DataSourceHealthResponse {
+  return {
+    ...cached.value,
+    cached: true,
+    cacheAgeMs: cached.ageMs,
+    coalesced: false,
+    refreshSuppressed: false,
+    nextRefreshAt: undefined,
+    ...extras,
+  };
+}
+
+export async function getDataSourceHealth(
+  forceRefresh = false,
+): Promise<DataSourceHealthResponse> {
+  const now = Date.now();
+  const cached = healthCache.read("all", now);
+
+  if (!forceRefresh && cached && cached.ageMs <= HEALTH_CACHE_TTL_MS) {
+    return cachedResponse(cached);
+  }
+
+  if (
+    forceRefresh &&
+    cached &&
+    now - lastProbeStartedAt < FORCE_REFRESH_COOLDOWN_MS
+  ) {
+    return cachedResponse(cached, {
+      refreshSuppressed: true,
+      nextRefreshAt: new Date(
+        lastProbeStartedAt + FORCE_REFRESH_COOLDOWN_MS,
+      ).toISOString(),
+    });
+  }
+
+  if (healthInFlight) {
+    const shared = await healthInFlight;
+    return { ...shared, coalesced: true };
+  }
+
+  lastProbeStartedAt = now;
+  healthInFlight = runHealthProbes();
+  try {
+    return await healthInFlight;
+  } finally {
+    healthInFlight = null;
+  }
 }
