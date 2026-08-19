@@ -32,6 +32,32 @@ test("sites compatibility route preserves context and opens the recommendation p
   ).toHaveAttribute("aria-current", "page");
 });
 
+test("legacy light-pollution entry points preserve bookmark context", async ({
+  request,
+}) => {
+  for (const path of ["/viirs", "/stargazing-finder-dark"]) {
+    const response = await request.get(
+      `${path}?lat=29.447&lng=118.579&name=%E5%BC%80%E5%8C%96%E6%9A%97%E5%A4%9C%E7%82%B9&` +
+        "elevation=980&model=aifs&overlay=night-lights",
+      { maxRedirects: 0 },
+    );
+
+    expect([307, 308]).toContain(response.status());
+    const location = response.headers().location;
+    expect(location).toBeTruthy();
+    const target = new URL(location!, "http://127.0.0.1:3100");
+    expect(target.pathname).toBe("/");
+    expect(target.searchParams.get("lat")).toBe("29.447");
+    expect(target.searchParams.get("lng")).toBe("118.579");
+    expect(target.searchParams.get("name")).toBe("开化暗夜点");
+    expect(target.searchParams.get("elevation")).toBe("980");
+    expect(target.searchParams.get("model")).toBe("aifs");
+    expect(target.searchParams.get("overlay")).toBe("night-lights");
+    expect(target.searchParams.get("view")).toBe("light-pollution");
+    expect(target.searchParams.has("panel")).toBe(false);
+  }
+});
+
 test("source disclosure keeps the current observation context when opening recommendations", async ({
   page,
 }) => {
