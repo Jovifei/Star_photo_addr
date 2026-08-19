@@ -1,0 +1,90 @@
+name: Capture README screenshots
+
+on:
+  push:
+    branches:
+      - docs/readme-visual-guide-20260819
+    paths:
+      - .github/workflows/readme-screenshots.yml
+      - scripts/capture-readme-screenshots.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: readme-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout screenshot branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production application
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+          BUILD_REVISION: ${{ github.sha }}
+
+      - name: Start application
+        run: |
+          PORT=3100 HOSTNAME=127.0.0.1 NODE_ENV=production \
+            npm run start:e2e > /tmp/readme-app.log 2>&1 &
+          echo $! > /tmp/readme-app.pid
+
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3100/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat /tmp/readme-app.log
+          exit 1
+
+      - name: Capture current interface
+        run: node scripts/capture-readme-screenshots.mjs
+        env:
+          README_SCREENSHOT_BASE_URL: http://127.0.0.1:3100
+
+      - name: Upload screenshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: readme-screenshots
+          path: docs/images/readme/*.jpg
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Commit screenshots to branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/images/readme/*.jpg
+
+          if git diff --cached --quiet; then
+            echo "Screenshots are unchanged."
+            exit 0
+          fi
+
+          git commit -m "docs(readme): capture current product interface"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
