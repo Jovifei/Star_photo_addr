@@ -1,0 +1,86 @@
+/* Operational data-source and refresh controls. */
+.cloud-control-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cloud-refresh-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--surface-border, var(--line));
+  border-radius: var(--radius-control, var(--radius-sm));
+  background: rgba(7, 24, 33, 0.82);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background-color var(--transition);
+}
+
+.cloud-refresh-button:hover:not(:disabled),
+.cloud-refresh-button:focus-visible {
+  border-color: var(--observation, var(--green));
+  background: rgba(121, 207, 226, 0.1);
+  color: var(--observation-strong, var(--green-soft));
+}
+
+.cloud-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.source-status-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.source-status-title small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: var(--font-data);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-dot.degraded {
+  background: var(--danger-soft, var(--red));
+  box-shadow: 0 0 8px rgba(203, 119, 104, 0.42);
+}
+
+.source-dot.not-installed {
+  background: var(--muted-2, #738990);
+  box-shadow: none;
+}
+
+.source-dot.unconfigured {
+  background: var(--moonlight, var(--amber));
+}
+
+@media (max-width: 768px) {
+  .cloud-control-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .cloud-refresh-button span {
+    display: none;
+  }
+
+  .cloud-refresh-button {
+    width: 36px;
+    padding-inline: 0;
+  }
+}

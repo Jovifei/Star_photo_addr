@@ -4,6 +4,7 @@ import { StoreProvider } from "@/lib/store";
 import ProductStateBridge from "@/components/ProductStateBridge";
 import "./globals.css";
 import "./theme-unified.css";
+import "./data-pipeline.css";
 
 export const metadata: Metadata = {
   title: "逐星｜今夜观测",

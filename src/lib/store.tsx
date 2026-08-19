@@ -1,20 +1,5 @@
 "use client";
 
-// Global application state: a React Context + useReducer store (no extra deps).
-// Holds the active sample, selected location, its forecast, the night window,
-// Bortle/cloud toggles, the candidate list, cloud-grid sampling data, and a
-// multi-location forecast cache. Action methods perform side-effects (pixel
-// sampling, forecast fetch) and dispatch results.
-//
-// v2 changes:
-//   - StoreProvider is now mounted at layout.tsx level (global Context) so
-//     both / and /viirs pages share the same state.
-//   - selectedLocation is persisted to localStorage (debounced 500 ms) and
-//     restored on mount.
-//   - New state fields: cloudGrid, cloudGridLoading, forecastCache.
-//   - New actions: setCloudGrid, setCloudGridLoading, addCandidate,
-//     removeCandidate, clearForecastCache.
-
 import {
   createContext,
   useCallback,
@@ -69,22 +54,17 @@ interface AppState {
   detailOpen: boolean;
   loading: boolean;
   error: string;
-  /** Cloud-grid spatial sampling data (Phase 2). */
   cloudGrid: CloudGridData | null;
-  /** Whether a cloud-grid fetch is in progress. */
   cloudGridLoading: boolean;
-  /** Latest satellite frame list shared by the map and the time workbench. */
   satelliteFrames: SatelliteFrame[];
-  /**
-   * Multi-location forecast cache for the star-window table.
-   * Key = locationId, value = LocationForecast (1 h expiry handled by caller).
-   */
   forecastCache: Map<string, LocationForecast>;
   mapViewMode: MapViewMode;
   recommendationThreshold: number;
   observingBortleLimit: 3 | 4;
   recommendedOnly: boolean;
   visibleRecommendationBands: RecommendationBand[];
+  /** Monotonic token observed by every data layer after a manual refresh. */
+  dataRefreshRevision: number;
 }
 
 const homeNight = currentNightKey();
@@ -97,8 +77,6 @@ const initialState: AppState = {
   forecast: null,
   nightKeys: homeNightKeys,
   selectedNight: homeNight,
-  // Off by default when no dark-sky raster is installed, so the map never
-  // mounts a layer whose tiles would all 404.
   bortleEnabled: hasDarkSkyLayer(),
   cloudState: {
     ...DEFAULT_CLOUD_STATE,
@@ -117,7 +95,13 @@ const initialState: AppState = {
   recommendationThreshold: 70,
   observingBortleLimit: 3,
   recommendedOnly: false,
-  visibleRecommendationBands: ["priority", "recommended", "watch", "not-recommended"],
+  visibleRecommendationBands: [
+    "priority",
+    "recommended",
+    "watch",
+    "not-recommended",
+  ],
+  dataRefreshRevision: 0,
 };
 
 type Action =
@@ -136,17 +120,14 @@ type Action =
   | { type: "SET_CLOUD_GRID"; data: CloudGridData | null }
   | { type: "SET_CLOUD_GRID_LOADING"; loading: boolean }
   | { type: "SET_SATELLITE_FRAMES"; frames: SatelliteFrame[] }
-  | {
-      type: "CACHE_FORECAST";
-      locationId: string;
-      forecast: LocationForecast;
-    }
+  | { type: "CACHE_FORECAST"; locationId: string; forecast: LocationForecast }
   | { type: "CLEAR_FORECAST_CACHE" }
   | { type: "SET_MAP_VIEW_MODE"; mode: MapViewMode }
   | { type: "SET_RECOMMENDATION_THRESHOLD"; threshold: number }
   | { type: "SET_OBSERVING_BORTLE_LIMIT"; limit: 3 | 4 }
   | { type: "SET_RECOMMENDED_ONLY"; enabled: boolean }
   | { type: "SET_RECOMMENDATION_BANDS"; bands: RecommendationBand[] }
+  | { type: "REFRESH_DATA"; revision: number }
   | { type: "HYDRATE_LOCATION"; location: Location };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -172,26 +153,27 @@ function reducer(state: AppState, action: Action): AppState {
           ...action.candidates.slice(0, MAX_SHORTLIST_SIZE),
           ...state.candidates.filter(
             (candidate) =>
-              !action.candidates.some((incoming) => incoming.id === candidate.id),
+              !action.candidates.some(
+                (incoming) => incoming.id === candidate.id,
+              ),
           ),
         ].slice(0, MAX_SHORTLIST_SIZE),
       };
-    case "ADD_CANDIDATE": {
-      // Avoid duplicate IDs.
-      if (state.candidates.some((c) => c.id === action.candidate.id)) {
+    case "ADD_CANDIDATE":
+      if (state.candidates.some((candidate) => candidate.id === action.candidate.id)) {
         return state;
       }
       return {
         ...state,
-        candidates: state.candidates.length >= MAX_SHORTLIST_SIZE
-          ? state.candidates
-          : [...state.candidates, action.candidate],
+        candidates:
+          state.candidates.length >= MAX_SHORTLIST_SIZE
+            ? state.candidates
+            : [...state.candidates, action.candidate],
       };
-    }
     case "REMOVE_CANDIDATE":
       return {
         ...state,
-        candidates: state.candidates.filter((c) => c.id !== action.id),
+        candidates: state.candidates.filter((candidate) => candidate.id !== action.id),
       };
     case "SET_DETAIL_OPEN":
       return { ...state, detailOpen: action.open };
@@ -215,13 +197,21 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_MAP_VIEW_MODE":
       return { ...state, mapViewMode: action.mode };
     case "SET_RECOMMENDATION_THRESHOLD":
-      return { ...state, recommendationThreshold: Math.min(90, Math.max(50, Math.round(action.threshold))) };
+      return {
+        ...state,
+        recommendationThreshold: Math.min(
+          90,
+          Math.max(50, Math.round(action.threshold)),
+        ),
+      };
     case "SET_OBSERVING_BORTLE_LIMIT":
       return { ...state, observingBortleLimit: action.limit };
     case "SET_RECOMMENDED_ONLY":
       return { ...state, recommendedOnly: action.enabled };
     case "SET_RECOMMENDATION_BANDS":
       return { ...state, visibleRecommendationBands: action.bands };
+    case "REFRESH_DATA":
+      return { ...state, dataRefreshRevision: action.revision };
     default:
       return state;
   }
@@ -230,9 +220,19 @@ function reducer(state: AppState, action: Action): AppState {
 async function fetchForecastFor(
   location: Location,
   model: CloudState["model"] = "icon",
+  forceRefresh = false,
 ): Promise<LocationForecast | null> {
-  const url = `/api/forecast?latitude=${location.latitude}&longitude=${location.longitude}&days=14&model=${model}`;
-  const response = await fetch(url);
+  const params = new URLSearchParams({
+    latitude: String(location.latitude),
+    longitude: String(location.longitude),
+    days: "14",
+    model,
+  });
+  if (forceRefresh) params.set("refresh", "1");
+  const response = await fetch(`/api/forecast?${params.toString()}`, {
+    cache: forceRefresh ? "no-store" : "default",
+    headers: { Accept: "application/json" },
+  });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.error ?? `天气请求失败 (${response.status})`);
@@ -251,6 +251,7 @@ interface StoreContextValue {
     name?: string,
     model?: CloudState["model"],
   ) => Promise<void>;
+  refreshData: () => Promise<void>;
   selectNight: (nightKey: string) => void;
   toggleBortle: () => void;
   setCloud: (partial: Partial<CloudState>) => void;
@@ -279,15 +280,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const forecastHydrationKeyRef = useRef<string | null>(null);
   const selectedLocationIdRef = useRef<string | null>(null);
   const latestForecastRequestRef = useRef(0);
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     selectedLocationIdRef.current = state.selectedLocation?.id ?? null;
   }, [state.selectedLocation]);
 
-  // ----- localStorage persistence (debounced 500 ms) -----
-  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Restore selectedLocation from localStorage on mount.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SELECTED_LOCATION_STORAGE_KEY);
@@ -306,9 +304,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         typeof parsed.id === "string" &&
         typeof parsed.name === "string"
       ) {
-        // Remove the exact placeholder produced by the old bridge bug where
-        // Number(null) turned a coordinate-less planner link into 0,0. An
-        // explicitly entered 0,0 location remains legal and is not removed.
         const isLegacyPlaceholder =
           parsed.id === "planner-0.00000-0.00000" &&
           parsed.name === "星野决策点位" &&
@@ -322,7 +317,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(SELECTED_LOCATION_STORAGE_KEY);
       }
     } catch {
-      // Ignore parse errors — stale or corrupt data.
+      // Optional persisted state may be corrupt or unavailable.
     }
   }, []);
 
@@ -333,9 +328,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SET_MAP_VIEW_MODE", mode });
       }
       const threshold = Number(localStorage.getItem(OBSERVING_THRESHOLD_STORAGE_KEY));
-      if (Number.isFinite(threshold)) dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });
+      if (Number.isFinite(threshold)) {
+        dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });
+      }
       const limit = Number(localStorage.getItem(OBSERVING_BORTLE_LIMIT_STORAGE_KEY));
-      if (limit === 3 || limit === 4) dispatch({ type: "SET_OBSERVING_BORTLE_LIMIT", limit });
+      if (limit === 3 || limit === 4) {
+        dispatch({ type: "SET_OBSERVING_BORTLE_LIMIT", limit });
+      }
       const recommendedOnly = localStorage.getItem(OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY);
       if (recommendedOnly === "true" || recommendedOnly === "false") {
         dispatch({ type: "SET_RECOMMENDED_ONLY", enabled: recommendedOnly === "true" });
@@ -343,18 +342,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const bands = localStorage.getItem(OBSERVING_BANDS_STORAGE_KEY);
       if (bands) {
         const parsed = JSON.parse(bands) as unknown;
-        if (Array.isArray(parsed) && parsed.every((band) =>
-          band === "priority" || band === "recommended" || band === "watch" || band === "not-recommended",
-        )) {
+        if (
+          Array.isArray(parsed) &&
+          parsed.every(
+            (band) =>
+              band === "priority" ||
+              band === "recommended" ||
+              band === "watch" ||
+              band === "not-recommended",
+          )
+        ) {
           dispatch({ type: "SET_RECOMMENDATION_BANDS", bands: parsed as RecommendationBand[] });
         }
       }
     } catch {
-      // Local preferences are optional; the default observation session remains usable.
+      // Local preferences are optional.
     }
   }, []);
 
-  // Restore user-added comparison locations independently from provider data.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CUSTOM_CANDIDATES_STORAGE_KEY);
@@ -369,11 +374,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Debounced write whenever selectedLocation changes.
   useEffect(() => {
-    if (persistTimer.current) {
-      clearTimeout(persistTimer.current);
-    }
+    if (persistTimer.current) clearTimeout(persistTimer.current);
     if (!state.selectedLocation) return;
     persistTimer.current = setTimeout(() => {
       try {
@@ -382,7 +384,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           JSON.stringify(state.selectedLocation),
         );
       } catch {
-        // Quota exceeded or private mode — silently ignore.
+        // Persistence failure does not block the current session.
       }
     }, 500);
     return () => {
@@ -393,46 +395,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!candidatesHydrated) return;
     try {
-        localStorage.setItem(
-          CUSTOM_CANDIDATES_STORAGE_KEY,
-          JSON.stringify(state.candidates),
-        );
+      localStorage.setItem(
+        CUSTOM_CANDIDATES_STORAGE_KEY,
+        JSON.stringify(state.candidates),
+      );
     } catch {
-      // Quota exceeded/private mode — the current session remains usable.
+      // Current in-memory candidates remain usable.
     }
   }, [candidatesHydrated, state.candidates]);
 
-  const selectLocation = useCallback(async (location: Location, model?: CloudState["model"]) => {
-    const selectedModel = model ?? state.cloudState.model;
-    const requestId = ++latestForecastRequestRef.current;
-    selectedLocationIdRef.current = location.id;
-    dispatch({ type: "SET_LOCATION", location });
-    dispatch({ type: "SET_DETAIL_OPEN", open: true });
-    dispatch({ type: "SET_LOADING", loading: true });
-    dispatch({ type: "SET_ERROR", error: "" });
-    dispatch({ type: "SET_SAMPLE", sample: null });
-    dispatch({ type: "SET_FORECAST", forecast: null });
-    try {
-      const forecast = await fetchForecastFor(location, selectedModel);
-      if (requestId !== latestForecastRequestRef.current) return;
-      dispatch({ type: "SET_FORECAST", forecast });
-      if (forecast) {
+  const selectLocation = useCallback(
+    async (location: Location, model?: CloudState["model"]) => {
+      const selectedModel = model ?? state.cloudState.model;
+      const requestId = ++latestForecastRequestRef.current;
+      selectedLocationIdRef.current = location.id;
+      dispatch({ type: "SET_LOCATION", location });
+      dispatch({ type: "SET_DETAIL_OPEN", open: true });
+      dispatch({ type: "SET_LOADING", loading: true });
+      dispatch({ type: "SET_ERROR", error: "" });
+      dispatch({ type: "SET_SAMPLE", sample: null });
+      dispatch({ type: "SET_FORECAST", forecast: null });
+      try {
+        const forecast = await fetchForecastFor(location, selectedModel);
+        if (requestId !== latestForecastRequestRef.current) return;
+        dispatch({ type: "SET_FORECAST", forecast });
+        if (forecast) {
+          dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
+        }
+      } catch (error) {
+        if (requestId !== latestForecastRequestRef.current) return;
         dispatch({
-          type: "CACHE_FORECAST",
-          locationId: location.id,
-          forecast,
+          type: "SET_ERROR",
+          error: error instanceof Error ? error.message : "天气请求失败",
         });
+      } finally {
+        if (requestId === latestForecastRequestRef.current) {
+          dispatch({ type: "SET_LOADING", loading: false });
+        }
       }
-    } catch (error) {
-      if (requestId !== latestForecastRequestRef.current) return;
-      const message = error instanceof Error ? error.message : "天气请求失败";
-      dispatch({ type: "SET_ERROR", error: message });
-    } finally {
-      if (requestId === latestForecastRequestRef.current) {
-        dispatch({ type: "SET_LOADING", loading: false });
-      }
-    }
-  }, [state.cloudState.model]);
+    },
+    [state.cloudState.model],
+  );
 
   const sampleAt = useCallback(
     async (
@@ -467,16 +470,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "SET_SAMPLE", sample });
         dispatch({ type: "SET_FORECAST", forecast });
         if (forecast) {
-          dispatch({
-            type: "CACHE_FORECAST",
-            locationId: location.id,
-            forecast,
-          });
+          dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
         }
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current) return;
-        const message = error instanceof Error ? error.message : "取样或天气请求失败";
-        dispatch({ type: "SET_ERROR", error: message });
+        dispatch({
+          type: "SET_ERROR",
+          error: error instanceof Error ? error.message : "取样或天气请求失败",
+        });
       } finally {
         if (requestId === latestForecastRequestRef.current) {
           dispatch({ type: "SET_LOADING", loading: false });
@@ -486,67 +487,96 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [state.cloudState.model],
   );
 
+  const refreshData = useCallback(async () => {
+    const revision = Date.now();
+    dispatch({ type: "REFRESH_DATA", revision });
+    dispatch({ type: "SET_ERROR", error: "" });
+    const location = state.selectedLocation;
+    if (!location) return;
+    const requestId = ++latestForecastRequestRef.current;
+    dispatch({ type: "SET_LOADING", loading: true });
+    try {
+      const forecast = await fetchForecastFor(
+        location,
+        state.cloudState.model,
+        true,
+      );
+      if (
+        requestId !== latestForecastRequestRef.current ||
+        selectedLocationIdRef.current !== location.id
+      ) {
+        return;
+      }
+      dispatch({ type: "SET_FORECAST", forecast });
+      if (forecast) {
+        dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
+      }
+    } catch (error) {
+      if (requestId !== latestForecastRequestRef.current) return;
+      dispatch({
+        type: "SET_ERROR",
+        error: error instanceof Error ? error.message : "数据刷新失败",
+      });
+    } finally {
+      if (requestId === latestForecastRequestRef.current) {
+        dispatch({ type: "SET_LOADING", loading: false });
+      }
+    }
+  }, [state.cloudState.model, state.selectedLocation]);
+
   const locate = useCallback(
     (latitude: number, longitude: number) => {
       void sampleAt(latitude, longitude);
     },
     [sampleAt],
   );
-
   const selectNight = useCallback((nightKey: string) => {
     dispatch({ type: "SELECT_NIGHT", nightKey });
   }, []);
-
   const toggleBortle = useCallback(() => {
-    // Without a raster source there is nothing to toggle on.
     if (!hasDarkSkyLayer()) return;
     dispatch({ type: "SET_BORTLE", enabled: !state.bortleEnabled });
   }, [state.bortleEnabled]);
-
   const setCloud = useCallback((partial: Partial<CloudState>) => {
     dispatch({ type: "SET_CLOUD", partial });
   }, []);
-
   const setCandidates = useCallback((candidates: CityCandidate[]) => {
     dispatch({ type: "SET_CANDIDATES", candidates });
   }, []);
-
-  const addCandidate = useCallback((location: Location) => {
-    if (state.candidates.length >= MAX_SHORTLIST_SIZE) return;
-    const candidate: CityCandidate = {
-      id: location.id,
-      adcode: 0,
-      province: location.province ?? "",
-      city: location.name,
-      name: location.name,
-      longitude: location.longitude,
-      latitude: location.latitude,
-      bortle: location.bortle ?? 0,
-      kind: "自定义",
-      note: location.description ?? location.area ?? "",
-    };
-    dispatch({ type: "ADD_CANDIDATE", candidate });
-  }, [state.candidates.length]);
-
+  const addCandidate = useCallback(
+    (location: Location) => {
+      if (state.candidates.length >= MAX_SHORTLIST_SIZE) return;
+      dispatch({
+        type: "ADD_CANDIDATE",
+        candidate: {
+          id: location.id,
+          adcode: 0,
+          province: location.province ?? "",
+          city: location.name,
+          name: location.name,
+          longitude: location.longitude,
+          latitude: location.latitude,
+          bortle: location.bortle ?? 0,
+          kind: "自定义",
+          note: location.description ?? location.area ?? "",
+        },
+      });
+    },
+    [state.candidates.length],
+  );
   const removeCandidate = useCallback((id: string) => {
     dispatch({ type: "REMOVE_CANDIDATE", id });
   }, []);
-
   const setDetailOpen = useCallback((open: boolean) => {
     dispatch({ type: "SET_DETAIL_OPEN", open });
   }, []);
-
   const setCloudGrid = useCallback((data: CloudGridData | null) => {
     dispatch({ type: "SET_CLOUD_GRID", data });
   }, []);
-
   const setCloudGridLoading = useCallback((loading: boolean) => {
     dispatch({ type: "SET_CLOUD_GRID_LOADING", loading });
   }, []);
 
-  // A location restored from localStorage still needs its point forecast.
-  // Otherwise the timeline can show a grid average while the control panel
-  // has no selected-point forecast for the same active hour.
   useEffect(() => {
     const location = state.selectedLocation;
     const model = state.cloudState.model;
@@ -562,15 +592,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     forecastHydrationKeyRef.current = hydrationKey;
     let cancelled = false;
-    void fetchForecastFor(location, model).then((forecast) => {
-      if (cancelled || !forecast || selectedLocationIdRef.current !== location.id) return;
-      dispatch({ type: "SET_FORECAST", forecast });
-      dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
-    }).catch(() => {
-      if (forecastHydrationKeyRef.current === hydrationKey) {
-        forecastHydrationKeyRef.current = null;
-      }
-    });
+    void fetchForecastFor(location, model)
+      .then((forecast) => {
+        if (
+          cancelled ||
+          !forecast ||
+          selectedLocationIdRef.current !== location.id
+        ) {
+          return;
+        }
+        dispatch({ type: "SET_FORECAST", forecast });
+        dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
+      })
+      .catch(() => {
+        if (forecastHydrationKeyRef.current === hydrationKey) {
+          forecastHydrationKeyRef.current = null;
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -579,42 +617,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setSatelliteFrames = useCallback((frames: SatelliteFrame[]) => {
     dispatch({ type: "SET_SATELLITE_FRAMES", frames });
   }, []);
-
   const cacheForecast = useCallback(
     (locationId: string, forecast: LocationForecast) => {
       dispatch({ type: "CACHE_FORECAST", locationId, forecast });
     },
     [],
   );
-
   const clearForecastCache = useCallback(() => {
     dispatch({ type: "CLEAR_FORECAST_CACHE" });
   }, []);
-
   const setMapViewMode = useCallback((mode: MapViewMode) => {
     dispatch({ type: "SET_MAP_VIEW_MODE", mode });
-    try { localStorage.setItem(OBSERVING_MAP_VIEW_STORAGE_KEY, mode); } catch { /* optional preference */ }
+    try {
+      localStorage.setItem(OBSERVING_MAP_VIEW_STORAGE_KEY, mode);
+    } catch {
+      // Optional preference.
+    }
   }, []);
-
   const setRecommendationThreshold = useCallback((threshold: number) => {
     dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });
-    try { localStorage.setItem(OBSERVING_THRESHOLD_STORAGE_KEY, String(threshold)); } catch { /* optional preference */ }
+    try {
+      localStorage.setItem(OBSERVING_THRESHOLD_STORAGE_KEY, String(threshold));
+    } catch {
+      // Optional preference.
+    }
   }, []);
-
   const setObservingBortleLimit = useCallback((limit: 3 | 4) => {
     dispatch({ type: "SET_OBSERVING_BORTLE_LIMIT", limit });
-    try { localStorage.setItem(OBSERVING_BORTLE_LIMIT_STORAGE_KEY, String(limit)); } catch { /* optional preference */ }
+    try {
+      localStorage.setItem(OBSERVING_BORTLE_LIMIT_STORAGE_KEY, String(limit));
+    } catch {
+      // Optional preference.
+    }
   }, []);
-
   const setRecommendedOnly = useCallback((enabled: boolean) => {
     dispatch({ type: "SET_RECOMMENDED_ONLY", enabled });
-    try { localStorage.setItem(OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY, String(enabled)); } catch { /* optional preference */ }
+    try {
+      localStorage.setItem(OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY, String(enabled));
+    } catch {
+      // Optional preference.
+    }
   }, []);
-
   const setRecommendationBands = useCallback((bands: RecommendationBand[]) => {
     const next = bands.filter((band, index) => bands.indexOf(band) === index);
     dispatch({ type: "SET_RECOMMENDATION_BANDS", bands: next });
-    try { localStorage.setItem(OBSERVING_BANDS_STORAGE_KEY, JSON.stringify(next)); } catch { /* optional preference */ }
+    try {
+      localStorage.setItem(OBSERVING_BANDS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Optional preference.
+    }
   }, []);
 
   const value = useMemo<StoreContextValue>(
@@ -622,6 +673,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       state,
       selectLocation,
       sampleAt,
+      refreshData,
       selectNight,
       toggleBortle,
       setCloud,
@@ -645,6 +697,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       state,
       selectLocation,
       sampleAt,
+      refreshData,
       selectNight,
       toggleBortle,
       setCloud,
@@ -670,7 +723,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 }
 
 export function useStore(): StoreContextValue {
-  const ctx = useContext(StoreContext);
-  if (!ctx) throw new Error("useStore must be used within StoreProvider");
-  return ctx;
+  const context = useContext(StoreContext);
+  if (!context) throw new Error("useStore must be used within StoreProvider");
+  return context;
 }
