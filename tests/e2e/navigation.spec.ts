@@ -82,3 +82,22 @@ test("source disclosure keeps the current observation context when opening recom
     page.getByRole("navigation", { name: "页面导航" }).getByText("推荐观星地点"),
   ).toHaveAttribute("aria-current", "page");
 });
+
+test.describe("mobile product header", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("keeps data-source disclosure reachable without crowding the navigation", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    const sourceButton = page.getByRole("button", { name: "数据依据与局限" });
+    await expect(sourceButton).toBeVisible();
+    await expect(sourceButton).toHaveCSS("width", "36px");
+
+    await sourceButton.click();
+    await expect(
+      page.getByRole("dialog", { name: "数据依据与局限" }),
+    ).toBeVisible();
+  });
+});
