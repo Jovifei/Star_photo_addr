@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildProductHref, buildSitesRedirect } from "@/lib/productRoutes";
+import {
+  buildLightPollutionRedirect,
+  buildProductHref,
+  buildSitesRedirect,
+} from "@/lib/productRoutes";
 
 describe("buildProductHref", () => {
   it("builds one canonical cross-workspace observation context", () => {
@@ -71,6 +75,34 @@ describe("buildProductHref", () => {
     expect(target.searchParams.has("lng")).toBe(false);
     expect(target.searchParams.has("name")).toBe(false);
     expect(target.searchParams.get("model")).toBe("icon");
+  });
+});
+
+describe("buildLightPollutionRedirect", () => {
+  it("preserves an old bookmark's observation context without opening the sites panel", () => {
+    const result = buildLightPollutionRedirect({
+      lat: "29.447",
+      lng: "118.579",
+      name: "开化暗夜点",
+      elevation: "980",
+      model: "aifs",
+      forecastTime: "2026-08-20T22:00",
+      overlay: "night-lights",
+      unsafeReturnTo: "https://example.com",
+    });
+    const target = new URL(result, "https://example.test");
+
+    expect(target.pathname).toBe("/");
+    expect(target.searchParams.get("lat")).toBe("29.447");
+    expect(target.searchParams.get("lng")).toBe("118.579");
+    expect(target.searchParams.get("name")).toBe("开化暗夜点");
+    expect(target.searchParams.get("elevation")).toBe("980");
+    expect(target.searchParams.get("model")).toBe("aifs");
+    expect(target.searchParams.get("forecastTime")).toBe("2026-08-20T22:00");
+    expect(target.searchParams.get("overlay")).toBe("night-lights");
+    expect(target.searchParams.get("view")).toBe("light-pollution");
+    expect(target.searchParams.has("panel")).toBe(false);
+    expect(target.searchParams.has("unsafeReturnTo")).toBe(false);
   });
 });
 
