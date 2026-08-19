@@ -91,7 +91,7 @@
 - `/planner`：多地点、多夜晚决策工作区；
 - `/viirs` 与 `/stargazing-finder-dark`：旧收藏兼容入口，重定向到统一光污染视图；
 - 所有兼容重定向必须保留 `lat/lng/name/elevation/night/model/forecastTime/observationTime/overlay`；
-- 所有工作区链接必须通过 `buildProductHref()` 构造，禁止页面内继续手写一套参数拼接；
+- 主地图共享导航和数据说明弹窗通过 `buildProductHref()` 构造；Planner 现有 `productHref()` 必须维持同一参数协议，后续迁移时再合并实现；
 - 主地图可主动丢弃历史夜晚和过期小时，但不得丢失地点、模型或用户明确选择的工作区；
 - URL 状态桥接的幂等键必须包含路径；相同查询参数在不同工作区可能具有不同语义。
 
