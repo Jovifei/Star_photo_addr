@@ -6,6 +6,7 @@ import {
 import {
   maxForecastDaysForModel,
   OPEN_METEO_FORECAST_URL,
+  openMeteoModelParameter,
 } from "./forecast";
 import type {
   FinderHourlyData,
@@ -153,16 +154,8 @@ export function buildFinderWeatherUrl(
     end_date: addFinderDays(sortedDates.at(-1)!, 1),
     wind_speed_unit: "ms",
   });
-  if (model !== "best_match") {
-    params.set(
-      "models",
-      model === "icon"
-        ? "icon_seamless"
-        : model === "gfs"
-          ? "gfs_seamless"
-          : "ecmwf_aifs025",
-    );
-  }
+  const providerModel = openMeteoModelParameter(model);
+  if (providerModel) params.set("models", providerModel);
   return `${OPEN_METEO_FORECAST_URL}?${params.toString()}`;
 }
 

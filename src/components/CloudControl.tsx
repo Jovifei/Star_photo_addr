@@ -102,10 +102,13 @@ export default function CloudControl() {
         if (data) setBuildInfo(data);
       })
       .catch(() => undefined);
-    void loadHealth(false);
+    const initialHealthTimer = window.setTimeout(() => {
+      void loadHealth(false);
+    }, 0);
     const timer = window.setInterval(() => void loadHealth(false), 5 * 60_000);
     return () => {
       controller.abort();
+      window.clearTimeout(initialHealthTimer);
       window.clearInterval(timer);
     };
   }, [loadHealth]);

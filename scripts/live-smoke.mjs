@@ -44,7 +44,7 @@ const MODELS = {
   best_match: null,
   icon: "icon_seamless",
   gfs: "gfs_seamless",
-  aifs: "ecmwf_aifs025",
+  aifs: "ecmwf_aifs025_single",
 };
 
 async function fetchWithRetry(url, options = {}, attempts = 3) {

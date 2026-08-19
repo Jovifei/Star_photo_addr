@@ -56,9 +56,14 @@ describe("forecast model routing", () => {
     expect(openMeteoModelParameter("best_match")).toBeNull();
     expect(openMeteoModelParameter("icon")).toBe("icon_seamless");
     expect(openMeteoModelParameter("gfs")).toBe("gfs_seamless");
-    expect(openMeteoModelParameter("aifs")).toBe("ecmwf_aifs025");
+    expect(openMeteoModelParameter("aifs")).toBe(
+      "ecmwf_aifs025_single",
+    );
     expect(buildForecastUrl([location], 2, "gfs")).toContain(
       "models=gfs_seamless",
+    );
+    expect(buildForecastUrl([location], 2, "aifs")).toContain(
+      "models=ecmwf_aifs025_single",
     );
     expect(buildForecastUrl([location], 2, "best_match")).not.toContain(
       "models=",
@@ -72,7 +77,11 @@ describe("forecast model routing", () => {
     expect(clampForecastDays(14, "icon")).toBe(8);
     expect(clampForecastDays(30, "gfs")).toBe(16);
     expect(clampForecastDays(30, "aifs")).toBe(15);
-    expect(new URL(buildForecastUrl([location], 14, "icon")).searchParams.get("forecast_days")).toBe("8");
+    expect(
+      new URL(buildForecastUrl([location], 14, "icon")).searchParams.get(
+        "forecast_days",
+      ),
+    ).toBe("8");
   });
 
   it("rejects incomplete multi-location responses instead of duplicating one location", async () => {

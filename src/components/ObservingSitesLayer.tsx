@@ -53,7 +53,6 @@ export default function ObservingSitesLayer() {
     });
     if (activeForecastTime) params.set("time", activeForecastTime);
     if (forceRefresh) params.set("refresh", "1");
-    setSnapshotStatus("loading");
     fetch(`/api/observing/snapshot?${params.toString()}`, {
       signal: controller.signal,
       cache: forceRefresh ? "no-store" : "default",

@@ -62,7 +62,7 @@ const MODEL_PARAMETERS: Record<ForecastModel, string | null> = {
   best_match: null,
   icon: "icon_seamless",
   gfs: "gfs_seamless",
-  aifs: "ecmwf_aifs025",
+  aifs: "ecmwf_aifs025_single",
 };
 
 /** Provider horizons used to prevent invalid `forecast_days` requests. */
