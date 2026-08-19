@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useCallback, useState } from "react";
-import { Telescope } from "lucide-react";
+import { Info, Telescope } from "lucide-react";
 import EventStatus from "@/components/EventStatus";
 import SourcePopover from "@/components/SourcePopover";
 import NavTabs from "@/components/NavTabs";
@@ -49,12 +49,14 @@ export default function TopBar() {
       <button
         type="button"
         className="source-button"
+        aria-label="数据依据与局限"
         aria-haspopup="dialog"
         aria-expanded={sourceOpen}
         aria-controls="source-popover"
         onClick={() => setSourceOpen(true)}
       >
-        数据依据与局限
+        <Info size={16} strokeWidth={1.9} aria-hidden="true" />
+        <span className="source-button-label">数据依据与局限</span>
       </button>
       <SourcePopover open={sourceOpen} onClose={closeSource} />
     </header>
