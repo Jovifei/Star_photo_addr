@@ -7,8 +7,8 @@ import type { CloudOverlayMode, MapViewMode } from "@/lib/types";
 import { addDays, initialForecastTime } from "@/lib/nighttime";
 
 /**
- * Imports location/night/view state passed between 逐星, 推荐观星地点 and
- * 星野决策 through the URL.
+ * Imports location/night/view state passed between 今夜观测、暗夜选址 and
+ * 观星计划 through the URL.
  *
  * Example:
  * /?lat=30.026&lng=119.007&name=牵牛岗&view=light-pollution&panel=sites
@@ -45,7 +45,7 @@ export default function ProductStateBridge() {
     const longitudeValue = searchParams.get("lng");
     const latitude = latitudeValue === null ? null : Number(latitudeValue);
     const longitude = longitudeValue === null ? null : Number(longitudeValue);
-    const name = searchParams.get("name")?.trim() || "星野决策点位";
+    const name = searchParams.get("name")?.trim() || "观星计划点位";
     // The home map is always tonight-first. Old planner links often carried
     // a seasonal 8/12 night and must not silently move the current map back
     // to that historical event date.

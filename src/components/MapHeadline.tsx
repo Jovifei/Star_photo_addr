@@ -11,7 +11,7 @@ export default function MapHeadline() {
 
   return (
     <div className="map-headline">
-      <span>今晚观测 · {formatNightLabel(state.selectedNight, true)}</span>
+      <span>今夜观测 · {formatNightLabel(state.selectedNight, true)}</span>
       <h1>今晚云量变化</h1>
       <p>当前状态 → 次日 05:00 · 逐小时预报</p>
       <small>

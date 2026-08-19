@@ -178,7 +178,7 @@ test("评分时间滑窗会改变当前时次、档位数量和地图筛选基�
   await expect(control).toHaveAttribute("data-score-status", "available");
 });
 
-test("地图加入候选后星野决策保留同一地点", async ({ page }) => {
+test("地图加入候选后观星计划保留同一地点", async ({ page }) => {
   await page.goto("/");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
   const visibleMarkerIndex = () => markers.evaluateAll((elements) => elements.findIndex((element) => {
@@ -197,12 +197,12 @@ test("地图加入候选后星野决策保留同一地点", async ({ page }) => 
   await marker.click();
   const selectedName = (await page.locator(".panel-location-name").textContent())?.trim();
   expect(selectedName).toBeTruthy();
-  const addButton = page.getByRole("button", { name: "加入星野决策候选" });
+  const addButton = page.getByRole("button", { name: "加入观星计划候选" });
   await expect(addButton).toBeVisible({ timeout: 15000 });
   await addButton.click();
-  await expect(page.getByRole("button", { name: "已加入星野决策" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "已加入观星计划" })).toBeDisabled();
 
-  await page.getByRole("link", { name: "星野决策" }).click();
+  await page.getByRole("link", { name: "观星计划" }).click();
   await expect(page).toHaveURL(/\/planner/);
   await expect(page.locator(".planner-root")).toContainText(selectedName, { timeout: 15000 });
 });

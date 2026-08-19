@@ -58,7 +58,7 @@ function buildForecastResponse(requestUrl: string) {
   };
 }
 
-test("sites compatibility route preserves context and opens the recommendation panel", async ({
+test("sites compatibility route preserves context and opens the dark-sky site panel", async ({
   page,
   request,
 }) => {
@@ -85,8 +85,13 @@ test("sites compatibility route preserves context and opens the recommendation p
 
   await page.goto("/?view=light-pollution&panel=sites");
   await expect(page.locator(".detail-overlay-host")).toHaveClass(/is-open/);
+  await expect(page.locator(".nav-tabs .nav-tab")).toHaveText([
+    "今夜观测",
+    "暗夜选址",
+    "观星计划",
+  ]);
   await expect(
-    page.getByRole("navigation", { name: "页面导航" }).getByText("推荐观星地点"),
+    page.getByRole("navigation", { name: "页面导航" }).getByText("暗夜选址"),
   ).toHaveAttribute("aria-current", "page");
 });
 
@@ -148,7 +153,7 @@ test("historical home links are normalized without re-running the bridge", async
   await expect.poll(() => selectedLocationRequests).toBe(1);
 });
 
-test("source disclosure keeps the current observation context when opening recommendations", async ({
+test("source disclosure keeps the current observation context when opening dark-sky site selection", async ({
   page,
 }) => {
   await page.route("**/api/forecast?**", async (route) => {
@@ -168,7 +173,7 @@ test("source disclosure keeps the current observation context when opening recom
   await page.getByRole("button", { name: "数据依据与局限" }).click();
   const dialog = page.getByRole("dialog", { name: "数据依据与局限" });
   const recommendationLink = dialog.getByRole("link", {
-    name: "推荐观星地点",
+    name: "暗夜选址",
   });
 
   await expect.poll(async () => {
@@ -195,7 +200,7 @@ test("source disclosure keeps the current observation context when opening recom
   expect(finalUrl.searchParams.get("model")).toBe("gfs");
   expect(finalUrl.searchParams.get("view")).toBe("light-pollution");
   await expect(
-    page.getByRole("navigation", { name: "页面导航" }).getByText("推荐观星地点"),
+    page.getByRole("navigation", { name: "页面导航" }).getByText("暗夜选址"),
   ).toHaveAttribute("aria-current", "page");
 });
 

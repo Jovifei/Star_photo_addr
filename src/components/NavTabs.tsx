@@ -8,8 +8,8 @@ import { buildProductHref } from "@/lib/productRoutes";
 
 /**
  * Shared product navigation. All three product entry points preserve the
- * current observation session so moving between map, recommendations and the
- * planner does not silently reset the selected location/model/time.
+ * current observation session so moving between 今夜观测、暗夜选址 and
+ * 观星计划 does not silently reset the selected location/model/time.
  */
 export default function NavTabs() {
   const pathname = usePathname();
@@ -54,19 +54,19 @@ export default function NavTabs() {
     {
       id: "map",
       href: homeHref,
-      label: "逐星",
+      label: "今夜观测",
       active: pathname === "/" && !recommendationActive,
     },
     {
       id: "sites",
       href: sitesHref,
-      label: "推荐观星地点",
+      label: "暗夜选址",
       active: recommendationActive,
     },
     {
       id: "planner",
       href: plannerHref,
-      label: "星野决策",
+      label: "观星计划",
       active: pathname === "/planner",
     },
   ];

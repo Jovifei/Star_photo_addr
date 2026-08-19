@@ -118,7 +118,7 @@ export default function SourcePopover({
         <p>
           继续前往{" "}
           <Link href={sitesHref} onClick={onClose}>
-            推荐观星地点
+            暗夜选址
           </Link>
           ，在同一地图中查看光污染图层与候选点位。
         </p>

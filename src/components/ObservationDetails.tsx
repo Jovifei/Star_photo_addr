@@ -153,7 +153,7 @@ export default function ObservationDetails({
           onClick={onAddCandidate}
           disabled={isCandidate}
         >
-          {isCandidate ? "已加入星野决策" : "加入星野决策候选"}
+          {isCandidate ? "已加入观星计划" : "加入观星计划候选"}
         </button>
       )}
     </div>

@@ -81,8 +81,8 @@ export default function CandidateList({
                       e.stopPropagation();
                       onTrack(candidate);
                     }}
-                    aria-label={`将 ${candidate.name} 加入星野决策跟踪`}
-                    title="加入星野决策跟踪"
+                    aria-label={`将 ${candidate.name} 加入观星计划跟踪`}
+                    title="加入观星计划跟踪"
                   >
                     <ArrowUpRight size={14} aria-hidden="true" />
                     跟踪

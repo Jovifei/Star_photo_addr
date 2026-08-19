@@ -11,13 +11,13 @@ function NavTabsFallback() {
   return (
     <nav className="nav-tabs" aria-label="页面导航">
       <Link href="/" className="nav-tab active" aria-current="page">
-        逐星
+        今夜观测
       </Link>
       <Link href="/sites" className="nav-tab">
-        推荐观星地点
+        暗夜选址
       </Link>
       <Link href="/planner" className="nav-tab">
-        星野决策
+        观星计划
       </Link>
     </nav>
   );

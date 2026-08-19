@@ -51,7 +51,7 @@ export default function SidePanel({ widthControls }: { widthControls: SidePanelW
     void sampleAt(candidate.latitude, candidate.longitude, 0, candidate.name);
   };
 
-  // "候选到星野决策跟踪"：带地点与观测夜跳转到 /planner，planner 会在挂载时
+  // "候选到观星计划跟踪"：带地点与观测夜跳转到 /planner，planner 会在挂载时
   // 把该点加入跟踪点位列表。
   const handleTrack = useCallback(
     (candidate: CityCandidate) => {
