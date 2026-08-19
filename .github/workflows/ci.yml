@@ -8,6 +8,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+  schedule:
+    - cron: "30 2 * * *"
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -33,6 +38,22 @@ jobs:
 
       - name: Check (lint + typecheck + unit tests + build)
         run: npm run check
+
+  live-data-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Probe weather, satellite, geocoding, air quality and Kp providers
+        run: npm run test:live
 
   e2e:
     needs: quality
