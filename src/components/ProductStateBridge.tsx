@@ -29,7 +29,8 @@ export default function ProductStateBridge() {
   useEffect(() => {
     if (pathname.startsWith("/planner")) return;
     const signature = searchParams.toString();
-    if (!signature || applied.current === signature) return;
+    const applicationKey = `${pathname}?${signature}`;
+    if (!signature || applied.current === applicationKey) return;
 
     const latitudeValue = searchParams.get("lat");
     const longitudeValue = searchParams.get("lng");
@@ -135,7 +136,6 @@ export default function ProductStateBridge() {
       longitude >= -180 &&
       longitude <= 180
     ) {
-      applied.current = signature;
       void selectLocation(
         {
           id: `planner-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
@@ -149,10 +149,10 @@ export default function ProductStateBridge() {
       );
     }
 
-    // Mark coordinate-less links as handled too. This prevents the bridge
-    // effect from retrying a view/panel-only URL forever while, importantly,
-    // never manufacturing a 0,0 location from missing query parameters.
-    applied.current = signature;
+    // Include the route in the idempotency key. The same query string can have
+    // different semantics on another workspace, so a pathname transition must
+    // not be skipped merely because its parameters are unchanged.
+    applied.current = applicationKey;
   }, [
     pathname,
     searchParams,
