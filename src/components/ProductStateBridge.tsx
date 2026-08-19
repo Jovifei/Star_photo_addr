@@ -24,13 +24,22 @@ export default function ProductStateBridge() {
     setMapViewMode,
     setDetailOpen,
   } = useStore();
-  const applied = useRef<string | null>(null);
+  const applied = useRef<{
+    raw: string;
+    canonical: string;
+  } | null>(null);
 
   useEffect(() => {
     if (pathname.startsWith("/planner")) return;
     const signature = searchParams.toString();
     const applicationKey = `${pathname}?${signature}`;
-    if (!signature || applied.current === applicationKey) return;
+    if (
+      !signature ||
+      applied.current?.raw === applicationKey ||
+      applied.current?.canonical === applicationKey
+    ) {
+      return;
+    }
 
     const latitudeValue = searchParams.get("lat");
     const longitudeValue = searchParams.get("lng");
@@ -77,12 +86,17 @@ export default function ProductStateBridge() {
       shouldReplaceUrl = true;
     }
 
-    // Replace the address once, then mark the normalized URL as handled. This
-    // prevents useSearchParams from causing a second location/forecast request
-    // when it observes the cleaned query string.
+    // React state updates below may render before Next's useSearchParams sees
+    // history.replaceState. Remember both forms before dispatching anything so
+    // neither the stale nor normalized URL can trigger a duplicate load.
     const canonicalApplicationKey = shouldReplaceUrl
       ? `${pathname}?${cleanUrl.searchParams.toString()}`
       : applicationKey;
+    applied.current = {
+      raw: applicationKey,
+      canonical: canonicalApplicationKey,
+    };
+
     if (shouldReplaceUrl) {
       window.history.replaceState(
         null,
@@ -163,11 +177,6 @@ export default function ProductStateBridge() {
         selectedModel,
       );
     }
-
-    // Include the route in the idempotency key. The same query string can have
-    // different semantics on another workspace, so a pathname transition must
-    // not be skipped merely because its parameters are unchanged.
-    applied.current = canonicalApplicationKey;
   }, [
     pathname,
     searchParams,
