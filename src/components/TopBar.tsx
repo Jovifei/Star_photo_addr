@@ -7,10 +7,8 @@ import SourcePopover from "@/components/SourcePopover";
 import NavTabs from "@/components/NavTabs";
 
 /**
- * Top bar: brand, navigation tabs, live event status, and the data-source
- * entry point.
- *
- * v2: integrates NavTabs for switching between "逐星" and "星野决策" pages.
+ * Top bar: one shared brand, three product workspaces, live event status and
+ * the data-source disclosure entry point.
  */
 export default function TopBar() {
   const [sourceOpen, setSourceOpen] = useState(false);
@@ -32,6 +30,9 @@ export default function TopBar() {
       <button
         type="button"
         className="source-button"
+        aria-haspopup="dialog"
+        aria-expanded={sourceOpen}
+        aria-controls="source-popover"
         onClick={() => setSourceOpen(true)}
       >
         数据依据与局限

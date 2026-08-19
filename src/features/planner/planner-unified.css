@@ -1,0 +1,480 @@
+/*
+ * Visual convergence layer for 星野决策.
+ *
+ * planner.css retains the migrated feature layout. Every rule in this file is
+ * scoped by .planner-root so route-level CSS cannot restyle the map product.
+ * The values mirror src/app/theme-unified.css and make both products feel like
+ * two workspaces in the same night-observation console.
+ */
+
+.planner-root.app-shell {
+  --bg: #02070b;
+  --bg-deep: #041018;
+  --bg-rise: #071821;
+  --surface: #081b24;
+  --surface-2: #0b222c;
+  --surface-3: #102d38;
+  --line: rgba(165, 205, 216, 0.16);
+  --line-strong: rgba(151, 211, 225, 0.34);
+  --text: #e7e7e0;
+  --text-soft: #d7e4e6;
+  --muted: #91a4ab;
+  --muted-2: #738990;
+  --cyan: #79cfe2;
+  --cyan-soft: rgba(121, 207, 226, 0.1);
+  --good: #79cfe2;
+  --warn: #d4b273;
+  --warn-strong: #e6c98f;
+  --bad: #cb7768;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow-panel: 0 18px 48px rgba(0, 0, 0, 0.34);
+  --shadow-float: 0 14px 34px rgba(0, 0, 0, 0.42);
+  width: 100%;
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: visible;
+  background:
+    radial-gradient(circle at 18% -8%, rgba(121, 207, 226, 0.08), transparent 35%),
+    radial-gradient(circle at 84% -14%, rgba(212, 178, 115, 0.06), transparent 28%),
+    linear-gradient(180deg, var(--bg), var(--bg-deep));
+}
+
+/* Header ------------------------------------------------------------------------ */
+.planner-root .topbar {
+  min-height: 58px;
+  height: auto;
+  gap: 14px;
+  padding: 9px max(18px, calc((100vw - 1360px) / 2));
+  border-bottom-color: var(--line-strong);
+  background: linear-gradient(180deg, rgba(6, 20, 27, 0.97), rgba(4, 16, 24, 0.91));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+}
+
+.planner-root .brand-lockup {
+  min-width: 190px;
+  gap: 10px;
+}
+
+.planner-root .brand-mark {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--warn);
+  background: radial-gradient(circle at 30% 30%, #2a2113, #0b0d10);
+  box-shadow:
+    rgba(212, 178, 115, 0.16) 0 0 28px,
+    rgba(212, 178, 115, 0.1) 0 0 16px inset;
+}
+
+.planner-root .brand-mark svg {
+  width: 18px;
+  height: 18px;
+}
+
+.planner-root .eyebrow {
+  margin-bottom: 1px;
+  color: var(--warn);
+  font-family: var(--font-body);
+  font-size: 9px;
+  letter-spacing: 0.24em;
+}
+
+.planner-root .brand-lockup h1 {
+  font-family: "Songti SC", STSong, "Noto Serif CJK SC", var(--font-body), serif;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+}
+
+.planner-root .suite-nav {
+  gap: 3px;
+  min-width: 0;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(2, 9, 14, 0.72);
+}
+
+.planner-root .suite-nav a,
+.planner-root .suite-nav span {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  transition:
+    color var(--transition),
+    border-color var(--transition),
+    background-color var(--transition);
+}
+
+.planner-root .suite-nav a:hover {
+  border-color: transparent;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.planner-root .suite-nav span[aria-current="page"] {
+  border-color: rgba(121, 207, 226, 0.28);
+  color: #b0e6ef;
+  background: linear-gradient(180deg, rgba(121, 207, 226, 0.15), rgba(121, 207, 226, 0.08));
+}
+
+.planner-root .desktop-nav {
+  gap: 3px;
+}
+
+.planner-root .desktop-nav button {
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.planner-root .desktop-nav button:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.planner-root .desktop-nav button.active {
+  border-color: var(--line);
+  color: var(--cyan);
+  background: var(--cyan-soft);
+}
+
+.planner-root .refresh-button {
+  min-height: 36px;
+  border-color: var(--line-strong);
+  border-radius: 8px;
+  background: rgba(8, 27, 36, 0.9);
+}
+
+.planner-root .refresh-button:hover {
+  border-color: var(--cyan);
+  color: #b0e6ef;
+  background: rgba(121, 207, 226, 0.08);
+}
+
+/* Main surfaces ----------------------------------------------------------------- */
+.planner-root .main-content {
+  width: min(1360px, calc(100% - 36px));
+  padding-top: 20px;
+}
+
+.planner-root :is(
+  .hero-card,
+  .briefing-card,
+  .night-section,
+  .rank-section,
+  .matrix-section,
+  .locations-section,
+  .detail-section,
+  .detail-range-panel,
+  .detail-summary,
+  .detail-metrics,
+  .method-note,
+  .location-form
+) {
+  border-color: var(--line);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, rgba(9, 28, 37, 0.9), rgba(5, 17, 24, 0.88));
+  box-shadow: var(--shadow-panel);
+}
+
+.planner-root .hero-card,
+.planner-root .briefing-card,
+.planner-root .night-section,
+.planner-root .rank-section,
+.planner-root .matrix-section,
+.planner-root .locations-section {
+  backdrop-filter: blur(10px);
+}
+
+.planner-root .section-kicker {
+  color: var(--warn);
+  letter-spacing: 0.14em;
+}
+
+.planner-root :is(.hero-location h2, .section-heading-row h2, .card-heading h3, .drawer-header h2) {
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.planner-root .control-strip {
+  min-height: 42px;
+}
+
+.planner-root .segmented {
+  padding: 3px;
+  border-color: var(--line);
+  border-radius: 10px;
+  background: rgba(2, 9, 14, 0.74);
+}
+
+.planner-root .segmented button {
+  border-radius: 7px;
+}
+
+.planner-root .segmented button.active {
+  color: #041018;
+  background: var(--cyan);
+  box-shadow: 0 8px 20px rgba(121, 207, 226, 0.14);
+}
+
+.planner-root .status-banner {
+  border-radius: 10px;
+  background: rgba(8, 27, 36, 0.9);
+}
+
+/* Semantically aligned status colors ------------------------------------------- */
+.planner-root .status-pill.good,
+.planner-root .good {
+  color: #9ce1ee;
+  background: rgba(121, 207, 226, 0.1);
+}
+
+.planner-root .status-pill.warn,
+.planner-root .warn {
+  color: var(--warn-strong);
+  background: rgba(212, 178, 115, 0.1);
+}
+
+.planner-root .status-pill.bad,
+.planner-root .bad {
+  color: #e29a8e;
+  background: rgba(203, 119, 104, 0.1);
+}
+
+.planner-root .status-pill.muted,
+.planner-root .muted {
+  color: var(--muted);
+  background: rgba(145, 164, 171, 0.09);
+}
+
+.planner-root .score-ring {
+  background: conic-gradient(var(--cyan) var(--score), rgba(165, 205, 216, 0.14) 0);
+  box-shadow: 0 0 32px rgba(121, 207, 226, 0.08);
+}
+
+.planner-root .score-ring > div {
+  background: #071821;
+}
+
+.planner-root .window-callout {
+  border-color: rgba(121, 207, 226, 0.28);
+  background: rgba(121, 207, 226, 0.08);
+}
+
+.planner-root .detail-cta,
+.planner-root .primary-button {
+  border-radius: 8px;
+  color: #041018;
+  background: var(--cyan);
+  box-shadow: 0 10px 24px rgba(121, 207, 226, 0.12);
+}
+
+.planner-root .detail-cta:hover,
+.planner-root .primary-button:hover {
+  background: #9ddfeb;
+}
+
+.planner-root .secondary-button,
+.planner-root .icon-button,
+.planner-root .detail-range-source button {
+  border-color: var(--line-strong);
+  border-radius: 8px;
+  background: rgba(8, 27, 36, 0.86);
+}
+
+/* Ranking, nights and tables ---------------------------------------------------- */
+.planner-root .night-rail button,
+.planner-root .rank-card,
+.planner-root .matrix-cell,
+.planner-root .detail-night-strip button,
+.planner-root .hour-chips button {
+  border-radius: 9px;
+  border-color: var(--line);
+  background: rgba(3, 13, 19, 0.72);
+}
+
+.planner-root .night-rail button:hover,
+.planner-root .night-rail button.active,
+.planner-root .rank-card:hover,
+.planner-root .detail-night-strip button:hover,
+.planner-root .detail-night-strip button.active,
+.planner-root .hour-chips button:hover,
+.planner-root .hour-chips button.active {
+  border-color: var(--cyan);
+  background: var(--cyan-soft);
+}
+
+.planner-root .rank-number.top,
+.planner-root .rank-score strong {
+  color: var(--warn);
+}
+
+.planner-root .matrix-wrap,
+.planner-root .location-table-wrap,
+.planner-root .chart-frame {
+  border-color: var(--line);
+  border-radius: 10px;
+  background: rgba(3, 13, 19, 0.62);
+}
+
+.planner-root .chart-frame {
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(121, 207, 226, 0.025);
+}
+
+/* Detail drawer ----------------------------------------------------------------- */
+.planner-root .drawer-backdrop {
+  background: rgba(0, 5, 8, 0.66);
+  backdrop-filter: blur(8px);
+}
+
+.planner-root .detail-drawer {
+  border-left-color: var(--line-strong);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(121, 207, 226, 0.06), transparent 28%),
+    linear-gradient(180deg, rgba(7, 24, 33, 0.99), rgba(3, 12, 18, 0.99));
+  box-shadow: -24px 0 64px rgba(0, 0, 0, 0.48);
+}
+
+.planner-root .detail-drawer-resizer::before {
+  background: var(--line-strong);
+}
+
+.planner-root .detail-drawer-resizer:hover::before,
+.planner-root .detail-drawer-resizer:focus-visible::before {
+  background: var(--cyan);
+  box-shadow: 0 0 14px rgba(121, 207, 226, 0.34);
+}
+
+.planner-root .profile-meta span,
+.planner-root .cloud-layer,
+.planner-root .source-status-panel {
+  border-color: var(--line);
+  background: rgba(4, 16, 23, 0.62);
+}
+
+.planner-root .site-footer {
+  border-top-color: var(--line);
+  background: rgba(3, 12, 18, 0.84);
+}
+
+/* Shared hourly matrix has one palette in both products. */
+.planner-root .hourly-matrix {
+  border-color: var(--line-strong);
+  background: linear-gradient(180deg, rgba(8, 26, 35, 0.96), rgba(4, 15, 22, 0.96));
+}
+
+.planner-root .hourly-matrix thead th,
+.planner-root .hourly-matrix thead th:first-child {
+  background: #0b222c;
+  color: #b0e6ef;
+}
+
+.planner-root .hourly-matrix tbody th {
+  background: #071821;
+  color: #dbe9eb;
+}
+
+.planner-root .hourly-matrix th.selected,
+.planner-root .hourly-matrix td.selected {
+  box-shadow: inset 0 0 0 2px var(--cyan);
+}
+
+/* Responsive -------------------------------------------------------------------- */
+@media (max-width: 1180px) {
+  .planner-root .topbar {
+    gap: 10px;
+  }
+
+  .planner-root .brand-lockup {
+    min-width: 168px;
+  }
+
+  .planner-root .suite-nav a,
+  .planner-root .suite-nav span,
+  .planner-root .desktop-nav button {
+    padding-inline: 9px;
+  }
+}
+
+@media (max-width: 900px) {
+  .planner-root .topbar {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+  }
+
+  .planner-root .brand-lockup {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .planner-root .suite-nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .planner-root .suite-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .planner-root .suite-nav a,
+  .planner-root .suite-nav span {
+    flex: 1 0 auto;
+    justify-content: center;
+  }
+
+  .planner-root .main-content {
+    width: min(calc(100% - 24px), 1360px);
+  }
+}
+
+@media (max-width: 600px) {
+  .planner-root .brand-lockup h1 {
+    font-size: 18px;
+  }
+
+  .planner-root .refresh-button {
+    width: 38px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .planner-root .refresh-button span {
+    display: none;
+  }
+
+  .planner-root .suite-nav a,
+  .planner-root .suite-nav span {
+    min-height: 34px;
+    font-size: 10px;
+  }
+
+  .planner-root .main-content {
+    width: calc(100% - 20px);
+  }
+
+  .planner-root :is(.hero-card, .briefing-card, .night-section, .rank-section, .matrix-section, .locations-section) {
+    border-radius: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planner-root .suite-nav a,
+  .planner-root .suite-nav span,
+  .planner-root .desktop-nav button,
+  .planner-root .refresh-button {
+    transition: none;
+  }
+}

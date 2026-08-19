@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { StoreProvider } from "@/lib/store";
 import ProductStateBridge from "@/components/ProductStateBridge";
 import "./globals.css";
+import "./theme-unified.css";
 
 export const metadata: Metadata = {
   title: "逐星｜今晚云量与卫星云图",
@@ -47,7 +48,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // No web fonts are loaded — the design uses system CJK font stacks only.
   return (
     <html lang="zh-CN" className="h-full">
       <body className="min-h-full antialiased">

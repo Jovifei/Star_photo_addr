@@ -7,15 +7,23 @@ import type { CloudOverlayMode, MapViewMode } from "@/lib/types";
 import { addDays, initialForecastTime } from "@/lib/nighttime";
 
 /**
- * Imports location/night state passed by 星野决策 through the URL.
+ * Imports location/night/view state passed between 逐星, 推荐观星地点 and
+ * 星野决策 through the URL.
  *
  * Example:
- * /?lat=30.026&lng=119.007&name=牵牛岗
+ * /?lat=30.026&lng=119.007&name=牵牛岗&view=light-pollution&panel=sites
  */
 export default function ProductStateBridge() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { state, selectLocation, selectNight, setCloud, setMapViewMode } = useStore();
+  const {
+    state,
+    selectLocation,
+    selectNight,
+    setCloud,
+    setMapViewMode,
+    setDetailOpen,
+  } = useStore();
   const applied = useRef<string | null>(null);
 
   useEffect(() => {
@@ -38,6 +46,7 @@ export default function ProductStateBridge() {
     const observationTime = searchParams.get("observationTime");
     const overlay = searchParams.get("overlay") as CloudOverlayMode | null;
     const view = searchParams.get("view");
+    const panel = searchParams.get("panel");
     if (isHome && searchParams.has("night")) {
       const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("night");
@@ -45,16 +54,21 @@ export default function ProductStateBridge() {
     }
 
     // Home is tonight-first. A copied planner URL may contain a historical
-    // forecast hour (for example 8/12) and must not silently move the map away
-    // from the current local window. Keep same/adjacent local dates so a valid
-    // cross-product handoff around midnight still works.
+    // forecast hour and must not silently move the map away from the current
+    // local window. Keep same/adjacent dates so a valid handoff around midnight
+    // still works.
     const homeForecastTime = initialForecastTime();
     const homeDate = homeForecastTime.slice(0, 10);
     const forecastDate = forecastTime?.slice(0, 10);
-    const acceptedHomeDates = new Set([homeDate, addDays(homeDate, -1), addDays(homeDate, 1)]);
-    const acceptedHomeForecastTime = !isHome || !forecastTime || acceptedHomeDates.has(forecastDate ?? "")
-      ? forecastTime
-      : null;
+    const acceptedHomeDates = new Set([
+      homeDate,
+      addDays(homeDate, -1),
+      addDays(homeDate, 1),
+    ]);
+    const acceptedHomeForecastTime =
+      !isHome || !forecastTime || acceptedHomeDates.has(forecastDate ?? "")
+        ? forecastTime
+        : null;
     if (isHome && forecastTime && !acceptedHomeForecastTime) {
       const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("forecastTime");
@@ -64,28 +78,50 @@ export default function ProductStateBridge() {
     if (night && state.nightKeys.includes(night)) {
       selectNight(night);
     }
-    const selectedModel = model === "icon" || model === "gfs" || model === "aifs" ? model : undefined;
+    const selectedModel =
+      model === "icon" || model === "gfs" || model === "aifs"
+        ? model
+        : undefined;
     if (selectedModel) setCloud({ model: selectedModel });
-    if (overlay === "satellite-cloud" || overlay === "forecast-cloud" || overlay === "night-lights") {
+    if (
+      overlay === "satellite-cloud" ||
+      overlay === "forecast-cloud" ||
+      overlay === "night-lights"
+    ) {
       setCloud({ overlayMode: overlay });
-      const mapView: MapViewMode = overlay === "satellite-cloud"
-        ? "satellite"
-        : overlay === "forecast-cloud"
-          ? "combined"
-          : "light-pollution";
+      const mapView: MapViewMode =
+        overlay === "satellite-cloud"
+          ? "satellite"
+          : overlay === "forecast-cloud"
+            ? "combined"
+            : "light-pollution";
       setMapViewMode(mapView);
     }
-    if (view === "light-pollution" || view === "combined" || view === "satellite") {
+    if (
+      view === "light-pollution" ||
+      view === "combined" ||
+      view === "satellite"
+    ) {
       const mapView = view as MapViewMode;
       setMapViewMode(mapView);
       setCloud({
-        overlayMode: mapView === "satellite" ? "satellite-cloud" : mapView === "combined" ? "forecast-cloud" : "night-lights",
+        overlayMode:
+          mapView === "satellite"
+            ? "satellite-cloud"
+            : mapView === "combined"
+              ? "forecast-cloud"
+              : "night-lights",
       });
+    }
+    if (panel === "sites") {
+      setDetailOpen(true);
     }
     if (acceptedHomeForecastTime || observationTime) {
       setCloud({
-        activeForecastTime: acceptedHomeForecastTime ?? state.cloudState.activeForecastTime,
-        activeObservationTime: observationTime ?? state.cloudState.activeObservationTime,
+        activeForecastTime:
+          acceptedHomeForecastTime ?? state.cloudState.activeForecastTime,
+        activeObservationTime:
+          observationTime ?? state.cloudState.activeObservationTime,
       });
     }
 
@@ -100,21 +136,35 @@ export default function ProductStateBridge() {
       longitude <= 180
     ) {
       applied.current = signature;
-      void selectLocation({
-        id: `planner-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
-        name,
-        latitude,
-        longitude,
-        elevation: Number(searchParams.get("elevation")) || 0,
-        source: "搜索",
-      }, selectedModel);
+      void selectLocation(
+        {
+          id: `planner-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
+          name,
+          latitude,
+          longitude,
+          elevation: Number(searchParams.get("elevation")) || 0,
+          source: "搜索",
+        },
+        selectedModel,
+      );
     }
 
     // Mark coordinate-less links as handled too. This prevents the bridge
-    // effect from retrying a night-only URL forever while, importantly, never
-    // manufacturing a 0,0 location from missing query parameters.
+    // effect from retrying a view/panel-only URL forever while, importantly,
+    // never manufacturing a 0,0 location from missing query parameters.
     applied.current = signature;
-  }, [pathname, searchParams, selectLocation, selectNight, setCloud, setMapViewMode, state.cloudState.activeForecastTime, state.cloudState.activeObservationTime, state.nightKeys]);
+  }, [
+    pathname,
+    searchParams,
+    selectLocation,
+    selectNight,
+    setCloud,
+    setDetailOpen,
+    setMapViewMode,
+    state.cloudState.activeForecastTime,
+    state.cloudState.activeObservationTime,
+    state.nightKeys,
+  ]);
 
   return null;
 }
