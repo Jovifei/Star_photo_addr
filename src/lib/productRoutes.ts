@@ -67,6 +67,16 @@ function hasValidCoordinates(
   );
 }
 
+function copyObservationContext(
+  source: ProductRouteSearchParams,
+  target: URLSearchParams,
+) {
+  for (const key of OBSERVATION_CONTEXT_KEYS) {
+    const value = firstNonEmpty(source[key]);
+    if (value !== null) target.set(key, value);
+  }
+}
+
 /**
  * Build a product-workspace URL from one canonical observation context.
  *
@@ -104,6 +114,20 @@ export function buildProductHref(
 }
 
 /**
+ * Preserve an old bookmark's observation context while moving it into the
+ * canonical light-pollution workspace. This is shared by `/viirs` and the old
+ * `/stargazing-finder-dark` entry point.
+ */
+export function buildLightPollutionRedirect(
+  searchParams: ProductRouteSearchParams,
+): string {
+  const target = new URLSearchParams();
+  copyObservationContext(searchParams, target);
+  target.set("view", "light-pollution");
+  return `/?${target.toString()}`;
+}
+
+/**
  * `/sites` is a compatibility route for the recommendation workspace now
  * embedded in the main map. Preserve the originating location/model/session
  * while forcing the canonical light-pollution + sites-panel view.
@@ -112,14 +136,8 @@ export function buildSitesRedirect(
   searchParams: ProductRouteSearchParams,
 ): string {
   const target = new URLSearchParams();
-
-  for (const key of OBSERVATION_CONTEXT_KEYS) {
-    const value = firstNonEmpty(searchParams[key]);
-    if (value !== null) target.set(key, value);
-  }
-
+  copyObservationContext(searchParams, target);
   target.set("view", "light-pollution");
   target.set("panel", "sites");
-
   return `/?${target.toString()}`;
 }
