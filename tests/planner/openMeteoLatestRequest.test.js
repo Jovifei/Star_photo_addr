@@ -51,7 +51,8 @@ describe("planner Open-Meteo adapter", () => {
     );
 
     expect(pending).toHaveLength(2);
-    expect(pending[0].url).toContain("models");
+    expect(pending[0].url).toContain("model=icon");
+    expect(pending[1].url).toContain("model=gfs");
     pending[1].resolve({
       ok: true,
       json: async () => ({
