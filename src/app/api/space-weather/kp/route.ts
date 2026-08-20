@@ -145,6 +145,26 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  if (
+    decision.suppressed &&
+    !coordinator.hasInFlight("kp") &&
+    (!cached || cached.ageMs > STALE_TTL_MS)
+  ) {
+    return NextResponse.json(
+      { error: "Kp 强制刷新处于冷却保护，请稍后重试", stale: false },
+      {
+        status: 429,
+        headers: responseHeaders(
+          true,
+          "refresh-cooldown",
+          false,
+          true,
+          decision.retryAfterSeconds,
+        ),
+      },
+    );
+  }
+
   const coordinated = coordinator.run("kp", async () => {
     const payload = await fetchKp();
     cache.write("kp", payload);
