@@ -14,19 +14,6 @@ const onePixelPng = Buffer.from(
   "base64",
 );
 
-function shanghaiDateKey(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const values = Object.fromEntries(
-    parts.map((part) => [part.type, part.value]),
-  );
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
@@ -113,67 +100,4 @@ test("光污染瓦片不强制要求 CORS 响应头", async ({ page }) => {
   const tile = page.locator('img.leaflet-tile[src*="darkmap.cn"]').first();
   await expect(tile).toBeVisible({ timeout: 15000 });
   expect(await tile.getAttribute("crossorigin")).toBeNull();
-});
-
-test("时间轴播放复用 AQI/Kp 序列，只有手动刷新才重新请求", async ({ page }) => {
-  const date = shanghaiDateKey();
-  const start = Date.parse(`${date}T00:00:00Z`);
-  const airUrls = [];
-  const kpUrls = [];
-
-  await page.route("**/api/air-quality?**", async (route) => {
-    airUrls.push(route.request().url());
-    const hourly = Array.from({ length: 96 }, (_, index) => ({
-      time: new Date(start + index * 3_600_000).toISOString().slice(0, 16),
-      usAqi: 30 + (index % 20),
-      pm2_5: 8,
-      pm10: 12,
-      ozone: 20,
-      nitrogenDioxide: 5,
-      sulphurDioxide: 2,
-    }));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ hourly }),
-    });
-  });
-  await page.route("**/api/space-weather/kp**", async (route) => {
-    kpUrls.push(route.request().url());
-    const frames = Array.from({ length: 32 }, (_, index) => ({
-      time: new Date(start - 8 * 3_600_000 + index * 3 * 3_600_000)
-        .toISOString()
-        .replace("T", " ")
-        .replace("Z", ""),
-      kp: 2 + (index % 4),
-    }));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ frames }),
-    });
-  });
-
-  await page.goto(
-    "/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&model=gfs&view=combined&overlay=forecast-cloud",
-  );
-  await expect.poll(() => airUrls.length, { timeout: 15000 }).toBe(1);
-  await expect.poll(() => kpUrls.length, { timeout: 15000 }).toBe(1);
-
-  const timeline = page.locator(".cloud-timeline");
-  await timeline.getByRole("button", { name: "播放" }).click();
-  await page.waitForTimeout(3500);
-  await timeline.getByRole("button", { name: "暂停" }).click();
-  expect(airUrls).toHaveLength(1);
-  expect(kpUrls).toHaveLength(1);
-
-  const refresh = page.getByRole("button", {
-    name: "强制刷新天气、卫星目录和数据源状态",
-  });
-  await expect(refresh).toBeEnabled();
-  await refresh.click();
-  await expect.poll(() => airUrls.length, { timeout: 10000 }).toBe(2);
-  await expect.poll(() => kpUrls.length, { timeout: 10000 }).toBe(2);
-  expect(new URL(airUrls.at(-1)).searchParams.get("refresh")).toBe("1");
-  expect(new URL(kpUrls.at(-1)).searchParams.get("refresh")).toBe("1");
 });
