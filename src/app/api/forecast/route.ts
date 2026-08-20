@@ -4,6 +4,7 @@ import {
   fetchForecastByCoords,
 } from "@/lib/forecast";
 import { TimedCache } from "@/lib/serverCache";
+import { RefreshCoordinator } from "@/lib/serverRefreshCoordinator";
 import type { ForecastModel, ForecastResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -58,8 +59,10 @@ const MAX_LOCATIONS = boundedInteger(
 );
 
 const forecastCache = new TimedCache<ForecastResponse>(192);
-const inFlight = new Map<string, Promise<ForecastResponse>>();
-const lastForcedRefreshAt = new Map<string, number>();
+const coordinator = new RefreshCoordinator<ForecastResponse>(
+  FORCE_REFRESH_COOLDOWN_MS,
+  192,
+);
 
 function markStale(data: ForecastResponse): ForecastResponse {
   const metadata = data.metadata
@@ -75,25 +78,6 @@ function markStale(data: ForecastResponse): ForecastResponse {
         : metadata,
     })),
   };
-}
-
-function cacheHeaders(forceRefresh: boolean): Record<string, string> {
-  return {
-    "Cache-Control": forceRefresh
-      ? "no-store, max-age=0"
-      : "public, max-age=0, s-maxage=600, stale-while-revalidate=1800",
-    Vary: "Accept-Encoding",
-  };
-}
-
-function trimRefreshHistory(): void {
-  while (lastForcedRefreshAt.size > 192) {
-    const oldest = lastForcedRefreshAt.keys().next().value as
-      | string
-      | undefined;
-    if (!oldest) break;
-    lastForcedRefreshAt.delete(oldest);
-  }
 }
 
 function normalizedCoordinateKey(values: number[]): string {
@@ -119,15 +103,36 @@ function responseHeaders(
   cacheState: string,
   stale: boolean,
   refreshSuppressed = false,
+  retryAfterSeconds: number | null = null,
 ): Record<string, string> {
   return {
-    ...cacheHeaders(forceRefresh),
+    "Cache-Control": forceRefresh
+      ? "no-store, max-age=0"
+      : "public, max-age=0, s-maxage=600, stale-while-revalidate=1800",
+    Vary: "Accept-Encoding",
     "X-Forecast-Cache": cacheState,
     "X-Forecast-Model": model,
     "X-Forecast-Days": String(days),
     "X-Data-Stale": String(stale),
     "X-Refresh-Suppressed": String(refreshSuppressed),
+    ...(retryAfterSeconds
+      ? { "Retry-After": String(retryAfterSeconds) }
+      : {}),
   };
+}
+
+function jsonError(
+  error: string,
+  status: number,
+  headers: Record<string, string> = {},
+) {
+  return NextResponse.json(
+    { error, stale: false },
+    {
+      status,
+      headers: { "Cache-Control": "no-store", ...headers },
+    },
+  );
 }
 
 /** GET /api/forecast?latitude=...&longitude=...&days=...&model=... */
@@ -140,16 +145,10 @@ export async function GET(request: NextRequest) {
   const forceRefresh = searchParams.get("refresh") === "1";
 
   if (!latitudeRaw || !longitudeRaw) {
-    return NextResponse.json(
-      { error: "缺少 latitude 或 longitude 参数" },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
-    );
+    return jsonError("缺少 latitude 或 longitude 参数", 400);
   }
   if (!MODELS.has(modelRaw as ForecastModel)) {
-    return NextResponse.json(
-      { error: "model 必须是 best_match、icon、gfs 或 aifs" },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
-    );
+    return jsonError("model 必须是 best_match、icon、gfs 或 aifs", 400);
   }
 
   const latitudes = latitudeRaw
@@ -170,11 +169,9 @@ export async function GET(request: NextRequest) {
     );
 
   if (!validCoordinates) {
-    return NextResponse.json(
-      {
-        error: `latitude 和 longitude 必须是合法且一一对应的坐标，单次最多 ${MAX_LOCATIONS} 个地点`,
-      },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+    return jsonError(
+      `latitude 和 longitude 必须是合法且一一对应的坐标，单次最多 ${MAX_LOCATIONS} 个地点`,
+      400,
     );
   }
 
@@ -185,8 +182,7 @@ export async function GET(request: NextRequest) {
     model,
   );
   const key = `${model}|${days}|${normalizedCoordinateKey(latitudes)}|${normalizedCoordinateKey(longitudes)}`;
-  const now = Date.now();
-  const cached = forecastCache.read(key, now);
+  const cached = forecastCache.read(key);
 
   if (!forceRefresh && cached && cached.ageMs <= FRESH_TTL_MS) {
     return NextResponse.json(cached.value, {
@@ -200,12 +196,11 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const lastForced = lastForcedRefreshAt.get(key) ?? 0;
+  const decision = coordinator.decide(key, forceRefresh);
   if (
-    forceRefresh &&
+    decision.suppressed &&
     cached &&
-    cached.ageMs <= STALE_TTL_MS &&
-    now - lastForced < FORCE_REFRESH_COOLDOWN_MS
+    cached.ageMs <= STALE_TTL_MS
   ) {
     const stale = cached.ageMs > FRESH_TTL_MS;
     return NextResponse.json(
@@ -218,53 +213,61 @@ export async function GET(request: NextRequest) {
           "refresh-cooldown",
           stale,
           true,
+          decision.retryAfterSeconds,
         ),
       },
     );
   }
 
-  let activeTask = inFlight.get(key);
-  let cacheState = "coalesced";
-  if (!activeTask) {
-    cacheState = "refresh";
-    if (forceRefresh) {
-      lastForcedRefreshAt.set(key, now);
-      trimRefreshHistory();
-    }
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    activeTask = (async () => {
-      try {
-        const data = await fetchForecastByCoords(
-          latitudes,
-          longitudes,
-          days,
-          controller.signal,
-          model,
-        );
-        forecastCache.write(key, data);
-        return data;
-      } finally {
-        clearTimeout(timeout);
-      }
-    })();
-    inFlight.set(key, activeTask);
-    void activeTask
-      .finally(() => {
-        if (inFlight.get(key) === activeTask) inFlight.delete(key);
-      })
-      .catch(() => undefined);
+  if (
+    decision.suppressed &&
+    !coordinator.hasInFlight(key) &&
+    (!cached || cached.ageMs > STALE_TTL_MS)
+  ) {
+    return jsonError(
+      "天气强制刷新处于冷却保护，请稍后重试",
+      429,
+      {
+        "X-Forecast-Cache": "refresh-cooldown",
+        "X-Forecast-Model": model,
+        "X-Forecast-Days": String(days),
+        "X-Refresh-Suppressed": "true",
+        ...(decision.retryAfterSeconds
+          ? { "Retry-After": String(decision.retryAfterSeconds) }
+          : {}),
+      },
+    );
   }
 
+  const coordinated = coordinator.run(key, async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const data = await fetchForecastByCoords(
+        latitudes,
+        longitudes,
+        days,
+        controller.signal,
+        model,
+      );
+      forecastCache.write(key, data);
+      return data;
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
+
   try {
-    const data = await activeTask;
+    const data = await coordinated.promise;
     return NextResponse.json(data, {
       headers: responseHeaders(
         forceRefresh,
         model,
         days,
-        cacheState,
+        coordinated.coalesced ? "coalesced" : "refresh",
         false,
+        decision.suppressed,
+        decision.retryAfterSeconds,
       ),
     });
   } catch (error) {
@@ -278,6 +281,8 @@ export async function GET(request: NextRequest) {
             days,
             "stale-memory",
             true,
+            decision.suppressed,
+            decision.retryAfterSeconds,
           ),
           Warning: '110 - "Response is stale"',
         },
@@ -290,12 +295,9 @@ export async function GET(request: NextRequest) {
       `[api/forecast] ${timedOut ? "timeout" : "upstream failure"}`,
       error instanceof Error ? error.message : error,
     );
-    return NextResponse.json(
-      { error: safeForecastError(error, timedOut), stale: false },
-      {
-        status: timedOut ? 504 : 502,
-        headers: { "Cache-Control": "no-store" },
-      },
+    return jsonError(
+      safeForecastError(error, timedOut),
+      timedOut ? 504 : 502,
     );
   }
 }
