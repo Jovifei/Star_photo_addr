@@ -83,11 +83,6 @@ export default function ViewportRecommendationPanel({
   const requestIdRef = useRef(0);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 1180px)");
-    setCollapsed(media.matches);
-  }, []);
-
-  useEffect(() => {
     const map = mapRef.current;
     if (!ready || !map) return;
     const report = () => setLiveViewport(readViewport(map));
@@ -282,6 +277,7 @@ export default function ViewportRecommendationPanel({
     scoreDate,
     state.cloudState.model,
     state.dataRefreshRevision,
+    state.observingBortleLimit,
   ]);
 
   const pickRecommendation = useCallback(
