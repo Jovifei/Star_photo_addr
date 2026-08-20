@@ -41,6 +41,19 @@ function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function alignedNumericSeries(
+  value: unknown,
+  expectedLength: number,
+): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === expectedLength &&
+    value.some(
+      (item) => typeof item === "number" && Number.isFinite(item),
+    )
+  );
+}
+
 function responseHeaders(
   forceRefresh: boolean,
   cacheState: string,
@@ -90,9 +103,21 @@ async function fetchAirQuality(
     const data = (await response.json()) as {
       hourly?: Record<string, unknown[]>;
     };
-    if (!Array.isArray(data.hourly?.time) || data.hourly.time.length === 0) {
+    const rawTimes = data.hourly?.time;
+    if (
+      !Array.isArray(rawTimes) ||
+      rawTimes.length === 0 ||
+      !rawTimes.every((time) => typeof time === "string")
+    ) {
       throw new Error("空气质量上游返回了无法识别的 hourly 数据");
     }
+    for (const field of ["us_aqi", "pm2_5", "pm10"] as const) {
+      if (!alignedNumericSeries(data.hourly?.[field], rawTimes.length)) {
+        throw new Error(`空气质量上游没有返回有效 ${field} 数据`);
+      }
+    }
+
+    const times = rawTimes as string[];
     const fetchedAt = new Date().toISOString();
     return {
       metadata: {
@@ -106,21 +131,19 @@ async function fetchAirQuality(
           pm10: "μg/m³",
         },
       },
-      hourly: data.hourly.time
-        .filter((time): time is string => typeof time === "string")
-        .map((time, index) => ({
-          time,
-          usAqi: numberOrNull(data.hourly?.us_aqi?.[index]),
-          pm2_5: numberOrNull(data.hourly?.pm2_5?.[index]),
-          pm10: numberOrNull(data.hourly?.pm10?.[index]),
-          ozone: numberOrNull(data.hourly?.ozone?.[index]),
-          nitrogenDioxide: numberOrNull(
-            data.hourly?.nitrogen_dioxide?.[index],
-          ),
-          sulphurDioxide: numberOrNull(
-            data.hourly?.sulphur_dioxide?.[index],
-          ),
-        })),
+      hourly: times.map((time, index) => ({
+        time,
+        usAqi: numberOrNull(data.hourly?.us_aqi?.[index]),
+        pm2_5: numberOrNull(data.hourly?.pm2_5?.[index]),
+        pm10: numberOrNull(data.hourly?.pm10?.[index]),
+        ozone: numberOrNull(data.hourly?.ozone?.[index]),
+        nitrogenDioxide: numberOrNull(
+          data.hourly?.nitrogen_dioxide?.[index],
+        ),
+        sulphurDioxide: numberOrNull(
+          data.hourly?.sulphur_dioxide?.[index],
+        ),
+      })),
     };
   } finally {
     clearTimeout(timeout);
