@@ -32,6 +32,7 @@ export default function CloudLayer() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const activeRequestSignatureRef = useRef<string | null>(null);
+  const lastAttemptedRequestSignatureRef = useRef<string | null>(null);
   const gridSigRef = useRef<string | null>(null);
   const cloudGridRef = useRef(cloudGrid);
   const lastHandledRefreshRevisionRef = useRef(0);
@@ -66,15 +67,23 @@ export default function CloudLayer() {
         .join("|");
       const requestSignature = `${contextSignature}|${boundsSignature}`;
 
-      // Setting cloudGrid=null used to retrigger the effect, which immediately
-      // aborted the request it had just started. Keep one request per exact
-      // context/bounds pair and preserve a compatible grid while refreshing.
+      // Keep one request per exact context/bounds pair. Mobile layout settling
+      // may emit moveend/zoomend immediately after a manual refresh; retrying
+      // the same failed request without `refresh=1` would hide the forced-refresh
+      // warning even though the user never moved the map.
       if (activeRequestSignatureRef.current === requestSignature) return;
+      if (
+        !forceRefresh &&
+        lastAttemptedRequestSignatureRef.current === requestSignature
+      ) {
+        return;
+      }
 
       requestRef.current?.abort();
       const controller = new AbortController();
       requestRef.current = controller;
       activeRequestSignatureRef.current = requestSignature;
+      lastAttemptedRequestSignatureRef.current = requestSignature;
 
       const existingGrid = cloudGridRef.current;
       const preserveExisting = Boolean(
@@ -160,6 +169,7 @@ export default function CloudLayer() {
       requestRef.current?.abort();
       requestRef.current = null;
       activeRequestSignatureRef.current = null;
+      lastAttemptedRequestSignatureRef.current = null;
       gridSigRef.current = null;
       setCloudGridLoading(false);
       return;
@@ -170,6 +180,13 @@ export default function CloudLayer() {
       dataRefreshRevision > 0 &&
       dataRefreshRevision !== lastHandledRefreshRevisionRef.current;
     if (forceRefresh) {
+      // A recenter/layout move may have queued a non-forced request with the
+      // previous refresh revision. Letting that stale timer run immediately
+      // after the manual request can mask a 503 with a cache-backed success.
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
       lastHandledRefreshRevisionRef.current = dataRefreshRevision;
     }
     void performSampling(forceRefresh);
@@ -219,6 +236,7 @@ export default function CloudLayer() {
       requestRef.current?.abort();
       requestRef.current = null;
       activeRequestSignatureRef.current = null;
+      lastAttemptedRequestSignatureRef.current = null;
     },
     [],
   );

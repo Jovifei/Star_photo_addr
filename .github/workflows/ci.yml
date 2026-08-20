@@ -39,7 +39,7 @@ jobs:
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
 
-      - name: Check (lint + typecheck + unit tests + build)
+      - name: Check (lint + typecheck + unit/contract/integration + build)
         run: npm run check
 
   live-data-smoke:
@@ -130,7 +130,7 @@ jobs:
   e2e:
     needs: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - name: Checkout
@@ -150,3 +150,49 @@ jobs:
 
       - name: Run production E2E tests
         run: npm run test:e2e
+
+      - name: Upload Chromium failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-chromium-${{ github.run_id }}
+          path: |
+            playwright-report
+            node_modules/.cache/playwright-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  cross-browser-smoke:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Firefox and WebKit
+        run: npx playwright install --with-deps firefox webkit
+
+      - name: Run Firefox/WebKit core smoke
+        run: npm run test:e2e:cross-browser
+
+      - name: Upload cross-browser failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-cross-browser-${{ github.run_id }}
+          path: |
+            playwright-report-cross-browser
+            node_modules/.cache/playwright-results-cross-browser
+          if-no-files-found: ignore
+          retention-days: 7
