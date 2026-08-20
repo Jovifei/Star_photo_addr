@@ -71,6 +71,18 @@ jobs:
             -f docker-compose.aliyun.yml \
             config --quiet
 
+      - name: Validate Nginx template
+        run: |
+          mkdir -p /tmp/star-photo-certs
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout /tmp/star-photo-certs/privkey.pem \
+            -out /tmp/star-photo-certs/fullchain.pem \
+            -days 1 -subj '/CN=stars.example.com' >/dev/null 2>&1
+          docker run --rm \
+            -v "$PWD/deploy/nginx/star-photo.conf:/etc/nginx/conf.d/star-photo.conf:ro" \
+            -v "/tmp/star-photo-certs:/etc/letsencrypt/live/stars.example.com:ro" \
+            nginx:1.27-alpine nginx -t
+
       - name: Build production image
         env:
           BUILD_REVISION: ${{ github.sha }}
