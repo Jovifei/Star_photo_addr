@@ -1,15 +1,11 @@
 // Planner-side adapter. All provider traffic goes through the same-origin
 // Next route handlers so the map and planner share timezone, model, validation
-// and stale-fallback semantics.
+// and stale-fallback semantics. Planner reads are explicit refresh operations;
+// the route still coalesces identical work and applies its public cooldown.
 
 async function responseError(response, fallback) {
   const body = await response.json().catch(() => null);
   return new Error(body?.error ?? `${fallback} (${response.status})`);
-}
-
-function addRefresh(params, forceRefresh) {
-  if (forceRefresh) params.set("refresh", "1");
-  return params;
 }
 
 export async function fetchSurfaceForecasts(
@@ -17,21 +13,18 @@ export async function fetchSurfaceForecasts(
   days = 14,
   signal,
   model = "best_match",
-  forceRefresh = false,
 ) {
   if (!locations.length) return [];
-  const params = addRefresh(
-    new URLSearchParams({
-      latitude: locations.map((item) => item.latitude).join(","),
-      longitude: locations.map((item) => item.longitude).join(","),
-      days: String(days),
-      model,
-    }),
-    forceRefresh,
-  );
+  const params = new URLSearchParams({
+    latitude: locations.map((item) => item.latitude).join(","),
+    longitude: locations.map((item) => item.longitude).join(","),
+    days: String(days),
+    model,
+    refresh: "1",
+  });
   const response = await fetch(`/api/forecast?${params}`, {
     signal,
-    cache: forceRefresh ? "no-store" : "default",
+    cache: "no-store",
     headers: { Accept: "application/json" },
   });
   if (!response.ok) throw await responseError(response, "天气请求失败");
@@ -53,20 +46,17 @@ export async function fetchPressureForecast(
   days = 7,
   signal,
   model = "best_match",
-  forceRefresh = false,
 ) {
-  const params = addRefresh(
-    new URLSearchParams({
-      latitude: String(location.latitude),
-      longitude: String(location.longitude),
-      days: String(days),
-      model,
-    }),
-    forceRefresh,
-  );
+  const params = new URLSearchParams({
+    latitude: String(location.latitude),
+    longitude: String(location.longitude),
+    days: String(days),
+    model,
+    refresh: "1",
+  });
   const response = await fetch(`/api/pressure-forecast?${params}`, {
     signal,
-    cache: forceRefresh ? "no-store" : "default",
+    cache: "no-store",
     headers: { Accept: "application/json" },
   });
   if (!response.ok) throw await responseError(response, "气压请求失败");
