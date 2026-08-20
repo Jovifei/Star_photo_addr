@@ -180,6 +180,13 @@ export default function CloudLayer() {
       dataRefreshRevision > 0 &&
       dataRefreshRevision !== lastHandledRefreshRevisionRef.current;
     if (forceRefresh) {
+      // A recenter/layout move may have queued a non-forced request with the
+      // previous refresh revision. Letting that stale timer run immediately
+      // after the manual request can mask a 503 with a cache-backed success.
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
       lastHandledRefreshRevisionRef.current = dataRefreshRevision;
     }
     void performSampling(forceRefresh);
