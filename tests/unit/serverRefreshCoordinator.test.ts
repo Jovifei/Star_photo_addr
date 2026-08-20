@@ -21,10 +21,10 @@ describe("RefreshCoordinator", () => {
 
   it("coalesces identical concurrent work and releases it afterwards", async () => {
     const coordinator = new RefreshCoordinator<number>(60_000);
-    let resolveTask;
+    let resolveTask: ((value: number) => void) | undefined;
     const factory = vi.fn(
       () =>
-        new Promise((resolve) => {
+        new Promise<number>((resolve) => {
           resolveTask = resolve;
         }),
     );
@@ -36,7 +36,7 @@ describe("RefreshCoordinator", () => {
     expect(second.promise).toBe(first.promise);
     expect(factory).toHaveBeenCalledTimes(1);
 
-    resolveTask(42);
+    resolveTask?.(42);
     await expect(first.promise).resolves.toBe(42);
     await Promise.resolve();
 
