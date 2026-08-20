@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import type { Map as LeafletMap } from "leaflet";
 import { useStore } from "@/lib/store";
+import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import MapHeadline from "@/components/MapHeadline";
 import MapViewActions from "@/components/MapViewActions";
 import MapSearchCard from "@/components/MapSearchCard";
@@ -13,22 +14,32 @@ import BortleControl from "@/components/BortleControl";
 import CloudControl from "@/components/CloudControl";
 import CloudTimeline from "@/components/CloudTimeline";
 import ObservingMapControl from "@/components/ObservingMapControl";
+import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 
-// Leaflet touches `window`, so the map is client-only.
+// Leaflet touches `window`, so both the map and any child component importing
+// Leaflet at module scope must remain behind a client-only dynamic boundary.
 const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
   ssr: false,
   loading: () => <div className="map-canvas" />,
 });
+const ViewportRecommendationMarkers = dynamic(
+  () => import("@/components/ViewportRecommendationMarkers"),
+  { ssr: false },
+);
 
 /**
  * Map stage: orchestrates the Leaflet canvas and all overlay controls.
  *
- * v2: keeps the forecast panel below the map viewport so a large matrix never
- * obscures the map. The panel has its own bounded scroll region.
+ * The viewport recommendation panel is deliberately user-triggered: moving or
+ * zooming the map only marks the shortlist dirty; pressing “更新此区域” applies
+ * the new bounds and reuses the existing observation snapshot cache.
  */
 export default function MapStage() {
   const mapRef = useRef<LeafletMap | null>(null);
   const [ready, setReady] = useState(false);
+  const [viewportRecommendations, setViewportRecommendations] = useState<
+    ViewportRecommendation[]
+  >([]);
   const { sampleAt } = useStore();
 
   return (
@@ -37,17 +48,33 @@ export default function MapStage() {
         <MapCanvas
           mapRef={mapRef}
           onReady={() => setReady(true)}
-          onSample={(latitude, longitude) => void sampleAt(latitude, longitude)}
+          onSample={(latitude: number, longitude: number) =>
+            void sampleAt(latitude, longitude)
+          }
           center={[34, 108]}
           zoom={4}
-          layers={{ viirs: true, cloud: true, boundaries: true, recommendations: false }}
-        />
+          layers={{
+            viirs: true,
+            cloud: true,
+            boundaries: true,
+            recommendations: false,
+          }}
+        >
+          <ViewportRecommendationMarkers
+            recommendations={viewportRecommendations}
+          />
+        </MapCanvas>
         <MapHeadline />
         <MapViewActions mapRef={mapRef} />
         <MapSearchCard />
         <BortleControl />
         <CloudControl />
         <ObservingMapControl />
+        <ViewportRecommendationPanel
+          mapRef={mapRef}
+          ready={ready}
+          onRecommendationsChange={setViewportRecommendations}
+        />
         <MapLegend />
         <MapSetup hidden={ready} />
       </div>

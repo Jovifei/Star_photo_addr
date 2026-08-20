@@ -1,0 +1,58 @@
+import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import {
+  installGeocodingMock,
+  installNextApiMock,
+  installOpenMeteoMock,
+} from "./mock-open-meteo.js";
+
+const fixture = JSON.parse(
+  readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
+);
+const onePixelPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  await installOpenMeteoMock(page, fixture);
+  await installGeocodingMock(page);
+  await installNextApiMock(page, fixture);
+  await page.route(/https:\/\/[^/]+\.basemaps\.cartocdn\.com\/.*/, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: onePixelPng }),
+  );
+  await page.route(/https:\/\/lpm\.darkmap\.cn\/.*/, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: onePixelPng }),
+  );
+});
+
+test("放大地图后生成编号推荐并可打开现有地点详情", async ({ page }) => {
+  await page.goto(
+    "/?lat=30.2741&lng=120.1551&name=%E6%9D%AD%E5%B7%9E&model=gfs&view=combined&overlay=forecast-cloud",
+  );
+  await expect(page.locator(".leaflet-container")).toBeVisible();
+
+  // The deep link intentionally opens the existing detail drawer and recentres
+  // the map to Zhejiang. Close it before opening the alternative regional
+  // shortlist; selecting a recommendation below must open the same drawer again.
+  const detailHost = page.locator(".detail-overlay-host");
+  await expect(detailHost).toHaveClass(/is-open/);
+  await page.getByRole("button", { name: "收起观测详情" }).first().click();
+  await expect(detailHost).toHaveClass(/is-closed/);
+
+  await page.getByRole("button", { name: "展开当前视野推荐" }).click();
+  const generate = page.getByRole("button", { name: "生成区域推荐" });
+  await expect(generate).toBeEnabled({ timeout: 15000 });
+  await generate.click();
+
+  const firstCard = page.locator(".viewport-recommendation-card").first();
+  await expect(firstCard).toBeVisible({ timeout: 15000 });
+  await expect(page.locator(".viewport-rank-marker-dot").first()).toHaveText("1");
+
+  await firstCard.click();
+  await expect(detailHost).toHaveClass(/is-open/);
+});
