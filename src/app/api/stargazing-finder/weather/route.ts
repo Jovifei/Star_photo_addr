@@ -54,10 +54,17 @@ function trimRefreshMap(): void {
   }
 }
 
-function noStoreError(message: string, status: number) {
+function noStoreError(
+  message: string,
+  status: number,
+  headers: Record<string, string> = {},
+) {
   return NextResponse.json(
     { error: message, stale: false },
-    { status, headers: { "Cache-Control": "no-store" } },
+    {
+      status,
+      headers: { "Cache-Control": "no-store", ...headers },
+    },
   );
 }
 
@@ -86,6 +93,29 @@ export async function GET(request: NextRequest) {
     now - lastForcedRefresh < FORCE_REFRESH_COOLDOWN_MS;
   const effectiveForceRefresh =
     forceRefreshRequested && !refreshSuppressed;
+  const retryAfterSeconds = refreshSuppressed
+    ? Math.max(
+        1,
+        Math.ceil(
+          (lastForcedRefresh + FORCE_REFRESH_COOLDOWN_MS - now) / 1000,
+        ),
+      )
+    : null;
+
+  let activeTask = inFlight.get(familyKey) ?? null;
+  if (refreshSuppressed && !activeTask) {
+    return noStoreError(
+      "观星天气强制刷新处于冷却保护，请稍后重试",
+      429,
+      {
+        "X-Finder-Cache": "refresh-cooldown",
+        "X-Refresh-Suppressed": "true",
+        ...(retryAfterSeconds
+          ? { "Retry-After": String(retryAfterSeconds) }
+          : {}),
+      },
+    );
+  }
 
   if (effectiveForceRefresh) {
     lastForcedRefreshAt.delete(familyKey);
@@ -93,14 +123,11 @@ export async function GET(request: NextRequest) {
     trimRefreshMap();
   }
 
-  let activeTask = inFlight.get(familyKey) ?? null;
   const cacheState = activeTask
     ? "coalesced"
-    : refreshSuppressed
-      ? "refresh-cooldown"
-      : effectiveForceRefresh
-        ? "refresh"
-        : "default";
+    : effectiveForceRefresh
+      ? "refresh"
+      : "default";
 
   if (!activeTask) {
     activeTask = (async () => {
@@ -137,18 +164,8 @@ export async function GET(request: NextRequest) {
         "X-Finder-Cache": cacheState,
         "X-Data-Stale": String(stale || response.stale),
         "X-Refresh-Suppressed": String(refreshSuppressed),
-        ...(refreshSuppressed
-          ? {
-              "Retry-After": String(
-                Math.max(
-                  1,
-                  Math.ceil(
-                    (lastForcedRefresh + FORCE_REFRESH_COOLDOWN_MS - now) /
-                      1000,
-                  ),
-                ),
-              ),
-            }
+        ...(retryAfterSeconds
+          ? { "Retry-After": String(retryAfterSeconds) }
           : {}),
       },
     });
