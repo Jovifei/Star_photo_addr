@@ -1,0 +1,68 @@
+{
+  "valid": {
+    "latitude": 30.2741,
+    "longitude": 120.1551,
+    "elevation": 20,
+    "timezone": "Asia/Shanghai",
+    "utc_offset_seconds": 28800,
+    "hourly": {
+      "time": ["2026-08-20T20:00", "2026-08-20T21:00"],
+      "cloud_cover": [10, 20],
+      "cloud_cover_low": [5, 8],
+      "cloud_cover_mid": [12, 15],
+      "cloud_cover_high": [25, 30]
+    }
+  },
+  "mixedType": {
+    "latitude": 30.2741,
+    "longitude": 120.1551,
+    "elevation": 20,
+    "timezone": "Asia/Shanghai",
+    "hourly": {
+      "time": ["2026-08-20T20:00", "2026-08-20T21:00"],
+      "cloud_cover": [10, 20],
+      "cloud_cover_low": [5, "8"],
+      "cloud_cover_mid": [12, 15],
+      "cloud_cover_high": [25, 30]
+    }
+  },
+  "misaligned": {
+    "latitude": 30.2741,
+    "longitude": 120.1551,
+    "elevation": 20,
+    "timezone": "Asia/Shanghai",
+    "hourly": {
+      "time": ["2026-08-20T20:00", "2026-08-20T21:00"],
+      "cloud_cover": [10, 20],
+      "cloud_cover_low": [5, 8],
+      "cloud_cover_mid": [12],
+      "cloud_cover_high": [25, 30]
+    }
+  },
+  "allNull": {
+    "latitude": 30.2741,
+    "longitude": 120.1551,
+    "elevation": 20,
+    "timezone": "Asia/Shanghai",
+    "hourly": {
+      "time": ["2026-08-20T20:00", "2026-08-20T21:00"],
+      "cloud_cover": [10, 20],
+      "cloud_cover_low": [5, 8],
+      "cloud_cover_mid": [12, 15],
+      "cloud_cover_high": [null, null]
+    }
+  },
+  "invalidTime": {
+    "latitude": 30.2741,
+    "longitude": 120.1551,
+    "elevation": 20,
+    "timezone": "Asia/Shanghai",
+    "hourly": {
+      "time": ["2026-08-20T20:00", 123],
+      "cloud_cover": [10, 20],
+      "cloud_cover_low": [5, 8],
+      "cloud_cover_mid": [12, 15],
+      "cloud_cover_high": [25, 30]
+    }
+  }
+}

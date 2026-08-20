@@ -1,9 +1,8 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
-// Minimal vitest config: only maps the project's `@/*` path alias (from
-// tsconfig.json) so that `src/lib/*` and `src/data/*` imports resolve under
-// node. No other project config (Next/TS) is touched.
+// Node-based test runner for pure logic, provider contracts and direct Next.js
+// route integration. Browser component/E2E coverage remains in Playwright.
 export default defineConfig({
   resolve: {
     alias: {
@@ -15,6 +14,8 @@ export default defineConfig({
     environment: "node",
     include: [
       "tests/unit/**/*.test.ts",
+      "tests/contract/**/*.test.ts",
+      "tests/integration/**/*.test.ts",
       "tests/planner/**/*.test.js",
       "src/**/*.test.ts",
     ],

@@ -132,6 +132,11 @@ function validAlignedSeries(
   return (
     Array.isArray(values) &&
     values.length === expectedLength &&
+    values.every(
+      (value) =>
+        value === null ||
+        (typeof value === "number" && Number.isFinite(value)),
+    ) &&
     values.some(
       (value) => typeof value === "number" && Number.isFinite(value),
     )
@@ -147,6 +152,15 @@ export function validateRawForecast(
   const times = item.hourly.time;
   if (times.length === 0) {
     throw new Error("天气上游没有返回逐小时数据");
+  }
+  if (
+    !times.every(
+      (time) =>
+        typeof time === "string" &&
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(time),
+    )
+  ) {
+    throw new Error("天气上游返回了无效逐小时时间轴");
   }
   for (const [field, label] of REQUIRED_CLOUD_SERIES) {
     if (!validAlignedSeries(item.hourly[field], times.length)) {
