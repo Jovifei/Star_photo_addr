@@ -67,10 +67,17 @@ const FORCE_REFRESH_COOLDOWN_MS = boundedInteger(
 const inFlight = new Map<string, Promise<ObservationSnapshot>>();
 const lastForcedRefreshAt = new Map<string, number>();
 
-function jsonError(message: string, status: number) {
+function jsonError(
+  message: string,
+  status: number,
+  headers: Record<string, string> = {},
+) {
   return NextResponse.json(
-    { error: message },
-    { status, headers: { "Cache-Control": "no-store" } },
+    { error: message, stale: false },
+    {
+      status,
+      headers: { "Cache-Control": "no-store", ...headers },
+    },
   );
 }
 
@@ -114,12 +121,15 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const focusTime = params.get("time");
-  const validFocusTime =
-    focusTime && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(focusTime)
-      ? focusTime
-      : undefined;
-  const key = observationSnapshotKey(date, days, model, validFocusTime);
+  const focusTimeRaw = params.get("time");
+  if (
+    params.has("time") &&
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(focusTimeRaw ?? "")
+  ) {
+    return jsonError("time 必须是 YYYY-MM-DDTHH:mm", 400);
+  }
+  const focusTime = focusTimeRaw ?? undefined;
+  const key = observationSnapshotKey(date, days, model, focusTime);
   const refreshFamily = observationRefreshFamilyKey(date, model);
   const forceRefreshRequested = params.get("refresh") === "1";
   const now = Date.now();
@@ -129,6 +139,14 @@ export async function GET(request: NextRequest) {
     now - lastForcedRefresh < FORCE_REFRESH_COOLDOWN_MS;
   const effectiveForceRefresh =
     forceRefreshRequested && !refreshSuppressed;
+  const retryAfterSeconds = refreshSuppressed
+    ? Math.max(
+        1,
+        Math.ceil(
+          (lastForcedRefresh + FORCE_REFRESH_COOLDOWN_MS - now) / 1000,
+        ),
+      )
+    : null;
 
   let activeTask: Promise<ObservationSnapshot> | null = null;
   try {
@@ -164,17 +182,30 @@ export async function GET(request: NextRequest) {
           "X-Observation-Cache": "refresh-cooldown",
           "X-Data-Stale": String(stale),
           "X-Refresh-Suppressed": "true",
-          "Retry-After": String(
-            Math.max(
-              1,
-              Math.ceil(
-                (lastForcedRefresh + FORCE_REFRESH_COOLDOWN_MS - now) /
-                  1000,
-              ),
-            ),
-          ),
+          ...(retryAfterSeconds
+            ? { "Retry-After": String(retryAfterSeconds) }
+            : {}),
         },
       });
+    }
+
+    activeTask = inFlight.get(key) ?? null;
+    if (
+      refreshSuppressed &&
+      !activeTask &&
+      (!cached || cachedAge > SNAPSHOT_STALE_TTL_MS)
+    ) {
+      return jsonError(
+        "观星快照强制刷新处于冷却保护，请稍后重试",
+        429,
+        {
+          "X-Observation-Cache": "refresh-cooldown",
+          "X-Refresh-Suppressed": "true",
+          ...(retryAfterSeconds
+            ? { "Retry-After": String(retryAfterSeconds) }
+            : {}),
+        },
+      );
     }
 
     if (effectiveForceRefresh) {
@@ -183,7 +214,6 @@ export async function GET(request: NextRequest) {
       trimRefreshMap();
     }
 
-    activeTask = inFlight.get(key) ?? null;
     let cacheState = activeTask
       ? "coalesced"
       : refreshSuppressed
@@ -214,7 +244,7 @@ export async function GET(request: NextRequest) {
             days,
             model,
             weatherByDate,
-            validFocusTime,
+            focusTime,
           );
         } finally {
           clearTimeout(sharedTimeout);
@@ -237,6 +267,9 @@ export async function GET(request: NextRequest) {
         "X-Observation-Cache": cacheState,
         "X-Data-Stale": String(snapshot.stale),
         "X-Refresh-Suppressed": String(refreshSuppressed),
+        ...(retryAfterSeconds
+          ? { "Retry-After": String(retryAfterSeconds) }
+          : {}),
       },
     });
   } catch (error) {
@@ -255,11 +288,13 @@ export async function GET(request: NextRequest) {
         },
       });
     }
-    const message =
-      error instanceof Error && /aborted|timeout|超时/i.test(error.message)
-        ? "观星快照请求超时"
-        : "观星快照暂时不可用";
-    return jsonError(message, /超时/.test(message) ? 504 : 502);
+    const timedOut =
+      error instanceof Error &&
+      (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
+    return jsonError(
+      timedOut ? "观星快照请求超时" : "观星快照暂时不可用",
+      timedOut ? 504 : 502,
+    );
   } finally {
     if (activeTask && inFlight.get(key) === activeTask) {
       inFlight.delete(key);
