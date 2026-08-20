@@ -1,0 +1,9 @@
+/* Mobile stacking fix for the expanded regional decision board.
+ * The existing cloud-control uses z-index 1100. Once the user explicitly
+ * expands the current-viewport shortlist, it becomes the active decision
+ * surface and must receive pointer events while remaining below the top bar. */
+@media (max-width: 768px) {
+  .viewport-recommendation-panel:not(.is-collapsed) {
+    z-index: 1150;
+  }
+}
