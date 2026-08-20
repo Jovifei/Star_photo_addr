@@ -84,7 +84,10 @@ test("手动刷新只启动一个云量网格请求并保留已有画布", async
 
 test("光污染瓦片不强制要求 CORS 响应头", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "光污染" }).click();
+  await page
+    .getByLabel("地图模式")
+    .getByRole("tab", { name: "光污染" })
+    .click();
 
   const map = page.locator(".map-viewport");
   await expect(map).toHaveAttribute(
