@@ -102,7 +102,9 @@ export default function SatelliteLayer() {
           frames: nextFrames,
           error: nextError,
         });
-        setSatelliteFrames(nextFrames);
+        // The shared timeline only represents satellite-cloud observations.
+        // Night-light reference frames remain local to this layer.
+        setSatelliteFrames(kind === "cloud" ? nextFrames : []);
         const nextFrame = nextFrames[0];
         if (activeMode === "satellite-cloud" && nextFrame) {
           setCloud({ activeObservationTime: nextFrame.time });
