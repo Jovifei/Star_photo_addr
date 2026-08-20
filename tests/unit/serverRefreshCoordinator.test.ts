@@ -36,10 +36,14 @@ describe("RefreshCoordinator", () => {
     expect(first.coalesced).toBe(false);
     expect(second.coalesced).toBe(true);
     expect(second.promise).toBe(first.promise);
-    expect(factory).toHaveBeenCalledTimes(1);
 
+    // The coordinator deliberately starts factories in a microtask so a
+    // synchronous factory throw is still represented by the shared Promise.
+    await Promise.resolve();
+    expect(factory).toHaveBeenCalledTimes(1);
     resolveTask?.(42);
     await expect(first.promise).resolves.toBe(42);
+    await Promise.resolve();
     await Promise.resolve();
     expect(coordinator.hasInFlight("same")).toBe(false);
 
