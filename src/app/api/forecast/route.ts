@@ -4,6 +4,7 @@ import {
   fetchForecastByCoords,
 } from "@/lib/forecast";
 import { TimedCache } from "@/lib/serverCache";
+import { parseCoordinateLists } from "@/lib/server/queryParams";
 import { RefreshCoordinator } from "@/lib/serverRefreshCoordinator";
 import type { ForecastModel, ForecastResponse } from "@/lib/types";
 
@@ -138,43 +139,21 @@ function jsonError(
 /** GET /api/forecast?latitude=...&longitude=...&days=...&model=... */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const latitudeRaw = searchParams.get("latitude") ?? searchParams.get("lat");
-  const longitudeRaw =
-    searchParams.get("longitude") ?? searchParams.get("lng");
   const modelRaw = searchParams.get("model") ?? "best_match";
   const forceRefresh = searchParams.get("refresh") === "1";
 
-  if (!latitudeRaw || !longitudeRaw) {
-    return jsonError("缺少 latitude 或 longitude 参数", 400);
-  }
   if (!MODELS.has(modelRaw as ForecastModel)) {
     return jsonError("model 必须是 best_match、icon、gfs 或 aifs", 400);
   }
 
-  const latitudes = latitudeRaw
-    .split(",")
-    .map((value) => Number(value.trim()));
-  const longitudes = longitudeRaw
-    .split(",")
-    .map((value) => Number(value.trim()));
-  const validCoordinates =
-    latitudes.length > 0 &&
-    latitudes.length === longitudes.length &&
-    latitudes.length <= MAX_LOCATIONS &&
-    latitudes.every(
-      (value) => Number.isFinite(value) && value >= -90 && value <= 90,
-    ) &&
-    longitudes.every(
-      (value) => Number.isFinite(value) && value >= -180 && value <= 180,
-    );
-
-  if (!validCoordinates) {
+  const coordinates = parseCoordinateLists(searchParams, MAX_LOCATIONS);
+  if (!coordinates) {
     return jsonError(
-      `latitude 和 longitude 必须是合法且一一对应的坐标，单次最多 ${MAX_LOCATIONS} 个地点`,
+      `latitude 和 longitude 必须是非空、合法且一一对应的坐标，单次最多 ${MAX_LOCATIONS} 个地点`,
       400,
     );
   }
-
+  const { latitudes, longitudes } = coordinates;
   const model = modelRaw as ForecastModel;
   const daysRaw = Number(searchParams.get("days") ?? "14");
   const days = clampForecastDays(

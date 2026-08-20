@@ -1,8 +1,5 @@
 import { hasDarkSkyLayer } from "@/lib/assets";
-import {
-  GIBS_CAPABILITIES_URL,
-  GIBS_LAYERS,
-} from "@/lib/gibs";
+import { GIBS_LAYERS } from "@/lib/gibs";
 import {
   LIGHT_POLLUTION_TILE_URL,
   lightPollutionTemplateError,
@@ -10,6 +7,7 @@ import {
 } from "@/lib/lightPollution";
 import { OPEN_METEO_FORECAST_URL } from "@/lib/forecast";
 import { TimedCache } from "@/lib/serverCache";
+import { getGibsCapabilities } from "@/lib/server/gibsCapabilities";
 import type {
   DataSourceHealthResponse,
   DataSourceProbe,
@@ -39,6 +37,24 @@ const HEALTH_CACHE_TTL_MS = boundedInteger(
   30_000,
   60 * 60_000,
 );
+const WEATHER_PROBE_TTL_MS = boundedInteger(
+  "DATA_SOURCE_WEATHER_PROBE_TTL_MS",
+  5 * 60_000,
+  30_000,
+  60 * 60_000,
+);
+const SATELLITE_PROBE_TTL_MS = boundedInteger(
+  "DATA_SOURCE_SATELLITE_PROBE_TTL_MS",
+  60 * 60_000,
+  5 * 60_000,
+  24 * 60 * 60_000,
+);
+const LIGHT_POLLUTION_PROBE_TTL_MS = boundedInteger(
+  "DATA_SOURCE_LIGHT_POLLUTION_PROBE_TTL_MS",
+  15 * 60_000,
+  60_000,
+  24 * 60 * 60_000,
+);
 const PROBE_TIMEOUT_MS = boundedInteger(
   "DATA_SOURCE_PROBE_TIMEOUT_MS",
   15_000,
@@ -53,6 +69,7 @@ const FORCE_REFRESH_COOLDOWN_MS = boundedInteger(
 );
 
 const healthCache = new TimedCache<DataSourceHealthResponse>(2);
+const sourceProbeCache = new TimedCache<DataSourceProbe>(8);
 let healthInFlight: Promise<DataSourceHealthResponse> | null = null;
 let lastProbeStartedAt = 0;
 
@@ -60,6 +77,11 @@ function numericSeries(values: unknown, expectedLength: number): boolean {
   return (
     Array.isArray(values) &&
     values.length === expectedLength &&
+    values.every(
+      (value) =>
+        value === null ||
+        (typeof value === "number" && Number.isFinite(value)),
+    ) &&
     values.some(
       (value) => typeof value === "number" && Number.isFinite(value),
     )
@@ -89,7 +111,10 @@ export function sanitizeProbeError(
   sourceLabel: string,
 ): string {
   if (error instanceof Error) {
-    if (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message)) {
+    if (
+      error.name === "AbortError" ||
+      /aborted|timeout|超时/i.test(error.message)
+    ) {
       return `${sourceLabel}请求超时`;
     }
     const httpStatus = error.message.match(/HTTP\s+(\d{3})/i)?.[1];
@@ -169,20 +194,15 @@ async function probeWeather(checkedAt: string): Promise<DataSourceProbe> {
   }
 }
 
-async function probeSatellite(checkedAt: string): Promise<DataSourceProbe> {
+async function probeSatellite(
+  checkedAt: string,
+  forceRefresh: boolean,
+): Promise<DataSourceProbe> {
   const startedAt = Date.now();
   try {
-    const response = await timedFetch(
-      GIBS_CAPABILITIES_URL,
-      "application/xml,text/xml",
-    );
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const xml = await response.text();
-    if (!xml.includes("<Capabilities") || !xml.includes("ResourceURL")) {
-      throw new Error("NASA GIBS 图层目录格式无法识别");
-    }
+    const capability = await getGibsCapabilities(forceRefresh);
     const missing = Object.values(GIBS_LAYERS).filter(
-      (identifier) => !xml.includes(identifier),
+      (identifier) => !capability.xml.includes(identifier),
     );
     if (missing.length) {
       throw new Error(`NASA GIBS 图层目录缺少 ${missing.join("、")}`);
@@ -190,8 +210,12 @@ async function probeSatellite(checkedAt: string): Promise<DataSourceProbe> {
     return {
       id: "satellite",
       label: "NASA GIBS",
-      status: "available",
-      detail: "Himawari 云图与 VIIRS Black Marble 图层目录可用",
+      status: capability.stale ? "degraded" : "available",
+      detail: capability.stale
+        ? "正在使用最近一次成功的 Himawari / VIIRS 图层目录"
+        : capability.refreshSuppressed
+          ? "GIBS 强制复检处于冷却保护，继续使用最近目录"
+          : "Himawari 云图与 VIIRS Black Marble 图层目录可用",
       checkedAt,
       latencyMs: Date.now() - startedAt,
     };
@@ -252,6 +276,21 @@ async function probeLightPollution(
   }
 }
 
+async function cachedProbe(
+  id: DataSourceProbe["id"],
+  ttlMs: number,
+  forceRefresh: boolean,
+  loader: (checkedAt: string) => Promise<DataSourceProbe>,
+): Promise<DataSourceProbe> {
+  const cached = sourceProbeCache.read(id);
+  if (!forceRefresh && cached && cached.ageMs <= ttlMs) {
+    return cached.value;
+  }
+  const result = await loader(new Date().toISOString());
+  sourceProbeCache.write(id, result);
+  return result;
+}
+
 function staticConfigurationProbes(
   checkedAt: string,
 ): Pick<
@@ -284,12 +323,30 @@ function staticConfigurationProbes(
   };
 }
 
-async function runHealthProbes(): Promise<DataSourceHealthResponse> {
+async function runHealthProbes(
+  forceRefresh: boolean,
+): Promise<DataSourceHealthResponse> {
   const checkedAt = new Date().toISOString();
   const [weather, satellite, lightPollution] = await Promise.all([
-    probeWeather(checkedAt),
-    probeSatellite(checkedAt),
-    probeLightPollution(checkedAt),
+    cachedProbe(
+      "weather",
+      WEATHER_PROBE_TTL_MS,
+      forceRefresh,
+      probeWeather,
+    ),
+    cachedProbe(
+      "satellite",
+      SATELLITE_PROBE_TTL_MS,
+      forceRefresh,
+      (sourceCheckedAt) =>
+        probeSatellite(sourceCheckedAt, forceRefresh),
+    ),
+    cachedProbe(
+      "light-pollution",
+      LIGHT_POLLUTION_PROBE_TTL_MS,
+      forceRefresh,
+      probeLightPollution,
+    ),
   ]);
   const staticSources = staticConfigurationProbes(checkedAt);
   const sources: DataSourceHealthResponse["sources"] = {
@@ -356,7 +413,7 @@ export async function getDataSourceHealth(
   }
 
   lastProbeStartedAt = now;
-  healthInFlight = runHealthProbes();
+  healthInFlight = runHealthProbes(forceRefresh);
   try {
     return await healthInFlight;
   } finally {

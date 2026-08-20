@@ -21,6 +21,9 @@ describe("data source health validation", () => {
     expect(
       missingCloudFields({ ...complete, cloud_cover_high: [null, null] }),
     ).toEqual(["高云"]);
+    expect(
+      missingCloudFields({ ...complete, cloud_cover_low: [5, "8"] }),
+    ).toEqual(["低云"]);
   });
 
   it("rejects an empty hourly time axis", () => {

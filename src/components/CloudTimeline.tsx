@@ -2,15 +2,23 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
-import { useStore } from "@/lib/store";
-import { NIGHT_END, NIGHT_START } from "@/lib/constants";
-import { formatHourWithDate, formatNightLabel, nightRangeKeys } from "@/lib/nighttime";
-import { HOURS_PER_NIGHT } from "@/lib/nighttime";
-import { isInNight } from "@/lib/nighttime";
+import HourlyForecastMatrix, {
+  buildNightTimes,
+} from "@/components/HourlyForecastMatrix";
+import { useAuxiliaryConditions } from "@/components/useAuxiliaryConditions";
 import { aggregateForecastHour, getValuesAtTime } from "@/lib/cloudGrid";
-import type { SatelliteFrame } from "@/lib/types";
-import HourlyForecastMatrix, { buildNightTimes } from "@/components/HourlyForecastMatrix";
+import { NIGHT_END, NIGHT_START } from "@/lib/constants";
+import {
+  formatHourWithDate,
+  formatNightLabel,
+  HOURS_PER_NIGHT,
+  isInNight,
+  nightRangeKeys,
+} from "@/lib/nighttime";
+import { LIGHT_POLLUTION_ATTRIBUTION } from "@/lib/lightPollution";
 import { evaluateNight } from "@/lib/scoring";
+import { useStore } from "@/lib/store";
+import type { SatelliteFrame } from "@/lib/types";
 
 const RANGE_OPTIONS: Array<{ value: 1 | 5 | 7; label: string }> = [
   { value: 1, label: "ä»Šæ™š" },
@@ -19,7 +27,9 @@ const RANGE_OPTIONS: Array<{ value: 1 | 5 | 7; label: string }> = [
 ];
 const PLAY_INTERVAL_MS = 1500;
 
-function buildSchedule(nightKeys: string[]): Array<{ time: string; nightKey: string }> {
+function buildSchedule(
+  nightKeys: string[],
+): Array<{ time: string; nightKey: string }> {
   return nightKeys.flatMap((nightKey) =>
     buildNightTimes(nightKey).map((time) => ({ time, nightKey })),
   );
@@ -30,7 +40,7 @@ function formatTimelineTime(time: string): string {
   if (time.length === 10) return time;
   // Provider and GIBS timestamps are already wall-clock labels for their
   // respective time domain. Format the string directly instead of reparsing
-  // it in the browser's timezone, which could shift an hour or differ on SSR.
+  // it in the browser timezone, which could shift an hour or differ on SSR.
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(time);
   if (!match) return time.slice(11, 16);
   const [, , month, day, hour, minute] = match;
@@ -44,10 +54,15 @@ function activeForecastTimeLabel(time?: string): string {
 
 export default function CloudTimeline() {
   const { state, setCloud, selectNight } = useStore();
-  const { cloudState, selectedNight, cloudGrid, forecast, selectedLocation } = state;
+  const {
+    cloudState,
+    selectedNight,
+    cloudGrid,
+    forecast,
+    selectedLocation,
+    dataRefreshRevision,
+  } = state;
   const [expanded, setExpanded] = useState(false);
-  const [aqiValue, setAqiValue] = useState<number | null>(null);
-  const [kpValue, setKpValue] = useState<number | null>(null);
   const nightKeys = useMemo(
     () => nightRangeKeys(selectedNight, cloudState.range),
     [selectedNight, cloudState.range],
@@ -55,8 +70,12 @@ export default function CloudTimeline() {
   const schedule = useMemo(() => buildSchedule(nightKeys), [nightKeys]);
   const isSatelliteMode = cloudState.overlayMode === "satellite-cloud";
   const isNightLightsMode = cloudState.overlayMode === "night-lights";
-  const pointForecast = forecast?.metadata?.model === cloudState.model ? forecast : null;
-  const gridForecast = cloudGrid?.model === cloudState.model ? cloudGrid.forecasts[0] ?? null : null;
+  const pointForecast =
+    forecast?.metadata?.model === cloudState.model ? forecast : null;
+  const gridForecast =
+    cloudGrid?.model === cloudState.model
+      ? (cloudGrid.forecasts[0] ?? null)
+      : null;
   const forecastSource = pointForecast
     ? "å–æ ·ç‚¹"
     : gridForecast
@@ -67,237 +86,141 @@ export default function CloudTimeline() {
     [gridForecast, pointForecast],
   );
   const forecastTimeline = useMemo(
-    () => forecastHours.slice(0, 73).map((hour) => ({ time: hour.time, nightKey: selectedNight })),
+    () =>
+      forecastHours
+        .slice(0, 73)
+        .map((hour) => ({ time: hour.time, nightKey: selectedNight })),
     [forecastHours, selectedNight],
   );
   const observationTimeline = state.satelliteFrames;
   const timelineItems = useMemo(
-    () => isNightLightsMode ? [] : isSatelliteMode ? observationTimeline : forecastTimeline,
-    [forecastTimeline, isNightLightsMode, isSatelliteMode, observationTimeline],
+    () =>
+      isNightLightsMode
+        ? []
+        : isSatelliteMode
+          ? observationTimeline
+          : forecastTimeline,
+    [
+      forecastTimeline,
+      isNightLightsMode,
+      isSatelliteMode,
+      observationTimeline,
+    ],
   );
   const timelineTicks = useMemo(() => {
     if (!timelineItems.length) return [];
     const tickCount = isSatelliteMode ? 5 : 4;
     return Array.from({ length: tickCount }, (_, index) => {
-      const itemIndex = Math.round((index * (timelineItems.length - 1)) / Math.max(1, tickCount - 1));
+      const itemIndex = Math.round(
+        (index * (timelineItems.length - 1)) / Math.max(1, tickCount - 1),
+      );
       return timelineItems[itemIndex];
     });
   }, [isSatelliteMode, timelineItems]);
   const activeTimelineIndex = isSatelliteMode
-    ? observationTimeline.findIndex((frame) => frame.time === cloudState.activeObservationTime)
-    : forecastTimeline.findIndex((item) => item.time === cloudState.activeForecastTime);
+    ? observationTimeline.findIndex(
+        (frame) => frame.time === cloudState.activeObservationTime,
+      )
+    : forecastTimeline.findIndex(
+        (item) => item.time === cloudState.activeForecastTime,
+      );
   const safeTimelineIndex = timelineItems.length
-    ? Math.min(Math.max(activeTimelineIndex >= 0 ? activeTimelineIndex : 0, 0), timelineItems.length - 1)
+    ? Math.min(
+        Math.max(activeTimelineIndex >= 0 ? activeTimelineIndex : 0, 0),
+        timelineItems.length - 1,
+      )
     : 0;
   const activeTimelineTime = isSatelliteMode
-    ? (timelineItems[safeTimelineIndex] as SatelliteFrame | undefined)?.time ?? null
-    : timelineItems[safeTimelineIndex]?.time ?? null;
+    ? ((timelineItems[safeTimelineIndex] as SatelliteFrame | undefined)?.time ??
+      null)
+    : (timelineItems[safeTimelineIndex]?.time ?? null);
   const activeScheduleIndex = cloudState.activeForecastTime
-    ? schedule.findIndex((item) => item.time === cloudState.activeForecastTime)
+    ? schedule.findIndex(
+        (item) => item.time === cloudState.activeForecastTime,
+      )
     : -1;
   const safeIndex = schedule.length
-    ? Math.min(Math.max(activeScheduleIndex >= 0 ? activeScheduleIndex : 0, 0), schedule.length - 1)
+    ? Math.min(
+        Math.max(activeScheduleIndex >= 0 ? activeScheduleIndex : 0, 0),
+        schedule.length - 1,
+      )
     : 0;
   const current = isSatelliteMode
     ? { time: activeTimelineTime ?? "", nightKey: selectedNight }
     : activeScheduleIndex >= 0
-    ? schedule[safeIndex]
-    : cloudState.activeForecastTime
-      ? { time: cloudState.activeForecastTime, nightKey: selectedNight }
-      : schedule[safeIndex];
+      ? schedule[safeIndex]
+      : cloudState.activeForecastTime
+        ? { time: cloudState.activeForecastTime, nightKey: selectedNight }
+        : schedule[safeIndex];
   const displayNight = current?.nightKey ?? selectedNight;
-  const matrixTimes = useMemo(() => buildNightTimes(displayNight), [displayNight]);
-  const matrixHours = useMemo(() => matrixTimes.map((time) => {
-    const selectedHour = pointForecast?.hourly.find((hour) => hour.time === time);
-    const gridHour = cloudGrid?.model === cloudState.model
-      ? aggregateForecastHour(cloudGrid.forecasts.map((item) => item.hourly.find((hour) => hour.time === time)), time)
-      : null;
-    return selectedHour ?? gridHour ?? { time };
-  }), [cloudGrid, cloudState.model, matrixTimes, pointForecast]);
-  const activeForecastHour = forecastHours.find((hour) => hour.time === cloudState.activeForecastTime) ?? null;
-  const selectedMatrixTime = matrixTimes.includes(cloudState.activeForecastTime ?? "")
+  const matrixTimes = useMemo(
+    () => buildNightTimes(displayNight),
+    [displayNight],
+  );
+  const matrixHours = useMemo(
+    () =>
+      matrixTimes.map((time) => {
+        const selectedHour = pointForecast?.hourly.find(
+          (hour) => hour.time === time,
+        );
+        const gridHour =
+          cloudGrid?.model === cloudState.model
+            ? aggregateForecastHour(
+                cloudGrid.forecasts.map((item) =>
+                  item.hourly.find((hour) => hour.time === time),
+                ),
+                time,
+              )
+            : null;
+        return selectedHour ?? gridHour ?? { time };
+      }),
+    [cloudGrid, cloudState.model, matrixTimes, pointForecast],
+  );
+  const activeForecastHour =
+    forecastHours.find(
+      (hour) => hour.time === cloudState.activeForecastTime,
+    ) ?? null;
+  const selectedMatrixTime = matrixTimes.includes(
+    cloudState.activeForecastTime ?? "",
+  )
     ? cloudState.activeForecastTime
     : null;
   // The expanded matrix is intentionally one night, while the compact rail is
   // a 72-hour forecast. Keep the summary/card bound to the actual active hour
   // even when the selected hour is outside the currently expanded night.
-  const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime) ?? matrixHours[0];
+  const selectedHour =
+    activeForecastHour ??
+    matrixHours.find((hour) => hour.time === selectedMatrixTime) ??
+    matrixHours[0];
   const activeSatelliteFrame = isSatelliteMode
-    ? (observationTimeline[safeTimelineIndex] as SatelliteFrame | undefined) ?? null
+    ? ((observationTimeline[safeTimelineIndex] as
+        | SatelliteFrame
+        | undefined) ?? null)
     : null;
   const nightSummary = useMemo(
-    () => pointForecast && selectedLocation ? evaluateNight(pointForecast, selectedLocation, displayNight) : null,
+    () =>
+      pointForecast && selectedLocation
+        ? evaluateNight(pointForecast, selectedLocation, displayNight)
+        : null,
     [displayNight, pointForecast, selectedLocation],
   );
-
-  useEffect(() => {
-    if (!selectedLocation) {
-      return;
-    }
-    const controller = new AbortController();
-    const params = `lat=${selectedLocation.latitude}&lng=${selectedLocation.longitude}`;
-    Promise.all([
-      fetch(`/api/air-quality?${params}&days=2`, { signal: controller.signal }).then((response) => response.ok ? response.json() : null),
-      fetch(`/api/space-weather/kp`, { signal: controller.signal }).then((response) => response.ok ? response.json() : null),
-    ]).then(([air, space]) => {
-      if (controller.signal.aborted) return;
-      const airHour = air?.hourly?.find((item: { time?: string }) => item.time === (selectedMatrixTime ?? cloudState.activeForecastTime)) ?? air?.hourly?.[0];
-      setAqiValue(typeof airHour?.usAqi === "number" ? airHour.usAqi : null);
-      const kpFrames = (space?.frames ?? []).filter((item: { kp?: number }) => typeof item.kp === "number");
-      const nearest = kpFrames.sort((a: { time: string }, b: { time: string }) => Math.abs(Date.parse(a.time) - Date.now()) - Math.abs(Date.parse(b.time) - Date.now()))[0];
-      setKpValue(typeof nearest?.kp === "number" ? nearest.kp : null);
-    }).catch(() => {
-      if (!controller.signal.aborted) { setAqiValue(null); setKpValue(null); }
-    });
-    return () => controller.abort();
-  }, [cloudState.activeForecastTime, selectedLocation, selectedMatrixTime]);
+  const auxiliaryTargetTime =
+    selectedMatrixTime ?? cloudState.activeForecastTime;
+  const auxiliaryForecast = pointForecast ?? gridForecast;
+  const { aqiValue, kpValue } = useAuxiliaryConditions({
+    location: selectedLocation,
+    targetTime: auxiliaryTargetTime,
+    utcOffsetSeconds: auxiliaryForecast?.utcOffsetSeconds ?? 8 * 60 * 60,
+    refreshRevision: dataRefreshRevision,
+  });
 
   useEffect(() => {
     if (isNightLightsMode) return;
-    if (isSatelliteMode) {
-      const frame = observationTimeline[safeTimelineIndex];
-      if (frame && frame.time !== cloudState.activeObservationTime) {
-        setCloud({ activeObservationTime: frame.time, playing: false });
-      }
-      return;
-    }
-    if (!forecastTimeline.length) return;
-    const forecastIndex = forecastTimeline.findIndex((item) => item.time === cloudState.activeForecastTime);
-    const selectedMatrixTimeIsInNight = matrixTimes.includes(cloudState.activeForecastTime ?? "");
-    if (forecastIndex < 0 && !selectedMatrixTimeIsInNight) {
-      setCloud({ activeForecastTime: forecastTimeline[0].time });
-    }
-  }, [cloudState.activeForecastTime, cloudState.activeObservationTime, forecastTimeline, isNightLightsMode, isSatelliteMode, matrixTimes, observationTimeline, safeTimelineIndex, setCloud]);
-
-  useEffect(() => {
-    if (isSatelliteMode || isNightLightsMode || !schedule.length) return;
-    const nextTime = schedule[safeIndex]?.time ?? schedule[0].time;
-    const activeIsNightTime = schedule.some((item) => item.time === cloudState.activeForecastTime);
-    if (!cloudState.activeForecastTime || (activeIsNightTime && cloudState.timeIndex !== safeIndex)) {
-      setCloud({ activeForecastTime: nextTime, timeIndex: safeIndex });
-    }
-  }, [cloudState.activeForecastTime, cloudState.timeIndex, isNightLightsMode, isSatelliteMode, safeIndex, schedule, setCloud]);
-
-  useEffect(() => {
-    if (!cloudState.playing || !timelineItems.length || isNightLightsMode) return;
-    const interval = setInterval(() => {
-      const nextIndex = (safeTimelineIndex + 1) % timelineItems.length;
-      if (isSatelliteMode) {
-        setCloud({ activeObservationTime: timelineItems[nextIndex].time });
-      } else {
-        setCloud({ activeForecastTime: timelineItems[nextIndex].time });
-      }
-    }, PLAY_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [cloudState.playing, isNightLightsMode, isSatelliteMode, safeTimelineIndex, setCloud, timelineItems]);
-
-  const setActiveTime = useCallback((time: string) => {
-    if (isSatelliteMode) {
-      setCloud({ activeObservationTime: time, playing: false });
-      return;
-    }
-    const index = schedule.findIndex((item) => item.time === time);
-    setCloud({ activeForecastTime: time, timeIndex: index >= 0 ? index : cloudState.timeIndex, playing: false });
-  }, [cloudState.timeIndex, isSatelliteMode, schedule, setCloud]);
-
-  const setTimelineIndex = useCallback((value: number) => {
-    const item = timelineItems[Math.min(Math.max(value, 0), Math.max(0, timelineItems.length - 1))];
-    if (item) setActiveTime(item.time);
-  }, [setActiveTime, timelineItems]);
-
-  const changeRange = (range: 1 | 5 | 7) => {
-    const nextNights = nightRangeKeys(selectedNight, range);
-    const nextSchedule = buildSchedule(nextNights);
-    setCloud({ overlayMode: "forecast-cloud", range, activeForecastTime: nextSchedule[0]?.time ?? null, timeIndex: 0, playing: false });
-  };
-
-  const changeNight = (nightKey: string) => {
-    selectNight(nightKey);
-    const index = schedule.findIndex((item) => item.nightKey === nightKey);
-    const time = schedule[index]?.time ?? buildNightTimes(nightKey)[0];
-    setCloud({ activeForecastTime: time, timeIndex: Math.max(0, index), playing: false });
-  };
-
-  if (!cloudState.enabled) return null;
-
-  return (
-    <section className={`cloud-timeline${expanded ? " is-expanded" : " is-collapsed"}`} aria-label={isSatelliteMode ? "å«æ˜Ÿäº‘å›¾æ—¶é—´å·¥ä½œå°" : isNightLightsMode ? "å…‰æ±¡æŸ“å‚è€ƒå›¾å±‚" : "é€å°æ—¶é¢„æŠ¥æ—¶é—´å·¥ä½œå°"} data-time-domain={isSatelliteMode ? "observation" : isNightLightsMode ? "reference" : "forecast"} data-active-time={activeTimelineTime ?? ""}>
-      <div className="cloud-timeline-bar">
-        <div className="cloud-timeline-title">
-          <span className="section-kicker">{isSatelliteMode ? "å«æ˜Ÿè§‚æµ‹" : isNightLightsMode ? "å…‰æ±¡æŸ“åŸºå‡†" : "é€å°æ—¶é¢„æŠ¥"}</span>
-          <strong>{isSatelliteMode ? "24 å°æ—¶è§‚æµ‹" : isNightLightsMode ? "VIIRS 2023 é™æ€å›¾å±‚" : "å½“å‰è‡³æœªæ¥ 72 å°æ—¶"}</strong>
-        </div>
-        {!isNightLightsMode && <button type="button" className={`cloud-timeline-play${cloudState.playing ? " playing" : ""}`} onClick={() => setCloud({ playing: !cloudState.playing })} aria-label={cloudState.playing ? "æš‚åœ" : "æ’­æ”¾"} disabled={!timelineItems.length}>
-          {cloudState.playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
-        </button>}
-          {!isNightLightsMode && <div className="cloud-timeline-slider">
-            <input
-              type="range"
-              min={0}
-              max={Math.max(0, timelineItems.length - 1)}
-              value={safeTimelineIndex}
-              disabled={!timelineItems.length || isNightLightsMode}
-              aria-label={isSatelliteMode ? "è¿‡å» 24 å°æ—¶å«æ˜Ÿè§‚æµ‹æ—¶æ¬¡" : "å½“å‰è‡³æœªæ¥ 72 å°æ—¶é¢„æŠ¥æ—¶æ¬¡"}
-              aria-valuetext={activeTimelineTime ?? "æš‚æ— æ—¶æ¬¡"}
-              onChange={(event) => setTimelineIndex(Number(event.target.value))}
-            />
-            <div className="cloud-timeline-labels" aria-hidden="true">
-              {timelineTicks.map((item, index) => <span key={`${item.time}-${index}`}>{item?.time ? formatTimelineTime(item.time) : "æš‚æ— "}</span>)}
-            </div>
-          </div>}
-          {!isSatelliteMode && !isNightLightsMode && <div className="cloud-timeline-range" role="group" aria-label="é¢„æŠ¥å¤œæ•°">
-           {RANGE_OPTIONS.map((option) => <button key={option.value} type="button" className={cloudState.range === option.value ? "active" : ""} aria-pressed={cloudState.range === option.value} onClick={() => changeRange(option.value)}>{option.label}</button>)}
-          </div>}
-          <span className="cloud-timeline-current" title={activeTimelineTime ?? undefined}>{isNightLightsMode ? "é™æ€å‚è€ƒï¼Œæ— æ—¶é—´è½´" : activeTimelineTime ? (isSatelliteMode ? formatTimelineTime(activeTimelineTime) : `${formatNightLabel(current.nightKey, true)} ${formatHourWithDate(activeTimelineTime, current.nightKey)}`) : "æš‚æ— æ—¶æ¬¡"}</span>
-        <button
-          type="button"
-          className="cloud-timeline-toggle"
-          aria-expanded={expanded}
-          aria-controls="hourly-forecast-panel"
-          onClick={() => setExpanded((value) => !value)}
-        >
-          {expanded ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
-          <span>{expanded ? "æ”¶èµ·æ•°æ®" : "å±•å¼€æ•°æ®"}</span>
-        </button>
-      </div>
-
-      <div className="cloud-timeline-data-card" aria-live="polite">
-        {isNightLightsMode ? <>
-          <b>å…‰æ±¡æŸ“åŸºå‡†</b><span>VIIRS 2023</span><span>é™æ€å‚è€ƒå›¾å±‚</span><small>æ¥æºï¼šdarkmap.cn Â· ä¸ä»£è¡¨å®æ—¶å…‰æ±¡æŸ“ã€Bortle æˆ– SQM å®æµ‹</small>
-        </> : activeSatelliteFrame ? <>
-          <b>å«æ˜Ÿè§‚æµ‹</b><span>{activeSatelliteFrame.satellite}</span><span>{activeSatelliteFrame.label}</span><span>{formatTimelineTime(activeSatelliteFrame.time)}</span><small>æ¥æºï¼š{activeSatelliteFrame.source} Â· {activeSatelliteFrame.coverage}</small>
-        </> : <>
-          <b>æ•°å€¼é¢„æŠ¥ Â· {cloudState.model.toUpperCase()}</b>
-          <span>äº‘é‡ {activeForecastHour?.cloudCover == null ? "â€”" : `${Math.round(activeForecastHour.cloudCover)}%`}</span>
-          <span>é™æ°´ {activeForecastHour?.precipitation == null ? "â€”" : `${activeForecastHour.precipitation.toFixed(1)} mm`}</span>
-          <span>é£ {activeForecastHour?.windSpeed == null ? "â€”" : `${activeForecastHour.windSpeed.toFixed(1)} m/s`} {activeForecastHour?.windDirection == null ? "" : `${Math.round(activeForecastHour.windDirection)}Â°`}</span>
-          <small>æ¥æºï¼š{forecastSource} Â· Open-Meteo Â· {cloudState.model.toUpperCase()} Â· æ—¶é—´ï¼š{activeForecastTimeLabel(activeForecastHour?.time)}</small>
-        </>}
-      </div>
-
-      {expanded && (
-        <div className="cloud-timeline-body" id="hourly-forecast-panel">
-          {!isSatelliteMode && !isNightLightsMode && <div className="cloud-night-tabs" role="tablist" aria-label="è§‚æµ‹å¤œé€‰æ‹©">
-            {nightKeys.map((nightKey) => <button key={nightKey} type="button" role="tab" aria-selected={displayNight === nightKey} className={displayNight === nightKey ? "active" : ""} onClick={() => changeNight(nightKey)}>{formatNightLabel(nightKey, true)}</button>)}
-          </div>}
-
-          {!isSatelliteMode && !isNightLightsMode && <div className="cloud-summary-card" aria-label="å½“å‰å°æ—¶æ‘˜è¦">
-            <span><b>è§‚æ˜Ÿåˆ†</b>{nightSummary?.score == null ? "â€”" : `${nightSummary.score}`}</span>
-            <span><b>æ€»äº‘é‡</b>{selectedHour?.cloudCover == null ? "â€”" : `${Math.round(selectedHour.cloudCover)}%`}</span>
-            <span><b>èƒ½è§åº¦</b>{selectedHour?.visibility == null ? "â€”" : `${(selectedHour.visibility / 1000).toFixed(1)} km`}</span>
-            <span><b>é£</b>{selectedHour?.windSpeed == null ? "â€”" : `${selectedHour.windSpeed.toFixed(1)} m/s`}</span>
-            <span><b>AQI</b>{!selectedLocation || aqiValue == null ? "â€”" : aqiValue}</span>
-            <span><b>Kp</b>{!selectedLocation || kpValue == null ? "â€”" : kpValue.toFixed(1)}</span>
-            <span><b>æœˆç›¸</b>{nightSummary?.moonPhase ?? "â€”"}</span>
-            <span><b>æš—å¤œçª—å£</b>{nightSummary?.windowLabel ?? "â€”"}</span>
-          </div>}
-
-           {isSatelliteMode ? <div className="cloud-observation-note">å½“å‰ä¸ºå«æ˜Ÿè§‚æµ‹æ—¶é—´è½´ï¼›åˆ‡æ¢åˆ°â€œäº‘é‡é¢„æŠ¥â€åæŸ¥çœ‹æœªæ¥ 72 å°æ—¶é€å°æ—¶çŸ©é˜µã€‚</div> : isNightLightsMode ? <div className="cloud-observation-note">å½“å‰ä¸º VIIRS 2023 å…‰æ±¡æŸ“é™æ€å‚è€ƒå›¾å±‚ï¼›å®ƒæ²¡æœ‰é€å°æ—¶æ—¶é—´åŸŸï¼Œä¸å‚ä¸å¤©æ°”è¯„åˆ†ã€‚</div> : <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} onSelectTime={setActiveTime} loading={state.cloudGridLoading} />}
-          {state.cloudGridLoading && <div className="cloud-timeline-loading" role="status">æ­£åœ¨é‡‡æ ·äº‘å›¾æ•°æ®â€¦</div>}
-        </div>
-      )}
-    </section>
-  );
-}
-
-export { buildSchedule, HOURS_PER_NIGHT, NIGHT_START, NIGHT_END, isInNight, getValuesAtTime };
+  ²È="25¥Ù•Q¥µ•±¥¹•Q¥µ”€üü€‹šjš^ƒš^Ûš²„‰ô(€€€€€€€€€€€€€½¹¡…¹”õì¡•Ù•¹Ğ¤€ôø(€€€€€€€€€€€€€€€Í•ÑQ¥µ•±¥¹•%¹‘•à¡9Õµ‰•È¡•Ù•¹Ğ¹Ñ…É•Ğ¹Ù…±Õ”¤¤(€€€€€€€€€€€€€ô(€€€€€€€€€€€€¼ø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰±½ÕµÑ¥µ•±¥¹”µ±…‰•±Ìˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆø(€€€€€€€€€€€€€íÑ¥µ•±¥¹•Q¥­Ì¹µ…À ¡¥Ñ•´°¥¹‘•à¤€ôø€ (€€€€€€€€€€€€€€€€ñÍÁ…¸­•äõí€‘í¥Ñ•´¹Ñ¥µ•ô´‘í¥¹‘•áõôø(€€€€€€€€€€€€€€€€€í¥Ñ•´ü¹Ñ¥µ”€ü™½Éµ…ÑQ¥µ•±¥¹•Q¥µ”¡¥Ñ•´¹Ñ¥µ”¤€è€‹šjš^€‰ô(€€€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€€€¤¥ô(€€€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€¥ô(€€€€€€€ì…¥ÍM…Ñ•±±¥Ñ•5½‘”€˜˜€…¥Í9¥¡Ñ1¥¡ÑÍ5½‘”€˜˜€ (€€€€€€€€€€ñ‘¥Ø(€€€€€€€€€€€±…ÍÍ9…µ”ô‰±½ÕµÑ¥µ•±¥¹”µÉ…¹”ˆ(€€€€€€€€€€€É½±”ô‰É½ÕÀˆ(€€€€€€€€€€€…É¥„µ±…‰•°ô‹¦Šš*—–’sšVÀˆ(€€€€€€€€€€ø(€€€€€€€€€€€íI9}=AQ%=9L¹µ…À ¡½ÁÑ¥½¸¤€ôø€ (€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸(€€€€€€€€€€€€€€€­•äõí½ÁÑ¥½¸¹Ù…±Õ•ô(€€€€€€€€€€€€€€€ÑåÁ”ô‰‰ÕÑÑ½¸ˆ(€€€€€€€€€€€€€€€±…ÍÍ9…µ”õì(€€€€€€€€€€€€€€€€€±½Õ‘MÑ…Ñ”¹É…¹”€ôôô½ÁÑ¥½¸¹Ù…±Õ”€ü€‰…Ñ¥Ù”ˆ€è€ˆˆ(€€€€€€€€€€€€€€€ô(€€€€€€€€€€€€€€€…É¥„µÁÉ•ÍÍ•õí±½Õ‘MÑ…Ñ”¹É…¹”€ôôô½ÁÑ¥½¸¹Ù…±Õ•ô(€€€€€€€€€€€€€€€½¹±¥¬õì ¤€ôø¡…¹•I…¹”¡½ÁÑ¥½¸¹Ù…±Õ”¥ô(€€€€€€€€€€€€€€ø(€€€€€€€€€€€€€€€í½ÁÑ¥½¸¹±…‰•±ô(€€€€€€€€€€€€€€ğ½‰ÕÑÑ½¸ø(€€€€€€€€€€€€¤¥ô(€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€¥ô(€€€€€€€€ñÍÁ…¸(€€€€€€€€€±…ÍÍ9…µ”ô‰±½ÕµÑ¥µ•±¥¹”µÕÉÉ•¹Ğˆ(€€€€€€€€€Ñ¥Ñ±”õí…Ñ¥Ù•Q¥µ•±¥¹•Q¥µ”€üüÕ¹‘•™¥¹•‘ô(€€€€€€€€ø(€€€€€€€€€í¥Í9¥¡Ñ1¥¡ÑÍ5½‘”(€€€€€€€€€€€€ü€‹¦vgš–>¢¾ò3š^ƒš^Û¦^Ó¢öĞˆ(€€€€€€€€€€€€è…Ñ¥Ù•Q¥µ•±¥¹•Q¥µ”(€€€€€€€€€€€€€€ü¥ÍM…Ñ•±±¥Ñ•5½‘”(€€€€€€€€€€€€€€€€ü™½Éµ…ÑQ¥µ•±¥¹•Q¥µ”¡…Ñ¥Ù•Q¥µ•±¥¹•Q¥µ”¤(€€€€€€€€€€€€€€€€è€‘í™½Éµ…Ñ9¥¡Ñ1…‰•°¡ÕÉÉ•¹Ğ¹¹¥¡Ñ-•ä°ÑÉÕ”¥ô€‘í™½Éµ…Ñ!½ÕÉ]¥Ñ¡…Ñ”¡…Ñ¥Ù•Q¥µ•±¥¹•Q¥µ”°ÕÉÉ•¹Ğ¹¹¥¡Ñ-•ä¥õ€(€€€€€€€€€€€€€€è€‹šjš^ƒš^Ûš²„‰ô(€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€ñ‰ÕÑÑ½¸(€€€€€€€€€ÑåÁ”ô‰‰ÕÑÑ½¸ˆ(€€€€€€€€€±…ÍÍ9…µ”ô‰±½ÕµÑ¥µ•±¥¹”µÑ½±”ˆ(€€€€€€€€€…É¥„µ•áÁ…¹‘•õí•áÁ…¹‘•‘ô(€€€€€€€€€…É¥„µ½¹ÑÉ½±Ìô‰¡½ÕÉ±äµ™½É•…ÍĞµÁ…¹•°ˆ(€€€€€€€€€½¹±¥¬õì ¤€ôøÍ•ÑáÁ…¹‘• ¡Ù…±Õ”¤€ôø€…Ù…±Õ”¥ô(€€€€€€€€ø(€€€€€€€€€í•áÁ…¹‘•€ü€ (€€€€€€€€€€€€ñ¡•ÙÉ½¹½İ¸Í¥é”õìÄÙô…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆ€¼ø(€€€€€€€€€€¤€è€ (€€€€€€€€€€€€ñ¡•ÙÉ½¹UÀÍ¥é”õìÄÙô…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆ€¼ø(€€€€€€€€€€¥ô(€€€€€€€€€€ñÍÁ…¸ùí•áÁ…¹‘•€ü€‹šRÛ¢ÖßšVÃš6¸ˆ€è€‹–ÆW–òšVÃš6¸‰ôğ½ÍÁ…¸ø(€€€€€€€€ğ½‰ÕÑÑ½¸ø(€€€€€€ğ½‘¥Øø((€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰±½ÕµÑ¥µ•±¥¹”µ‘…Ñ„µ…Éˆ…É¥„µ±¥Ù”ô‰Á½±¥Ñ”ˆø(€€€€€€€í¥Í9¥¡Ñ1¥¡ÑÍ5½‘”€ü€ (€€€€€€€€€€ğø(€€€€€€€€€€€€ñˆû–'šÆ‡š~O–~ë–ğ½ˆø(€€€€€€€€€€€€ñÍÁ…¸ùY%%IL€ÈÀÈÌğ½ÍÁ…¸ø(€€€€€€€€€€€€ñÍÁ…¸û¦vgš–>¢–nû–Æğ½ÍÁ…¸ø(€€€€€€€€€€€€ñÍµ…±°ø(€€€€€€€€€€€€€í1%!Q}A=11UQ%=9}QQI%	UQ%=9ôƒ
+Üƒ’â7’î¢†£–º{š^Û–'šÆ‡š~O	½ÉÑ±”ƒš"XME4ƒ–º{šÖ,(€€€€€€€€€€€€ğ½Íµ…±°ø(€€€€€€€€€€ğ¼ø(€€€€€€€€¤€è…Ñ¥Ù•M…Ñ•±±¥Ñ•É…µ”€ü€ (€€€€€€€€€€ğø(€€€€€€€€€€€€ñˆû–6¯šb¢šÖ,ğ½ˆø(€€€€€€€€€€€€ñÍÁ…¸ùí…Ñ¥Ù•M…Ñ•±±¥Ñ•É…µ”¹Í…Ñ•±±¥Ñ•ôğ½ÍÁ…¸ø(€€€€€€€€€€€€ñÍÁ…¸ùí…Ñ¥Ù•M…Ñ•±±¥Ñ•É…µ”¹±…‰•±ôğ½ÍÁ…¸ø(€€€€€€€€€€€€ñÍÁ…¸ùí™½Éµ…ÑQ¥µ•±¥¹•Q¥µ”¡…Ñ¥Ù•M…Ñ•±±¥Ñ•É…µ”¹Ñ¥µ”¥ôğ½ÍÁ…¸ø(€€€€€€€€€€€€ñÍµ…±°ø(€€€€€€€€€€€€€ƒšv—šêC¾òií…Ñ¥Ù•M…Ñ•±±¥Ñ•É…µ”¹Í½ÕÉ•ôƒ
+Üí…Ñ¥Ù•M…Ñ•±±¥Ñ•É…µ”¹½Ù•É…•ô(€€€€€€€€€€€€ğ½Íµ…±°ø(€€€€€€€€€€ğ¼ø(€€€€€€€€¤€è€ (€€€€€€€€€€ğø(€€€€€€€€€€€€ñˆûšVÃ–ó¦Šš*”ƒ
+Üí±½Õ‘MÑ…Ñ”¹µ½‘•°¹Ñ½UÁÁ•É…Í” ¥ôğ½ˆø(€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€ƒ’êG¦=ìˆ€‰ô(€€€€€€€€€€€€€í…Ñ¥Ù•½É•…ÍÑ!½ÕÈü¹±½Õ‘½Ù•È€ôô¹Õ±°(€€€€€€€€€€€€€€€€ü€‹ŠPˆ(€€€€€€€€€€€€€€€€è€‘í5…Ñ ¹É½Õ¹¡…Ñ¥Ù•½É•…ÍÑ!½ÕÈ¹±½Õ‘½Ù•È¥ô•ô(€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€ƒ¦f7šÂÑìˆ€‰ô(€€€€€€€€€€€€€í…Ñ¥Ù•½É•…ÍÑ!½ÕÈü¹ÁÉ•¥Á¥Ñ…Ñ¥½¸€ôô¹Õ±°(€€€€€€€€€€€€€€€€ü€‹ŠPˆ(€€€€€€€€€€€€€€€€è€‘í…Ñ¥Ù•½É•…ÍÑ!½ÕÈ¹ÁÉ•¥Á¥Ñ…Ñ¥½¸¹Ñ½¥á• Ä¥ôµµô(€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€ƒ¦9ìˆ€‰ô(€€€€€€€€€€€€€í…Ñ¥Ù•½É•…ÍÑ!½ÕÈü¹İ¥¹‘MÁ••€ôô¹Õ±°(€€€€€€€€€€€€€€€€ü€‹ŠPˆ(€€€€€€€€€€€€€€€€è€‘í…Ñ¥Ù•½É•…ÍÑ!½ÕÈ¹İ¥¹‘MÁ••¹Ñ½¥á• Ä¥ô´½Íõìˆ€‰ô(€€€€€€€€€€€€€í…Ñ¥Ù•½É•…ÍÑ!½ÕÈü¹İ¥¹‘¥É•Ñ¥½¸€ôô¹Õ±°(€€€€€€€€€€€€€€€€ü€ˆˆ(€€€€€€€€€€€€€€€€è€‘í5…Ñ ¹É½Õ¹¡…Ñ¥Ù•½É•…ÍÑ!½ÕÈ¹İ¥¹‘¥É•Ñ¥½¸¥÷
+Áô(€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€ñÍµ…±°ø(€€€€€€€€€€€€€ƒšv—šêC¾òií™½É•…ÍÑM½ÕÉ•ôƒ
+Ü=Á•¸µ5•Ñ•¼ƒ
+İìˆ€‰ô(€€€€€€€€€€€€€í±½Õ‘MÑ…Ñ”¹µ½‘•°¹Ñ½UÁÁ•É…Í” ¥ôƒ
+Üƒš^Û¦^Ó¾òh(€€€€€€€€€€€€€í…Ñ¥Ù•½É•…ÍÑQ¥µ•1…‰•°¡…Ñ¥Ù•½É•…ÍÑ!½ÕÈü¹Ñ¥µ”¥ô(€€€€€€€€€€€€ğ½Íµ…±°ø(€€€€€€€€€€ğ¼ø(€€€€€€€€¥ô(€€€€€€ğ½‘¥Øø((€€€€€í•áÁ…¹‘•€˜˜€ (€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰±½ÕµÑ¥µ•±¥¹”µ‰½‘äˆ¥ô‰¡½ÕÉ±äµ™½É•…ÍĞµÁ…¹•°ˆø(€€€€€€€€€ì…¥ÍM…Ñ•±±¥Ñ•5½‘”€˜˜€…¥Í9¥¡Ñ1¥¡ÑÍ5½‘”€˜˜€ (€€€€€€€€€€€€ñ‘¥Ø(€€€€€€€€€€€€€±…ÍÍ9…µ”ô‰±½Õµ¹¥¡ĞµÑ…‰Ìˆ(€€€€€€€€€€€€€É½±”ô‰Ñ…‰±¥ÍĞˆ(€€€€€€€€€€€€€…É¥„µ±…‰•°ô‹¢šÖ/–’s¦'š.¤ˆ(€€€€€€€€€€€€ø(€€€€€€€€€€€€€í¹¥¡Ñ-•åÌ¹µ…À ¡¹¥¡Ñ-•ä¤€ôø€ (€€€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸(€€€€€€€€€€€€€€€€€­•äõí¹¥¡Ñ-•åô(€€€€€€€€€€€€€€€€€ÑåÁ”ô‰‰ÕÑÑ½¸ˆ(€€€€€€€€€€€€€€€€€É½±”ô‰Ñ…ˆˆ(€€€€€€€€€€€€€€€€€…É¥„µÍ•±•Ñ•õí‘¥ÍÁ±…å9¥¡Ğ€ôôô¹¥¡Ñ-•åô(€€€€€€€€€€€€€€€€€±…ÍÍ9…µ”õí‘¥ÍÁ±…å9¥¡Ğ€ôôô¹¥¡Ñ-•ä€ü€‰…Ñ¥Ù”ˆ€è€ˆ‰ô(€€€€€€€€€€€€€€€€€½¹±¥¬õì ¤€ôø¡…¹•9¥¡Ğ¡¹¥¡Ñ-•ä¥ô(€€€€€€€€€€€€€€€€ø(€€€€€€€€€€€€€€€€€í™½Éµ…Ñ9¥¡Ñ1…‰•°¡¹¥¡Ñ-•ä°ÑÉÕ”¥ô(€€€€€€€€€€€€€€€€ğ½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€¤¥ô(€€€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€€€¥ô((€€€€€€€€€ì…¥ÍM…Ñ•±±¥Ñ•5½‘”€˜˜€…¥Í9¥¡Ñ1¥¡ÑÍ5½‘”€˜˜€ (€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰±½ÕµÍÕµµ…Éäµ…Éˆ…É¥„µ±…‰•°ô‹–öO–&7–Â?š^ÛšFc¢šˆø(€€€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€€€€ñˆû¢šb–"ğ½ˆø(€€€€€€€€€€€€€€€í¹¥¡ÑMÕµµ…Éäü¹Í½É”€ôô¹Õ±°€ü€‹ŠPˆ€è€‘í¹¥¡ÑMÕµµ…Éä¹Í½É•õô(€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€€€€ñˆûšï’êG¦<ğ½ˆø(€€€€€€€€€€€€€€€íÍ•±•Ñ•‘!½ÕÈü¹±½Õ‘½Ù•È€ôô¹Õ±°(€€€€€€€€€€€€€€€€€€ü€‹ŠPˆ(€€€€€€€€€€€€€€€€€€è€‘í5…Ñ ¹É½Õ¹¡Í•±•Ñ•‘!½ÕÈ¹±½Õ‘½Ù•È¥ô•ô(€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€€€€ñˆû¢÷¢–ê˜ğ½ˆø(€€€€€€€€€€€€€€€íÍ•±•Ñ•‘!½ÕÈü¹Ù¥Í¥‰¥±¥Ñä€ôô¹Õ±°(€€€€€€€€€€€€€€€€€€ü€‹ŠPˆ(€€€€€€€€€€€€€€€€€€è€‘ì¡Í•±•Ñ•‘!½ÕÈ¹Ù¥Í¥‰¥±¥Ñä€¼€ÄÀÀÀ¤¹Ñ½¥á• Ä¥ô­µô(€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€€€€ñˆû¦8ğ½ˆø(€€€€€€€€€€€€€€€íÍ•±•Ñ•‘!½ÕÈü¹İ¥¹‘MÁ••€ôô¹Õ±°(€€€€€€€€€€€€€€€€€€ü€‹ŠPˆ(€€€€€€€€€€€€€€€€€€è€‘íÍ•±•Ñ•‘!½ÕÈ¹İ¥¹‘MÁ••¹Ñ½¥á• Ä¥ô´½Íô(€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€€€€ñˆùE$ğ½ˆø(€€€€€€€€€€€€€€€ì…Í•±•Ñ•‘1½…Ñ¥½¸ñğ…Å¥Y…±Õ”€ôô¹Õ±°€ü€‹ŠPˆ€è…Å¥Y…±Õ•ô(€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€€€€ñˆù-Àğ½ˆø(€€€€€€€€€€€€€€€í­ÁY…±Õ”€ôô¹Õ±°€ü€‹ŠPˆ€è­ÁY…±Õ”¹Ñ½¥á• Ä¥ô(€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€€€€ñˆûšr#nàğ½ˆø(€€€€€€€€€€€€€€€í¹¥¡ÑMÕµµ…Éäü¹µ½½¹A¡…Í”€üü€‹ŠP‰ô(€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€€€ñÍÁ…¸ø(€€€€€€€€€€€€€€€€ñˆûšj_–’sª_–>Œğ½ˆø(€€€€€€€€€€€€€€€í¹¥¡ÑMÕµµ…Éäü¹İ¥¹‘½İ1…‰•°€üü€‹ŠP‰ô(€€€€€€€€€€€€€€ğ½ÍÁ…¸ø(€€€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€€€¥ô((€€€€€€€€€í¥ÍM…Ñ•±±¥Ñ•5½‘”€ü€ (€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰±½Õµ½‰Í•ÉÙ…Ñ¥½¸µ¹½Ñ”ˆø(€€€€€€€€€€€€€ƒ–öO–&7’âë–6¯šb¢šÖ/š^Û¦^Ó¢öÓ¾òo–"š6‹–"ÃŠs’êG¦?¦Šš*—Šw–B;š~—r/šr«šv”€ÜÈ(€€€€€€€€€€€€€ƒ–Â?š^Û¦C–Â?š^Û~§¦b×(€€€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€€€¤€è¥Í9¥¡Ñ1¥¡ÑÍ5½‘”€ü€ (€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰±½Õµ½‰Í•ÉÙ…Ñ¥½¸µ¹½Ñ”ˆø(€€€€€€€€€€€€€ƒ–öO–&7’âèY%%IL€ÈÀÈÌ(€€€€€€€€€€€€€ƒ–'šÆ‡š~O¦vgš–>¢–nû–Æ¾òo–ºšÊ‡šr'¦C–Â?š^Ûš^Û¦^Ó–~¾ò3’â7–>’â;–’§šÂS¢¾–"(€€€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€€€¤€è€ (€€€€€€€€€€€€ñ!½ÕÉ±å½É•…ÍÑ5…ÑÉ¥à(€€€€€€€€€€€€€¹¥¡Ñ-•äõí‘¥ÍÁ±…å9¥¡Ñô(€€€€€€€€€€€€€¡½ÕÉÌõíµ…ÑÉ¥á!½ÕÉÍô(€€€€€€€€€€€€€Í•±•Ñ•‘Q¥µ”õíÍ•±•Ñ•‘5…ÑÉ¥áQ¥µ•ô(€€€€€€€€€€€€€½¹M•±•ÑQ¥µ”õíÍ•ÑÑ¥Ù•Q¥µ•ô(€€€€€€€€€€€€€±½…‘¥¹œõíÍÑ…Ñ”¹±½Õ‘É¥‘1½…‘¥¹ô(€€€€€€€€€€€€¼ø(€€€€€€€€€€¥ô(€€€€€€€€€íÍÑ…Ñ”¹±½Õ‘É¥‘1½…‘¥¹œ€˜˜€ (€€€€€€€€€€€€ñ‘¥Ø±…ÍÍ9…µ”ô‰±½ÕµÑ¥µ•±¥¹”µ±½…‘¥¹œˆÉ½±”ô‰ÍÑ…ÑÕÌˆø(€€€€€€€€€€€€€ƒš¶–r£¦š‚ß’êG–nûšVÃš6»Š˜(€€€€€€€€€€€€ğ½‘¥Øø(€€€€€€€€€€¥ô(€€€€€€€€ğ½‘¥Øø(€€€€€€¥ô(€€€€ğ½Í•Ñ¥½¸ø(€€¤ì)ô()•áÁ½ÉĞì(€‰Õ¥±‘M¡•‘Õ±”°(€!=UIM}AI}9%!P°(€9%!Q}MQIP°(€9%!Q}9°(€¥Í%¹9¥¡Ğ°(€•ÑY…±Õ•ÍÑQ¥µ”°)ôì(

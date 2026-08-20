@@ -3,6 +3,7 @@ import {
   DEFAULT_LIGHT_POLLUTION_TILE_URL,
   lightPollutionTemplateError,
   materializeLightPollutionTile,
+  resolveLightPollutionAttribution,
 } from "@/lib/lightPollution";
 
 describe("light-pollution tile configuration", () => {
@@ -35,6 +36,37 @@ describe("light-pollution tile configuration", () => {
     expect(materializeLightPollutionTile(template, 4, 12, 6)).toBe(
       "https://a.tiles.example.com/4/12/9.png",
     );
+  });
+
+  it("uses neutral or sanitized attribution for custom sources", () => {
+    expect(
+      resolveLightPollutionAttribution(
+        "https://tiles.example.com/{z}/{x}/{y}.png",
+        "",
+      ),
+    ).toBe("自定义光污染参考图层");
+    expect(
+      resolveLightPollutionAttribution(
+        "https://tiles.example.com/{z}/{x}/{y}.png",
+        "<b>自有数据</b>",
+      ),
+    ).toBe("自有数据");
+    expect(resolveLightPollutionAttribution("", "")).toContain(
+      "darkmap.cn",
+    );
+  });
+
+  it("allows HTTP only for local development hosts", () => {
+    expect(
+      lightPollutionTemplateError(
+        "http://localhost:8080/tiles/{z}/{x}/{y}.png",
+      ),
+    ).toBeNull();
+    expect(
+      lightPollutionTemplateError(
+        "http://tiles.example.com/{z}/{x}/{y}.png",
+      ),
+    ).toContain("HTTPS");
   });
 
   it("rejects unsupported schemes and embedded credentials", () => {

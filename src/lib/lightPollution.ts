@@ -1,17 +1,47 @@
 export const DEFAULT_LIGHT_POLLUTION_TILE_URL =
   "https://lpm.darkmap.cn/gwc/service/wmts?layer=PostGIS:VIIR_2023&style=&tilematrixset=EPSG:900913&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix=EPSG:900913:{z}&TileCol={x}&TileRow={y}";
 
+export const DEFAULT_LIGHT_POLLUTION_ATTRIBUTION =
+  "光污染参考 © darkmap.cn · VIIRS 2023";
+
+const configuredTileUrl =
+  process.env.NEXT_PUBLIC_LIGHT_POLLUTION_TILE_URL?.trim() ?? "";
+const configuredAttribution =
+  process.env.NEXT_PUBLIC_LIGHT_POLLUTION_ATTRIBUTION?.trim() ?? "";
+
 /**
  * Visual VIIRS 2023 reference raster. This is a third-party tile service and
  * must not be presented as a live Bortle/SQM measurement. Aliyun deployments
  * can replace it at build time with a licensed/self-hosted WMTS template.
  */
 export const LIGHT_POLLUTION_TILE_URL =
-  process.env.NEXT_PUBLIC_LIGHT_POLLUTION_TILE_URL?.trim() ||
-  DEFAULT_LIGHT_POLLUTION_TILE_URL;
+  configuredTileUrl || DEFAULT_LIGHT_POLLUTION_TILE_URL;
+
+/**
+ * Never credit the default provider after a custom URL is configured. When an
+ * operator omits a label, use a neutral fallback rather than false attribution.
+ */
+export function resolveLightPollutionAttribution(
+  tileUrl: string,
+  attribution: string,
+): string {
+  const configuredUrl = tileUrl.trim();
+  const configuredLabel = attribution
+    .replace(/<[^>]*>/g, "")
+    .replace(/\p{C}/gu, " ")
+    .trim()
+    .slice(0, 180);
+  if (configuredLabel) return configuredLabel;
+  return configuredUrl
+    ? "自定义光污染参考图层"
+    : DEFAULT_LIGHT_POLLUTION_ATTRIBUTION;
+}
 
 export const LIGHT_POLLUTION_ATTRIBUTION =
-  "光污染参考 © darkmap.cn · VIIRS 2023";
+  resolveLightPollutionAttribution(
+    configuredTileUrl,
+    configuredAttribution,
+  );
 
 /**
  * Materialize a browser tile template for the server-side probe. Leaflet
@@ -33,6 +63,16 @@ export function materializeLightPollutionTile(
     .replaceAll("{y}", String(y))
     .replaceAll("{s}", "a")
     .replaceAll("{r}", "");
+}
+
+function isLocalDevelopmentHost(hostname: string): boolean {
+  const value = hostname.toLowerCase();
+  return (
+    value === "localhost" ||
+    value.endsWith(".localhost") ||
+    value === "127.0.0.1" ||
+    value === "::1"
+  );
 }
 
 /**
@@ -64,6 +104,9 @@ export function lightPollutionTemplateError(template: string): string | null {
     const url = new URL(concrete);
     if (url.protocol !== "https:" && url.protocol !== "http:") {
       return "瓦片模板必须使用 HTTP 或 HTTPS";
+    }
+    if (url.protocol === "http:" && !isLocalDevelopmentHost(url.hostname)) {
+      return "公网瓦片模板必须使用 HTTPS，避免浏览器混合内容拦截";
     }
     if (url.username || url.password) {
       return "瓦片模板不能在 URL 中携带账号或密码";

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TimedCache } from "@/lib/serverCache";
+import { parseCoordinatePair } from "@/lib/server/queryParams";
 import { RefreshCoordinator } from "@/lib/serverRefreshCoordinator";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,11 @@ function alignedNumericSeries(
   return (
     Array.isArray(value) &&
     value.length === expectedLength &&
+    value.every(
+      (item) =>
+        item === null ||
+        (typeof item === "number" && Number.isFinite(item)),
+    ) &&
     value.some(
       (item) => typeof item === "number" && Number.isFinite(item),
     )
@@ -152,25 +158,16 @@ async function fetchAirQuality(
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-  const latitudeRaw = params.get("latitude") ?? params.get("lat");
-  const longitudeRaw = params.get("longitude") ?? params.get("lng");
-  const latitude = latitudeRaw === null ? Number.NaN : Number(latitudeRaw);
-  const longitude = longitudeRaw === null ? Number.NaN : Number(longitudeRaw);
+  const coordinates = parseCoordinatePair(params);
   const forceRefresh = params.get("refresh") === "1";
 
-  if (
-    !Number.isFinite(latitude) ||
-    latitude < -90 ||
-    latitude > 90 ||
-    !Number.isFinite(longitude) ||
-    longitude < -180 ||
-    longitude > 180
-  ) {
+  if (!coordinates) {
     return NextResponse.json(
-      { error: "必须提供合法 latitude 和 longitude" },
+      { error: "必须提供非空且合法的 latitude 和 longitude" },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
+  const { latitude, longitude } = coordinates;
   const daysRaw = Number(params.get("days") ?? "2");
   const days = Number.isFinite(daysRaw)
     ? Math.min(5, Math.max(1, Math.floor(daysRaw)))

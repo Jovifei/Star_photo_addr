@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  GIBS_CAPABILITIES_URL,
   GIBS_LAYERS,
   buildSatelliteFrame,
   extractLayerBlock,
@@ -8,150 +7,26 @@ import {
   parseTileTemplate,
   parseTimeDimension,
 } from "@/lib/gibs";
+import { parseCoordinatePair } from "@/lib/server/queryParams";
+import {
+  GibsRefreshCooldownError,
+  getGibsCapabilities,
+} from "@/lib/server/gibsCapabilities";
 
 export const dynamic = "force-dynamic";
 
-function boundedInteger(
-  name: string,
-  fallback: number,
-  minimum: number,
-  maximum: number,
-): number {
-  const parsed = Number(process.env[name]);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(maximum, Math.max(minimum, Math.round(parsed)));
-}
-
-const CACHE_TTL_MS = boundedInteger(
-  "GIBS_CACHE_TTL_MS",
-  15 * 60_000,
-  30_000,
-  2 * 60 * 60_000,
-);
-const STALE_TTL_MS = boundedInteger(
-  "GIBS_STALE_TTL_MS",
-  24 * 60 * 60_000,
-  CACHE_TTL_MS,
-  7 * 24 * 60 * 60_000,
-);
-const REQUEST_TIMEOUT_MS = boundedInteger(
-  "GIBS_REQUEST_TIMEOUT_MS",
-  15_000,
-  3_000,
-  120_000,
-);
-const FORCE_REFRESH_COOLDOWN_MS = boundedInteger(
-  "GIBS_FORCE_REFRESH_COOLDOWN_MS",
-  60_000,
-  5_000,
-  15 * 60_000,
-);
-
-type CapabilitiesCacheState =
-  | "memory"
-  | "refresh"
-  | "coalesced"
-  | "refresh-cooldown"
-  | "stale-memory";
-
-interface CapabilitiesResult {
-  xml: string;
-  stale: boolean;
-  cache: CapabilitiesCacheState;
-  refreshSuppressed?: boolean;
-}
-
-let capabilitiesCache: {
-  xml: string;
-  savedAt: number;
-  expiresAt: number;
-} | null = null;
-let capabilitiesInFlight: Promise<CapabilitiesResult> | null = null;
-let lastCapabilitiesProbeStartedAt = 0;
-
-async function fetchCapabilities(signal: AbortSignal): Promise<CapabilitiesResult> {
-  try {
-    const response = await fetch(GIBS_CAPABILITIES_URL, {
-      signal,
-      cache: "no-store",
-      headers: { Accept: "application/xml,text/xml" },
-    });
-    if (!response.ok) {
-      throw new Error(`GIBS capabilities 返回 HTTP ${response.status}`);
-    }
-    const xml = await response.text();
-    if (!xml.includes("<Capabilities") || !xml.includes("ResourceURL")) {
-      throw new Error("GIBS capabilities 格式无法识别");
-    }
-    const now = Date.now();
-    capabilitiesCache = {
-      xml,
-      savedAt: now,
-      expiresAt: now + CACHE_TTL_MS,
-    };
-    return { xml, stale: false, cache: "refresh" };
-  } catch (error) {
-    if (
-      capabilitiesCache &&
-      Date.now() - capabilitiesCache.savedAt <= STALE_TTL_MS
-    ) {
-      return {
-        xml: capabilitiesCache.xml,
-        stale: true,
-        cache: "stale-memory",
-      };
-    }
-    throw error;
-  }
-}
-
-async function capabilities(
-  signal: AbortSignal,
-  forceRefresh: boolean,
-): Promise<CapabilitiesResult> {
-  const now = Date.now();
-  if (
-    !forceRefresh &&
-    capabilitiesCache &&
-    capabilitiesCache.expiresAt > now
-  ) {
-    return { xml: capabilitiesCache.xml, stale: false, cache: "memory" };
-  }
-
-  if (
-    forceRefresh &&
-    capabilitiesCache &&
-    now - capabilitiesCache.savedAt <= STALE_TTL_MS &&
-    now - lastCapabilitiesProbeStartedAt < FORCE_REFRESH_COOLDOWN_MS
-  ) {
-    return {
-      xml: capabilitiesCache.xml,
-      stale: capabilitiesCache.expiresAt <= now,
-      cache: "refresh-cooldown",
-      refreshSuppressed: true,
-    };
-  }
-
-  if (capabilitiesInFlight) {
-    const shared = await capabilitiesInFlight;
-    return { ...shared, cache: "coalesced" };
-  }
-
-  lastCapabilitiesProbeStartedAt = now;
-  capabilitiesInFlight = fetchCapabilities(signal);
-  try {
-    return await capabilitiesInFlight;
-  } finally {
-    capabilitiesInFlight = null;
-  }
-}
-
-function safeSatelliteError(error: unknown, timedOut: boolean): string {
-  if (timedOut) return "卫星时次请求超时";
+function safeSatelliteError(error: unknown): string {
   if (error instanceof Error) {
+    if (error.name === "AbortError" || /aborted|timeout/i.test(error.message)) {
+      return "卫星时次请求超时";
+    }
     const status = error.message.match(/HTTP (\d{3})/)?.[1];
     if (status) return `NASA GIBS 返回 HTTP ${status}`;
-    if (/白名单图层|格式无法识别|未提供瓦片模板|未提供时次/.test(error.message)) {
+    if (
+      /白名单图层|格式无法识别|未提供瓦片模板|未提供时次/.test(
+        error.message,
+      )
+    ) {
       return error.message.slice(0, 180);
     }
   }
@@ -159,9 +34,8 @@ function safeSatelliteError(error: unknown, timedOut: boolean): string {
 }
 
 export async function GET(request: NextRequest) {
-  const kind = request.nextUrl.searchParams.get(
-    "kind",
-  ) as keyof typeof GIBS_LAYERS;
+  const params = request.nextUrl.searchParams;
+  const kind = params.get("kind") as keyof typeof GIBS_LAYERS;
   if (kind !== "cloud" && kind !== "night-lights") {
     return NextResponse.json(
       { error: "kind 只允许 cloud 或 night-lights" },
@@ -169,40 +43,20 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // The catalogue is global, but old clients may still send coordinates. When
-  // either value is present both must be present and valid; Number(null) must
-  // never silently turn a missing longitude into 0.
-  const latRaw = request.nextUrl.searchParams.get("lat");
-  const lngRaw = request.nextUrl.searchParams.get("lng");
-  if ((latRaw === null) !== (lngRaw === null)) {
+  // The catalogue is global, but old clients may still send coordinates.
+  const hasCoordinates = ["lat", "latitude", "lng", "longitude"].some(
+    (name) => params.has(name),
+  );
+  if (hasCoordinates && !parseCoordinatePair(params)) {
     return NextResponse.json(
-      { error: "lat 和 lng 必须同时提供" },
+      { error: "lat/lng 必须同时为非空合法坐标" },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
-  if (latRaw !== null && lngRaw !== null) {
-    const latitude = Number(latRaw);
-    const longitude = Number(lngRaw);
-    if (
-      !Number.isFinite(latitude) ||
-      latitude < -90 ||
-      latitude > 90 ||
-      !Number.isFinite(longitude) ||
-      longitude < -180 ||
-      longitude > 180
-    ) {
-      return NextResponse.json(
-        { error: "lat/lng 必须同时为合法坐标" },
-        { status: 400, headers: { "Cache-Control": "no-store" } },
-      );
-    }
-  }
 
-  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const forceRefresh = params.get("refresh") === "1";
   try {
-    const capability = await capabilities(controller.signal, forceRefresh);
+    const capability = await getGibsCapabilities(forceRefresh);
     const identifier = GIBS_LAYERS[kind];
     const block = extractLayerBlock(capability.xml, identifier);
     const template = block && parseTileTemplate(block);
@@ -234,6 +88,7 @@ export async function GET(request: NextRequest) {
     const frames = frameTimes.map((time) =>
       buildSatelliteFrame(kind, time, concreteTemplate),
     );
+
     return NextResponse.json(
       {
         kind,
@@ -270,26 +125,38 @@ export async function GET(request: NextRequest) {
           "X-Refresh-Suppressed": String(
             Boolean(capability.refreshSuppressed),
           ),
+          ...(capability.retryAfterSeconds
+            ? { "Retry-After": String(capability.retryAfterSeconds) }
+            : {}),
         },
       },
     );
   } catch (error) {
-    const timedOut =
-      controller.signal.aborted ||
-      (error instanceof Error &&
-        (error.name === "AbortError" || /aborted|timeout/i.test(error.message)));
+    if (error instanceof GibsRefreshCooldownError) {
+      return NextResponse.json(
+        { error: error.message, stale: false },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "X-GIBS-Cache": "refresh-cooldown",
+            "X-Refresh-Suppressed": "true",
+            "Retry-After": String(error.retryAfterSeconds),
+          },
+        },
+      );
+    }
     console.warn(
-      `[api/satellite/times] ${timedOut ? "timeout" : "upstream failure"}`,
+      "[api/satellite/times] upstream failure",
       error instanceof Error ? error.message : error,
     );
+    const message = safeSatelliteError(error);
     return NextResponse.json(
-      { error: safeSatelliteError(error, timedOut), stale: false },
+      { error: message, stale: false },
       {
-        status: timedOut ? 504 : 502,
+        status: /超时/.test(message) ? 504 : 502,
         headers: { "Cache-Control": "no-store" },
       },
     );
-  } finally {
-    clearTimeout(timeout);
   }
 }
