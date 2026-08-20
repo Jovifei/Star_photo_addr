@@ -51,6 +51,10 @@ export class RefreshCoordinator<T> {
     };
   }
 
+  hasInFlight(key: string): boolean {
+    return this.inFlight.has(key);
+  }
+
   run(
     key: string,
     factory: () => Promise<T>,
