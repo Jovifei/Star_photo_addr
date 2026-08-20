@@ -28,12 +28,13 @@ describe("light-pollution tile configuration", () => {
     ).toContain("{y}");
   });
 
-  it("accepts common Leaflet subdomain and retina placeholders", () => {
-    expect(
-      lightPollutionTemplateError(
-        "https://{s}.tiles.example.com/{z}/{x}/{y}{r}.png",
-      ),
-    ).toBeNull();
+  it("accepts and materializes common Leaflet placeholders", () => {
+    const template =
+      "https://{s}.tiles.example.com/{z}/{x}/{-y}{r}.png";
+    expect(lightPollutionTemplateError(template)).toBeNull();
+    expect(materializeLightPollutionTile(template, 4, 12, 6)).toBe(
+      "https://a.tiles.example.com/4/12/9.png",
+    );
   });
 
   it("rejects unsupported schemes and embedded credentials", () => {
