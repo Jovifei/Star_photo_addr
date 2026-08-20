@@ -29,7 +29,9 @@ describe("RefreshCoordinator", () => {
         }),
     );
 
+    expect(coordinator.hasInFlight("same")).toBe(false);
     const first = coordinator.run("same", factory);
+    expect(coordinator.hasInFlight("same")).toBe(true);
     const second = coordinator.run("same", factory);
     expect(first.coalesced).toBe(false);
     expect(second.coalesced).toBe(true);
@@ -39,6 +41,7 @@ describe("RefreshCoordinator", () => {
     resolveTask?.(42);
     await expect(first.promise).resolves.toBe(42);
     await Promise.resolve();
+    expect(coordinator.hasInFlight("same")).toBe(false);
 
     const third = coordinator.run("same", async () => 7);
     expect(third.coalesced).toBe(false);
