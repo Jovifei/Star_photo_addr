@@ -12,7 +12,7 @@ let fetchForecastByCoords: ReturnType<typeof vi.fn>;
 
 function metadata(model: ForecastModel) {
   return {
-    source: "Integration Test",
+    source: "Open-Meteo" as const,
     model,
     fetchedAt: "2026-08-20T00:00:00.000Z",
     stale: false,

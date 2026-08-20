@@ -1,11 +1,24 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DataSourceHealthResponse } from "@/lib/dataSourceStatus";
+import type {
+  DataSourceHealthResponse,
+  DataSourceProbe,
+} from "@/lib/dataSourceStatus";
 
 let getDataSourceHealth: ReturnType<typeof vi.fn>;
 
 function request(query = ""): NextRequest {
   return new NextRequest(`http://localhost/api/data-status${query}`);
+}
+
+function probe(id: DataSourceProbe["id"]): DataSourceProbe {
+  return {
+    id,
+    label: id,
+    status: "available",
+    detail: "integration fixture",
+    checkedAt: "2026-08-20T00:00:00.000Z",
+  };
 }
 
 function response(
@@ -15,7 +28,13 @@ function response(
     status: "ok",
     checkedAt: "2026-08-20T00:00:00.000Z",
     cached: false,
-    sources: {},
+    sources: {
+      weather: probe("weather"),
+      satellite: probe("satellite"),
+      "light-pollution": probe("light-pollution"),
+      tianditu: probe("tianditu"),
+      "local-dark-sky": probe("local-dark-sky"),
+    },
     ...overrides,
   };
 }
