@@ -55,6 +55,63 @@ jobs:
       - name: Probe weather, satellite, geocoding, air quality and Kp providers
         run: npm run test:live
 
+  container-smoke:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate merged Compose configuration
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.aliyun.yml \
+            config --quiet
+
+      - name: Build production image
+        env:
+          BUILD_REVISION: ${{ github.sha }}
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.aliyun.yml \
+            build star-weather
+
+      - name: Start and probe production container
+        env:
+          BUILD_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cleanup() {
+            docker compose \
+              -f docker-compose.yml \
+              -f docker-compose.aliyun.yml \
+              down --remove-orphans || true
+          }
+          trap cleanup EXIT
+
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.aliyun.yml \
+            up -d --no-deps star-weather
+
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3100/healthz > /tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 1
+          done
+
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.aliyun.yml \
+            logs star-weather
+          exit 1
+
   e2e:
     needs: quality
     runs-on: ubuntu-latest
