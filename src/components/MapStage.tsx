@@ -14,14 +14,18 @@ import BortleControl from "@/components/BortleControl";
 import CloudControl from "@/components/CloudControl";
 import CloudTimeline from "@/components/CloudTimeline";
 import ObservingMapControl from "@/components/ObservingMapControl";
-import ViewportRecommendationMarkers from "@/components/ViewportRecommendationMarkers";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 
-// Leaflet touches `window`, so the map is client-only.
+// Leaflet touches `window`, so both the map and any child component importing
+// Leaflet at module scope must remain behind a client-only dynamic boundary.
 const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
   ssr: false,
   loading: () => <div className="map-canvas" />,
 });
+const ViewportRecommendationMarkers = dynamic(
+  () => import("@/components/ViewportRecommendationMarkers"),
+  { ssr: false },
+);
 
 /**
  * Map stage: orchestrates the Leaflet canvas and all overlay controls.
