@@ -34,6 +34,7 @@ export default function CloudLayer() {
   const activeRequestSignatureRef = useRef<string | null>(null);
   const gridSigRef = useRef<string | null>(null);
   const cloudGridRef = useRef(cloudGrid);
+  const lastHandledRefreshRevisionRef = useRef(0);
 
   useEffect(() => {
     cloudGridRef.current = cloudGrid;
@@ -165,7 +166,13 @@ export default function CloudLayer() {
     }
     const signature = `${selectedNight}|${cloudState.range}|${cloudState.model}|${dataRefreshRevision}`;
     if (cloudGrid && gridSigRef.current === signature) return;
-    void performSampling(dataRefreshRevision > 0);
+    const forceRefresh =
+      dataRefreshRevision > 0 &&
+      dataRefreshRevision !== lastHandledRefreshRevisionRef.current;
+    if (forceRefresh) {
+      lastHandledRefreshRevisionRef.current = dataRefreshRevision;
+    }
+    void performSampling(forceRefresh);
   }, [
     cloudGrid,
     cloudState.enabled,
