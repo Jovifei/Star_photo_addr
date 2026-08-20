@@ -1,21 +1,35 @@
 // Planner-side adapter. All provider traffic goes through the same-origin
 // Next route handlers so the map and planner share timezone, model, validation
-// and stale-fallback semantics. Planner refreshes are explicit user actions, so
-// this adapter bypasses the fresh in-memory value while the route may still
-// return a clearly marked stale fallback when the upstream is unavailable.
+// and stale-fallback semantics. Planner reads are explicit refresh operations;
+// the route still coalesces identical work and applies its public cooldown.
+
+let latestSurfaceRequest = null;
 
 async function responseError(response, fallback) {
   const body = await response.json().catch(() => null);
   return new Error(body?.error ?? `${fallback} (${response.status})`);
 }
 
-export async function fetchSurfaceForecasts(
+function linkedController(signal) {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal?.aborted) {
+    controller.abort();
+  } else {
+    signal?.addEventListener("abort", abort, { once: true });
+  }
+  return {
+    controller,
+    cleanup: () => signal?.removeEventListener("abort", abort),
+  };
+}
+
+async function requestSurfaceForecasts(
   locations,
-  days = 14,
+  days,
   signal,
-  model = "best_match",
+  model,
 ) {
-  if (!locations.length) return [];
   const params = new URLSearchParams({
     latitude: locations.map((item) => item.latitude).join(","),
     longitude: locations.map((item) => item.longitude).join(","),
@@ -40,6 +54,42 @@ export async function fetchSurfaceForecasts(
     ...forecast,
     locationId: locations[index]?.id ?? forecast.locationId,
   }));
+}
+
+export async function fetchSurfaceForecasts(
+  locations,
+  days = 14,
+  signal,
+  model = "best_match",
+) {
+  if (!locations.length) return [];
+
+  latestSurfaceRequest?.controller.abort();
+  const { controller, cleanup } = linkedController(signal);
+  const entry = {
+    controller,
+    promise: requestSurfaceForecasts(
+      locations,
+      days,
+      controller.signal,
+      model,
+    ),
+  };
+  latestSurfaceRequest = entry;
+
+  try {
+    return await entry.promise;
+  } catch (error) {
+    // A model/location change superseded this request. Resolve the older
+    // caller with the newest result so it cannot overwrite fresh state or show
+    // a misleading timeout banner after the replacement request succeeds.
+    if (latestSurfaceRequest !== entry) {
+      return latestSurfaceRequest.promise;
+    }
+    throw error;
+  } finally {
+    cleanup();
+  }
 }
 
 export async function fetchPressureForecast(

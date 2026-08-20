@@ -3,9 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { TileLayer } from "react-leaflet";
 import { useStore } from "@/lib/store";
+import {
+  satelliteMaxNativeZoom,
+  validSatelliteFrames,
+} from "@/lib/satelliteFrames";
 import type { SatelliteFrame } from "@/lib/types";
 
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+
+type SatelliteCatalogue = {
+  mode: string;
+  frames: SatelliteFrame[];
+  error: string;
+};
 
 function describeSatelliteError(error: unknown): string {
   if (error instanceof TypeError && /fetch/i.test(error.message)) {
@@ -21,12 +31,15 @@ export default function SatelliteLayer() {
   const usesUnifiedViirs =
     activeMode === "night-lights" &&
     state.mapViewMode === "light-pollution";
-  const [frame, setFrame] = useState<SatelliteFrame | null>(null);
-  const [frames, setFrames] = useState<SatelliteFrame[]>([]);
-  const [frameMode, setFrameMode] = useState("");
-  const [error, setError] = useState("");
+  const [catalogue, setCatalogue] = useState<SatelliteCatalogue>({
+    mode: "",
+    frames: [],
+    error: "",
+  });
   const [refreshTick, setRefreshTick] = useState(0);
   const lastManualRevision = useRef(0);
+  const requestSequence = useRef(0);
+  const activeProductRef = useRef("");
 
   useEffect(() => {
     if (activeMode === "forecast-cloud" || usesUnifiedViirs) return;
@@ -38,9 +51,18 @@ export default function SatelliteLayer() {
   }, [activeMode, usesUnifiedViirs]);
 
   useEffect(() => {
-    if (activeMode === "forecast-cloud" || usesUnifiedViirs) return;
-    const kind =
+    if (activeMode === "forecast-cloud" || usesUnifiedViirs) {
+      requestSequence.current += 1;
+      activeProductRef.current = "";
+      return;
+    }
+
+    const kind: SatelliteFrame["kind"] =
       activeMode === "satellite-cloud" ? "cloud" : "night-lights";
+    activeProductRef.current = activeMode;
+    const requestId = requestSequence.current + 1;
+    requestSequence.current = requestId;
+
     const manualRefresh =
       state.dataRefreshRevision > 0 &&
       state.dataRefreshRevision !== lastManualRevision.current;
@@ -48,46 +70,63 @@ export default function SatelliteLayer() {
     const params = new URLSearchParams({ kind });
     if (manualRefresh) params.set("refresh", "1");
     const controller = new AbortController();
+
     fetch(`/api/satellite/times?${params.toString()}`, {
       signal: controller.signal,
       cache: manualRefresh ? "no-store" : "default",
       headers: { Accept: "application/json" },
     })
       .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error ?? "卫星数据不可用");
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data) {
+          throw new Error(data?.error ?? "卫星数据不可用");
         }
         return data;
       })
       .then((data) => {
-        const nextFrames = Array.isArray(data.frames)
-          ? (data.frames as SatelliteFrame[])
-          : [];
-        const nextFrame = nextFrames[0];
-        if (nextFrames.length) {
-          setFrames(nextFrames);
-          setSatelliteFrames(nextFrames);
-          setFrame(nextFrame ?? null);
-          if (activeMode === "satellite-cloud" && nextFrame) {
-            setCloud({ activeObservationTime: nextFrame.time });
-          }
+        if (
+          controller.signal.aborted ||
+          requestSequence.current !== requestId ||
+          activeProductRef.current !== activeMode
+        ) {
+          return;
         }
-        setFrameMode(activeMode);
-        setError(
-          nextFrame
-            ? data.stale
-              ? data.message ?? "正在使用最近一次成功的卫星目录"
-              : ""
-            : data.message ?? "最近没有可用卫星时次",
-        );
+        const nextFrames = validSatelliteFrames(kind, data.frames);
+        const nextError = nextFrames.length
+          ? data.stale
+            ? data.message ?? "正在使用最近一次成功的卫星目录"
+            : ""
+          : data.message ?? "最近没有可用卫星时次";
+        setCatalogue({
+          mode: activeMode,
+          frames: nextFrames,
+          error: nextError,
+        });
+        // The shared timeline only represents satellite-cloud observations.
+        // Night-light reference frames remain local to this layer.
+        setSatelliteFrames(kind === "cloud" ? nextFrames : []);
+        const nextFrame = nextFrames[0];
+        if (activeMode === "satellite-cloud" && nextFrame) {
+          setCloud({ activeObservationTime: nextFrame.time });
+        }
       })
       .catch((requestError) => {
-        if (requestError.name !== "AbortError") {
-          setFrameMode(activeMode);
-          setError(describeSatelliteError(requestError));
+        if (
+          requestError?.name === "AbortError" ||
+          controller.signal.aborted ||
+          requestSequence.current !== requestId ||
+          activeProductRef.current !== activeMode
+        ) {
+          return;
         }
+        setCatalogue({
+          mode: activeMode,
+          frames: [],
+          error: describeSatelliteError(requestError),
+        });
+        setSatelliteFrames([]);
       });
+
     return () => controller.abort();
   }, [
     activeMode,
@@ -98,34 +137,42 @@ export default function SatelliteLayer() {
     usesUnifiedViirs,
   ]);
 
+  const expectedKind: SatelliteFrame["kind"] =
+    activeMode === "satellite-cloud" ? "cloud" : "night-lights";
   const displayedFrame =
-    activeMode === "satellite-cloud"
-      ? frames.find(
-          (item) => item.time === state.cloudState.activeObservationTime,
-        ) ?? frames[0] ?? null
-      : frame;
+    catalogue.mode === activeMode
+      ? activeMode === "satellite-cloud"
+        ? catalogue.frames.find(
+            (item) =>
+              item.kind === expectedKind &&
+              item.time === state.cloudState.activeObservationTime,
+          ) ??
+          catalogue.frames.find((item) => item.kind === expectedKind) ??
+          null
+        : catalogue.frames.find((item) => item.kind === expectedKind) ?? null
+      : null;
 
   if (activeMode === "forecast-cloud" || usesUnifiedViirs) return null;
-  if (frameMode !== activeMode || !displayedFrame) {
-    return frameMode === activeMode && error ? (
+  if (!displayedFrame) {
+    return catalogue.mode === activeMode && catalogue.error ? (
       <div className="satellite-layer-error" role="status">
-        {error}
+        {catalogue.error}
       </div>
-    ) : frameMode === activeMode ? (
+    ) : (
       <div
         className="satellite-layer-error satellite-layer-loading"
         role="status"
       >
         正在刷新卫星观测…
       </div>
-    ) : null;
+    );
   }
 
   const url = displayedFrame.tileTemplate
     .replaceAll("{Time}", displayedFrame.time)
-    .replace("{TileMatrix}", "{z}")
-    .replace("{TileRow}", "{y}")
-    .replace("{TileCol}", "{x}");
+    .replaceAll("{TileMatrix}", "{z}")
+    .replaceAll("{TileRow}", "{y}")
+    .replaceAll("{TileCol}", "{x}");
   return (
     <>
       <TileLayer
@@ -133,7 +180,10 @@ export default function SatelliteLayer() {
         url={url}
         opacity={activeMode === "night-lights" ? 0.82 : 0.72}
         attribution={`&copy; NASA GIBS · ${displayedFrame.satellite} · ${displayedFrame.time}`}
-        maxZoom={9}
+        maxNativeZoom={satelliteMaxNativeZoom(displayedFrame.kind)}
+        maxZoom={18}
+        noWrap
+        keepBuffer={4}
       />
       <div className="satellite-frame-badge" role="status">
         {activeMode === "satellite-cloud"
@@ -141,7 +191,7 @@ export default function SatelliteLayer() {
           : "卫星夜光 · 2016 基准"}
         {" · "}
         {formatFrameTime(displayedFrame.time, activeMode)}
-        {error ? " · 数据目录降级" : " · 已同步"}
+        {catalogue.error ? " · 数据目录降级" : " · 已同步"}
       </div>
     </>
   );

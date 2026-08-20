@@ -31,7 +31,14 @@ export default function CloudLayer() {
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const activeRequestSignatureRef = useRef<string | null>(null);
   const gridSigRef = useRef<string | null>(null);
+  const cloudGridRef = useRef(cloudGrid);
+  const lastHandledRefreshRevisionRef = useRef(0);
+
+  useEffect(() => {
+    cloudGridRef.current = cloudGrid;
+  }, [cloudGrid]);
 
   const performSampling = useCallback(
     async (forceRefresh = false) => {
@@ -42,18 +49,47 @@ export default function CloudLayer() {
       ) {
         return;
       }
-      const { samples, rows, cols } = generateGridBounds(
+      const { samples, rows, cols, rect } = generateGridBounds(
         map.getBounds(),
         5,
         6,
       );
       const nights = nightRangeKeys(selectedNight, cloudState.range);
+      const contextSignature = `${selectedNight}|${cloudState.range}|${cloudState.model}|${dataRefreshRevision}`;
+      const boundsSignature = [
+        rect.north,
+        rect.south,
+        rect.east,
+        rect.west,
+      ]
+        .map((value) => value.toFixed(4))
+        .join("|");
+      const requestSignature = `${contextSignature}|${boundsSignature}`;
+
+      // Setting cloudGrid=null used to retrigger the effect, which immediately
+      // aborted the request it had just started. Keep one request per exact
+      // context/bounds pair and preserve a compatible grid while refreshing.
+      if (activeRequestSignatureRef.current === requestSignature) return;
+
       requestRef.current?.abort();
       const controller = new AbortController();
       requestRef.current = controller;
+      activeRequestSignatureRef.current = requestSignature;
+
+      const existingGrid = cloudGridRef.current;
+      const preserveExisting = Boolean(
+        existingGrid &&
+          existingGrid.model === cloudState.model &&
+          existingGrid.nightKeys[0] === selectedNight &&
+          existingGrid.nightKeys.length === cloudState.range,
+      );
+      if (!preserveExisting) {
+        cloudGridRef.current = null;
+        setCloudGrid(null);
+      }
       setCloudGridLoading(true);
-      setCloudGrid(null);
       setError(null);
+
       try {
         const data = await fetchCloudGrid(
           samples,
@@ -70,15 +106,34 @@ export default function CloudLayer() {
           controller.signal,
           forceRefresh,
         );
-        if (controller.signal.aborted) return;
-        gridSigRef.current = `${selectedNight}|${cloudState.range}|${cloudState.model}|${dataRefreshRevision}`;
+        if (
+          controller.signal.aborted ||
+          activeRequestSignatureRef.current !== requestSignature
+        ) {
+          return;
+        }
+        gridSigRef.current = contextSignature;
+        cloudGridRef.current = data;
         setCloudGrid(data);
       } catch (caught) {
-        if (controller.signal.aborted) return;
+        if (
+          controller.signal.aborted ||
+          activeRequestSignatureRef.current !== requestSignature
+        ) {
+          return;
+        }
         setError(describeCloudError(caught));
-        setCloudGrid(null);
+        if (!preserveExisting) {
+          cloudGridRef.current = null;
+          setCloudGrid(null);
+        }
       } finally {
-        if (requestRef.current === controller) {
+        if (
+          requestRef.current === controller &&
+          activeRequestSignatureRef.current === requestSignature
+        ) {
+          requestRef.current = null;
+          activeRequestSignatureRef.current = null;
           setCloudGridLoading(false);
         }
       }
@@ -103,12 +158,21 @@ export default function CloudLayer() {
       !selectedNight
     ) {
       requestRef.current?.abort();
+      requestRef.current = null;
+      activeRequestSignatureRef.current = null;
       gridSigRef.current = null;
+      setCloudGridLoading(false);
       return;
     }
     const signature = `${selectedNight}|${cloudState.range}|${cloudState.model}|${dataRefreshRevision}`;
     if (cloudGrid && gridSigRef.current === signature) return;
-    void performSampling(dataRefreshRevision > 0);
+    const forceRefresh =
+      dataRefreshRevision > 0 &&
+      dataRefreshRevision !== lastHandledRefreshRevisionRef.current;
+    if (forceRefresh) {
+      lastHandledRefreshRevisionRef.current = dataRefreshRevision;
+    }
+    void performSampling(forceRefresh);
   }, [
     cloudGrid,
     cloudState.enabled,
@@ -119,6 +183,7 @@ export default function CloudLayer() {
     map,
     performSampling,
     selectedNight,
+    setCloudGridLoading,
   ]);
 
   useMapEvents({
@@ -152,6 +217,8 @@ export default function CloudLayer() {
     () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       requestRef.current?.abort();
+      requestRef.current = null;
+      activeRequestSignatureRef.current = null;
     },
     [],
   );
@@ -194,9 +261,13 @@ export default function CloudLayer() {
           }}
         />
       )}
-      {error && !cloudGrid && (
+      {error && (
         <div className="cloud-overlay-error" role="status">
-          <span>云图加载失败：{error}</span>
+          <span>
+            {cloudGrid
+              ? `云图刷新失败，已保留上一次结果：${error}`
+              : `云图加载失败：${error}`}
+          </span>
           <button type="button" onClick={() => void performSampling(true)}>
             强制重试
           </button>

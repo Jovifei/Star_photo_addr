@@ -13,14 +13,63 @@ export const LIGHT_POLLUTION_TILE_URL =
 export const LIGHT_POLLUTION_ATTRIBUTION =
   "光污染参考 © darkmap.cn · VIIRS 2023";
 
+/**
+ * Materialize a browser tile template for the server-side probe. Leaflet
+ * understands `{s}`, `{r}` and `{-y}` in addition to z/x/y; leaving any of
+ * those literal made a valid custom template fail `/api/data-status` even
+ * though the browser could render it.
+ */
 export function materializeLightPollutionTile(
   template: string,
   zoom = 4,
   x = 12,
   y = 6,
 ): string {
+  const invertedY = Math.max(0, 2 ** zoom - y - 1);
   return template
     .replaceAll("{z}", String(zoom))
     .replaceAll("{x}", String(x))
-    .replaceAll("{y}", String(y));
+    .replaceAll("{-y}", String(invertedY))
+    .replaceAll("{y}", String(y))
+    .replaceAll("{s}", "a")
+    .replaceAll("{r}", "");
+}
+
+/**
+ * Validate the public Leaflet/WMTS template before either the browser or the
+ * server-side health probe tries to use it. A malformed build-time value used
+ * to produce a page that looked healthy while every tile request was invalid.
+ */
+export function lightPollutionTemplateError(template: string): string | null {
+  const value = template.trim();
+  if (!value) return "瓦片模板为空";
+  if (/\p{C}/u.test(value)) return "瓦片模板包含控制字符";
+
+  const missing: string[] = [];
+  if (!value.includes("{z}")) missing.push("{z}");
+  if (!value.includes("{x}")) missing.push("{x}");
+  if (!value.includes("{y}") && !value.includes("{-y}")) {
+    missing.push("{y} 或 {-y}");
+  }
+  if (missing.length) {
+    return `瓦片模板缺少 ${missing.join("、")} 占位符`;
+  }
+
+  const concrete = materializeLightPollutionTile(value, 4, 12, 6);
+  if (/\{[^}]+\}/.test(concrete)) {
+    return "瓦片模板包含不支持的占位符";
+  }
+
+  try {
+    const url = new URL(concrete);
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return "瓦片模板必须使用 HTTP 或 HTTPS";
+    }
+    if (url.username || url.password) {
+      return "瓦片模板不能在 URL 中携带账号或密码";
+    }
+  } catch {
+    return "瓦片模板不是合法 URL";
+  }
+  return null;
 }

@@ -36,6 +36,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Check (lint + typecheck + unit tests + build)
         run: npm run check
 
@@ -54,6 +57,75 @@ jobs:
 
       - name: Probe weather, satellite, geocoding, air quality and Kp providers
         run: npm run test:live
+
+  container-smoke:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate merged Compose configuration
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.aliyun.yml \
+            config --quiet
+
+      - name: Validate Nginx template
+        run: |
+          mkdir -p /tmp/star-photo-certs
+          openssl req -x509 -newkey rsa:2048 -nodes \
+            -keyout /tmp/star-photo-certs/privkey.pem \
+            -out /tmp/star-photo-certs/fullchain.pem \
+            -days 1 -subj '/CN=stars.example.com' >/dev/null 2>&1
+          docker run --rm \
+            -v "$PWD/deploy/nginx/star-photo.conf:/etc/nginx/conf.d/star-photo.conf:ro" \
+            -v "/tmp/star-photo-certs:/etc/letsencrypt/live/stars.example.com:ro" \
+            nginx:1.27-alpine nginx -t
+
+      - name: Build production image
+        env:
+          BUILD_REVISION: ${{ github.sha }}
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.aliyun.yml \
+            build star-weather
+
+      - name: Start and probe production container
+        env:
+          BUILD_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cleanup() {
+            docker compose \
+              -f docker-compose.yml \
+              -f docker-compose.aliyun.yml \
+              down --remove-orphans || true
+          }
+          trap cleanup EXIT
+
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.aliyun.yml \
+            up -d --no-deps star-weather
+
+          for attempt in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3100/healthz > /tmp/health.json; then
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 1
+          done
+
+          docker compose \
+            -f docker-compose.yml \
+            -f docker-compose.aliyun.yml \
+            logs star-weather
+          exit 1
 
   e2e:
     needs: quality

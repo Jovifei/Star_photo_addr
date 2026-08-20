@@ -5,6 +5,7 @@ import {
 } from "@/lib/gibs";
 import {
   LIGHT_POLLUTION_TILE_URL,
+  lightPollutionTemplateError,
   materializeLightPollutionTile,
 } from "@/lib/lightPollution";
 import { OPEN_METEO_FORECAST_URL } from "@/lib/forecast";
@@ -94,7 +95,7 @@ export function sanitizeProbeError(
     const httpStatus = error.message.match(/HTTP\s+(\d{3})/i)?.[1];
     if (httpStatus) return `${sourceLabel}返回 HTTP ${httpStatus}`;
     if (
-      /字段不可用|格式无法识别|图层目录缺少|瓦片响应不是图片|瓦片内容过小/.test(
+      /字段不可用|格式无法识别|图层目录缺少|瓦片响应不是图片|瓦片内容过小|瓦片模板无效/.test(
         error.message,
       )
     ) {
@@ -211,6 +212,12 @@ async function probeLightPollution(
 ): Promise<DataSourceProbe> {
   const startedAt = Date.now();
   try {
+    const templateIssue = lightPollutionTemplateError(
+      LIGHT_POLLUTION_TILE_URL,
+    );
+    if (templateIssue) {
+      throw new Error(`光污染瓦片模板无效：${templateIssue}`);
+    }
     const tileUrl = materializeLightPollutionTile(
       LIGHT_POLLUTION_TILE_URL,
       4,

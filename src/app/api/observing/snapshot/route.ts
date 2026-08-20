@@ -6,6 +6,7 @@ import {
 import { buildObservationSnapshot } from "@/lib/observingSites";
 import {
   markSnapshotStale,
+  observationRefreshFamilyKey,
   observationSnapshotKey,
   readObservationSnapshot,
   snapshotAgeMs,
@@ -34,22 +35,22 @@ function boundedInteger(
   minimum: number,
   maximum: number,
 ): number {
-  const parsed = Number(process.env[name]);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(maximum, Math.max(minimum, Math.round(parsed)));
+  const value = Number(process.env[name]);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(maximum, Math.max(minimum, Math.round(value)));
 }
 
 const SNAPSHOT_TTL_MS = boundedInteger(
   "OBSERVATION_SNAPSHOT_TTL_MS",
   30 * 60_000,
   60_000,
-  6 * 60 * 60_000,
+  24 * 60 * 60_000,
 );
 const SNAPSHOT_STALE_TTL_MS = boundedInteger(
   "OBSERVATION_SNAPSHOT_STALE_TTL_MS",
   6 * 60 * 60_000,
   SNAPSHOT_TTL_MS,
-  48 * 60 * 60_000,
+  7 * 24 * 60 * 60_000,
 );
 const SNAPSHOT_TIMEOUT_MS = boundedInteger(
   "OBSERVATION_SNAPSHOT_TIMEOUT_MS",
@@ -63,34 +64,31 @@ const FORCE_REFRESH_COOLDOWN_MS = boundedInteger(
   5_000,
   15 * 60_000,
 );
-
 const inFlight = new Map<string, Promise<ObservationSnapshot>>();
 const lastForcedRefreshAt = new Map<string, number>();
 
-function jsonError(message: string, status: number) {
+function jsonError(
+  message: string,
+  status: number,
+  headers: Record<string, string> = {},
+) {
   return NextResponse.json(
-    { error: message },
-    { status, headers: { "Cache-Control": "no-store" } },
+    { error: message, stale: false },
+    {
+      status,
+      headers: { "Cache-Control": "no-store", ...headers },
+    },
   );
 }
 
-function trimRefreshHistory(): void {
+function trimRefreshMap(): void {
   while (lastForcedRefreshAt.size > 64) {
     const oldest = lastForcedRefreshAt.keys().next().value as
       | string
       | undefined;
-    if (!oldest) break;
+    if (oldest === undefined) break;
     lastForcedRefreshAt.delete(oldest);
   }
-}
-
-function safeSnapshotError(error: unknown, timedOut: boolean): string {
-  if (timedOut) return "观星快照请求超时";
-  if (error instanceof Error) {
-    const status = error.message.match(/HTTP\s+(\d{3})/i)?.[1];
-    if (status) return `观星天气上游返回 HTTP ${status}`;
-  }
-  return "观星快照暂不可用";
 }
 
 export async function GET(request: NextRequest) {
@@ -132,122 +130,174 @@ export async function GET(request: NextRequest) {
   }
   const focusTime = focusTimeRaw ?? undefined;
   const key = observationSnapshotKey(date, days, model, focusTime);
-  const forceRefresh = params.get("refresh") === "1";
+  const refreshFamily = observationRefreshFamilyKey(date, model);
+  const forceRefreshRequested = params.get("refresh") === "1";
   const now = Date.now();
-  const cached = await readObservationSnapshot(key);
-  const cachedAge = cached ? snapshotAgeMs(cached) : Number.POSITIVE_INFINITY;
+  const lastForcedRefresh = lastForcedRefreshAt.get(refreshFamily) ?? 0;
+  const refreshSuppressed =
+    forceRefreshRequested &&
+    now - lastForcedRefresh < FORCE_REFRESH_COOLDOWN_MS;
+  const effectiveForceRefresh =
+    forceRefreshRequested && !refreshSuppressed;
+  const retryAfterSeconds = refreshSuppressed
+    ? Math.max(
+        1,
+        Math.ceil(
+          (lastForcedRefresh + FORCE_REFRESH_COOLDOWN_MS - now) / 1000,
+        ),
+      )
+    : null;
 
-  if (!forceRefresh && cached && cachedAge < SNAPSHOT_TTL_MS) {
-    return NextResponse.json(cached, {
-      headers: {
-        "Cache-Control":
-          "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
-        "X-Observation-Cache": "disk",
-        "X-Data-Stale": String(cached.stale),
-        "X-Refresh-Suppressed": "false",
-      },
-    });
-  }
-
-  const lastForced = lastForcedRefreshAt.get(key) ?? 0;
-  if (
-    forceRefresh &&
-    cached &&
-    cachedAge <= SNAPSHOT_STALE_TTL_MS &&
-    now - lastForced < FORCE_REFRESH_COOLDOWN_MS
-  ) {
-    const stale = cachedAge >= SNAPSHOT_TTL_MS || cached.stale;
-    return NextResponse.json(stale ? markSnapshotStale(cached) : cached, {
-      headers: {
-        "Cache-Control": "no-store, max-age=0",
-        "X-Observation-Cache": "refresh-cooldown",
-        "X-Data-Stale": String(stale),
-        "X-Refresh-Suppressed": "true",
-      },
-    });
-  }
-
-  let activeTask = inFlight.get(key);
-  let cacheState = "coalesced";
-  if (!activeTask) {
-    cacheState = "refresh";
-    if (forceRefresh) {
-      lastForcedRefreshAt.set(key, now);
-      trimRefreshHistory();
-    }
-    const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      SNAPSHOT_TIMEOUT_MS,
-    );
-    activeTask = (async () => {
-      try {
-        const weather = await fetchFinderWeatherRange(
-          dates,
-          controller.signal,
-          forceRefresh,
-          model,
-        );
-        const weatherByDate = Object.fromEntries(
-          Object.entries(weather).map(([night, response]) => [
-            night,
-            response.data,
-          ]),
-        );
-        const snapshot = buildObservationSnapshot(
-          date,
-          days,
-          model,
-          weatherByDate,
-          focusTime,
-        );
-        await writeObservationSnapshot(key, snapshot);
-        return snapshot;
-      } finally {
-        clearTimeout(timeout);
-      }
-    })();
-    inFlight.set(key, activeTask);
-    void activeTask
-      .finally(() => {
-        if (inFlight.get(key) === activeTask) inFlight.delete(key);
-      })
-      .catch(() => undefined);
-  }
-
+  let activeTask: Promise<ObservationSnapshot> | null = null;
   try {
+    const cached = await readObservationSnapshot(key);
+    const cachedAge = cached ? snapshotAgeMs(cached) : Number.POSITIVE_INFINITY;
+
+    if (
+      !forceRefreshRequested &&
+      cached &&
+      cachedAge < SNAPSHOT_TTL_MS
+    ) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control":
+            "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
+          "X-Observation-Cache": "disk",
+          "X-Data-Stale": String(cached.stale),
+          "X-Refresh-Suppressed": "false",
+        },
+      });
+    }
+
+    if (
+      refreshSuppressed &&
+      cached &&
+      cachedAge <= SNAPSHOT_STALE_TTL_MS
+    ) {
+      const stale = cachedAge >= SNAPSHOT_TTL_MS || cached.stale;
+      const payload = stale ? markSnapshotStale(cached) : cached;
+      return NextResponse.json(payload, {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+          "X-Observation-Cache": "refresh-cooldown",
+          "X-Data-Stale": String(stale),
+          "X-Refresh-Suppressed": "true",
+          ...(retryAfterSeconds
+            ? { "Retry-After": String(retryAfterSeconds) }
+            : {}),
+        },
+      });
+    }
+
+    activeTask = inFlight.get(key) ?? null;
+    if (
+      refreshSuppressed &&
+      !activeTask &&
+      (!cached || cachedAge > SNAPSHOT_STALE_TTL_MS)
+    ) {
+      return jsonError(
+        "观星快照强制刷新处于冷却保护，请稍后重试",
+        429,
+        {
+          "X-Observation-Cache": "refresh-cooldown",
+          "X-Refresh-Suppressed": "true",
+          ...(retryAfterSeconds
+            ? { "Retry-After": String(retryAfterSeconds) }
+            : {}),
+        },
+      );
+    }
+
+    if (effectiveForceRefresh) {
+      lastForcedRefreshAt.delete(refreshFamily);
+      lastForcedRefreshAt.set(refreshFamily, now);
+      trimRefreshMap();
+    }
+
+    let cacheState = activeTask
+      ? "coalesced"
+      : refreshSuppressed
+        ? "refresh-cooldown"
+        : "refresh";
+    if (!activeTask) {
+      activeTask = (async () => {
+        const sharedController = new AbortController();
+        const sharedTimeout = setTimeout(
+          () => sharedController.abort(),
+          SNAPSHOT_TIMEOUT_MS,
+        );
+        try {
+          const weather = await fetchFinderWeatherRange(
+            dates,
+            sharedController.signal,
+            effectiveForceRefresh,
+            model,
+          );
+          const weatherByDate = Object.fromEntries(
+            Object.entries(weather).map(([night, response]) => [
+              night,
+              response.data,
+            ]),
+          );
+          return buildObservationSnapshot(
+            date,
+            days,
+            model,
+            weatherByDate,
+            focusTime,
+          );
+        } finally {
+          clearTimeout(sharedTimeout);
+        }
+      })();
+      inFlight.set(key, activeTask);
+    }
     const snapshot = await activeTask;
+    await writeObservationSnapshot(key, snapshot);
+    if (cacheState === "coalesced" && refreshSuppressed) {
+      cacheState = "refresh-cooldown";
+    }
     return NextResponse.json(snapshot, {
       headers: {
-        "Cache-Control": forceRefresh
+        "Cache-Control": forceRefreshRequested
           ? "no-store, max-age=0"
           : "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
         "X-Observation-Source":
           "Open-Meteo + curated dark-sky site metadata",
         "X-Observation-Cache": cacheState,
-        "X-Data-Stale": "false",
-        "X-Refresh-Suppressed": "false",
+        "X-Data-Stale": String(snapshot.stale),
+        "X-Refresh-Suppressed": String(refreshSuppressed),
+        ...(retryAfterSeconds
+          ? { "Retry-After": String(retryAfterSeconds) }
+          : {}),
       },
     });
   } catch (error) {
     const fallback = await readObservationSnapshot(key);
-    if (fallback && snapshotAgeMs(fallback) <= SNAPSHOT_STALE_TTL_MS) {
+    if (
+      fallback &&
+      snapshotAgeMs(fallback) <= SNAPSHOT_STALE_TTL_MS
+    ) {
       return NextResponse.json(markSnapshotStale(fallback), {
         headers: {
           "Cache-Control": "no-store, max-age=0",
           "X-Observation-Cache": "stale-disk",
           "X-Data-Stale": "true",
-          "X-Refresh-Suppressed": "false",
+          "X-Refresh-Suppressed": String(refreshSuppressed),
+          Warning: '110 - "Response is stale"',
         },
       });
     }
     const timedOut =
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
-    console.warn(
-      `[api/observing/snapshot] ${timedOut ? "timeout" : "upstream failure"}`,
-      error instanceof Error ? error.message : error,
+    return jsonError(
+      timedOut ? "观星快照请求超时" : "观星快照暂时不可用",
+      timedOut ? 504 : 502,
     );
-    return jsonError(safeSnapshotError(error, timedOut), timedOut ? 504 : 502);
+  } finally {
+    if (activeTask && inFlight.get(key) === activeTask) {
+      inFlight.delete(key);
+    }
   }
 }
