@@ -89,7 +89,9 @@ test("光污染瓦片不强制要求 CORS 响应头", async ({ page }) => {
     .getByRole("tab", { name: "光污染" })
     .click();
 
-  const map = page.locator(".map-viewport");
+  // ObservingViirsLayer writes status on Leaflet's actual map container, not
+  // the outer layout wrapper.
+  const map = page.locator(".leaflet-container");
   await expect(map).toHaveAttribute(
     "data-observing-viirs-status",
     "available",
