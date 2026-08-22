@@ -9,6 +9,8 @@ import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import MapHeadline from "@/components/MapHeadline";
 import MapViewActions from "@/components/MapViewActions";
 import MapSearchCard from "@/components/MapSearchCard";
+import MapLayerBar from "@/components/MapLayerBar";
+import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import MapSetup from "@/components/MapSetup";
 import MapLegend from "@/components/MapLegend";
 import BortleControl from "@/components/BortleControl";
@@ -74,6 +76,8 @@ export default function MapStage() {
         <MapHeadline />
         <MapViewActions mapRef={mapRef} />
         <MapSearchCard />
+        <ForecastThemeSwitch />
+        <MapLayerBar />
         <BortleControl />
         <CloudControl />
         <ObservingMapControl />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { NIGHT_END, NIGHT_START } from "@/lib/constants";
@@ -17,7 +17,9 @@ const RANGE_OPTIONS: Array<{ value: 1 | 5 | 7; label: string }> = [
   { value: 5, label: "5 夜" },
   { value: 7, label: "7 夜" },
 ];
-const PLAY_INTERVAL_MS = 1500;
+const PLAY_BASE_INTERVAL_MS = 1500;
+const PLAY_SPEEDS = [0.5, 1, 2] as const;
+const EXPAND_PREF_KEY = "perseids-cloud-timeline-expand-v1";
 
 function buildSchedule(nightKeys: string[]): Array<{ time: string; nightKey: string }> {
   return nightKeys.flatMap((nightKey) =>
@@ -42,12 +44,85 @@ function activeForecastTimeLabel(time?: string): string {
   return time.replace("T", " ");
 }
 
+function previousDateKey(date: string): string {
+  const value = new Date(`${date}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() - 1);
+  return value.toISOString().slice(0, 10);
+}
+
+/** Night bucket of an ISO hour: 20:00–05:00 rolls 00–05 into the prior date. */
+function nightKeyOfTime(time: string): string {
+  const hour = Number(time.slice(11, 13));
+  const date = time.slice(0, 10);
+  if (hour <= 5) return previousDateKey(date);
+  return date;
+}
+
+interface TrackTick {
+  time: string;
+  label: string;
+}
+
+interface TrackSegment {
+  key: string;
+  kind: "night" | "day";
+  label: string;
+  ticks: TrackTick[];
+}
+
+/**
+ * Group the flat hourly timeline into night rails with collapsed daytime
+ * gaps, so 72 hours of forecast become "tonight / tomorrow / …" tracks with
+ * directly clickable hour ticks instead of one opaque 73-step slider.
+ */
+function buildTrackSegments(
+  items: Array<{ time: string }>,
+  satellite: boolean,
+): TrackSegment[] {
+  if (!items.length) return [];
+  if (satellite) {
+    const step = Math.max(1, Math.ceil(items.length / 8));
+    const ticks = items
+      .filter((_, index) => index % step === 0 || index === items.length - 1)
+      .map((item) => ({ time: item.time, label: formatTimelineTime(item.time).slice(6) }));
+    return [{ key: "obs-24h", kind: "night", label: "过去 24 小时", ticks }];
+  }
+  const segments: TrackSegment[] = [];
+  for (const item of items) {
+    const hour = Number(item.time.slice(11, 13));
+    const isDayHour = hour >= 6 && hour <= 19;
+    if (isDayHour) {
+      if (hour % 6 !== 0) continue;
+      let day = segments[segments.length - 1];
+      if (!day || day.kind !== "day") {
+        day = { key: `day-${item.time.slice(0, 10)}`, kind: "day", label: "白天", ticks: [] };
+        segments.push(day);
+      }
+      day.ticks.push({ time: item.time, label: String(hour) });
+      continue;
+    }
+    const nightKey = nightKeyOfTime(item.time);
+    let segment = segments.find((candidate) => candidate.kind === "night" && candidate.key === nightKey);
+    if (!segment) {
+      segment = { key: nightKey, kind: "night", label: formatNightLabel(nightKey, true), ticks: [] };
+      segments.push(segment);
+    }
+    segment.ticks.push({ time: item.time, label: String(hour) });
+  }
+  return segments;
+}
+
 export default function CloudTimeline() {
   const { state, setCloud, selectNight } = useStore();
   const { cloudState, selectedNight, cloudGrid, forecast, selectedLocation } = state;
   const [expanded, setExpanded] = useState(false);
+  const [playSpeed, setPlaySpeed] = useState<(typeof PLAY_SPEEDS)[number]>(1);
   const [aqiValue, setAqiValue] = useState<number | null>(null);
   const [kpValue, setKpValue] = useState<number | null>(null);
+  // Auto-expanding the matrix for a fresh selection is a default, not a law:
+  // once the user toggles the panel we persist their preference and stop.
+  const expandTouchedRef = useRef(false);
+  const autoExpandedLocationRef = useRef<string | null>(null);
   const nightKeys = useMemo(
     () => nightRangeKeys(selectedNight, cloudState.range),
     [selectedNight, cloudState.range],
@@ -75,14 +150,6 @@ export default function CloudTimeline() {
     () => isNightLightsMode ? [] : isSatelliteMode ? observationTimeline : forecastTimeline,
     [forecastTimeline, isNightLightsMode, isSatelliteMode, observationTimeline],
   );
-  const timelineTicks = useMemo(() => {
-    if (!timelineItems.length) return [];
-    const tickCount = isSatelliteMode ? 5 : 4;
-    return Array.from({ length: tickCount }, (_, index) => {
-      const itemIndex = Math.round((index * (timelineItems.length - 1)) / Math.max(1, tickCount - 1));
-      return timelineItems[itemIndex];
-    });
-  }, [isSatelliteMode, timelineItems]);
   const activeTimelineIndex = isSatelliteMode
     ? observationTimeline.findIndex((frame) => frame.time === cloudState.activeObservationTime)
     : forecastTimeline.findIndex((item) => item.time === cloudState.activeForecastTime);
@@ -129,6 +196,47 @@ export default function CloudTimeline() {
     () => pointForecast && selectedLocation ? evaluateNight(pointForecast, selectedLocation, displayNight) : null,
     [displayNight, pointForecast, selectedLocation],
   );
+
+  const trackSegments = useMemo(
+    () => buildTrackSegments(timelineItems, isSatelliteMode),
+    [isSatelliteMode, timelineItems],
+  );
+  const isTimeActive = useCallback((time: string) =>
+    time === (isSatelliteMode ? cloudState.activeObservationTime : cloudState.activeForecastTime),
+    [cloudState.activeForecastTime, cloudState.activeObservationTime, isSatelliteMode],
+  );
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(EXPAND_PREF_KEY);
+      if (saved) {
+        expandTouchedRef.current = true;
+        if (saved === "1") queueMicrotask(() => setExpanded(true));
+      }
+    } catch {
+      // Preference storage is optional.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedLocation || expandTouchedRef.current) return;
+    if (autoExpandedLocationRef.current === selectedLocation.id) return;
+    autoExpandedLocationRef.current = selectedLocation.id;
+    queueMicrotask(() => setExpanded(true));
+  }, [selectedLocation]);
+
+  const toggleExpanded = useCallback(() => {
+    setExpanded((value) => {
+      const next = !value;
+      expandTouchedRef.current = true;
+      try {
+        localStorage.setItem(EXPAND_PREF_KEY, next ? "1" : "0");
+      } catch {
+        // Preference storage is optional.
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!selectedLocation) {
@@ -187,9 +295,9 @@ export default function CloudTimeline() {
       } else {
         setCloud({ activeForecastTime: timelineItems[nextIndex].time });
       }
-    }, PLAY_INTERVAL_MS);
+    }, Math.round(PLAY_BASE_INTERVAL_MS / playSpeed));
     return () => clearInterval(interval);
-  }, [cloudState.playing, isNightLightsMode, isSatelliteMode, safeTimelineIndex, setCloud, timelineItems]);
+  }, [cloudState.playing, isNightLightsMode, isSatelliteMode, playSpeed, safeTimelineIndex, setCloud, timelineItems]);
 
   const setActiveTime = useCallback((time: string) => {
     if (isSatelliteMode) {
@@ -204,6 +312,25 @@ export default function CloudTimeline() {
     const item = timelineItems[Math.min(Math.max(value, 0), Math.max(0, timelineItems.length - 1))];
     if (item) setActiveTime(item.time);
   }, [setActiveTime, timelineItems]);
+
+  /** Keyboard scrub: ±1 step, ±1 night (±6 obs frames), Home/End. */
+  const onTrackKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
+    const nightJump = isSatelliteMode ? 6 : HOURS_PER_NIGHT;
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      setTimelineIndex(safeTimelineIndex + (event.key === "ArrowRight" ? 1 : -1));
+    } else if (event.key === "PageUp" || event.key === "PageDown") {
+      event.preventDefault();
+      setTimelineIndex(safeTimelineIndex + (event.key === "PageDown" ? nightJump : -nightJump));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setTimelineIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setTimelineIndex(timelineItems.length - 1);
+    }
+  }, [isSatelliteMode, safeTimelineIndex, setTimelineIndex, timelineItems.length]);
 
   const changeRange = (range: 1 | 5 | 7) => {
     const nextNights = nightRangeKeys(selectedNight, range);
@@ -230,21 +357,60 @@ export default function CloudTimeline() {
         {!isNightLightsMode && <button type="button" className={`cloud-timeline-play${cloudState.playing ? " playing" : ""}`} onClick={() => setCloud({ playing: !cloudState.playing })} aria-label={cloudState.playing ? "暂停" : "播放"} disabled={!timelineItems.length}>
           {cloudState.playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
         </button>}
-          {!isNightLightsMode && <div className="cloud-timeline-slider">
-            <input
-              type="range"
-              min={0}
-              max={Math.max(0, timelineItems.length - 1)}
-              value={safeTimelineIndex}
-              disabled={!timelineItems.length || isNightLightsMode}
-              aria-label={isSatelliteMode ? "过去 24 小时卫星观测时次" : "当前至未来 72 小时预报时次"}
-              aria-valuetext={activeTimelineTime ?? "暂无时次"}
-              onChange={(event) => setTimelineIndex(Number(event.target.value))}
-            />
-            <div className="cloud-timeline-labels" aria-hidden="true">
-              {timelineTicks.map((item, index) => <span key={`${item.time}-${index}`}>{item?.time ? formatTimelineTime(item.time) : "暂无"}</span>)}
-            </div>
-          </div>}
+        {!isNightLightsMode && <div className="cloud-timeline-speed" role="group" aria-label="播放速度">
+          {PLAY_SPEEDS.map((speed) => (
+            <button key={speed} type="button" aria-pressed={playSpeed === speed} className={playSpeed === speed ? "active" : ""} onClick={() => setPlaySpeed(speed)}>
+              {speed === 0.5 ? "½×" : `${speed}×`}
+            </button>
+          ))}
+        </div>}
+        {!isNightLightsMode && (
+          <div
+            className="cloud-track"
+            role="group"
+            tabIndex={0}
+            aria-label={isSatelliteMode ? "卫星观测时次轨道：点击刻度直达，方向键微调，PageUp/PageDown 跳 6 小时" : "按夜分组的预报轨道：点击刻度直达，方向键微调，PageUp/PageDown 跳一夜"}
+            onKeyDown={onTrackKeyDown}
+          >
+            {trackSegments.map((segment) => (
+              <div key={segment.key} className={`cloud-track-seg ${segment.kind}${!isSatelliteMode && current.nightKey === segment.key ? " active" : ""}`}>
+                <button
+                  type="button"
+                  className="cloud-track-seg-label"
+                  onClick={() => {
+                    const first = segment.ticks[0];
+                    if (first) setActiveTime(first.time);
+                  }}
+                  disabled={!segment.ticks.length}
+                  aria-label={`跳到${segment.label}第一个时次`}
+                >
+                  {segment.label}
+                </button>
+                <div className="cloud-track-ticks">
+                  {segment.ticks.map((tick) => {
+                    const active = isTimeActive(tick.time);
+                    const showLabel = segment.kind === "day" || isSatelliteMode || Number(tick.label) % 2 === 0 || Number(tick.label) === 5;
+                    return (
+                      <button
+                        key={tick.time}
+                        type="button"
+                        className={`cloud-tick${active ? " active" : ""}`}
+                        aria-pressed={active}
+                        aria-label={`${segment.label} ${tick.label} 时`}
+                        title={formatTimelineTime(tick.time)}
+                        onClick={() => setActiveTime(tick.time)}
+                      >
+                        <span className="cloud-tick-mark" aria-hidden="true" />
+                        {showLabel && <span className="cloud-tick-label" aria-hidden="true">{tick.label}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            {!trackSegments.length && <span className="cloud-track-empty">暂无时次</span>}
+          </div>
+        )}
           {!isSatelliteMode && !isNightLightsMode && <div className="cloud-timeline-range" role="group" aria-label="预报夜数">
            {RANGE_OPTIONS.map((option) => <button key={option.value} type="button" className={cloudState.range === option.value ? "active" : ""} aria-pressed={cloudState.range === option.value} onClick={() => changeRange(option.value)}>{option.label}</button>)}
           </div>}
@@ -254,7 +420,7 @@ export default function CloudTimeline() {
           className="cloud-timeline-toggle"
           aria-expanded={expanded}
           aria-controls="hourly-forecast-panel"
-          onClick={() => setExpanded((value) => !value)}
+          onClick={toggleExpanded}
         >
           {expanded ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
           <span>{expanded ? "收起数据" : "展开数据"}</span>

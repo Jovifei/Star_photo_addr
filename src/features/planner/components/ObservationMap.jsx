@@ -224,7 +224,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
                 radius={selected?.id === location.id ? 9 : 6}
                 pathOptions={{ color: selected?.id === location.id ? "#ffffff" : "#45d8ea", fillColor: "#45d8ea", fillOpacity: 0.85, weight: 2 }}
                 eventHandlers={{ click: () => selectCandidate(location) }}
-              ><Tooltip>{location.name} · {location.elevation} m</Tooltip></CircleMarker>
+              ><Tooltip>{location.name} · {location.elevation == null ? "海拔待核" : `${Math.round(location.elevation)} m`}</Tooltip></CircleMarker>
             ))}
             {selected && !locations.some((location) => location.id === selected.id) && (
               <CircleMarker center={[selected.latitude, selected.longitude]} radius={10} pathOptions={{ color: "#ffffff", fillColor: "#9b8cf9", fillOpacity: 0.95, weight: 3 }}>
@@ -247,7 +247,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
                   className={selected?.id === location.id ? "active" : ""}
                   onClick={() => selectCandidate(location)}
                 >
-                  <span>{location.name}</span><small>{location.elevation} m</small>
+                  <span>{location.name}</span><small>{location.elevation == null ? "海拔待核" : `${Math.round(location.elevation)} m`}</small>
                 </button>
               ))}
             </div>

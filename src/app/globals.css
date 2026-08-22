@@ -23,7 +23,7 @@
 
   --font-sans: "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui,
     sans-serif;
-  --font-heading: "Songti SC", STSong, "Noto Serif CJK SC", "Noto Sans SC Variable", Georgia, serif;
+  --font-heading: "Songti SC", STSong, "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "STZhongsong", SimSun, "Noto Sans SC Variable", Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 }
@@ -95,7 +95,7 @@
 
   --font-sans: "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui,
     sans-serif;
-  --font-heading: "Songti SC", STSong, "Noto Serif CJK SC", "Noto Sans SC Variable", Georgia, serif;
+  --font-heading: "Songti SC", STSong, "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "STZhongsong", SimSun, "Noto Sans SC Variable", Georgia, serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 
@@ -1554,12 +1554,156 @@
   color: var(--amber);
   border-color: var(--amber);
 }
-.cloud-timeline-slider {
+.cloud-timeline-speed {
+  display: inline-flex;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-deep, #04101a);
+}
+.cloud-timeline-speed button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.cloud-timeline-speed button.active {
+  color: #02070b;
+  background: var(--green, #79cfe2);
+  font-weight: 700;
+}
+/* Night-grouped track: clickable hour ticks per night, collapsed daytime. */
+.cloud-track {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: stretch;
+  gap: 6px;
   min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(3, 13, 19, 0.62);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cloud-track:focus-visible {
+  outline: 1px solid var(--green);
+  outline-offset: 1px;
+}
+.cloud-track::-webkit-scrollbar {
+  display: none;
+}
+.cloud-track-seg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+.cloud-track-seg.day {
+  flex: 0 0 auto;
+  opacity: 0.55;
+}
+.cloud-track-seg.day .cloud-track-ticks {
+  gap: 3px;
+}
+.cloud-track-seg-label {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 1px 2px;
+  border-radius: 3px;
+  text-align: left;
+  transition: color var(--transition);
+}
+.cloud-track-seg-label:hover {
+  color: var(--text);
+}
+.cloud-track-seg.active .cloud-track-seg-label {
+  color: var(--green, #79cfe2);
+}
+.cloud-track-seg.day .cloud-track-seg-label {
+  cursor: default;
+  font-weight: 500;
+}
+.cloud-track-ticks {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 0;
+}
+.cloud-tick {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 12px 0 2px;
+  min-width: 14px;
+  flex: 1 1 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.cloud-tick-mark {
+  width: 2px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--line-strong, rgba(151, 211, 225, 0.34));
+  transition: background var(--transition), height var(--transition), box-shadow var(--transition);
+}
+.cloud-tick:hover .cloud-tick-mark {
+  background: var(--text);
+  height: 12px;
+}
+.cloud-tick.active .cloud-tick-mark {
+  background: var(--green, #79cfe2);
+  height: 14px;
+  box-shadow: 0 0 8px rgba(121, 207, 226, 0.55);
+}
+.cloud-tick-label {
+  font-size: 9px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  line-height: 1;
+  white-space: nowrap;
+}
+.cloud-tick.active .cloud-tick-label {
+  color: var(--green, #79cfe2);
+  font-weight: 700;
+}
+.cloud-track-seg.day .cloud-tick {
+  min-width: 10px;
+  padding-top: 15px;
+}
+.cloud-track-empty {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+@media (max-width: 1080px) {
+  .cloud-tick {
+    min-width: 11px;
+  }
+  .cloud-tick-label {
+    display: none;
+  }
+  .cloud-tick.active .cloud-tick-label {
+    display: block;
+  }
 }
 .cloud-timeline-range {
   display: inline-flex;
@@ -1587,18 +1731,6 @@
   background: var(--green, #79cfe2);
   color: #02070b;
   font-weight: 700;
-}
-.cloud-timeline-slider input[type="range"] {
-  width: 100%;
-  accent-color: var(--green);
-  cursor: pointer;
-}
-.cloud-timeline-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--muted);
-  font-family: var(--font-mono);
 }
 .cloud-timeline-current {
   color: var(--text);
@@ -3047,8 +3179,6 @@
 }
 .observing-map-control-title span { display: inline-flex; align-items: center; gap: 7px; color: var(--green-soft); font-weight: 700; }
 .observing-map-control-title b { color: var(--green-soft); font-family: var(--font-data); font-size: 12px; }
-.observing-mode-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.observing-mode-tabs button,
 .observing-filter-row select {
   min-width: 0;
   min-height: 38px;
@@ -3059,7 +3189,6 @@
   font-size: 11px;
   cursor: pointer;
 }
-.observing-mode-tabs button.active { border-color: var(--green); color: var(--green-soft); background: rgba(18, 55, 64, .88); }
 .observing-map-control > small { color: var(--muted); font-size: 10px; line-height: 1.35; }
 .observing-filter-row select { width: 150px; padding: 0 8px; }
 .observing-filter-row span,
@@ -3362,4 +3491,156 @@
     gap: 4px;
     line-height: 1.3;
   }
+}
+
+/* 2026-08-22 P1: cross-product theme switch + global layer bar. */
+.forecast-theme-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(2, 9, 14, 0.72);
+}
+.forecast-theme-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color var(--transition), background-color var(--transition), box-shadow var(--transition);
+}
+.forecast-theme-switch button:hover {
+  color: var(--text);
+}
+.forecast-theme-switch button.active {
+  color: #02070b;
+  background: var(--green, #79cfe2);
+  box-shadow: 0 6px 16px rgba(121, 207, 226, 0.18);
+}
+.forecast-theme-switch.theme-cloud button.active {
+  background: var(--amber, #d4b273);
+  box-shadow: 0 6px 16px rgba(212, 178, 115, 0.2);
+}
+.forecast-theme-switch.compact button {
+  min-height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+.map-layer-bar {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 920;
+  display: inline-flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid rgba(121, 207, 226, 0.32);
+  border-radius: var(--radius-pill, 999px);
+  background: rgba(4, 16, 24, 0.92);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+}
+.map-layer-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition), background-color var(--transition);
+}
+.map-layer-bar button:hover {
+  color: var(--text);
+}
+.map-layer-bar button.active {
+  color: #041018;
+  background: var(--green, #79cfe2);
+}
+/* Cloud domain sub-toggle (预报 / 实况) lives inside the cloud entry. */
+.map-layer-sub {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+  padding: 2px;
+  border-left: 1px solid var(--line);
+  border-radius: 999px;
+}
+.map-layer-sub button {
+  min-height: 24px;
+  padding: 0 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+}
+.map-layer-bar button.active[data-layer="night-lights"] {
+  background: var(--amber, #d4b273);
+}
+@media (max-width: 720px) {
+  .map-layer-bar {
+    top: auto;
+    bottom: 132px;
+    max-width: calc(100vw - 20px);
+    overflow-x: auto;
+  }
+  .map-layer-bar button {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
+
+/* Theme switch lives under the global layer bar on the map. */
+.map-viewport > .forecast-theme-switch {
+  position: absolute;
+  top: 116px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 920;
+}
+
+.cloud-active-layer-note {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.cloud-active-layer-note small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted-2);
+  font-size: 10px;
+}
+
+.viewport-recommendation-panel .metric-primary {
+  color: var(--green, #79cfe2);
+  font-weight: 700;
+}
+.viewport-recommendation-panel.theme-cloud .metric-primary {
+  color: var(--amber, #d4b273);
+}
+
+.observing-mode-hint {
+  margin: 2px 0 6px;
+}
+.observing-mode-hint small {
+  color: var(--muted-2);
+  font-size: 10px;
+  line-height: 1.5;
 }

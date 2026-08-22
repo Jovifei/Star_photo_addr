@@ -55,6 +55,13 @@ export default function NavTabs() {
       active: recommendationActive,
     },
     {
+      id: "fireglow",
+      href: "/fireglow",
+      label: "火烧云",
+      hint: "晨晚霞窗口",
+      active: pathname === "/fireglow",
+    },
+    {
       id: "planner",
       href: plannerHref,
       label: "观星计划",

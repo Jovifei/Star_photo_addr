@@ -13,13 +13,7 @@ import {
   formatNightLabel,
   scoreDateForForecastTime,
 } from "@/lib/nighttime";
-import type { MapViewMode, ObservationSnapshot, RecommendationBand } from "@/lib/types";
-
-const MODES: Array<{ id: MapViewMode; label: string; hint: string }> = [
-  { id: "satellite", label: "卫星云图", hint: "Himawari · 过去 24 小时" },
-  { id: "light-pollution", label: "光污染", hint: "VIIRS 2023 · 静态基准" },
-  { id: "combined", label: "综合决策", hint: "光污染 + 未来云量" },
-];
+import type { ObservationSnapshot, RecommendationBand } from "@/lib/types";
 
 const BAND_FILTERS: Array<{ id: Exclude<RecommendationBand, "unknown">; label: string; range: string; color: string }> = [
   { id: "priority", label: "优先", range: "85–100", color: "#63e6e2" },
@@ -29,9 +23,16 @@ const BAND_FILTERS: Array<{ id: Exclude<RecommendationBand, "unknown">; label: s
 ];
 
 export default function ObservingMapControl() {
-  const { state, setMapViewMode, setCloud, setRecommendationThreshold, setObservingBortleLimit, setRecommendedOnly, setRecommendationBands } = useStore();
-  const selectedMode = MODES.find((mode) => mode.id === state.mapViewMode) ?? MODES[0];
-  const [scoreWindowStart] = useState(state.cloudState.activeForecastTime ?? "");
+  const { state, setCloud, setRecommendationThreshold, setObservingBortleLimit, setRecommendedOnly, setRecommendationBands } = useStore();
+  // The score window anchors on the current hour, which can tick between
+  // server render and hydration (e.g. 17:59 -> 18:00) and break hydration.
+  // Render the empty placeholder on both sides, then adopt the store value
+  // after mount.
+  const [scoreWindowStart, setScoreWindowStart] = useState("");
+  const initialScoreWindowRef = useRef(state.cloudState.activeForecastTime ?? "");
+  useEffect(() => {
+    queueMicrotask(() => setScoreWindowStart(initialScoreWindowRef.current));
+  }, []);
   const scoreTimes = useMemo(() => forecastTimeWindow(scoreWindowStart, 72), [scoreWindowStart]);
   const [snapshot, setSnapshot] = useState<ObservationSnapshot | null>(null);
   const [snapshotErrorTime, setSnapshotErrorTime] = useState<string | null>(null);
@@ -139,14 +140,6 @@ export default function ObservingMapControl() {
     if (time) setCloud({ activeForecastTime: time, playing: false });
   }
 
-  function selectMode(mode: MapViewMode) {
-    setMapViewMode(mode);
-    setCloud({
-      overlayMode: mode === "satellite" ? "satellite-cloud" : mode === "combined" ? "forecast-cloud" : "night-lights",
-      playing: false,
-    });
-  }
-
   return (
     <section
       className="observing-map-control"
@@ -159,21 +152,11 @@ export default function ObservingMapControl() {
         <span><SlidersHorizontal size={14} aria-hidden="true" />观星地点</span>
         <b>{activeSnapshot ? visibleCount : "—"} / {state.observingBortleLimit === 3 ? 222 : OBSERVING_SITE_COUNT} 个点</b>
       </div>
-      <div className="observing-mode-tabs" role="tablist" aria-label="地图模式">
-        {MODES.map((mode) => (
-          <button
-            key={mode.id}
-            type="button"
-            role="tab"
-            aria-selected={state.mapViewMode === mode.id}
-            className={state.mapViewMode === mode.id ? "active" : ""}
-            onClick={() => selectMode(mode.id)}
-          >
-            {mode.label}
-          </button>
-        ))}
+      <div className="observing-mode-hint">
+        <small>
+          图层（云图 · 预报/实况、光污染）请使用地图顶部图层条；本面板专注地点筛选与评分门槛。
+        </small>
       </div>
-      <small>{selectedMode.hint}</small>
       <label className="observing-filter-row">
         <span>Bortle ≤ {state.observingBortleLimit}</span>
         <select value={state.observingBortleLimit} onChange={(event) => setObservingBortleLimit(Number(event.target.value) === 4 ? 4 : 3)} aria-label="Bortle 地点范围">

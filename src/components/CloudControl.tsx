@@ -60,7 +60,7 @@ function healthModeLabel(health: DataSourceHealthResponse): string {
 }
 
 export default function CloudControl() {
-  const { state, setCloud, setMapViewMode, refreshData } = useStore();
+  const { state, setCloud, refreshData } = useStore();
   const { cloudState, selectedNight, forecast, cloudGrid } = state;
   const [buildInfo, setBuildInfo] = useState<{
     version?: string;
@@ -285,62 +285,15 @@ export default function CloudControl() {
 
       <div className={`cloud-body${cloudState.enabled ? "" : " disabled"}`}>
         <div className="cloud-field">
-          <label>图层模式</label>
-          <div
-            className="cloud-tabs"
-            role="tablist"
-            aria-label="云图与光污染图层"
-          >
-            {[
-              {
-                id: "satellite-cloud",
-                label: "卫星云图",
-                map: "satellite" as const,
-              },
-              {
-                id: "forecast-cloud",
-                label: "综合决策",
-                map: "combined" as const,
-              },
-              {
-                id: "night-lights",
-                label: "光污染",
-                map: "light-pollution" as const,
-              },
-            ].map((layer) => (
-              <button
-                key={layer.id}
-                type="button"
-                role="tab"
-                aria-selected={cloudState.overlayMode === layer.id}
-                className={
-                  cloudState.overlayMode === layer.id ? "active" : ""
-                }
-                onClick={() => {
-                  setMapViewMode(layer.map);
-                  setCloud({
-                    overlayMode: layer.id as
-                      | "forecast-cloud"
-                      | "satellite-cloud"
-                      | "night-lights",
-                    playing: false,
-                  });
-                }}
-              >
-                {layer.label}
-              </button>
-            ))}
-          </div>
-          {cloudState.overlayMode === "satellite-cloud" && (
-            <small className="cloud-source-note">
-              NASA GIBS · Himawari AHI Band 13 · 实际观测时次
-            </small>
-          )}
-          {cloudState.overlayMode === "night-lights" && (
-            <small className="cloud-source-note">
-              VIIRS 2023 静态视觉参考 · 第三方 WMTS · 非现场 Bortle/SQM
-            </small>
-          )}
+          <label>当前图层</label>
+          <p className="cloud-active-layer-note">
+            {cloudState.overlayMode === "satellite-cloud"
+              ? "卫星云图 · NASA GIBS · Himawari AHI Band 13 · 实际观测时次"
+              : cloudState.overlayMode === "night-lights"
+                ? "光污染 · VIIRS 2023 静态视觉参考 · 第三方 WMTS · 非现场 Bortle/SQM"
+                : "云量预报 · 数值模式逐小时外推"}
+            <small>切换图层请使用地图顶部的图层条</small>
+          </p>
         </div>
 
         {cloudState.overlayMode === "forecast-cloud" && (

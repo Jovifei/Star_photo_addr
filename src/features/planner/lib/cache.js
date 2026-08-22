@@ -1,3 +1,5 @@
+import { normalizeLocationTexts } from "../../../lib/chineseText";
+
 const CACHE_KEY = "perseids-forecast-v1";
 const LOCATIONS_KEY = "perseids-locations-v1";
 const MAX_AGE_MS = 60 * 60 * 1000;
@@ -37,7 +39,7 @@ export function readCustomLocations() {
   if (typeof window === "undefined") return [];
   try {
     const value = JSON.parse(localStorage.getItem(LOCATIONS_KEY) ?? "[]");
-    return Array.isArray(value) ? value : [];
+    return Array.isArray(value) ? value.map(normalizeLocationTexts) : [];
   } catch {
     return [];
   }

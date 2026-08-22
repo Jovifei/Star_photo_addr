@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
 import type { CloudOverlayMode, MapViewMode } from "@/lib/types";
 import { addDays, initialForecastTime } from "@/lib/nighttime";
+import { toSimplifiedChinese } from "@/lib/chineseText";
 
 /**
  * Imports location/night/view state passed between 今夜观测、暗夜选址 and
@@ -45,7 +46,7 @@ export default function ProductStateBridge() {
     const longitudeValue = searchParams.get("lng");
     const latitude = latitudeValue === null ? null : Number(latitudeValue);
     const longitude = longitudeValue === null ? null : Number(longitudeValue);
-    const name = searchParams.get("name")?.trim() || "观星计划点位";
+    const name = toSimplifiedChinese(searchParams.get("name")?.trim()) || "观星计划点位";
     // The home map is always tonight-first. Old planner links often carried
     // a seasonal 8/12 night and must not silently move the current map back
     // to that historical event date.

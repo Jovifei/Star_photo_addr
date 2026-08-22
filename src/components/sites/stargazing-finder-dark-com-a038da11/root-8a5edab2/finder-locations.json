@@ -11,7 +11,8 @@
       "lat": 32.356,
       "bortle": 1,
       "cityCode": "101140701",
-      "description": "IUCN认证世界暗夜保护地，海拔4700m，亚洲首个暗夜公园，SQM>21.5"
+      "description": "IUCN认证世界暗夜保护地，海拔4700m，亚洲首个暗夜公园，SQM>21.5",
+      "elevation": 4700
     },
     {
       "id": "finder-002-location",
@@ -22,7 +23,8 @@
       "lat": 31.38,
       "bortle": 1,
       "cityCode": "101140601",
-      "description": "IUCN认证世界暗夜保护地，平均海拔4600m，规划面积100km²"
+      "description": "IUCN认证世界暗夜保护地，平均海拔4600m，规划面积100km²",
+      "elevation": 4600
     },
     {
       "id": "finder-003-location",
@@ -33,7 +35,8 @@
       "lat": 33.048,
       "bortle": 2,
       "cityCode": "101190601",
-      "description": "IUCN认证世界暗夜保护地，盐城大丰黄海湿地，长三角唯一暗夜保护地"
+      "description": "IUCN认证世界暗夜保护地，盐城大丰黄海湿地，长三角唯一暗夜保护地",
+      "elevation": 3
     },
     {
       "id": "finder-004-location",
@@ -44,7 +47,8 @@
       "lat": 35.625,
       "bortle": 2,
       "cityCode": "101101001",
-      "description": "IUCN认证世界暗夜保护地，森林覆盖率87.9%，视宁度极佳"
+      "description": "IUCN认证世界暗夜保护地，森林覆盖率87.9%，视宁度极佳",
+      "elevation": 1262
     },
     {
       "id": "finder-005-location",
@@ -55,7 +59,8 @@
       "lat": 28.41,
       "bortle": 2,
       "cityCode": "101240301",
-      "description": "IUCN认证世界暗夜保护地，位于上饶横峰县，山区暗夜"
+      "description": "IUCN认证世界暗夜保护地，位于上饶横峰县，山区暗夜",
+      "elevation": 85
     },
     {
       "id": "finder-006-location",
@@ -66,7 +71,8 @@
       "lat": 35.062,
       "bortle": 2,
       "cityCode": "101110501",
-      "description": "IUCN认证世界暗夜保护地，位于铜川照金，丹霞地貌暗夜"
+      "description": "IUCN认证世界暗夜保护地，位于铜川照金，丹霞地貌暗夜",
+      "elevation": 940
     },
     {
       "id": "finder-007-location",
@@ -77,7 +83,8 @@
       "lat": 29.356,
       "bortle": 2,
       "cityCode": "101210801",
-      "description": "IUCN认证世界暗夜保护地(2024)，钱江源国家公园内，江浙沪夜空最暗处"
+      "description": "IUCN认证世界暗夜保护地(2024)，钱江源国家公园内，江浙沪夜空最暗处",
+      "elevation": 432
     },
     {
       "id": "finder-008-location",
@@ -88,7 +95,8 @@
       "lat": 44.188,
       "bortle": 1,
       "cityCode": "101080601",
-      "description": "中国绿发会第11家暗夜保护地(2024)，大兴安岭夜空最暗处之一"
+      "description": "中国绿发会第11家暗夜保护地(2024)，大兴安岭夜空最暗处之一",
+      "elevation": 1088
     },
     {
       "id": "finder-009-location",
@@ -99,7 +107,8 @@
       "lat": 41.832,
       "bortle": 2,
       "cityCode": "101080401",
-      "description": "华北首个火山暗夜星空保护基地(2026)，察右后旗，低光污染高可见度"
+      "description": "华北首个火山暗夜星空保护基地(2026)，察右后旗，低光污染高可见度",
+      "elevation": 1490
     },
     {
       "id": "finder-010-location",
@@ -110,7 +119,8 @@
       "lat": 38.602,
       "bortle": 1,
       "cityCode": "101150701",
-      "description": "世界级光学天文台址(Nature 2021)，海拔4200m，视宁度0.75角秒，比肩夏威夷莫纳克亚"
+      "description": "世界级光学天文台址(Nature 2021)，海拔4200m，视宁度0.75角秒，比肩夏威夷莫纳克亚",
+      "elevation": 4200
     },
     {
       "id": "finder-011-location",
@@ -121,7 +131,8 @@
       "lat": 36.741,
       "bortle": 2,
       "cityCode": "101150801",
-      "description": "天空之镜，海拔3000m+，夜间盐湖倒映星空，七八月最佳"
+      "description": "天空之镜，海拔3000m+，夜间盐湖倒映星空，七八月最佳",
+      "elevation": 3000
     },
     {
       "id": "finder-012-location",
@@ -132,7 +143,8 @@
       "lat": 36.716,
       "bortle": 2,
       "cityCode": "101150801",
-      "description": "青海湖环湖西路，海拔3200m，银河拱桥倒映湖面"
+      "description": "青海湖环湖西路，海拔3200m，银河拱桥倒映湖面",
+      "elevation": 3200
     },
     {
       "id": "finder-013-location",
@@ -143,7 +155,8 @@
       "lat": 33.003,
       "bortle": 1,
       "cityCode": "101150601",
-      "description": "三江源国家公园，原始暗夜，长江黄河源头"
+      "description": "三江源国家公园，原始暗夜，长江黄河源头",
+      "elevation": 3687
     },
     {
       "id": "finder-014-location",
@@ -154,7 +167,8 @@
       "lat": 34.482,
       "bortle": 1,
       "cityCode": "101150501",
-      "description": "黄河源头，高海拔低光污染，鄂陵湖扎陵湖"
+      "description": "黄河源头，高海拔低光污染，鄂陵湖扎陵湖",
+      "elevation": 4551
     },
     {
       "id": "finder-015-location",
@@ -165,7 +179,8 @@
       "lat": 30.918,
       "bortle": 1,
       "cityCode": "101140601",
-      "description": "海拔4718m，离天堂最近的湖泊，银河触手可及"
+      "description": "海拔4718m，离天堂最近的湖泊，银河触手可及",
+      "elevation": 4718
     },
     {
       "id": "finder-016-location",
@@ -176,7 +191,8 @@
       "lat": 28.145,
       "bortle": 1,
       "cityCode": "101140201",
-      "description": "海拔5200m，世界之巅下的星空，极低光污染"
+      "description": "海拔5200m，世界之巅下的星空，极低光污染",
+      "elevation": 5200
     },
     {
       "id": "finder-017-location",
@@ -187,7 +203,8 @@
       "lat": 28.868,
       "bortle": 1,
       "cityCode": "101140301",
-      "description": "三大圣湖之一，海拔4441m，高原暗夜"
+      "description": "三大圣湖之一，海拔4441m，高原暗夜",
+      "elevation": 4441
     },
     {
       "id": "finder-018-location",
@@ -198,7 +215,8 @@
       "lat": 29.605,
       "bortle": 2,
       "cityCode": "101140401",
-      "description": "藏东南，海拔3500m，森林湖泊暗夜"
+      "description": "藏东南，海拔3500m，森林湖泊暗夜",
+      "elevation": 3500
     },
     {
       "id": "finder-019-location",
@@ -209,7 +227,8 @@
       "lat": 48.723,
       "bortle": 1,
       "cityCode": "101131401",
-      "description": "北疆暗夜公园，喀纳斯湖畔，极低光污染"
+      "description": "北疆暗夜公园，喀纳斯湖畔，极低光污染",
+      "elevation": 1658
     },
     {
       "id": "finder-020-location",
@@ -220,7 +239,8 @@
       "lat": 48.385,
       "bortle": 1,
       "cityCode": "101131401",
-      "description": "喀纳斯东，图瓦人村落，原始暗夜"
+      "description": "喀纳斯东，图瓦人村落，原始暗夜",
+      "elevation": 2327
     },
     {
       "id": "finder-021-location",
@@ -231,7 +251,8 @@
       "lat": 44.603,
       "bortle": 2,
       "cityCode": "101131601",
-      "description": "高山湖泊，海拔2071m，西天山暗夜"
+      "description": "高山湖泊，海拔2071m，西天山暗夜",
+      "elevation": 2071
     },
     {
       "id": "finder-022-location",
@@ -242,7 +263,8 @@
       "lat": 43.33,
       "bortle": 2,
       "cityCode": "101110101",
-      "description": "伊犁河谷，空中草原，远离城市"
+      "description": "伊犁河谷，空中草原，远离城市",
+      "elevation": 2417
     },
     {
       "id": "finder-023-location",
@@ -253,7 +275,8 @@
       "lat": 37.778,
       "bortle": 1,
       "cityCode": "101130901",
-      "description": "帕米尔高原，海拔3100m，慕士塔格峰下"
+      "description": "帕米尔高原，海拔3100m，慕士塔格峰下",
+      "elevation": 3100
     },
     {
       "id": "finder-024-location",
@@ -264,7 +287,8 @@
       "lat": 47.226,
       "bortle": 2,
       "cityCode": "101131401",
-      "description": "阿勒泰地区，戈壁湖泊暗夜"
+      "description": "阿勒泰地区，戈壁湖泊暗夜",
+      "elevation": 485
     },
     {
       "id": "finder-025-location",
@@ -275,7 +299,8 @@
       "lat": 43.026,
       "bortle": 1,
       "cityCode": "101130601",
-      "description": "天山腹地，海拔2500m，九曲十八弯暗夜"
+      "description": "天山腹地，海拔2500m，九曲十八弯暗夜",
+      "elevation": 2500
     },
     {
       "id": "finder-026-location",
@@ -286,7 +311,8 @@
       "lat": 42.518,
       "bortle": 2,
       "cityCode": "101131201",
-      "description": "东天山戈壁，雅丹地貌暗夜"
+      "description": "东天山戈壁，雅丹地貌暗夜",
+      "elevation": 512
     },
     {
       "id": "finder-027-location",
@@ -297,7 +323,8 @@
       "lat": 40.521,
       "bortle": 1,
       "cityCode": "101160201",
-      "description": "敦煌以西180km，戈壁雅丹暗夜，丝路星空"
+      "description": "敦煌以西180km，戈壁雅丹暗夜，丝路星空",
+      "elevation": 829
     },
     {
       "id": "finder-028-location",
@@ -308,7 +335,8 @@
       "lat": 40.087,
       "bortle": 2,
       "cityCode": "101160201",
-      "description": "敦煌城南，沙漠星空，古丝路观星圣地"
+      "description": "敦煌城南，沙漠星空，古丝路观星圣地",
+      "elevation": 1185
     },
     {
       "id": "finder-029-location",
@@ -319,7 +347,8 @@
       "lat": 38.957,
       "bortle": 2,
       "cityCode": "101160701",
-      "description": "丹霞地貌，远离城市灯光"
+      "description": "丹霞地貌，远离城市灯光",
+      "elevation": 1726
     },
     {
       "id": "finder-030-location",
@@ -330,7 +359,8 @@
       "lat": 34.563,
       "bortle": 2,
       "cityCode": "101160601",
-      "description": "甘南藏区，石城暗夜，海拔3000m+"
+      "description": "甘南藏区，石城暗夜，海拔3000m+",
+      "elevation": 3000
     },
     {
       "id": "finder-031-location",
@@ -341,7 +371,8 @@
       "lat": 28.429,
       "bortle": 1,
       "cityCode": "101271807",
-      "description": "海拔4000m+，牛奶海/五色海，顶级观星地"
+      "description": "海拔4000m+，牛奶海/五色海，顶级观星地",
+      "elevation": 4000
     },
     {
       "id": "finder-032-location",
@@ -352,7 +383,8 @@
       "lat": 30.005,
       "bortle": 1,
       "cityCode": "101271801",
-      "description": "天空之城理塘，海拔4000m，极暗夜"
+      "description": "天空之城理塘，海拔4000m，极暗夜",
+      "elevation": 4000
     },
     {
       "id": "finder-033-location",
@@ -363,7 +395,8 @@
       "lat": 29.548,
       "bortle": 1,
       "cityCode": "101271401",
-      "description": "贡嘎之眼，海拔4500m，拍摄贡嘎雪山倒影与星空的秘境"
+      "description": "贡嘎之眼，海拔4500m，拍摄贡嘎雪山倒影与星空的秘境",
+      "elevation": 4500
     },
     {
       "id": "finder-034-location",
@@ -374,7 +407,8 @@
       "lat": 32.297,
       "bortle": 1,
       "cityCode": "101271507",
-      "description": "海拔3800m，高原暗夜，红色佛国星空"
+      "description": "海拔3800m，高原暗夜，红色佛国星空",
+      "elevation": 3800
     },
     {
       "id": "finder-035-location",
@@ -385,7 +419,8 @@
       "lat": 33.842,
       "bortle": 2,
       "cityCode": "101270301",
-      "description": "川西北高原湿地，海拔3400m，草原暗夜"
+      "description": "川西北高原湿地，海拔3400m，草原暗夜",
+      "elevation": 3400
     },
     {
       "id": "finder-036-location",
@@ -396,7 +431,8 @@
       "lat": 30.828,
       "bortle": 1,
       "cityCode": "101271501",
-      "description": "丹巴县党岭，海拔4000m+，原始森林暗夜"
+      "description": "丹巴县党岭，海拔4000m+，原始森林暗夜",
+      "elevation": 4000
     },
     {
       "id": "finder-037-location",
@@ -407,7 +443,8 @@
       "lat": 28.418,
       "bortle": 1,
       "cityCode": "101290301",
-      "description": "梅里雪山飞来寺，海拔3400m，日照金山+星空"
+      "description": "梅里雪山飞来寺，海拔3400m，日照金山+星空",
+      "elevation": 3400
     },
     {
       "id": "finder-038-location",
@@ -418,7 +455,8 @@
       "lat": 27.107,
       "bortle": 2,
       "cityCode": "101290201",
-      "description": "海拔3100m，光污染几乎为零，低纬度观星不冷"
+      "description": "海拔3100m，光污染几乎为零，低纬度观星不冷",
+      "elevation": 3100
     },
     {
       "id": "finder-039-location",
@@ -429,7 +467,8 @@
       "lat": 27.709,
       "bortle": 2,
       "cityCode": "101290201",
-      "description": "海拔2690m，湖山环抱，星空倒映湖面"
+      "description": "海拔2690m，湖山环抱，星空倒映湖面",
+      "elevation": 2690
     },
     {
       "id": "finder-040-location",
@@ -440,7 +479,8 @@
       "lat": 28.062,
       "bortle": 1,
       "cityCode": "101290501",
-      "description": "怒江大峡谷北端，人神共居之地，原始暗夜"
+      "description": "怒江大峡谷北端，人神共居之地，原始暗夜",
+      "elevation": 3798
     },
     {
       "id": "finder-041-location",
@@ -451,7 +491,8 @@
       "lat": 25.675,
       "bortle": 2,
       "cityCode": "101290301",
-      "description": "苍山海拔3900m，高原观星，洱海西侧"
+      "description": "苍山海拔3900m，高原观星，洱海西侧",
+      "elevation": 3900
     },
     {
       "id": "finder-042-location",
@@ -462,7 +503,8 @@
       "lat": 39.832,
       "bortle": 1,
       "cityCode": "101081201",
-      "description": "中国最美沙漠，极低光污染，沙海星空"
+      "description": "中国最美沙漠，极低光污染，沙海星空",
+      "elevation": 1258
     },
     {
       "id": "finder-043-location",
@@ -473,7 +515,8 @@
       "lat": 43.964,
       "bortle": 2,
       "cityCode": "101080801",
-      "description": "广袤草原暗夜，地平线无遮挡"
+      "description": "广袤草原暗夜，地平线无遮挡",
+      "elevation": 986
     },
     {
       "id": "finder-044-location",
@@ -484,7 +527,8 @@
       "lat": 50.243,
       "bortle": 2,
       "cityCode": "101081000",
-      "description": "大兴安岭西麓，草原森林交界暗夜"
+      "description": "大兴安岭西麓，草原森林交界暗夜",
+      "elevation": 576
     },
     {
       "id": "finder-045-location",
@@ -495,7 +539,8 @@
       "lat": 43.482,
       "bortle": 2,
       "cityCode": "101080601",
-      "description": "赤峰克什克腾，花岗岩石林暗夜"
+      "description": "赤峰克什克腾，花岗岩石林暗夜",
+      "elevation": 1505
     },
     {
       "id": "finder-046-location",
@@ -506,7 +551,8 @@
       "lat": 53.558,
       "bortle": 1,
       "cityCode": "101050701",
-      "description": "中国最北城镇(53°33'N)，极光与星空圣地，夏至白昼17h+"
+      "description": "中国最北城镇(53°33'N)，极光与星空圣地，夏至白昼17h+",
+      "elevation": 398
     },
     {
       "id": "finder-047-location",
@@ -517,7 +563,8 @@
       "lat": 51.448,
       "bortle": 1,
       "cityCode": "101050701",
-      "description": "大兴安岭核心，原始森林暗夜"
+      "description": "大兴安岭核心，原始森林暗夜",
+      "elevation": 725
     },
     {
       "id": "finder-048-location",
@@ -528,7 +575,8 @@
       "lat": 52.334,
       "bortle": 1,
       "cityCode": "101050701",
-      "description": "大兴安岭北部，极低光污染"
+      "description": "大兴安岭北部，极低光污染",
+      "elevation": 362
     },
     {
       "id": "finder-049-location",
@@ -539,7 +587,8 @@
       "lat": 41.418,
       "bortle": 2,
       "cityCode": "101060101",
-      "description": "海拔2189m，火山口湖，森林暗夜"
+      "description": "海拔2189m，火山口湖，森林暗夜",
+      "elevation": 2189
     },
     {
       "id": "finder-050-location",
@@ -550,7 +599,8 @@
       "lat": 42.582,
       "bortle": 2,
       "cityCode": "101060301",
-      "description": "延边朝鲜族自治州，边境暗夜"
+      "description": "延边朝鲜族自治州，边境暗夜",
+      "elevation": 745
     },
     {
       "id": "finder-051-location",
@@ -561,7 +611,8 @@
       "lat": 37.482,
       "bortle": 2,
       "cityCode": "101170301",
-      "description": "腾格里沙漠腹地，方圆10km无灯，全年晴天300天+"
+      "description": "腾格里沙漠腹地，方圆10km无灯，全年晴天300天+",
+      "elevation": 1253
     },
     {
       "id": "finder-052-location",
@@ -572,7 +623,8 @@
       "lat": 35.942,
       "bortle": 2,
       "cityCode": "101170401",
-      "description": "六盘山区，高原暗夜"
+      "description": "六盘山区，高原暗夜",
+      "elevation": 1857
     },
     {
       "id": "finder-053-location",
@@ -583,7 +635,8 @@
       "lat": 32.788,
       "bortle": 2,
       "cityCode": "101110801",
-      "description": "秦岭以南，巴山深处，森林暗夜"
+      "description": "秦岭以南，巴山深处，森林暗夜",
+      "elevation": 1264
     },
     {
       "id": "finder-054-location",
@@ -594,7 +647,8 @@
       "lat": 33.955,
       "bortle": 2,
       "cityCode": "101110101",
-      "description": "秦岭主峰，海拔3767m，高山暗夜"
+      "description": "秦岭主峰，海拔3767m，高山暗夜",
+      "elevation": 3767
     },
     {
       "id": "finder-055-location",
@@ -605,7 +659,8 @@
       "lat": 41.642,
       "bortle": 2,
       "cityCode": "101090402",
-      "description": "北京周边最佳观星地，海拔1500m草原"
+      "description": "北京周边最佳观星地，海拔1500m草原",
+      "elevation": 1500
     },
     {
       "id": "finder-056-location",
@@ -616,7 +671,8 @@
       "lat": 40.962,
       "bortle": 2,
       "cityCode": "101090301",
-      "description": "冬奥赛区，海拔1600m，空气通透"
+      "description": "冬奥赛区，海拔1600m，空气通透",
+      "elevation": 1600
     },
     {
       "id": "finder-057-location",
@@ -627,7 +683,8 @@
       "lat": 39.84,
       "bortle": 2,
       "cityCode": "101090301",
-      "description": "小五台山方向，海拔2100m高山草甸"
+      "description": "小五台山方向，海拔2100m高山草甸",
+      "elevation": 2100
     },
     {
       "id": "finder-058-location",
@@ -638,7 +695,8 @@
       "lat": 39.022,
       "bortle": 2,
       "cityCode": "101101001",
-      "description": "海拔2795m，佛教圣地，高海拔暗夜"
+      "description": "海拔2795m，佛教圣地，高海拔暗夜",
+      "elevation": 2795
     },
     {
       "id": "finder-059-location",
@@ -649,7 +707,8 @@
       "lat": 37.482,
       "bortle": 2,
       "cityCode": "101101100",
-      "description": "吕梁山脉，华北落叶松之乡，森林暗夜"
+      "description": "吕梁山脉，华北落叶松之乡，森林暗夜",
+      "elevation": 1468
     },
     {
       "id": "finder-060-location",
@@ -660,7 +719,8 @@
       "lat": 37.398,
       "bortle": 2,
       "cityCode": "101120301",
-      "description": "中国好望角，三面环海，海滨暗夜"
+      "description": "中国好望角，三面环海，海滨暗夜",
+      "elevation": 21
     },
     {
       "id": "finder-061-location",
@@ -671,7 +731,8 @@
       "lat": 37.911,
       "bortle": 2,
       "cityCode": "101120501",
-      "description": "渤海海峡列岛，海上暗夜"
+      "description": "渤海海峡列岛，海上暗夜",
+      "elevation": 11
     },
     {
       "id": "finder-062-location",
@@ -682,7 +743,8 @@
       "lat": 36.382,
       "bortle": 2,
       "cityCode": "101120101",
-      "description": "《国家地理》全球最美星空之一，济南/泰安/莱芜三城交界"
+      "description": "《国家地理》全球最美星空之一，济南/泰安/莱芜三城交界",
+      "elevation": 766
     },
     {
       "id": "finder-063-location",
@@ -693,7 +755,8 @@
       "lat": 36.162,
       "bortle": 2,
       "cityCode": "101120201",
-      "description": "海拔1133m，距市区不远但光污染少，青岛首屈一指星空地"
+      "description": "海拔1133m，距市区不远但光污染少，青岛首屈一指星空地",
+      "elevation": 1133
     },
     {
       "id": "finder-064-location",
@@ -704,7 +767,8 @@
       "lat": 37.082,
       "bortle": 2,
       "cityCode": "101120501",
-      "description": "2026暑期全国观星优选地，胶东半岛国家级暗夜点"
+      "description": "2026暑期全国观星优选地，胶东半岛国家级暗夜点",
+      "elevation": 65
     },
     {
       "id": "finder-065-location",
@@ -715,7 +779,8 @@
       "lat": 36.262,
       "bortle": 2,
       "cityCode": "101120101",
-      "description": "海拔1545m，五岳之首，云海星河"
+      "description": "海拔1545m，五岳之首，云海星河",
+      "elevation": 1545
     },
     {
       "id": "finder-066-location",
@@ -726,7 +791,8 @@
       "lat": 30.132,
       "bortle": 2,
       "cityCode": "101220101",
-      "description": "海拔1860m，清凉台观星，云海星空"
+      "description": "海拔1860m，清凉台观星，云海星空",
+      "elevation": 1860
     },
     {
       "id": "finder-067-location",
@@ -737,7 +803,8 @@
       "lat": 29.853,
       "bortle": 2,
       "cityCode": "101221001",
-      "description": "祁门大山深处，原始生态，接近天堂的观星地"
+      "description": "祁门大山深处，原始生态，接近天堂的观星地",
+      "elevation": 123
     },
     {
       "id": "finder-068-location",
@@ -748,7 +815,8 @@
       "lat": 29.882,
       "bortle": 2,
       "cityCode": "101220101",
-      "description": "徽州古村落，山区暗夜，油菜花田星空"
+      "description": "徽州古村落，山区暗夜，油菜花田星空",
+      "elevation": 121
     },
     {
       "id": "finder-069-location",
@@ -759,7 +827,8 @@
       "lat": 31.182,
       "bortle": 2,
       "cityCode": "101221501",
-      "description": "大别山主峰之一，海拔1729m，森林暗夜"
+      "description": "大别山主峰之一，海拔1729m，森林暗夜",
+      "elevation": 1729
     },
     {
       "id": "finder-070-location",
@@ -770,7 +839,8 @@
       "lat": 30.842,
       "bortle": 2,
       "cityCode": "101220701",
-      "description": "大别山区，海拔1227m，禅宗圣地暗夜"
+      "description": "大别山区，海拔1227m，禅宗圣地暗夜",
+      "elevation": 1227
     },
     {
       "id": "finder-071-location",
@@ -781,7 +851,8 @@
       "lat": 29.882,
       "bortle": 2,
       "cityCode": "101220101",
-      "description": "黄山木梨硔村，海拔近千米，星空社观测点"
+      "description": "黄山木梨硔村，海拔近千米，星空社观测点",
+      "elevation": 404
     },
     {
       "id": "finder-072-location",
@@ -792,7 +863,8 @@
       "lat": 30.562,
       "bortle": 2,
       "cityCode": "101210201",
-      "description": "中科院上海天文台选址，海拔1000m，江南首个夜天光保护区"
+      "description": "中科院上海天文台选址，海拔1000m，江南首个夜天光保护区",
+      "elevation": 1000
     },
     {
       "id": "finder-073-location",
@@ -803,7 +875,8 @@
       "lat": 28.342,
       "bortle": 2,
       "cityCode": "101210801",
-      "description": "丽水山区，海拔1600m，梯田云海星空"
+      "description": "丽水山区，海拔1600m，梯田云海星空",
+      "elevation": 1600
     },
     {
       "id": "finder-074-location",
@@ -814,7 +887,8 @@
       "lat": 30.022,
       "bortle": 2,
       "cityCode": "101210101",
-      "description": "杭州临安，海拔1489m，浙西山区暗夜"
+      "description": "杭州临安，海拔1489m，浙西山区暗夜",
+      "elevation": 1489
     },
     {
       "id": "finder-075-location",
@@ -825,7 +899,8 @@
       "lat": 28.712,
       "bortle": 2,
       "cityCode": "101210301",
-      "description": "浙东南最高峰之一，海拔1382m，风车星空"
+      "description": "浙东南最高峰之一，海拔1382m，风车星空",
+      "elevation": 1382
     },
     {
       "id": "finder-076-location",
@@ -836,7 +911,8 @@
       "lat": 27.792,
       "bortle": 2,
       "cityCode": "101230101",
-      "description": "武夷山核心区，海拔1100m，峡谷暗夜"
+      "description": "武夷山核心区，海拔1100m，峡谷暗夜",
+      "elevation": 1100
     },
     {
       "id": "finder-077-location",
@@ -847,7 +923,8 @@
       "lat": 27.022,
       "bortle": 2,
       "cityCode": "101230301",
-      "description": "闽东沿海山脉，海拔917m，花岗岩暗夜"
+      "description": "闽东沿海山脉，海拔917m，花岗岩暗夜",
+      "elevation": 917
     },
     {
       "id": "finder-078-location",
@@ -858,7 +935,8 @@
       "lat": 26.672,
       "bortle": 2,
       "cityCode": "101240601",
-      "description": "井冈山山区，海拔1340m，森林暗夜"
+      "description": "井冈山山区，海拔1340m，森林暗夜",
+      "elevation": 1340
     },
     {
       "id": "finder-079-location",
@@ -869,7 +947,8 @@
       "lat": 28.848,
       "bortle": 2,
       "cityCode": "101240301",
-      "description": "三清山最高峰，海拔1817m，中国最美星空基地之一"
+      "description": "三清山最高峰，海拔1817m，中国最美星空基地之一",
+      "elevation": 1817
     },
     {
       "id": "finder-080-location",
@@ -880,7 +959,8 @@
       "lat": 27.472,
       "bortle": 2,
       "cityCode": "101240401",
-      "description": "海拔1918m，高山草甸，星空露营圣地"
+      "description": "海拔1918m，高山草甸，星空露营圣地",
+      "elevation": 1918
     },
     {
       "id": "finder-081-location",
@@ -891,7 +971,8 @@
       "lat": 29.542,
       "bortle": 2,
       "cityCode": "101240201",
-      "description": "海拔1280m，鄱阳湖方向视野开阔，避暑观星"
+      "description": "海拔1280m，鄱阳湖方向视野开阔，避暑观星",
+      "elevation": 1280
     },
     {
       "id": "finder-082-location",
@@ -902,7 +983,8 @@
       "lat": 28.412,
       "bortle": 2,
       "cityCode": "101240301",
-      "description": "横峰县最高峰(1366m)，360°全景视野，专业观星平台"
+      "description": "横峰县最高峰(1366m)，360°全景视野，专业观星平台",
+      "elevation": 86
     },
     {
       "id": "finder-083-location",
@@ -913,7 +995,8 @@
       "lat": 28.762,
       "bortle": 2,
       "cityCode": "101240101",
-      "description": "南昌最近观星地，海拔841m，城市周边暗夜"
+      "description": "南昌最近观星地，海拔841m，城市周边暗夜",
+      "elevation": 841
     },
     {
       "id": "finder-084-location",
@@ -924,7 +1007,8 @@
       "lat": 31.482,
       "bortle": 2,
       "cityCode": "101201201",
-      "description": "神农架核心区，海拔2600m，华中暗夜胜地"
+      "description": "神农架核心区，海拔2600m，华中暗夜胜地",
+      "elevation": 2600
     },
     {
       "id": "finder-085-location",
@@ -935,7 +1019,8 @@
       "lat": 30.273,
       "bortle": 2,
       "cityCode": "101201001",
-      "description": "喀斯特山区，海拔2000m，峡谷暗夜"
+      "description": "喀斯特山区，海拔2000m，峡谷暗夜",
+      "elevation": 2000
     },
     {
       "id": "finder-086-location",
@@ -946,7 +1031,8 @@
       "lat": 29.432,
       "bortle": 2,
       "cityCode": "101200701",
-      "description": "海拔1556m，2级暗夜，2026暑期全国观星优选地，森林覆盖率96.6%"
+      "description": "海拔1556m，2级暗夜，2026暑期全国观星优选地，森林覆盖率96.6%",
+      "elevation": 1556
     },
     {
       "id": "finder-087-location",
@@ -957,7 +1043,8 @@
       "lat": 30.302,
       "bortle": 2,
       "cityCode": "101201002",
-      "description": "中国南方最大山地草场，海拔1900m，恩施观星佳地"
+      "description": "中国南方最大山地草场，海拔1900m，恩施观星佳地",
+      "elevation": 1900
     },
     {
       "id": "finder-088-location",
@@ -968,7 +1055,8 @@
       "lat": 30.182,
       "bortle": 2,
       "cityCode": "101201002",
-      "description": "海拔1681m，光污染少，'手可摘星辰'之名"
+      "description": "海拔1681m，光污染少，'手可摘星辰'之名",
+      "elevation": 1681
     },
     {
       "id": "finder-089-location",
@@ -979,7 +1067,8 @@
       "lat": 31.022,
       "bortle": 2,
       "cityCode": "101201401",
-      "description": "大别山国家森林公园核心，天然氧吧暗夜"
+      "description": "大别山国家森林公园核心，天然氧吧暗夜",
+      "elevation": 129
     },
     {
       "id": "finder-090-location",
@@ -990,7 +1079,8 @@
       "lat": 30.462,
       "bortle": 2,
       "cityCode": "101200401",
-      "description": "海拔700m，2级暗夜，2026暑期全国观星优选地"
+      "description": "海拔700m，2级暗夜，2026暑期全国观星优选地",
+      "elevation": 700
     },
     {
       "id": "finder-091-location",
@@ -1001,7 +1091,8 @@
       "lat": 29.117,
       "bortle": 2,
       "cityCode": "101251401",
-      "description": "海拔1518m，石英砂岩峰林暗夜"
+      "description": "海拔1518m，石英砂岩峰林暗夜",
+      "elevation": 1518
     },
     {
       "id": "finder-092-location",
@@ -1012,7 +1103,8 @@
       "lat": 28.082,
       "bortle": 2,
       "cityCode": "101251501",
-      "description": "凤凰古城方向，苗族聚居区，山区暗夜"
+      "description": "凤凰古城方向，苗族聚居区，山区暗夜",
+      "elevation": 631
     },
     {
       "id": "finder-093-location",
@@ -1023,7 +1115,8 @@
       "lat": 27.302,
       "bortle": 2,
       "cityCode": "101250401",
-      "description": "中国南方最佳观星地，海拔1300m，祝融峰之高为南岳四绝之首"
+      "description": "中国南方最佳观星地，海拔1300m，祝融峰之高为南岳四绝之首",
+      "elevation": 1300
     },
     {
       "id": "finder-094-location",
@@ -1034,7 +1127,8 @@
       "lat": 28.422,
       "bortle": 2,
       "cityCode": "101250101",
-      "description": "湘东第一高峰(1608m)，受光污染最小，有专门观星台"
+      "description": "湘东第一高峰(1608m)，受光污染最小，有专门观星台",
+      "elevation": 1315
     },
     {
       "id": "finder-095-location",
@@ -1045,7 +1139,8 @@
       "lat": 25.622,
       "bortle": 2,
       "cityCode": "101250501",
-      "description": "海拔1314m高山草原，40km²，手可摘星辰"
+      "description": "海拔1314m高山草原，40km²，手可摘星辰",
+      "elevation": 1314
     },
     {
       "id": "finder-096-location",
@@ -1056,7 +1151,8 @@
       "lat": 27.282,
       "bortle": 2,
       "cityCode": "101251201",
-      "description": "海拔1500m，森林覆盖率95%，天然氧吧暗夜"
+      "description": "海拔1500m，森林覆盖率95%，天然氧吧暗夜",
+      "elevation": 1500
     },
     {
       "id": "finder-097-location",
@@ -1067,7 +1163,8 @@
       "lat": 24.928,
       "bortle": 2,
       "cityCode": "101280201",
-      "description": "广东最高峰石坑崆(1902m)，南岭暗夜"
+      "description": "广东最高峰石坑崆(1902m)，南岭暗夜",
+      "elevation": 1032
     },
     {
       "id": "finder-098-location",
@@ -1078,7 +1175,8 @@
       "lat": 24.802,
       "bortle": 2,
       "cityCode": "101280201",
-      "description": "韶关乳源，森林覆盖率97.6%，2026年大湾区首发天文观测点位"
+      "description": "韶关乳源，森林覆盖率97.6%，2026年大湾区首发天文观测点位",
+      "elevation": 212
     },
     {
       "id": "finder-099-location",
@@ -1089,7 +1187,8 @@
       "lat": 24.382,
       "bortle": 2,
       "cityCode": "101280401",
-      "description": "海拔1298m，全球海拔较高科普天文台，粤东观星圣地"
+      "description": "海拔1298m，全球海拔较高科普天文台，粤东观星圣地",
+      "elevation": 1298
     },
     {
       "id": "finder-100-location",
@@ -1100,7 +1199,8 @@
       "lat": 23.742,
       "bortle": 2,
       "cityCode": "101280101",
-      "description": "海拔700m，广州最高村落，广州最佳观星地"
+      "description": "海拔700m，广州最高村落，广州最佳观星地",
+      "elevation": 700
     },
     {
       "id": "finder-101-location",
@@ -1111,7 +1211,8 @@
       "lat": 23.622,
       "bortle": 2,
       "cityCode": "101281101",
-      "description": "北回归线绿洲，海拔800m+，珠三角后花园暗夜"
+      "description": "北回归线绿洲，海拔800m+，珠三角后花园暗夜",
+      "elevation": 800
     },
     {
       "id": "finder-102-location",
@@ -1122,7 +1223,8 @@
       "lat": 25.022,
       "bortle": 2,
       "cityCode": "101280201",
-      "description": "世界自然遗产，保护区无光污染，丹霞地貌星空"
+      "description": "世界自然遗产，保护区无光污染，丹霞地貌星空",
+      "elevation": 156
     },
     {
       "id": "finder-103-location",
@@ -1133,7 +1235,8 @@
       "lat": 23.743,
       "bortle": 2,
       "cityCode": "101281201",
-      "description": "华南最大人工湖，山区暗夜"
+      "description": "华南最大人工湖，山区暗夜",
+      "elevation": 34
     },
     {
       "id": "finder-104-location",
@@ -1144,7 +1247,8 @@
       "lat": 24.782,
       "bortle": 2,
       "cityCode": "101301001",
-      "description": "百色乐业，世界最大天坑群，喀斯特暗夜"
+      "description": "百色乐业，世界最大天坑群，喀斯特暗夜",
+      "elevation": 964
     },
     {
       "id": "finder-105-location",
@@ -1155,7 +1259,8 @@
       "lat": 24.142,
       "bortle": 2,
       "cityCode": "101301201",
-      "description": "长寿之乡，喀斯特山区暗夜"
+      "description": "长寿之乡，喀斯特山区暗夜",
+      "elevation": 233
     },
     {
       "id": "finder-106-location",
@@ -1166,7 +1271,8 @@
       "lat": 25.882,
       "bortle": 2,
       "cityCode": "101300301",
-      "description": "华南第一峰(2142m)，漓江源头，森林暗夜"
+      "description": "华南第一峰(2142m)，漓江源头，森林暗夜",
+      "elevation": 1932
     },
     {
       "id": "finder-107-location",
@@ -1177,7 +1283,8 @@
       "lat": 18.775,
       "bortle": 2,
       "cityCode": "101310101",
-      "description": "海南岛最高峰(1867m)，热带暗夜"
+      "description": "海南岛最高峰(1867m)，热带暗夜",
+      "elevation": 328
     },
     {
       "id": "finder-108-location",
@@ -1188,7 +1295,8 @@
       "lat": 25.282,
       "bortle": 2,
       "cityCode": "101260401",
-      "description": "荔波暗夜公园，世界自然遗产，喀斯特森林暗夜"
+      "description": "荔波暗夜公园，世界自然遗产，喀斯特森林暗夜",
+      "elevation": 949
     },
     {
       "id": "finder-109-location",
@@ -1199,7 +1307,8 @@
       "lat": 26.382,
       "bortle": 2,
       "cityCode": "101260501",
-      "description": "苗岭主峰(2178m)，原始森林暗夜"
+      "description": "苗岭主峰(2178m)，原始森林暗夜",
+      "elevation": 1966
     },
     {
       "id": "finder-110-location",
@@ -1210,7 +1319,8 @@
       "lat": 26.662,
       "bortle": 2,
       "cityCode": "101260701",
-      "description": "贵州最高峰(2900m)，高原暗夜"
+      "description": "贵州最高峰(2900m)，高原暗夜",
+      "elevation": 2458
     },
     {
       "id": "finder-111-location",
@@ -1221,7 +1331,8 @@
       "lat": 33.682,
       "bortle": 2,
       "cityCode": "101180101",
-      "description": "伏牛山腹地，海拔2216m，光污染小，河南理想银河拍摄地"
+      "description": "伏牛山腹地，海拔2216m，光污染小，河南理想银河拍摄地",
+      "elevation": 2216
     },
     {
       "id": "finder-112-location",
@@ -1232,7 +1343,8 @@
       "lat": 33.752,
       "bortle": 2,
       "cityCode": "101180301",
-      "description": "伏牛山主峰(2297m)，道教圣地，高山暗夜"
+      "description": "伏牛山主峰(2297m)，道教圣地，高山暗夜",
+      "elevation": 1032
     },
     {
       "id": "finder-113-location",
@@ -1243,7 +1355,8 @@
       "lat": 34.512,
       "bortle": 2,
       "cityCode": "101180101",
-      "description": "中岳嵩山，海拔1512m，元代观星台所在地"
+      "description": "中岳嵩山，海拔1512m，元代观星台所在地",
+      "elevation": 1512
     },
     {
       "id": "finder-114-location",
@@ -1254,7 +1367,8 @@
       "lat": 33.832,
       "bortle": 2,
       "cityCode": "101180701",
-      "description": "伏牛山世界地质公园，森林茂密暗夜"
+      "description": "伏牛山世界地质公园，森林茂密暗夜",
+      "elevation": 849
     },
     {
       "id": "finder-115-location",
@@ -1265,7 +1379,8 @@
       "lat": 31.822,
       "bortle": 2,
       "cityCode": "101180601",
-      "description": "豫南避暑胜地，海拔811m，森林暗夜"
+      "description": "豫南避暑胜地，海拔811m，森林暗夜",
+      "elevation": 811
     },
     {
       "id": "finder-116-location",
@@ -1276,7 +1391,8 @@
       "lat": 29.352,
       "bortle": 2,
       "cityCode": "101040100",
-      "description": "海拔2033m，南国第一牧原，重庆星空地图推荐点"
+      "description": "海拔2033m，南国第一牧原，重庆星空地图推荐点",
+      "elevation": 2033
     },
     {
       "id": "finder-117-location",
@@ -1287,7 +1403,8 @@
       "lat": 29.382,
       "bortle": 2,
       "cityCode": "101040100",
-      "description": "海拔1664m，西南首座风力发电站，竹海星空"
+      "description": "海拔1664m，西南首座风力发电站，竹海星空",
+      "elevation": 1664
     },
     {
       "id": "finder-118-location",
@@ -1298,7 +1415,8 @@
       "lat": 29.282,
       "bortle": 2,
       "cityCode": "101040100",
-      "description": "海拔1948m，波特尔2级，2026全国星空避暑秘境"
+      "description": "海拔1948m，波特尔2级，2026全国星空避暑秘境",
+      "elevation": 1948
     },
     {
       "id": "finder-119-location",
@@ -1309,7 +1427,8 @@
       "lat": 28.652,
       "bortle": 2,
       "cityCode": "101040300",
-      "description": "千年道观，古建筑与星空交相辉映"
+      "description": "千年道观，古建筑与星空交相辉映",
+      "elevation": 1101
     },
     {
       "id": "finder-120-location",
@@ -1320,7 +1439,8 @@
       "lat": 29.022,
       "bortle": 2,
       "cityCode": "101040100",
-      "description": "海拔2238m，国家级保护区，山城最美星空"
+      "description": "海拔2238m，国家级保护区，山城最美星空",
+      "elevation": 2238
     },
     {
       "id": "finder-121-location",
@@ -1331,7 +1451,8 @@
       "lat": 31.482,
       "bortle": 2,
       "cityCode": "101040200",
-      "description": "海拔2630m，云端净土，远离城市光污染"
+      "description": "海拔2630m，云端净土，远离城市光污染",
+      "elevation": 2630
     },
     {
       "id": "finder-122-location",
@@ -1342,7 +1463,8 @@
       "lat": 28.882,
       "bortle": 2,
       "cityCode": "101040900",
-      "description": "新晋打卡地，银河横跨天空，临崖观星"
+      "description": "新晋打卡地，银河横跨天空，临崖观星",
+      "elevation": 826
     },
     {
       "id": "finder-123-location",
@@ -1353,7 +1475,8 @@
       "lat": 29.982,
       "bortle": 2,
       "cityCode": "101040500",
-      "description": "海拔1300m，高山草甸，星空露营"
+      "description": "海拔1300m，高山草甸，星空露营",
+      "elevation": 1300
     },
     {
       "id": "finder-124-location",
@@ -1364,7 +1487,8 @@
       "lat": 32.082,
       "bortle": 2,
       "cityCode": "101190101",
-      "description": "南京近郊，海拔442m，城市周边暗夜"
+      "description": "南京近郊，海拔442m，城市周边暗夜",
+      "elevation": 442
     },
     {
       "id": "finder-125-location",
@@ -1375,7 +1499,8 @@
       "lat": 34.682,
       "bortle": 2,
       "cityCode": "101191201",
-      "description": "江苏最高峰(624m)，沿海山区暗夜"
+      "description": "江苏最高峰(624m)，沿海山区暗夜",
+      "elevation": 3
     },
     {
       "id": "finder-126-location",
@@ -1386,7 +1511,8 @@
       "lat": 26.682,
       "bortle": 2,
       "cityCode": "101230301",
-      "description": "福建距大陆最远有人居住海岛，光污染约2级，蓝眼泪+星空圣地"
+      "description": "福建距大陆最远有人居住海岛，光污染约2级，蓝眼泪+星空圣地",
+      "elevation": 0
     },
     {
       "id": "finder-127-location",
@@ -1397,7 +1523,8 @@
       "lat": 48.108,
       "bortle": 2,
       "cityCode": "101050801",
-      "description": "小兴安岭腹地，原始红松林，暗夜环境优良"
+      "description": "小兴安岭腹地，原始红松林，暗夜环境优良",
+      "elevation": 286
     },
     {
       "id": "finder-128-location",
@@ -1408,7 +1535,8 @@
       "lat": 51.482,
       "bortle": 1,
       "cityCode": "101050701",
-      "description": "大兴安岭核心区，中国最北自然保护区之一，极暗夜"
+      "description": "大兴安岭核心区，中国最北自然保护区之一，极暗夜",
+      "elevation": 1039
     },
     {
       "id": "finder-129-location",
@@ -1419,7 +1547,8 @@
       "lat": 47.582,
       "bortle": 2,
       "cityCode": "101051101",
-      "description": "黑龙江畔，中俄边境湿地，光污染极低"
+      "description": "黑龙江畔，中俄边境湿地，光污染极低",
+      "elevation": 86
     },
     {
       "id": "finder-130-location",
@@ -1430,7 +1559,8 @@
       "lat": 46.802,
       "bortle": 2,
       "cityCode": "101051401",
-      "description": "乌苏里江畔，中俄边境，森林湿地暗夜"
+      "description": "乌苏里江畔，中俄边境，森林湿地暗夜",
+      "elevation": 52
     },
     {
       "id": "finder-131-location",
@@ -1441,7 +1571,8 @@
       "lat": 44.032,
       "bortle": 2,
       "cityCode": "101050301",
-      "description": "火山堰塞湖，海拔350m，景区暗夜"
+      "description": "火山堰塞湖，海拔350m，景区暗夜",
+      "elevation": 350
     },
     {
       "id": "finder-132-location",
@@ -1452,7 +1583,8 @@
       "lat": 47.642,
       "bortle": 2,
       "cityCode": "101050801",
-      "description": "三江平原腹地，黑龙江与松花江交汇处，平原暗夜"
+      "description": "三江平原腹地，黑龙江与松花江交汇处，平原暗夜",
+      "elevation": 60
     },
     {
       "id": "finder-133-location",
@@ -1463,7 +1595,8 @@
       "lat": 44.842,
       "bortle": 2,
       "cityCode": "101060601",
-      "description": "科尔沁草原腹地，湿地保护区，平原暗夜"
+      "description": "科尔沁草原腹地，湿地保护区，平原暗夜",
+      "elevation": 158
     },
     {
       "id": "finder-134-location",
@@ -1474,7 +1607,8 @@
       "lat": 44.382,
       "bortle": 2,
       "cityCode": "101060101",
-      "description": "长春西部最大淡水湖湿地，光污染低，视野开阔"
+      "description": "长春西部最大淡水湖湿地，光污染低，视野开阔",
+      "elevation": 218
     },
     {
       "id": "finder-135-location",
@@ -1485,7 +1619,8 @@
       "lat": 42.182,
       "bortle": 2,
       "cityCode": "101060501",
-      "description": "长白山余脉主峰1233m，森林暗夜"
+      "description": "长白山余脉主峰1233m，森林暗夜",
+      "elevation": 477
     },
     {
       "id": "finder-136-location",
@@ -1496,7 +1631,8 @@
       "lat": 42.982,
       "bortle": 2,
       "cityCode": "101060201",
-      "description": "松花江上游，山区湖畔暗夜，有星空旅游开发"
+      "description": "松花江上游，山区湖畔暗夜，有星空旅游开发",
+      "elevation": 323
     },
     {
       "id": "finder-137-location",
@@ -1507,7 +1643,8 @@
       "lat": 41.082,
       "bortle": 2,
       "cityCode": "101060501",
-      "description": "鸭绿江大拐弯，距集安市40分钟车程，边境暗夜"
+      "description": "鸭绿江大拐弯，距集安市40分钟车程，边境暗夜",
+      "elevation": 390
     },
     {
       "id": "finder-138-location",
@@ -1518,7 +1655,8 @@
       "lat": 24.382,
       "bortle": 2,
       "cityCode": "101290101",
-      "description": "海拔1907m，喀斯特地貌，昆明周边最佳观星地"
+      "description": "海拔1907m，喀斯特地貌，昆明周边最佳观星地",
+      "elevation": 1907
     },
     {
       "id": "finder-139-location",
@@ -1529,7 +1667,8 @@
       "lat": 25.582,
       "bortle": 2,
       "cityCode": "101290101",
-      "description": "距昆明23km，地势开阔，无光污染，肉眼可见繁星"
+      "description": "距昆明23km，地势开阔，无光污染，肉眼可见繁星",
+      "elevation": 1910
     },
     {
       "id": "finder-140-location",
@@ -1540,7 +1679,8 @@
       "lat": 24.582,
       "bortle": 2,
       "cityCode": "101290401",
-      "description": "高原深水湖，海拔1720m，中科院太阳观测站旁"
+      "description": "高原深水湖，海拔1720m，中科院太阳观测站旁",
+      "elevation": 1720
     },
     {
       "id": "finder-141-location",
@@ -1551,7 +1691,8 @@
       "lat": 23.502,
       "bortle": 2,
       "cityCode": "101290701",
-      "description": "云南中部山区，热带森林暗夜"
+      "description": "云南中部山区，热带森林暗夜",
+      "elevation": 935
     },
     {
       "id": "finder-142-location",
@@ -1562,7 +1703,8 @@
       "lat": 25.682,
       "bortle": 2,
       "cityCode": "101290801",
-      "description": "楚雄元谋，喀斯特土林地貌，观星老牌胜地"
+      "description": "楚雄元谋，喀斯特土林地貌，观星老牌胜地",
+      "elevation": 1200
     },
     {
       "id": "finder-143-location",
@@ -1573,7 +1715,8 @@
       "lat": 24.882,
       "bortle": 2,
       "cityCode": "101290401",
-      "description": "彩色沙林地貌，距昆明2小时车程，观星爱好者常去地"
+      "description": "彩色沙林地貌，距昆明2小时车程，观星爱好者常去地",
+      "elevation": 2011
     },
     {
       "id": "finder-144-location",
@@ -1584,7 +1727,8 @@
       "lat": 25.082,
       "bortle": 2,
       "cityCode": "101290501",
-      "description": "火山地热区，海拔1640m，边境暗夜"
+      "description": "火山地热区，海拔1640m，边境暗夜",
+      "elevation": 1640
     },
     {
       "id": "finder-145-location",
@@ -1595,7 +1739,8 @@
       "lat": 32.082,
       "bortle": 2,
       "cityCode": "101270601",
-      "description": "海拔2273m，川东北最高峰之一，夏日银河星空"
+      "description": "海拔2273m，川东北最高峰之一，夏日银河星空",
+      "elevation": 2273
     },
     {
       "id": "finder-146-location",
@@ -1606,7 +1751,8 @@
       "lat": 32.482,
       "bortle": 2,
       "cityCode": "101270401",
-      "description": "米仓山核心区，海拔2500m，森林暗夜"
+      "description": "米仓山核心区，海拔2500m，森林暗夜",
+      "elevation": 2500
     },
     {
       "id": "finder-147-location",
@@ -1617,7 +1763,8 @@
       "lat": 29.782,
       "bortle": 2,
       "cityCode": "101271001",
-      "description": "海拔3666m，中国最大观景平台，云海星空圣地"
+      "description": "海拔3666m，中国最大观景平台，云海星空圣地",
+      "elevation": 3666
     },
     {
       "id": "finder-148-location",
@@ -1628,7 +1775,8 @@
       "lat": 30.382,
       "bortle": 2,
       "cityCode": "101270801",
-      "description": "川东平行岭谷最高峰，海拔1704m"
+      "description": "川东平行岭谷最高峰，海拔1704m",
+      "elevation": 1704
     },
     {
       "id": "finder-149-location",
@@ -1639,7 +1787,8 @@
       "lat": 27.582,
       "bortle": 2,
       "cityCode": "101271101",
-      "description": "海拔4359m，邛海西侧，冰川湖泊暗夜"
+      "description": "海拔4359m，邛海西侧，冰川湖泊暗夜",
+      "elevation": 4359
     },
     {
       "id": "finder-150-location",
@@ -1650,7 +1799,8 @@
       "lat": 29.682,
       "bortle": 2,
       "cityCode": "101271201",
-      "description": "海拔2830m，中国最大方山，森林暗夜"
+      "description": "海拔2830m，中国最大方山，森林暗夜",
+      "elevation": 2830
     },
     {
       "id": "finder-151-location",
@@ -1661,7 +1811,8 @@
       "lat": 30.082,
       "bortle": 1,
       "cityCode": "101271401",
-      "description": "海拔4000m+，措普湖畔，川西高原极暗夜"
+      "description": "海拔4000m+，措普湖畔，川西高原极暗夜",
+      "elevation": 4000
     },
     {
       "id": "finder-152-location",
@@ -1672,7 +1823,8 @@
       "lat": 37.782,
       "bortle": 1,
       "cityCode": "101130901",
-      "description": "帕米尔高原，海拔3100m，慕士塔格峰下极暗夜"
+      "description": "帕米尔高原，海拔3100m，慕士塔格峰下极暗夜",
+      "elevation": 3100
     },
     {
       "id": "finder-153-location",
@@ -1683,7 +1835,8 @@
       "lat": 37.082,
       "bortle": 1,
       "cityCode": "101131501",
-      "description": "塔克拉玛干沙漠南缘，尼雅遗址方向，极暗夜"
+      "description": "塔克拉玛干沙漠南缘，尼雅遗址方向，极暗夜",
+      "elevation": 1400
     },
     {
       "id": "finder-154-location",
@@ -1694,7 +1847,8 @@
       "lat": 38.182,
       "bortle": 1,
       "cityCode": "101130801",
-      "description": "昆仑山北麓，沙漠腹地，极暗夜"
+      "description": "昆仑山北麓，沙漠腹地，极暗夜",
+      "elevation": 1234
     },
     {
       "id": "finder-155-location",
@@ -1705,7 +1859,8 @@
       "lat": 41.282,
       "bortle": 2,
       "cityCode": "101130701",
-      "description": "天山南麓，托木尔峰区域，海拔2000m+"
+      "description": "天山南麓，托木尔峰区域，海拔2000m+",
+      "elevation": 2000
     },
     {
       "id": "finder-156-location",
@@ -1716,7 +1871,8 @@
       "lat": 43.682,
       "bortle": 2,
       "cityCode": "101131201",
-      "description": "天山北麓东段，海拔1650m，高山草原暗夜"
+      "description": "天山北麓东段，海拔1650m，高山草原暗夜",
+      "elevation": 1650
     },
     {
       "id": "finder-157-location",
@@ -1727,7 +1883,8 @@
       "lat": 42.082,
       "bortle": 2,
       "cityCode": "101130601",
-      "description": "中国最大内陆淡水湖，湖畔暗夜"
+      "description": "中国最大内陆淡水湖，湖畔暗夜",
+      "elevation": 1047
     },
     {
       "id": "finder-158-location",
@@ -1738,7 +1895,8 @@
       "lat": 40.982,
       "bortle": 2,
       "cityCode": "101130601",
-      "description": "塔里木河畔，塔克拉玛干沙漠边缘，古村暗夜"
+      "description": "塔里木河畔，塔克拉玛干沙漠边缘，古村暗夜",
+      "elevation": 890
     },
     {
       "id": "finder-159-location",
@@ -1749,7 +1907,8 @@
       "lat": 38.382,
       "bortle": 1,
       "cityCode": "101150701",
-      "description": "一级暗空，雅丹地貌魔鬼城，纯净星空"
+      "description": "一级暗空，雅丹地貌魔鬼城，纯净星空",
+      "elevation": 3326
     },
     {
       "id": "finder-160-location",
@@ -1760,7 +1919,8 @@
       "lat": 36.482,
       "bortle": 2,
       "cityCode": "101150801",
-      "description": "柴达木盆地，胡杨林沙漠暗夜"
+      "description": "柴达木盆地，胡杨林沙漠暗夜",
+      "elevation": 2769
     },
     {
       "id": "finder-161-location",
@@ -1771,7 +1931,8 @@
       "lat": 37.882,
       "bortle": 1,
       "cityCode": "101150701",
-      "description": "柴达木盆地盐湖，海拔3148m，一级暗空"
+      "description": "柴达木盆地盐湖，海拔3148m，一级暗空",
+      "elevation": 3148
     },
     {
       "id": "finder-162-location",
@@ -1782,7 +1943,8 @@
       "lat": 38.282,
       "bortle": 2,
       "cityCode": "101150201",
-      "description": "海拔4300m，丹霞地貌，高原暗夜"
+      "description": "海拔4300m，丹霞地貌，高原暗夜",
+      "elevation": 4300
     },
     {
       "id": "finder-163-location",
@@ -1793,7 +1955,8 @@
       "lat": 37.182,
       "bortle": 2,
       "cityCode": "101150201",
-      "description": "祁连山东段，海拔3000m+，森林暗夜"
+      "description": "祁连山东段，海拔3000m+，森林暗夜",
+      "elevation": 3000
     },
     {
       "id": "finder-164-location",
@@ -1804,7 +1967,8 @@
       "lat": 36.682,
       "bortle": 2,
       "cityCode": "101150801",
-      "description": "海拔3100m，天空之镜，星空倒影圣地"
+      "description": "海拔3100m，天空之镜，星空倒影圣地",
+      "elevation": 3100
     },
     {
       "id": "finder-165-location",
@@ -1815,7 +1979,8 @@
       "lat": 38.982,
       "bortle": 2,
       "cityCode": "101170101",
-      "description": "海拔1500m，避开城市灰霾，超高晴空率"
+      "description": "海拔1500m，避开城市灰霾，超高晴空率",
+      "elevation": 1500
     },
     {
       "id": "finder-166-location",
@@ -1826,7 +1991,8 @@
       "lat": 38.482,
       "bortle": 2,
       "cityCode": "101170101",
-      "description": "银川以北40分钟，沙水相依，星空倒映湖面"
+      "description": "银川以北40分钟，沙水相依，星空倒映湖面",
+      "elevation": 1109
     },
     {
       "id": "finder-167-location",
@@ -1837,7 +2003,8 @@
       "lat": 37.782,
       "bortle": 2,
       "cityCode": "101170301",
-      "description": "宁夏最佳观星景区之一，有共享天文台"
+      "description": "宁夏最佳观星景区之一，有共享天文台",
+      "elevation": 1485
     },
     {
       "id": "finder-168-location",
@@ -1848,7 +2015,8 @@
       "lat": 39.882,
       "bortle": 1,
       "cityCode": "101081001",
-      "description": "中国第三大沙漠，海拔1600m，极暗夜，星空摄影圣地"
+      "description": "中国第三大沙漠，海拔1600m，极暗夜，星空摄影圣地",
+      "elevation": 1600
     },
     {
       "id": "finder-169-location",
@@ -1859,7 +2027,8 @@
       "lat": 41.982,
       "bortle": 1,
       "cityCode": "101081101",
-      "description": "巴丹吉林沙漠北缘，胡杨林暗夜，光污染几乎为零"
+      "description": "巴丹吉林沙漠北缘，胡杨林暗夜，光污染几乎为零",
+      "elevation": 936
     },
     {
       "id": "finder-170-location",
@@ -1870,7 +2039,8 @@
       "lat": 37.582,
       "bortle": 2,
       "cityCode": "101170301",
-      "description": "阿拉善左旗，腾格里沙漠东南缘，方圆10km无灯光"
+      "description": "阿拉善左旗，腾格里沙漠东南缘，方圆10km无灯光",
+      "elevation": 1249
     },
     {
       "id": "finder-171-location",
@@ -1881,7 +2051,8 @@
       "lat": 44.282,
       "bortle": 2,
       "cityCode": "101080601",
-      "description": "2024年暗夜星空保护地，大兴安岭地区夜空最暗之一"
+      "description": "2024年暗夜星空保护地，大兴安岭地区夜空最暗之一",
+      "elevation": 1039
     },
     {
       "id": "finder-172-location",
@@ -1892,7 +2063,8 @@
       "lat": 41.082,
       "bortle": 2,
       "cityCode": "101080401",
-      "description": "海拔1800m，高山草甸，距北京300km"
+      "description": "海拔1800m，高山草甸，距北京300km",
+      "elevation": 1800
     },
     {
       "id": "finder-173-location",
@@ -1903,7 +2075,8 @@
       "lat": 42.282,
       "bortle": 2,
       "cityCode": "101080801",
-      "description": "草原腹地，元上都世界遗产，开阔暗夜"
+      "description": "草原腹地，元上都世界遗产，开阔暗夜",
+      "elevation": 1287
     },
     {
       "id": "finder-174-location",
@@ -1914,7 +2087,8 @@
       "lat": 49.382,
       "bortle": 2,
       "cityCode": "101081001",
-      "description": "呼伦贝尔大草原核心区，地广人稀，暗夜环境"
+      "description": "呼伦贝尔大草原核心区，地广人稀，暗夜环境",
+      "elevation": 599
     },
     {
       "id": "finder-175-location",
@@ -1925,7 +2099,8 @@
       "lat": 41.182,
       "bortle": 2,
       "cityCode": "101070501",
-      "description": "本溪东南70km，森林覆盖率95%，东北小黄山暗夜"
+      "description": "本溪东南70km，森林覆盖率95%，东北小黄山暗夜",
+      "elevation": 340
     },
     {
       "id": "finder-176-location",
@@ -1936,7 +2111,8 @@
       "lat": 41.282,
       "bortle": 2,
       "cityCode": "101070501",
-      "description": "海拔824m，世界文化遗产高句丽遗址，浑江畔暗夜"
+      "description": "海拔824m，世界文化遗产高句丽遗址，浑江畔暗夜",
+      "elevation": 824
     },
     {
       "id": "finder-177-location",
@@ -1947,7 +2123,8 @@
       "lat": 41.082,
       "bortle": 2,
       "cityCode": "101070501",
-      "description": "桓仁县城南，森林覆盖率97%，夏季均温20℃避暑观星"
+      "description": "桓仁县城南，森林覆盖率97%，夏季均温20℃避暑观星",
+      "elevation": 462
     },
     {
       "id": "finder-178-location",
@@ -1958,7 +2135,8 @@
       "lat": 41.382,
       "bortle": 2,
       "cityCode": "101070501",
-      "description": "东北道教发祥地，海拔900m，云光洞暗夜"
+      "description": "东北道教发祥地，海拔900m，云光洞暗夜",
+      "elevation": 900
     },
     {
       "id": "finder-179-location",
@@ -1969,7 +2147,8 @@
       "lat": 41.182,
       "bortle": 2,
       "cityCode": "101071201",
-      "description": "喀左县，光污染4级以下村庄多，肉眼可见银河"
+      "description": "喀左县，光污染4级以下村庄多，肉眼可见银河",
+      "elevation": 416
     },
     {
       "id": "finder-180-location",
@@ -1980,7 +2159,8 @@
       "lat": 41.682,
       "bortle": 2,
       "cityCode": "101071201",
-      "description": "努鲁尔虎山北麓，海拔1074m，辽宁西部山区暗夜"
+      "description": "努鲁尔虎山北麓，海拔1074m，辽宁西部山区暗夜",
+      "elevation": 1074
     },
     {
       "id": "finder-181-location",
@@ -1991,7 +2171,8 @@
       "lat": 40.982,
       "bortle": 2,
       "cityCode": "101070601",
-      "description": "宽甸满族自治县，辽宁东部山区，森林暗夜"
+      "description": "宽甸满族自治县，辽宁东部山区，森林暗夜",
+      "elevation": 364
     },
     {
       "id": "finder-182-location",
@@ -2002,7 +2183,8 @@
       "lat": 41.882,
       "bortle": 2,
       "cityCode": "101070401",
-      "description": "长白山脉龙岗山系，海拔1347m，抚顺最高峰暗夜"
+      "description": "长白山脉龙岗山系，海拔1347m，抚顺最高峰暗夜",
+      "elevation": 1347
     },
     {
       "id": "finder-183-location",
@@ -2013,7 +2195,8 @@
       "lat": 31.482,
       "bortle": 2,
       "cityCode": "101201301",
-      "description": "楚北天空第一峰，海拔1055m，微博实拍银河观星地"
+      "description": "楚北天空第一峰，海拔1055m，微博实拍银河观星地",
+      "elevation": 1055
     },
     {
       "id": "finder-184-location",
@@ -2024,7 +2207,8 @@
       "lat": 31.082,
       "bortle": 2,
       "cityCode": "101200901",
-      "description": "三峡库区，海拔1700m，国家森林公园暗夜"
+      "description": "三峡库区，海拔1700m，国家森林公园暗夜",
+      "elevation": 1700
     },
     {
       "id": "finder-185-location",
@@ -2035,7 +2219,8 @@
       "lat": 31.782,
       "bortle": 2,
       "cityCode": "101200201",
-      "description": "荆山腹地，海拔1600m，磷矿矿区转型生态暗夜"
+      "description": "荆山腹地，海拔1600m，磷矿矿区转型生态暗夜",
+      "elevation": 1600
     },
     {
       "id": "finder-186-location",
@@ -2046,7 +2231,8 @@
       "lat": 30.882,
       "bortle": 2,
       "cityCode": "101201401",
-      "description": "大别山主峰南麓，海拔1100m，五彩杜鹃+星空"
+      "description": "大别山主峰南麓，海拔1100m，五彩杜鹃+星空",
+      "elevation": 1100
     },
     {
       "id": "finder-187-location",
@@ -2057,7 +2243,8 @@
       "lat": 32.402,
       "bortle": 2,
       "cityCode": "101201101",
-      "description": "海拔1612m，道教圣地，武当金顶星空"
+      "description": "海拔1612m，道教圣地，武当金顶星空",
+      "elevation": 1612
     },
     {
       "id": "finder-188-location",
@@ -2068,7 +2255,8 @@
       "lat": 29.432,
       "bortle": 2,
       "cityCode": "101200701",
-      "description": "海拔1556m，2级暗夜，2026暑期全国观星优选地"
+      "description": "海拔1556m，2级暗夜，2026暑期全国观星优选地",
+      "elevation": 1556
     },
     {
       "id": "finder-189-location",
@@ -2079,7 +2267,8 @@
       "lat": 25.682,
       "bortle": 1,
       "cityCode": "101240701",
-      "description": "赣南第一峰(2061m)，97.6%森林覆盖，光污染极小，星空云海"
+      "description": "赣南第一峰(2061m)，97.6%森林覆盖，光污染极小，星空云海",
+      "elevation": 241
     },
     {
       "id": "finder-190-location",
@@ -2090,7 +2279,8 @@
       "lat": 25.882,
       "bortle": 2,
       "cityCode": "101240701",
-      "description": "齐云山相邻，诸广山脉主峰区域，原始森林暗夜"
+      "description": "齐云山相邻，诸广山脉主峰区域，原始森林暗夜",
+      "elevation": 547
     },
     {
       "id": "finder-191-location",
@@ -2101,7 +2291,8 @@
       "lat": 24.882,
       "bortle": 2,
       "cityCode": "101240701",
-      "description": "赣南寻乌县，海拔1530m，赣粤交界山区暗夜"
+      "description": "赣南寻乌县，海拔1530m，赣粤交界山区暗夜",
+      "elevation": 1530
     },
     {
       "id": "finder-192-location",
@@ -2112,7 +2303,8 @@
       "lat": 25.082,
       "bortle": 2,
       "cityCode": "101240701",
-      "description": "东江源头，海拔1169m，国家森林公园暗夜"
+      "description": "东江源头，海拔1169m，国家森林公园暗夜",
+      "elevation": 1169
     },
     {
       "id": "finder-193-location",
@@ -2123,7 +2315,8 @@
       "lat": 24.682,
       "bortle": 2,
       "cityCode": "101240701",
-      "description": "赣粤交界，南岭东段，原始森林核心保护区暗夜"
+      "description": "赣粤交界，南岭东段，原始森林核心保护区暗夜",
+      "elevation": 487
     },
     {
       "id": "finder-194-location",
@@ -2134,7 +2327,8 @@
       "lat": 25.382,
       "bortle": 2,
       "cityCode": "101240701",
-      "description": "大余县，梅岭海拔600m，赣粤古道山区暗夜"
+      "description": "大余县，梅岭海拔600m，赣粤古道山区暗夜",
+      "elevation": 600
     },
     {
       "id": "finder-195-location",
@@ -2145,7 +2339,8 @@
       "lat": 26.982,
       "bortle": 2,
       "cityCode": "101240801",
-      "description": "宁都东韶乡，海拔1455m，雩山山脉宁都第一峰，三市三县交界"
+      "description": "宁都东韶乡，海拔1455m，雩山山脉宁都第一峰，三市三县交界",
+      "elevation": 1455
     },
     {
       "id": "finder-196-location",
@@ -2156,7 +2351,8 @@
       "lat": 26.682,
       "bortle": 2,
       "cityCode": "101240901",
-      "description": "武夷山脉西麓，海拔1391m，抚州南部山区暗夜"
+      "description": "武夷山脉西麓，海拔1391m，抚州南部山区暗夜",
+      "elevation": 1391
     },
     {
       "id": "finder-197-location",
@@ -2167,7 +2363,8 @@
       "lat": 26.382,
       "bortle": 2,
       "cityCode": "101240901",
-      "description": "石城县东北部，海拔1314m，高山草甸暗夜"
+      "description": "石城县东北部，海拔1314m，高山草甸暗夜",
+      "elevation": 1314
     },
     {
       "id": "finder-198-location",
@@ -2178,7 +2375,8 @@
       "lat": 25.882,
       "bortle": 2,
       "cityCode": "101240701",
-      "description": "于都县，海拔1312m，高山牧场暗夜"
+      "description": "于都县，海拔1312m，高山牧场暗夜",
+      "elevation": 1312
     },
     {
       "id": "finder-199-location",
@@ -2189,7 +2387,8 @@
       "lat": 25.782,
       "bortle": 2,
       "cityCode": "101300301",
-      "description": "龙胜各族自治县，海拔1100m，梯田星空"
+      "description": "龙胜各族自治县，海拔1100m，梯田星空",
+      "elevation": 1100
     },
     {
       "id": "finder-200-location",
@@ -2200,7 +2399,8 @@
       "lat": 24.882,
       "bortle": 2,
       "cityCode": "101300401",
-      "description": "桂东北，都庞岭西麓，瑶族山区暗夜"
+      "description": "桂东北，都庞岭西麓，瑶族山区暗夜",
+      "elevation": 209
     },
     {
       "id": "finder-201-location",
@@ -2211,7 +2411,8 @@
       "lat": 22.982,
       "bortle": 2,
       "cityCode": "101300501",
-      "description": "桂东南，海拔1210m，山地公园暗夜"
+      "description": "桂东南，海拔1210m，山地公园暗夜",
+      "elevation": 1210
     },
     {
       "id": "finder-202-location",
@@ -2222,7 +2423,8 @@
       "lat": 24.082,
       "bortle": 2,
       "cityCode": "101300201",
-      "description": "大瑶山核心区，海拔1979m，圣堂山暗夜"
+      "description": "大瑶山核心区，海拔1979m，圣堂山暗夜",
+      "elevation": 1979
     },
     {
       "id": "finder-203-location",
@@ -2233,7 +2435,8 @@
       "lat": 24.782,
       "bortle": 2,
       "cityCode": "101280201",
-      "description": "乳源瑶族县，南水湖畔，森林湿地暗夜"
+      "description": "乳源瑶族县，南水湖畔，森林湿地暗夜",
+      "elevation": 109
     },
     {
       "id": "finder-204-location",
@@ -2244,7 +2447,8 @@
       "lat": 24.582,
       "bortle": 2,
       "cityCode": "101281101",
-      "description": "粤北瑶族山区，海拔800m+，喀斯特峰林暗夜"
+      "description": "粤北瑶族山区，海拔800m+，喀斯特峰林暗夜",
+      "elevation": 800
     },
     {
       "id": "finder-205-location",
@@ -2255,7 +2459,8 @@
       "lat": 23.882,
       "bortle": 2,
       "cityCode": "101280901",
-      "description": "粤西北山区，海拔600m+，喀斯特溶洞暗夜"
+      "description": "粤西北山区，海拔600m+，喀斯特溶洞暗夜",
+      "elevation": 600
     },
     {
       "id": "finder-206-location",
@@ -2266,7 +2471,8 @@
       "lat": 26.1,
       "bortle": 2,
       "cityCode": "101250201",
-      "description": "城步南山牧场48坪之一，高山草原台地海拔约1700m，远离城市光害"
+      "description": "城步南山牧场48坪之一，高山草原台地海拔约1700m，远离城市光害",
+      "elevation": 1307
     },
     {
       "id": "finder-207-location",
@@ -2277,7 +2483,8 @@
       "lat": 26.08,
       "bortle": 2,
       "cityCode": "101250201",
-      "description": "南山天湖人工湖，水面6公顷海拔约1700m，四周群山环绕暗夜环境"
+      "description": "南山天湖人工湖，水面6公顷海拔约1700m，四周群山环绕暗夜环境",
+      "elevation": 1633
     },
     {
       "id": "finder-208-location",
@@ -2288,7 +2495,8 @@
       "lat": 25.35,
       "bortle": 2,
       "cityCode": "101300501",
-      "description": "海拔1936m海洋山脉主峰，全州县与灌阳县交界，山顶360度开阔视野"
+      "description": "海拔1936m海洋山脉主峰，全州县与灌阳县交界，山顶360度开阔视野",
+      "elevation": 1936
     },
     {
       "id": "finder-209-location",
@@ -2299,7 +2507,8 @@
       "lat": 26.15,
       "bortle": 2,
       "cityCode": "101250201",
-      "description": "城步白毛坪镇与资源县交界，平均海拔1670m最高1801m，原生态高山森林湿地约10平方公里开阔地"
+      "description": "城步白毛坪镇与资源县交界，平均海拔1670m最高1801m，原生态高山森林湿地约10平方公里开阔地",
+      "elevation": 1670
     },
     {
       "id": "finder-210-location",
@@ -2310,7 +2519,8 @@
       "lat": 40.47,
       "bortle": 1,
       "cityCode": "101080301",
-      "description": "中国第七大沙漠，鄂尔多斯高原北部，距北京最近的沙漠，沙漠腹地极低光污染，沙海星空"
+      "description": "中国第七大沙漠，鄂尔多斯高原北部，距北京最近的沙漠，沙漠腹地极低光污染，沙海星空",
+      "elevation": 1123
     },
     {
       "id": "finder-211-location",
@@ -2321,7 +2531,8 @@
       "lat": 26.13,
       "bortle": 2,
       "cityCode": "101300301",
-      "description": "海拔2123m华南第二高峰，越城岭山脉全州资源交界，天湖高山湖泊群13座，秋观漫天星斗"
+      "description": "海拔2123m华南第二高峰，越城岭山脉全州资源交界，天湖高山湖泊群13座，秋观漫天星斗",
+      "elevation": 2123
     },
     {
       "id": "finder-212-location",
@@ -2332,7 +2543,8 @@
       "lat": 22.352,
       "bortle": 2,
       "cityCode": "101280101",
-      "description": "中国首个国际暗夜社区，三面环山一面向海，森林覆盖率90%，海拔50m，沙滩+星空+萤火虫，大湾区1小时星空圈"
+      "description": "中国首个国际暗夜社区，三面环山一面向海，森林覆盖率90%，海拔50m，沙滩+星空+萤火虫，大湾区1小时星空圈",
+      "elevation": 0
     },
     {
       "id": "finder-213-location",
@@ -2343,7 +2555,8 @@
       "lat": 40.582,
       "bortle": 3,
       "cityCode": "101011100",
-      "description": "国家天文台密云射电观测基地，《三体》红岸基地原型，海拔200m，50m口径射电望远镜阵列，距北京城区120km"
+      "description": "国家天文台密云射电观测基地，《三体》红岸基地原型，海拔200m，50m口径射电望远镜阵列，距北京城区120km",
+      "elevation": 200
     },
     {
       "id": "finder-214-location",
@@ -2354,7 +2567,8 @@
       "lat": 30.042,
       "bortle": 2,
       "cityCode": "101220101",
-      "description": "2026年全国首批适宜观星区域，千年古村海拔400m，黟县生态环境优良光污染极少，粉墙黛瓦与星空交映"
+      "description": "2026年全国首批适宜观星区域，千年古村海拔400m，黟县生态环境优良光污染极少，粉墙黛瓦与星空交映",
+      "elevation": 400
     },
     {
       "id": "finder-215-location",
@@ -2365,7 +2579,8 @@
       "lat": 33.962,
       "bortle": 3,
       "cityCode": "101180501",
-      "description": "2023年度推荐星空目的地，前坪龙湖畔海拔300m，露营观星基地，距洛阳城区40km交通便利"
+      "description": "2023年度推荐星空目的地，前坪龙湖畔海拔300m，露营观星基地，距洛阳城区40km交通便利",
+      "elevation": 300
     },
     {
       "id": "finder-216-location",
@@ -2376,7 +2591,8 @@
       "lat": 33.882,
       "bortle": 3,
       "cityCode": "101191001",
-      "description": "2023年度推荐星空目的地，洪泽湖西北浅水湖泊，海拔15m，湖面开阔视野无遮挡，平原暗夜"
+      "description": "2023年度推荐星空目的地，洪泽湖西北浅水湖泊，海拔15m，湖面开阔视野无遮挡，平原暗夜",
+      "elevation": 16
     },
     {
       "id": "finder-217-location",
@@ -2387,7 +2603,8 @@
       "lat": 28.352,
       "bortle": 2,
       "cityCode": "101210801",
-      "description": "全国首批天气气候景观地唯一星空景观，海拔1000m开车直达，国际暗夜公园银级标准，华东最佳观星点"
+      "description": "全国首批天气气候景观地唯一星空景观，海拔1000m开车直达，国际暗夜公园银级标准，华东最佳观星点",
+      "elevation": 1000
     },
     {
       "id": "finder-218-location",
@@ -2398,7 +2615,8 @@
       "lat": 29.315,
       "bortle": 2,
       "cityCode": "101210301",
-      "description": "中华暗夜星空保护地，海拔680m，钱塘江源头千年古村，裸眼看银河，开化暗夜公园上榜世界暗夜保护地名录"
+      "description": "中华暗夜星空保护地，海拔680m，钱塘江源头千年古村，裸眼看银河，开化暗夜公园上榜世界暗夜保护地名录",
+      "elevation": 680
     },
     {
       "id": "finder-219-location",
@@ -2409,7 +2627,8 @@
       "lat": 38.682,
       "bortle": 1,
       "cityCode": "101150601",
-      "description": "全国首个沙漠天文科普特色小镇，中科院国家天文台支持，腾格里沙漠腹地海拔1300m，沙漠平坦地形，晴天多光污染极少"
+      "description": "全国首个沙漠天文科普特色小镇，中科院国家天文台支持，腾格里沙漠腹地海拔1300m，沙漠平坦地形，晴天多光污染极少",
+      "elevation": 1300
     },
     {
       "id": "finder-220-location",
@@ -2420,7 +2639,8 @@
       "lat": 40.658,
       "bortle": 4,
       "cityCode": "101010100",
-      "description": "距北京140km，波特尔4级绿区，极限星等6.1-6.5，长城脚下星空小镇，光污染小，北京观星最佳地"
+      "description": "距北京140km，波特尔4级绿区，极限星等6.1-6.5，长城脚下星空小镇，光污染小，北京观星最佳地",
+      "elevation": 196
     },
     {
       "id": "finder-221-location",
@@ -2431,7 +2651,8 @@
       "lat": 40.842,
       "bortle": 4,
       "cityCode": "101010200",
-      "description": "北京周边光污染最小的地方，原始森林，海拔约700m，银河可见"
+      "description": "北京周边光污染最小的地方，原始森林，海拔约700m，银河可见",
+      "elevation": 819
     },
     {
       "id": "finder-222-location",
@@ -2442,7 +2663,8 @@
       "lat": 40.522,
       "bortle": 4,
       "cityCode": "101010800",
-      "description": "延庆旧县镇北张庄村，天文观测基地，光污染较小，适合摄影和肉眼观星"
+      "description": "延庆旧县镇北张庄村，天文观测基地，光污染较小，适合摄影和肉眼观星",
+      "elevation": 519
     },
     {
       "id": "finder-223-location",
@@ -2453,7 +2675,8 @@
       "lat": 31.522,
       "bortle": 4,
       "cityCode": "101020300",
-      "description": "距上海市中心46km，波特尔4级黄区，极限星等6.1-6.5，湿地开阔视野好，上海观星最佳地"
+      "description": "距上海市中心46km，波特尔4级黄区，极限星等6.1-6.5，湿地开阔视野好，上海观星最佳地",
+      "elevation": 3
     },
     {
       "id": "finder-224-location",
@@ -2464,7 +2687,8 @@
       "lat": 31.662,
       "bortle": 4,
       "cityCode": "101020300",
-      "description": "崇明岛光污染小，波特尔4级，森林环境开阔，适合家庭观星"
+      "description": "崇明岛光污染小，波特尔4级，森林环境开阔，适合家庭观星",
+      "elevation": 6
     },
     {
       "id": "finder-225-location",
@@ -2475,7 +2699,8 @@
       "lat": 32.732,
       "bortle": 4,
       "cityCode": "101100901",
-      "description": "距上海最近的可观星地点，洪泽湖南岸，天文观测站，海拔180m，夜天光V星等20.78等"
+      "description": "距上海最近的可观星地点，洪泽湖南岸，天文观测站，海拔180m，夜天光V星等20.78等",
+      "elevation": 180
     },
     {
       "id": "finder-226-location",
@@ -2486,7 +2711,8 @@
       "lat": 30.082,
       "bortle": 4,
       "cityCode": "101210101",
-      "description": "海拔1487m，山顶视野开阔，波特尔4级，肉眼可见银河，江浙沪最佳观星点之一，开车直达"
+      "description": "海拔1487m，山顶视野开阔，波特尔4级，肉眼可见银河，江浙沪最佳观星点之一，开车直达",
+      "elevation": 1487
     },
     {
       "id": "finder-227-location",
@@ -2497,7 +2723,8 @@
       "lat": 28.822,
       "bortle": 4,
       "cityCode": "101210301",
-      "description": "浙东第一高峰海拔1382m，21世纪中国大陆首缕曙光首照地，波特尔4级，星空一览无遗，风车作前景，开车直达"
+      "description": "浙东第一高峰海拔1382m，21世纪中国大陆首缕曙光首照地，波特尔4级，星空一览无遗，风车作前景，开车直达",
+      "elevation": 1382
     },
     {
       "id": "finder-228-location",
@@ -2508,7 +2735,8 @@
       "lat": 23.742,
       "bortle": 4,
       "cityCode": "101280101",
-      "description": "广州海拔最高村落约730m，从化流溪河源头附近，广州最佳观星圣地，全天开放免门票"
+      "description": "广州海拔最高村落约730m，从化流溪河源头附近，广州最佳观星圣地，全天开放免门票",
+      "elevation": 146
     },
     {
       "id": "finder-229-location",
@@ -2519,7 +2747,8 @@
       "lat": 23.782,
       "bortle": 4,
       "cityCode": "101280101",
-      "description": "广州从化，光污染3-4级，距广州1小时多车程，银河肉眼可见，有停车场"
+      "description": "广州从化，光污染3-4级，距广州1小时多车程，银河肉眼可见，有停车场",
+      "elevation": 478
     },
     {
       "id": "finder-230-location",
@@ -2530,7 +2759,8 @@
       "lat": 24.922,
       "bortle": 4,
       "cityCode": "101281301",
-      "description": "广东最高峰海拔1902m，距广州220km，远离城市光污染，山顶可观云层上星空，广东最佳观星地"
+      "description": "广东最高峰海拔1902m，距广州220km，远离城市光污染，山顶可观云层上星空，广东最佳观星地",
+      "elevation": 1902
     },
     {
       "id": "finder-231-location",
@@ -2541,7 +2771,8 @@
       "lat": 24.382,
       "bortle": 4,
       "cityCode": "101280401",
-      "description": "海拔1298m，梅州首屈一指名山，远离珠三角光污染，有天文台拍星圣地，距广州约300km"
+      "description": "海拔1298m，梅州首屈一指名山，远离珠三角光污染，有天文台拍星圣地，距广州约300km",
+      "elevation": 1298
     },
     {
       "id": "finder-232-location",
@@ -2552,7 +2783,8 @@
       "lat": 30.182,
       "bortle": 4,
       "cityCode": "101210101",
-      "description": "海拔1557m，浙西三尖之首，天目山脉高峰，波特尔2-4级，自驾可至山腰驿站，徒步30分钟登顶，杭州著名观星胜地"
+      "description": "海拔1557m，浙西三尖之首，天目山脉高峰，波特尔2-4级，自驾可至山腰驿站，徒步30分钟登顶，杭州著名观星胜地",
+      "elevation": 1557
     },
     {
       "id": "finder-233-location",
@@ -2563,7 +2795,8 @@
       "lat": 25.462,
       "bortle": 4,
       "cityCode": "101230101",
-      "description": "海拔104m，三面环海，平潭海坛岛南端，远离大陆光污染，海天一色观星胜地，可看蓝眼泪与星空"
+      "description": "海拔104m，三面环海，平潭海坛岛南端，远离大陆光污染，海天一色观星胜地，可看蓝眼泪与星空",
+      "elevation": 104
     },
     {
       "id": "finder-234-location",
@@ -2574,7 +2807,8 @@
       "lat": 26.182,
       "bortle": 4,
       "cityCode": "101100101",
-      "description": "海拔800m，福州闽侯大湖乡，山峦绵延60km，波特尔4级，福州周边最佳观星地，入选全国推荐观星点"
+      "description": "海拔800m，福州闽侯大湖乡，山峦绵延60km，波特尔4级，福州周边最佳观星地，入选全国推荐观星点",
+      "elevation": 800
     },
     {
       "id": "finder-235-location",
@@ -2585,7 +2819,8 @@
       "lat": 26.082,
       "bortle": 4,
       "cityCode": "101230301",
-      "description": "福建少有的二级暗夜观星地，朱子故里尤溪，自驾可达，湖光山色邂逅银河"
+      "description": "福建少有的二级暗夜观星地，朱子故里尤溪，自驾可达，湖光山色邂逅银河",
+      "elevation": 779
     },
     {
       "id": "finder-236-location",
@@ -2596,7 +2831,8 @@
       "lat": 25.682,
       "bortle": 4,
       "cityCode": "101100101",
-      "description": "海拔1000m+，青云山之巅，万亩草甸伸手触云，福州周边高空观星点"
+      "description": "海拔1000m+，青云山之巅，万亩草甸伸手触云，福州周边高空观星点",
+      "elevation": 1000
     },
     {
       "id": "finder-237-location",
@@ -2607,7 +2843,8 @@
       "lat": 28.072,
       "bortle": 4,
       "cityCode": "101180801",
-      "description": "鹰潭市，世界自然遗产，道教发源地，丹霞地貌+泸溪河，远离城市光污染，肉眼可观银河"
+      "description": "鹰潭市，世界自然遗产，道教发源地，丹霞地貌+泸溪河，远离城市光污染，肉眼可观银河",
+      "elevation": 66
     },
     {
       "id": "finder-238-location",
@@ -2618,7 +2855,8 @@
       "lat": 25.382,
       "bortle": 4,
       "cityCode": "101240701",
-      "description": "赣粤交界梅岭古道，海拔420m，波特尔4级，赣南最佳观星点之一"
+      "description": "赣粤交界梅岭古道，海拔420m，波特尔4级，赣南最佳观星点之一",
+      "elevation": 420
     },
     {
       "id": "finder-239-location",
@@ -2629,7 +2867,8 @@
       "lat": 33.262,
       "bortle": 3,
       "cityCode": "101270401",
-      "description": "阿坝州，世界自然遗产，海拔2000-3000m，岷山南段，距成都430km，远离光污染，高原星空胜地"
+      "description": "阿坝州，世界自然遗产，海拔2000-3000m，岷山南段，距成都430km，远离光污染，高原星空胜地",
+      "elevation": 2864
     },
     {
       "id": "finder-240-location",
@@ -2640,7 +2879,8 @@
       "lat": 31.902,
       "bortle": 3,
       "cityCode": "101271101",
-      "description": "阿坝州府，海拔2600m，川西高原腹地，光污染极小，英仙座流星雨观赏地"
+      "description": "阿坝州府，海拔2600m，川西高原腹地，光污染极小，英仙座流星雨观赏地",
+      "elevation": 2600
     },
     {
       "id": "finder-241-location",
@@ -2651,7 +2891,8 @@
       "lat": 32.582,
       "bortle": 3,
       "cityCode": "101270801",
-      "description": "广元青川，1.7万公顷国家级自然保护区，森林覆盖率98%，大巴山深处原始秘境，光污染极低"
+      "description": "广元青川，1.7万公顷国家级自然保护区，森林覆盖率98%，大巴山深处原始秘境，光污染极低",
+      "elevation": 1577
     },
     {
       "id": "finder-242-location",
@@ -2662,7 +2903,13 @@
       "lat": 28.58,
       "bortle": 4,
       "cityCode": "101281101",
-      "description": "台州黄岩西部，括苍山余脉，平均海拔900m，主峰大寺尖1252m，森林覆盖率98%，黄岩永宁江与永嘉楠溪江发源地，全省唯一未来国有林场试点"
+      "description": "台州黄岩西部，括苍山余脉，平均海拔900m，主峰大寺尖1252m，森林覆盖率98%，黄岩永宁江与永嘉楠溪江发源地，全省唯一未来国有林场试点",
+      "elevation": 900
     }
-  ]
+  ],
+  "elevationBackfill": {
+    "source": "Open-Meteo elevation API (Copernicus DEM GLO-90)",
+    "backfilledAt": "2026-08-22T10:24:11.049Z",
+    "demFilled": 110
+  }
 }

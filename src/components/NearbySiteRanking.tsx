@@ -42,7 +42,9 @@ function plannerHref(
   params.set("lat", String(item.site.latitude));
   params.set("lng", String(item.site.longitude));
   params.set("name", item.site.name);
-  params.set("elevation", String(item.site.altitude ?? 0));
+  if (item.site.altitude != null) {
+    params.set("elevation", String(item.site.altitude));
+  }
   params.set("night", night);
   params.set("model", model);
   return `/planner?${params.toString()}`;

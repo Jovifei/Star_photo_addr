@@ -46,7 +46,7 @@
   min-height: 58px;
   height: auto;
   gap: 14px;
-  padding: 9px max(18px, calc((100vw - 1360px) / 2));
+  padding: 9px max(18px, calc((100vw - 1680px) / 2));
   border-bottom-color: var(--line-strong);
   background: linear-gradient(180deg, rgba(6, 20, 27, 0.97), rgba(4, 16, 24, 0.91));
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2);
@@ -84,7 +84,7 @@
 }
 
 .planner-root .brand-lockup h1 {
-  font-family: "Songti SC", STSong, "Noto Serif CJK SC", var(--font-body), serif;
+  font-family: "Songti SC", STSong, "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "STZhongsong", SimSun, var(--font-body), serif;
   font-size: 20px;
   font-weight: 650;
   letter-spacing: 0.1em;
@@ -162,7 +162,7 @@
 
 /* Main surfaces ----------------------------------------------------------------- */
 .planner-root .main-content {
-  width: min(1360px, calc(100% - 36px));
+  width: min(1680px, calc(100% - 48px));
   padding-top: 20px;
 }
 
@@ -436,7 +436,7 @@
   }
 
   .planner-root .main-content {
-    width: min(calc(100% - 24px), 1360px);
+    width: min(calc(100% - 24px), 1680px);
   }
 }
 
@@ -477,4 +477,42 @@
   .planner-root .refresh-button {
     transition: none;
   }
+}
+
+/* 2026-08-22 atmosphere pass: a faint starfield over the night gradient. */
+.planner-root.app-shell {
+  background:
+    radial-gradient(1.4px 1.4px at 12% 18%, rgba(231, 231, 224, .34), transparent 100%),
+    radial-gradient(1.1px 1.1px at 28% 9%, rgba(231, 231, 224, .22), transparent 100%),
+    radial-gradient(1.6px 1.6px at 46% 24%, rgba(176, 230, 239, .26), transparent 100%),
+    radial-gradient(1.1px 1.1px at 63% 12%, rgba(231, 231, 224, .2), transparent 100%),
+    radial-gradient(1.4px 1.4px at 79% 27%, rgba(212, 178, 115, .24), transparent 100%),
+    radial-gradient(1px 1px at 88% 8%, rgba(231, 231, 224, .26), transparent 100%),
+    radial-gradient(1.2px 1.2px at 8% 46%, rgba(231, 231, 224, .16), transparent 100%),
+    radial-gradient(1.2px 1.2px at 94% 52%, rgba(176, 230, 239, .18), transparent 100%),
+    radial-gradient(circle at 18% -8%, rgba(121, 207, 226, 0.08), transparent 35%),
+    radial-gradient(circle at 84% -14%, rgba(212, 178, 115, 0.06), transparent 28%),
+    linear-gradient(180deg, var(--bg), var(--bg-deep));
+}
+
+.planner-root .recommend-chip {
+  border-color: rgba(212, 178, 115, 0.4);
+  color: var(--warn-strong);
+  background: rgba(212, 178, 115, 0.12);
+}
+
+.planner-root .nearby-hint {
+  color: var(--warn-strong);
+}
+
+.planner-root .rank-card:hover {
+  border-color: var(--line-strong);
+  background: rgba(12, 30, 39, 0.72);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planner-root .rank-card {
+    transition: background-color var(--transition), border-color var(--transition);
+  }
+  .planner-root .rank-card:hover { transform: none; }
 }

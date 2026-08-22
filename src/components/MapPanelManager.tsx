@@ -1,6 +1,7 @@
 "use client";
 
-import { Move, RotateCcw, Type } from "lucide-react";
+import { Move, RotateCcw, Settings2, Type } from "lucide-react";
+import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "jovi-map-panel-layout-v2";
@@ -102,6 +103,52 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   );
 }
 
+const SNAP_DISTANCE = 64;
+const SNAP_MARGIN = 14;
+
+/**
+ * Magnetic docking: when a dropped panel sits close to a viewport edge,
+ * translate it the remaining distance so it rests flush against that edge.
+ * The panel CSS keeps a transform transition outside of active drags, so the
+ * correction animates instead of teleporting.
+ */
+function snapToNearestEdge(
+  panel: HTMLElement,
+  key: PanelKey,
+  update: Dispatch<SetStateAction<LayoutMap>>,
+) {
+  const rect = panel.getBoundingClientRect();
+  const gaps: Record<"left" | "right" | "top" | "bottom", number> = {
+    left: rect.left - SNAP_MARGIN,
+    right: window.innerWidth - SNAP_MARGIN - rect.right,
+    top: rect.top - SNAP_MARGIN,
+    bottom: window.innerHeight - SNAP_MARGIN - rect.bottom,
+  };
+  const nearest = (Object.keys(gaps) as Array<keyof typeof gaps>).reduce(
+    (best, edge) => (gaps[edge] < gaps[best] ? edge : best),
+    "left" as keyof typeof gaps,
+  );
+  if (gaps[nearest] >= SNAP_DISTANCE || gaps[nearest] < -SNAP_DISTANCE) return;
+
+  let dx = 0;
+  let dy = 0;
+  if (nearest === "left") dx = -gaps.left;
+  else if (nearest === "right") dx = gaps.right;
+  else if (nearest === "top") dy = -gaps.top;
+  else dy = gaps.bottom;
+
+  const maxX = Math.max(80, window.innerWidth * 0.7);
+  const maxY = Math.max(80, window.innerHeight * 0.65);
+  update((current) => ({
+    ...current,
+    [key]: {
+      ...current[key],
+      x: clamp(current[key].x + dx, -maxX, maxX),
+      y: clamp(current[key].y + dy, -maxY, maxY),
+    },
+  }));
+}
+
 /**
  * Progressive enhancement for the three map panels.
  *
@@ -111,6 +158,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
  */
 export default function MapPanelManager() {
   const [selected, setSelected] = useState<PanelKey>("layers");
+  const [open, setOpen] = useState(false);
   const [layouts, setLayouts] = useState<LayoutMap>(readStoredLayouts);
   const layoutsRef = useRef(layouts);
 
@@ -194,6 +242,7 @@ export default function MapPanelManager() {
             window.removeEventListener("pointermove", onPointerMove);
             window.removeEventListener("pointerup", finish);
             window.removeEventListener("pointercancel", finish);
+            snapToNearestEdge(panel, panelDefinition.key, setLayouts);
           };
 
           window.addEventListener("pointermove", onPointerMove);
@@ -261,51 +310,66 @@ export default function MapPanelManager() {
   }
 
   return (
-    <section className="map-panel-manager" aria-label="地图面板显示设置">
-      <div className="map-panel-manager-title">
-        <Move size={14} aria-hidden="true" />
-        <span>面板布局</span>
-      </div>
-      <select
-        value={selected}
-        onChange={(event) => setSelected(event.target.value as PanelKey)}
-        aria-label="选择要调整的地图面板"
-      >
-        {PANELS.map((panel) => (
-          <option key={panel.key} value={panel.key}>
-            {panel.label}
-          </option>
-        ))}
-      </select>
-      <label className="map-panel-scale-control">
-        <Type size={13} aria-hidden="true" />
-        <span>{Math.round(selectedLayout.scale * 100)}%</span>
-        <input
-          type="range"
-          min="0.9"
-          max="1.35"
-          step="0.05"
-          value={selectedLayout.scale}
-          onChange={(event) => {
-            const scale = clamp(Number(event.target.value), 0.9, 1.35);
-            setLayouts((current) => ({
-              ...current,
-              [selected]: { ...current[selected], scale },
-            }));
-          }}
-          aria-label={`${selectedLabel}显示比例`}
-        />
-      </label>
+    <section className="map-panel-manager" data-open={open} aria-label="地图面板显示设置">
       <button
         type="button"
-        className="map-panel-reset"
-        onClick={resetSelected}
-        aria-label={`恢复${selectedLabel}默认位置和大小`}
-        title="恢复默认位置和大小"
+        className="map-panel-manager-toggle"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-controls="map-panel-manager-body"
+        aria-label={open ? "收起面板布局设置" : "打开面板布局设置"}
+        title="面板布局设置"
       >
-        <RotateCcw size={14} aria-hidden="true" />
+        <Settings2 size={15} aria-hidden="true" />
       </button>
-      <small>拖动面板标题移动；调整只保存在本浏览器。</small>
+      {open && (
+        <div id="map-panel-manager-body" className="map-panel-manager-body">
+          <div className="map-panel-manager-title">
+            <Move size={13} aria-hidden="true" />
+            <span>面板布局</span>
+          </div>
+          <select
+            value={selected}
+            onChange={(event) => setSelected(event.target.value as PanelKey)}
+            aria-label="选择要调整的地图面板"
+          >
+            {PANELS.map((panel) => (
+              <option key={panel.key} value={panel.key}>
+                {panel.label}
+              </option>
+            ))}
+          </select>
+          <label className="map-panel-scale-control">
+            <Type size={13} aria-hidden="true" />
+            <span>{Math.round(selectedLayout.scale * 100)}%</span>
+            <input
+              type="range"
+              min="0.9"
+              max="1.35"
+              step="0.05"
+              value={selectedLayout.scale}
+              onChange={(event) => {
+                const scale = clamp(Number(event.target.value), 0.9, 1.35);
+                setLayouts((current) => ({
+                  ...current,
+                  [selected]: { ...current[selected], scale },
+                }));
+              }}
+              aria-label={`${selectedLabel}显示比例`}
+            />
+          </label>
+          <button
+            type="button"
+            className="map-panel-reset"
+            onClick={resetSelected}
+            aria-label={`恢复${selectedLabel}默认位置和大小`}
+            title="恢复默认位置和大小"
+          >
+            <RotateCcw size={14} aria-hidden="true" />
+          </button>
+          <small>拖动面板标题移动，靠近屏幕边缘松手可自动吸附；调整只保存在本浏览器。</small>
+        </div>
+      )}
     </section>
   );
 }

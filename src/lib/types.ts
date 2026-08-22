@@ -8,8 +8,8 @@ export interface Location {
   name: string;
   latitude: number;
   longitude: number;
-  /** Metres above sea level. User elevation is never silently overwritten by the model. */
-  elevation: number;
+  /** Metres above sea level; null when the curated source has no verified value. User elevation is never silently overwritten by the model. */
+  elevation: number | null;
   /** IANA timezone, filled in by the forecast proxy via `timezone=auto`. */
   timezone?: string;
   source: "参考点位" | "自定义" | "modeled" | "搜索";
@@ -111,6 +111,14 @@ export type CloudOverlayMode = "satellite-cloud" | "forecast-cloud" | "night-lig
  * values so old deep links remain readable while the new shell has a small,
  * stable interface. */
 export type MapViewMode = "satellite" | "light-pollution" | "combined";
+
+/**
+ * Prediction theme shared by all products: same night-observation data,
+ * different scoring lens. `star` ranks astro visibility, `cloud` ranks
+ * cloud-sea potential (low-cloud driven). Future themes (e.g. fire glow)
+ * extend this union.
+ */
+export type ForecastTheme = "star" | "cloud";
 
 export type RecommendationBand =
   | "priority"

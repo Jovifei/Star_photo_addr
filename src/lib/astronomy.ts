@@ -34,7 +34,7 @@ export function astronomyAt(date: Date, location: Location): AstronomyResult {
   // Astronomy Engine requires a finite observer height; using sea level for
   // the geometric calculation is safe, while callers continue to preserve
   // the original unknown elevation for display and later enrichment.
-  const elevation = Number.isFinite(location.elevation) ? location.elevation : 0;
+  const elevation = location.elevation != null && Number.isFinite(location.elevation) ? location.elevation : 0;
   const observer = new Astronomy.Observer(
     location.latitude,
     location.longitude,

@@ -1,5 +1,6 @@
 // Server-only Open-Meteo geocoding proxy logic.
 
+import { toSimplifiedChinese } from "./chineseText";
 import type { GeocodeResponse, GeocodeResult } from "./types";
 
 interface RawGeocodeResult {
@@ -41,7 +42,7 @@ export function normalizeGeocodeResults(
     )
     .map((raw, index) => ({
       id: raw.id ?? -(index + 1),
-      name: raw.name!.trim(),
+      name: toSimplifiedChinese(raw.name!.trim()),
       latitude: raw.latitude!,
       longitude: raw.longitude!,
       elevation:
@@ -49,7 +50,7 @@ export function normalizeGeocodeResults(
           ? raw.elevation
           : undefined,
       country: raw.country,
-      admin1: raw.admin1,
+      admin1: toSimplifiedChinese(raw.admin1),
       timezone: raw.timezone,
       featureCode: raw.feature_code,
     }));

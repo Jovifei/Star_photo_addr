@@ -105,7 +105,7 @@ export default function RecommendationMarker({
             <span className="bortle-chip">B{recommendation.bortle}</span>
           </div>
           <div className="recommendation-card-meta">
-            {recommendation.province} · 海拔 {recommendation.elevation}m
+            {recommendation.province} · 海拔 {recommendation.elevation == null ? "—" : `${recommendation.elevation}m`}
           </div>
           <p className="recommendation-card-reason">{recommendation.reason}</p>
           <div className="recommendation-card-season">

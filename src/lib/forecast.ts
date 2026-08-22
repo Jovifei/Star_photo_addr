@@ -41,6 +41,12 @@ export const OPEN_METEO_FORECAST_URL =
   process.env.OPEN_METEO_FORECAST_URL?.trim() ||
   "https://api.open-meteo.com/v1/forecast";
 
+/** Optional Open-Meteo Pro key; lifts the free daily call quota when set. */
+export function applyOpenMeteoApiKey(params: URLSearchParams): void {
+  const key = process.env.OPEN_METEO_API_KEY?.trim();
+  if (key) params.set("apikey", key);
+}
+
 const SURFACE_VARIABLES = [
   "temperature_2m",
   "relative_humidity_2m",
@@ -122,6 +128,7 @@ export function buildForecastUrl(
   });
   const providerModel = MODEL_PARAMETERS[model];
   if (providerModel) params.set("models", providerModel);
+  applyOpenMeteoApiKey(params);
   return `${OPEN_METEO_FORECAST_URL}?${params.toString()}`;
 }
 

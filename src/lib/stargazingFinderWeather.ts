@@ -4,6 +4,7 @@ import {
   getShanghaiDate,
 } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
 import {
+  applyOpenMeteoApiKey,
   maxForecastDaysForModel,
   OPEN_METEO_FORECAST_URL,
   openMeteoModelParameter,
@@ -156,6 +157,7 @@ export function buildFinderWeatherUrl(
   });
   const providerModel = openMeteoModelParameter(model);
   if (providerModel) params.set("models", providerModel);
+  applyOpenMeteoApiKey(params);
   return `${OPEN_METEO_FORECAST_URL}?${params.toString()}`;
 }
 

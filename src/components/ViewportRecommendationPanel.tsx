@@ -303,10 +303,11 @@ export default function ViewportRecommendationPanel({
 
   return (
     <section
-      className={`viewport-recommendation-panel${collapsed ? " is-collapsed" : ""}`}
+      className={`viewport-recommendation-panel${collapsed ? " is-collapsed" : ""}${state.forecastTheme === "cloud" ? " theme-cloud" : ""}`}
       aria-label="当前视野观星地点推荐"
       data-dirty={dirty}
       data-loading={loading}
+      data-theme={state.forecastTheme}
     >
       <div className="viewport-recommendation-head">
         <div>
@@ -398,8 +399,12 @@ export default function ViewportRecommendationPanel({
                   <span className="viewport-recommendation-meta">
                     <b>B{item.site.bortle}</b>
                     <b>{item.site.altitude == null ? "海拔未知" : `海拔 ${Math.round(item.site.altitude)}m`}</b>
-                    <b>{item.score?.cloud == null ? "云量 —" : `云量 ${Math.round(item.score.cloud)}%`}</b>
-                    <b>{item.score?.score == null ? "观星分 —" : `观星分 ${item.score.score}`}</b>
+                    {state.forecastTheme === "cloud" ? (
+                      <b className="metric-primary">{item.score?.cloud == null ? "云海 —" : `云海 ${Math.round(100 - item.score.cloud)}`}</b>
+                    ) : (
+                      <b>{item.score?.cloud == null ? "云量 —" : `云量 ${Math.round(item.score.cloud)}%`}</b>
+                    )}
+                    <b className={state.forecastTheme === "cloud" ? undefined : "metric-primary"}>{item.score?.score == null ? "观星分 —" : `观星分 ${item.score.score}`}</b>
                   </span>
                 </span>
               </button>

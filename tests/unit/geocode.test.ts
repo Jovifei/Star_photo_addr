@@ -31,4 +31,13 @@ describe("normalizeGeocodeResults", () => {
       }),
     ]);
   });
+
+  it("normalizes traditional geonames to simplified Chinese", () => {
+    const results = normalizeGeocodeResults([
+      { id: 7, name: "臨安區", admin1: "浙江", latitude: 30, longitude: 119 },
+      { id: 8, name: "太子街", latitude: 30, longitude: 119 },
+    ]);
+    expect(results[0]).toMatchObject({ name: "临安区", admin1: "浙江" });
+    expect(results[1]).toMatchObject({ name: "太子街" });
+  });
 });

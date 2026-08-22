@@ -44,7 +44,7 @@ export function observingSiteToLocation(site: ObservingSite) {
     name: site.name,
     latitude: site.latitude,
     longitude: site.longitude,
-    elevation: site.altitude ?? 0,
+    elevation: site.altitude,
     source: "参考点位" as const,
     bortle: site.bortle,
     province: site.province,

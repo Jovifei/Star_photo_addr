@@ -31,8 +31,11 @@ import { fetchPressureForecast, fetchSurfaceForecasts } from "./lib/openMeteo";
 import { evaluateNight, statusMeta } from "./lib/scoring";
 import { addDays, formatHour, formatNightLabel, nextNightKeys, relativeFreshness } from "./lib/time";
 import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
+import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import { useStore } from "@/lib/store";
 import { OBSERVING_SITES, observingSiteToLocation, recommendationLabel } from "@/lib/observingSites";
+import { rankNearbySites } from "@/lib/locationPresentation";
+import { toSimplifiedChinese } from "@/lib/chineseText";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "今晚", icon: Binoculars },
@@ -48,6 +51,15 @@ const PLANNER_DRAWER_MIN_WIDTH = 420;
 const PLANNER_DRAWER_MAX_WIDTH = 920;
 const PLANNER_DRAWER_DEFAULT_WIDTH = 720;
 const DRAWER_DRAG_RESET_GUARD_MS = 2000;
+const PLANNER_NEARBY_KEY = "perseids-planner-nearby-v1";
+// 0 关闭；开启后推荐站点会并入排名，但不会写入本机点位列表。
+const NEARBY_RADIUS_OPTIONS = [
+  { value: 0, label: "关闭" },
+  { value: 100, label: "100 km" },
+  { value: 200, label: "200 km" },
+  { value: 300, label: "300 km" },
+];
+const NEARBY_RECOMMEND_LIMIT = 8;
 const DETAIL_RANGE_OPTIONS = [
   { value: 1, label: "今日", hint: "当前夜" },
   { value: 3, label: "3 天", hint: "短期" },
@@ -77,6 +89,16 @@ function readPlannerDrawerWidth() {
     return Number.isFinite(saved) ? clampPlannerDrawerWidth(saved) : null;
   } catch {
     return null;
+  }
+}
+
+function readPlannerNearbyRadius() {
+  if (typeof window === "undefined") return 0;
+  try {
+    const saved = Number(localStorage.getItem(PLANNER_NEARBY_KEY));
+    return NEARBY_RADIUS_OPTIONS.some((option) => option.value === saved) ? saved : 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -145,7 +167,7 @@ function readProductBridge() {
   const latitude = latitudeRaw === null || latitudeRaw.trim() === "" ? NaN : Number(latitudeRaw);
   const longitude = longitudeRaw === null || longitudeRaw.trim() === "" ? NaN : Number(longitudeRaw);
   const elevationRaw = params.get("elevation");
-  const elevation = elevationRaw === null || elevationRaw.trim() === "" ? 0 : Number(elevationRaw);
+  const elevation = elevationRaw === null || elevationRaw.trim() === "" ? null : Number(elevationRaw);
   const night = params.get("night");
   const model = params.get("model");
   const forecastTime = params.get("forecastTime");
@@ -169,10 +191,10 @@ function readProductBridge() {
     overlay,
     location: {
       id: `perseids-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
-      name: params.get("name")?.trim() || "今夜观测联动点位",
+      name: toSimplifiedChinese(params.get("name")?.trim()) || "今夜观测联动点位",
       latitude,
       longitude,
-      elevation: Number.isFinite(elevation) ? elevation : 0,
+      elevation: Number.isFinite(elevation) ? elevation : null,
       timezone: undefined,
       source: "今夜观测联动",
     },
@@ -185,7 +207,9 @@ function productHref(path, location, night, session = {}) {
     params.set("lat", String(location.latitude));
     params.set("lng", String(location.longitude));
     params.set("name", location.name);
-    params.set("elevation", String(location.elevation ?? 0));
+    if (location.elevation != null && Number.isFinite(location.elevation)) {
+      params.set("elevation", String(location.elevation));
+    }
   }
   if (night) params.set("night", night);
   if (session.model) params.set("model", session.model);
@@ -215,7 +239,7 @@ export function App() {
         name: candidate.name,
         latitude: candidate.latitude,
         longitude: candidate.longitude,
-        elevation: 0,
+        elevation: candidate.elevation ?? null,
         source: "自定义",
         bortle: candidate.bortle,
         province: candidate.province,
@@ -227,8 +251,10 @@ export function App() {
     );
   }, [bridge.location, customLocations, sharedState.candidates]);
   const [days, setDays] = useState(7);
-  const [mode, setMode] = useState("star");
+  // 预测主题（星空/云海）是跨产品共享的观察口径，不再作为本页局部参数。
+  const mode = sharedState.forecastTheme;
   const [view, setView] = useState("dashboard");
+  const [nearbyRadiusKm, setNearbyRadiusKm] = useState(readPlannerNearbyRadius);
   const tonightNight = nextNightKeys(14)[0];
   const [rangeStartNight, setRangeStartNight] = useState(() =>
     bridge.night && nextNightKeys(14).includes(bridge.night) ? bridge.night : sharedState.selectedNight,
@@ -262,15 +288,36 @@ export function App() {
   const displayedSnapshotStatus = snapshotAttemptKey === snapshotRequestKey ? snapshotStatus : locations.length ? "loading" : "idle";
   const isSpecifiedNight = Boolean(bridge.night && selectedNight === bridge.night && selectedNight !== tonightNight);
 
+  // 附近推荐：以首个候选点为锚点，从全国观测点库中按距离圈选参考点位。
+  // 它们只参与排名与会话内详情，不写入本机候选列表。
+  const nearbyAnchor = locations[0] ?? null;
+  const recommendedLocations = useMemo(() => {
+    if (!nearbyRadiusKm || !nearbyAnchor) return [];
+    const existingIds = new Set(locations.map((item) => item.id));
+    return rankNearbySites(nearbyAnchor, nearbyRadiusKm, activeObservationSnapshot, NEARBY_RECOMMEND_LIMIT)
+      .filter((item) => !existingIds.has(item.site.id))
+      .map((item) => ({
+        ...observingSiteToLocation(item.site),
+        source: "附近推荐",
+        distanceKm: Math.round(item.distanceKm),
+      }));
+  }, [activeObservationSnapshot, locations, nearbyAnchor, nearbyRadiusKm]);
+  const rankingPool = useMemo(
+    () => [...locations, ...recommendedLocations].filter(
+      (item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index,
+    ),
+    [locations, recommendedLocations],
+  );
+
   const refresh = useCallback(
     async (silent = false) => {
-      if (!locations.length) return;
+      if (!rankingPool.length) return;
       if (!silent) setLoading(true);
       setError("");
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 25000);
       try {
-        const data = await fetchSurfaceForecasts(locations, 14, controller.signal, sharedModel);
+        const data = await fetchSurfaceForecasts(rankingPool, 14, controller.signal, sharedModel);
         const cache = writeForecastCache(data);
         setForecasts(data);
         setSavedAt(cache.savedAt);
@@ -283,7 +330,7 @@ export function App() {
         setLoading(false);
       }
     },
-    [locations, forecasts.length, sharedModel],
+    [rankingPool, forecasts.length, sharedModel],
   );
 
   useEffect(() => {
@@ -363,6 +410,27 @@ export function App() {
     writeCustomLocations(customLocations);
   }, [customLocations]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(PLANNER_NEARBY_KEY, String(nearbyRadiusKm));
+    } catch {
+      // 推荐偏好是渐进增强，写入失败不影响当前会话。
+    }
+  }, [nearbyRadiusKm]);
+
+  // 开启推荐或锚点变化后，为新推荐的点位静默补拉逐小时预报；
+  // 每组点位只自动尝试一次，失败后仍可用顶部刷新按钮手动重试。
+  const nearbyForecastAttemptRef = useRef("");
+  useEffect(() => {
+    if (!recommendedLocations.length) return;
+    const attemptKey = recommendedLocations.map((item) => item.id).join(",");
+    if (nearbyForecastAttemptRef.current === attemptKey) return;
+    const missing = recommendedLocations.some((item) => !forecasts.some((forecast) => forecast.locationId === item.id));
+    if (!missing || loading) return;
+    nearbyForecastAttemptRef.current = attemptKey;
+    queueMicrotask(() => void refresh(true));
+  }, [forecasts, loading, recommendedLocations, refresh]);
+
   function changeDays(value) {
     const nextKeys = detailNightKeys(rangeStartNight, value);
     setDays(value);
@@ -395,7 +463,7 @@ export function App() {
 
   const rankings = useMemo(() => {
     const scoreIndex = Math.max(0, nightOffset(snapshotStartNight, selectedNight));
-    return locations
+    return rankingPool
       .map((location) => {
         const forecast = forecasts.find((item) => item.locationId === location.id);
         const leadIndex = nextNightKeys(14).indexOf(selectedNight);
@@ -407,7 +475,7 @@ export function App() {
         };
       })
       .sort((a, b) => rankValue(b, mode) - rankValue(a, mode));
-  }, [activeObservationSnapshot, forecasts, locations, mode, selectedNight, snapshotStartNight]);
+  }, [activeObservationSnapshot, forecasts, mode, rankingPool, selectedNight, snapshotStartNight]);
 
   const best = rankings[0];
   const detail = selectedLocationId ? rankings.find((item) => item.location.id === selectedLocationId) : null;
@@ -474,6 +542,7 @@ export function App() {
         <nav className="suite-nav" aria-label="产品导航">
           <a href={perseidsHref}>今夜观测</a>
           <a href={sitesHref}>暗夜选址</a>
+          <a href="/fireglow">火烧云</a>
           <span aria-current="page">观星计划</span>
         </nav>
         <nav className="desktop-nav" aria-label="主导航">
@@ -488,15 +557,23 @@ export function App() {
       </header>
 
       <main className="main-content" id="main-content" tabIndex="-1">
-        <section className="control-strip" aria-label="预测范围与摄影模式">
+        <section className="control-strip" aria-label="预测范围与推荐设置">
           <div className="segmented" aria-label="预测天数">
             {[1, 3, 5, 7].map((value) => (
               <button key={value} type="button" aria-pressed={days === value} className={days === value ? "active" : ""} onClick={() => changeDays(value)}>{value} 天</button>
             ))}
           </div>
-          <div className="segmented mode-switch" aria-label="摄影模式">
-            <button type="button" aria-pressed={mode === "star"} className={mode === "star" ? "active" : ""} onClick={() => setMode("star")}><Moon />星空</button>
-            <button type="button" aria-pressed={mode === "cloud"} className={mode === "cloud" ? "active" : ""} onClick={() => setMode("cloud")}><Mountains />云海</button>
+          <div className="segmented nearby-switch" aria-label="附近观星点推荐范围">
+            <span className="segmented-caption"><Sparkle />附近推荐</span>
+            {NEARBY_RADIUS_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={nearbyRadiusKm === option.value}
+                className={nearbyRadiusKm === option.value ? "active" : ""}
+                onClick={() => setNearbyRadiusKm(option.value)}
+              >{option.label}</button>
+            ))}
           </div>
           <div className={`freshness ${stale || displayedSnapshotStatus === "degraded" ? "stale" : ""}`} role="status" aria-live="polite">
             <span className="freshness-dot" />{relativeFreshness(savedAt)}{stale || displayedSnapshotStatus === "degraded" ? " · 已降级" : displayedSnapshotStatus === "loading" ? " · 评分读取中" : ""}
@@ -521,6 +598,7 @@ export function App() {
             isLinkedLocation={Boolean(detail)}
             observationSnapshot={activeObservationSnapshot}
             snapshotStartNight={snapshotStartNight}
+            nearby={{ enabled: nearbyRadiusKm > 0, radiusKm: nearbyRadiusKm, anchorName: nearbyAnchor?.name ?? "", count: recommendedLocations.length }}
           />
         )}
         {locations.length > 0 && forecasts.length > 0 && view === "matrix" && (
@@ -602,7 +680,7 @@ function EmptyState({ hasLocations, onRefresh }) {
   return <section className="empty-state"><Cloud size={36} /><h2>{hasLocations ? "还没有天气数据" : "还没有候选观测点"}</h2><p>{hasLocations ? "连接网络后刷新，页面会保留最近一次成功数据。" : "请先回到今夜观测地图，点击地点并加入观星计划；这里会比较今晚、3/5/7 天。"}</p>{!hasLocations && <Link className="primary-button" href="/">回到今夜观测</Link>}<button className="secondary-button" type="button" onClick={onRefresh}>重新读取</button></section>;
 }
 
-function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail, isSpecifiedNight, onReturnTonight, isLinkedLocation, observationSnapshot, snapshotStartNight }) {
+function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail, isSpecifiedNight, onReturnTonight, isLinkedLocation, observationSnapshot, snapshotStartNight, nearby }) {
   const evaluation = best?.evaluation;
   const sharedScore = best?.sharedScore;
   const meta = recommendationMeta(sharedScore, evaluation);
@@ -614,13 +692,14 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
           <div className="hero-header">
             <span className="section-kicker">{formatNightLabel(selectedNight)} · {mode === "star" ? "星空最佳" : "云海潜力"}</span>
             {isSpecifiedNight && <button className="specified-night-button" type="button" onClick={onReturnTonight}>回到今晚</button>}
+            <ForecastThemeSwitch />
             <span className={`status-pill ${meta.tone}`}>{meta.label}</span>
           </div>
           <div className="hero-location">
             <div>
-              <p className="hero-overline">{isLinkedLocation ? "指定观测点" : "综合最优机位"}</p>
+              <p className="hero-overline">{isLinkedLocation ? "指定观测点" : best?.location.source === "附近推荐" ? "附近推荐机位" : "综合最优机位"}</p>
               <h2>{best?.location.name ?? "计算中"}</h2>
-              <p className="coordinate"><MapPin />{best?.location.elevation} m · {best?.location.latitude.toFixed(4)}, {best?.location.longitude.toFixed(4)}</p>
+              <p className="coordinate"><MapPin />{formatSiteElevation(best?.location.elevation)} · {best?.location.latitude.toFixed(4)}, {best?.location.longitude.toFixed(4)}{best?.location.source === "附近推荐" && best?.location.distanceKm != null ? ` · 距离约 ${best.location.distanceKm} km` : ""}</p>
             </div>
             <ScoreRing value={displayScore} label={mode === "cloud" ? "云海指数" : "星空分"} />
           </div>
@@ -651,7 +730,13 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
 
       <section className="rank-section">
         <div className="section-heading-row">
-          <div><span className="section-kicker">地点排名</span><h2>{mode === "star" ? "点位星空排名" : "点位云海潜力"}</h2></div>
+          <div>
+            <span className="section-kicker">地点排名</span>
+            <h2>{mode === "star" ? "点位星空排名" : "点位云海潜力"}</h2>
+            {nearby?.enabled && nearby.count > 0 && (
+              <p className="nearby-hint">已并入 {nearby.anchorName} 周边 {nearby.radiusKm} km 内的 {nearby.count} 个推荐点位（仅作参考，不写入本机列表）</p>
+            )}
+          </div>
           <span className="count-label">{rankings.length} 个点位</span>
         </div>
         <div className="ranking-list">
@@ -673,6 +758,11 @@ function Metric({ icon: Icon, label, value }) {
 
 function formatNullable(value, suffix = "", transform = (item) => item) {
   return value == null || !Number.isFinite(value) ? "—" : `${transform(value)}${suffix}`;
+}
+
+// 参考点位库中约半数海拔未核验；显示层绝不能把未知伪装成 0 m。
+function formatSiteElevation(value) {
+  return value == null || !Number.isFinite(value) ? "海拔待核" : `${Math.round(value)} m`;
 }
 
 function DecisionItem({ tone, title, text }) {
@@ -717,14 +807,14 @@ function RankCard({ item, rank, mode, onOpen }) {
   const sharedScore = item.sharedScore;
   const meta = recommendationMeta(sharedScore, evaluation);
   const score = sharedScore?.score ?? (mode === "cloud" ? evaluation?.cloudSeaPotential : evaluation?.score);
-  const bestHour = evaluation?.window[0] ?? evaluation?.hours?.sort((a, b) => b.score - a.score)[0];
+  const bestHour = evaluation?.window[0] ?? [...(evaluation?.hours ?? [])].sort((a, b) => b.score - a.score)[0];
   const cloud = sharedScore?.cloud ?? (bestHour?.cloudCover == null ? null : Math.round(bestHour.cloudCover));
   const bestWindow = sharedScore?.bestWindow ?? evaluation?.windowLabel;
   return (
     <button className="rank-card" type="button" onClick={onOpen}>
       <span className={`rank-number ${rank <= 3 ? "top" : ""}`}>{String(rank).padStart(2, "0")}</span>
       <div className="rank-main">
-        <div className="rank-title"><div><h3>{item.location.name}</h3><p>{item.location.elevation} m · {evaluation?.confidence.level ?? "—"}置信度</p></div><span className={`status-pill ${meta.tone}`}>{meta.label}</span></div>
+        <div className="rank-title"><div><h3>{item.location.name}{item.location.source === "附近推荐" && <span className="recommend-chip">推荐 · {item.location.distanceKm} km</span>}</h3><p>{formatSiteElevation(item.location.elevation)} · {evaluation?.confidence.level ?? "—"}置信度</p></div><span className={`status-pill ${meta.tone}`}>{meta.label}</span></div>
         <div className="rank-stats">
           <span><Cloud />云量 {cloud == null ? "—" : `${cloud}%`}</span>
           <span><CloudRain />降水 {formatNullable(bestHour?.precipitationProbability, "%", Math.round)}</span>
@@ -755,7 +845,7 @@ function MatrixView({ locations, forecasts, nightKeys, mode, onSelect, observati
       <div className="matrix-wrap">
         <table>
           <thead><tr><th>点位</th>{nightKeys.map((night) => <th key={night}>{formatNightLabel(night, true)}</th>)}</tr></thead>
-          <tbody>{matrix.map((row) => <tr key={row.location.id}><th>{row.location.name}<small>{row.location.elevation}m</small></th>{row.values.map((value, index) => {
+          <tbody>{matrix.map((row) => <tr key={row.location.id}><th>{row.location.name}<small>{formatSiteElevation(row.location.elevation)}</small></th>{row.values.map((value, index) => {
             const sharedScore = value?.sharedScore;
             const evaluation = value?.evaluation;
             const meta = sharedScore ? recommendationMeta(sharedScore, null) : statusMeta(evaluation?.status);
@@ -786,7 +876,7 @@ function LocationsView({ locations, customLocations, onAdd, onRemove }) {
   return (
     <section className="locations-section">
       <div className="section-heading-row"><div><span className="section-kicker">观测点管理</span><h2>点位管理</h2><p>天气查询统一使用 WGS84 坐标；用户海拔不会被模型静默覆盖。</p></div><button className="primary-button" type="button" onClick={() => setShowForm(true)}><Plus />新增点位</button></div>
-      <div className="location-table-wrap"><table className="location-table"><thead><tr><th>点位</th><th>纬度</th><th>经度</th><th>海拔(m)</th><th>来源</th><th /></tr></thead><tbody>{locations.map((location) => <tr key={location.id}><td><MapPin />{location.name}</td><td>{location.latitude.toFixed(4)}</td><td>{location.longitude.toFixed(4)}</td><td>{location.elevation}</td><td>{location.source}</td><td>{customLocations.some((item) => item.id === location.id) && <button className="icon-button danger" type="button" onClick={() => onRemove(location.id)} aria-label={`删除 ${location.name}`}><X /></button>}</td></tr>)}</tbody></table></div>
+      <div className="location-table-wrap"><table className="location-table"><thead><tr><th>点位</th><th>纬度</th><th>经度</th><th>海拔(m)</th><th>来源</th><th /></tr></thead><tbody>{locations.map((location) => <tr key={location.id}><td><MapPin />{location.name}</td><td>{location.latitude.toFixed(4)}</td><td>{location.longitude.toFixed(4)}</td><td>{location.elevation == null ? "—" : Math.round(location.elevation)}</td><td>{location.source}</td><td>{customLocations.some((item) => item.id === location.id) && <button className="icon-button danger" type="button" onClick={() => onRemove(location.id)} aria-label={`删除 ${location.name}`}><X /></button>}</td></tr>)}</tbody></table></div>
       {showForm && <div className="modal-backdrop" onMouseDown={() => setShowForm(false)}><form ref={formRef} className="location-form" role="dialog" aria-modal="true" aria-labelledby="location-form-title" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}><div className="form-header"><div><span className="section-kicker">新增地点</span><h3 id="location-form-title">新增观测点</h3></div><button type="button" className="icon-button" aria-label="关闭表单" onClick={() => setShowForm(false)}><X /></button></div><label>点位名称<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="例如：东白山" required /></label><div className="form-grid"><label>纬度<input type="number" step="0.0001" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} placeholder="29.5000" required /></label><label>经度<input type="number" step="0.0001" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} placeholder="120.3000" required /></label></div><label>用户海拔（米）<input type="number" step="0.1" value={form.elevation} onChange={(event) => setForm({ ...form, elevation: event.target.value })} placeholder="1000" required /></label><p className="form-note"><Info />保存后点击刷新获取 14 天天气。自定义点位只保存在本机浏览器。</p><button className="primary-button wide" type="submit"><CheckCircle />保存点位</button></form></div>}
     </section>
   );
@@ -804,6 +894,9 @@ function DetailDrawer({
   onClose,
 }) {
   const { location, evaluation, forecast } = item;
+  // 库里未核验海拔的点位用模型地形高程兜底计算剖面，展示层仍如实标注。
+  const siteElevation = location.elevation ?? forecast?.metadata?.modelElevation ?? 0;
+  const elevationEstimated = location.elevation == null && forecast?.metadata?.modelElevation != null;
   const [pressure, setPressure] = useState(null);
   const [pressureError, setPressureError] = useState("");
   const [pressureLoading, setPressureLoading] = useState(true);
@@ -963,12 +1056,12 @@ function DetailDrawer({
 
   const profile = useMemo(() => pressure?.profiles?.[activeDetailHour] ?? [], [pressure, activeDetailHour]);
   const layers = useMemo(
-    () => pressure ? deriveCloudLayers(profile, pressure.modelElevation, location.elevation) : [],
-    [pressure, profile, location.elevation],
+    () => pressure ? deriveCloudLayers(profile, pressure.modelElevation, siteElevation) : [],
+    [pressure, profile, siteElevation],
   );
   const weatherOption = useMemo(() => buildWeatherChart(activeEvaluation?.hours ?? []), [activeEvaluation]);
   const astroOption = useMemo(() => buildAstroChart(activeEvaluation?.hours ?? []), [activeEvaluation]);
-  const profileOption = useMemo(() => buildProfileChart(profile, location.elevation), [profile, location.elevation]);
+  const profileOption = useMemo(() => buildProfileChart(profile, siteElevation), [profile, siteElevation]);
   const trendOption = useMemo(() => buildNightTrendChart(detailEvaluations), [detailEvaluations]);
   const trendChartKey = `${detailDays}-${availableDetailNights.join("-")}-${forecastUpdatedAt ?? "cache"}`;
   const activeChartKey = `${activeDetailNight}-${activeDetailHour ?? "empty"}`;
@@ -995,7 +1088,7 @@ function DetailDrawer({
           onKeyDown={onDrawerResizeKeyDown}
           onDoubleClick={resetDrawerWidth}
         />
-        <div className="drawer-header"><div><span className="section-kicker">地点详情 · {formatNightLabel(activeDetailNight)}</span><h2 id="detail-drawer-title">{location.name}</h2><p>{location.elevation} m · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" type="button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
+        <div className="drawer-header"><div><span className="section-kicker">地点详情 · {formatNightLabel(activeDetailNight)}</span><h2 id="detail-drawer-title">{location.name}</h2><p>{formatSiteElevation(location.elevation)} · {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}</p></div><button className="icon-button" type="button" aria-label="关闭详情" onClick={onClose}><X /></button></div>
         <section className="detail-range-panel" aria-label="地点详情预报范围" data-active-night={activeDetailNight}>
           <div className="detail-range-heading">
             <div><span className="section-kicker">今夜观测地点会话 / 观星计划</span><strong>未来多夜趋势与单夜下钻</strong></div>
@@ -1037,7 +1130,7 @@ function DetailDrawer({
         <DetailSection title="低云海拔评估" subtitle="实验性气压层推导，不是山顶实测" icon={Mountains}>
           {pressureLoading && <div className="inline-loading"><span className="loader small" />读取垂直云层…</div>}
           {pressureError && <p className="inline-error"><Warning />{pressureError}</p>}
-          {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>用户海拔：{location.elevation} m</span><span>时次：{formatHour(activeDetailHour)}</span></div><AccessibleChart option={profileOption} height={250} chartKey={`profile-${activeChartKey}`} label="低云垂直剖面图：云量与海拔关系" />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud strokeWidth={2.4} /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
+          {pressure && <><div className="profile-meta"><span>模型地形：{Math.round(pressure.modelElevation)} m</span><span>{elevationEstimated ? `海拔按模型地形 ${Math.round(siteElevation)} m 估算` : `点位海拔：${Math.round(siteElevation)} m`}</span><span>时次：{formatHour(activeDetailHour)}</span></div><AccessibleChart option={profileOption} height={250} chartKey={`profile-${activeChartKey}`} label="低云垂直剖面图：云量与海拔关系" />{layers.length ? <div className="cloud-layer-list">{layers.map((layer, index) => <div className="cloud-layer" key={`${layer.baseMsl}-${index}`}><Cloud strokeWidth={2.4} /><div><strong>{layer.baseMsl}–{layer.topMsl} m MSL</strong><span>距模型地面 {layer.baseAgl}–{layer.topAgl} m AGL · {layer.confidence}置信度</span></div><span className={`relation ${layer.relation === "云上" ? "good" : layer.relation === "云中" ? "bad" : "warn"}`}>{layer.relation}</span></div>)}</div> : <p className="no-layer">该时次未识别到可靠连续云层。</p>}</>}
         </DetailSection>
         <div className="method-note"><Info /><p><strong>方法边界</strong> 云底/云顶由数值模型气压层推导，已过滤模型地表以下层并取整到 50 m。复杂山地仍需结合现场云图、能见度与周边谷地情况。</p></div>
         <HourlyForecastMatrix nightKey={activeDetailNight} hours={activeEvaluation?.hours ?? []} selectedTime={activeDetailHour} onSelectTime={selectDetailHour} title="单夜十小时矩阵" />
@@ -1085,11 +1178,12 @@ function buildNightTrendChart(items) {
   const cloud = items.map((item) => averageNumeric(item.evaluation?.hours, "cloudCover"));
   const windows = items.map((item) => item.evaluation?.window?.length ?? null);
   const tooltipUnits = { 星空分: "分", 平均总云量: "%", 连续窗口: "h" };
+  const base = baseChartStyle();
   return {
-    ...baseChartStyle(),
+    ...base,
     grid: { left: 42, right: 42, top: 42, bottom: 38 },
     tooltip: {
-      ...baseChartStyle().tooltip,
+      ...base.tooltip,
       formatter: (params) => {
         const rows = Array.isArray(params) ? params : [params];
         const title = rows[0]?.axisValueLabel ?? "";

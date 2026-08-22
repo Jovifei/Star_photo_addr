@@ -14,6 +14,7 @@ import {
 import {
   DEFAULT_CLOUD_STATE,
   CUSTOM_CANDIDATES_STORAGE_KEY,
+  FORECAST_THEME_STORAGE_KEY,
   OBSERVING_BANDS_STORAGE_KEY,
   OBSERVING_BORTLE_LIMIT_STORAGE_KEY,
   OBSERVING_MAP_VIEW_STORAGE_KEY,
@@ -34,6 +35,7 @@ import type {
   CloudGridData,
   CloudState,
   DarkSkySample,
+  ForecastTheme,
   Location,
   LocationForecast,
   MapViewMode,
@@ -41,6 +43,7 @@ import type {
   SatelliteFrame,
 } from "@/lib/types";
 import { MAX_SHORTLIST_SIZE } from "@/lib/observingSites";
+import { normalizeLocationTexts } from "@/lib/chineseText";
 
 interface AppState {
   sample: DarkSkySample | null;
@@ -59,6 +62,8 @@ interface AppState {
   satelliteFrames: SatelliteFrame[];
   forecastCache: Map<string, LocationForecast>;
   mapViewMode: MapViewMode;
+  /** Cross-product prediction lens (star vs cloud-sea scoring). */
+  forecastTheme: ForecastTheme;
   recommendationThreshold: number;
   observingBortleLimit: 3 | 4;
   recommendedOnly: boolean;
@@ -92,6 +97,7 @@ const initialState: AppState = {
   satelliteFrames: [],
   forecastCache: new Map(),
   mapViewMode: "satellite",
+  forecastTheme: "star",
   recommendationThreshold: 70,
   observingBortleLimit: 3,
   recommendedOnly: false,
@@ -123,6 +129,7 @@ type Action =
   | { type: "CACHE_FORECAST"; locationId: string; forecast: LocationForecast }
   | { type: "CLEAR_FORECAST_CACHE" }
   | { type: "SET_MAP_VIEW_MODE"; mode: MapViewMode }
+  | { type: "SET_FORECAST_THEME"; theme: ForecastTheme }
   | { type: "SET_RECOMMENDATION_THRESHOLD"; threshold: number }
   | { type: "SET_OBSERVING_BORTLE_LIMIT"; limit: 3 | 4 }
   | { type: "SET_RECOMMENDED_ONLY"; enabled: boolean }
@@ -196,6 +203,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, forecastCache: new Map() };
     case "SET_MAP_VIEW_MODE":
       return { ...state, mapViewMode: action.mode };
+    case "SET_FORECAST_THEME":
+      return { ...state, forecastTheme: action.theme };
     case "SET_RECOMMENDATION_THRESHOLD":
       return {
         ...state,
@@ -266,6 +275,7 @@ interface StoreContextValue {
   cacheForecast: (locationId: string, forecast: LocationForecast) => void;
   clearForecastCache: () => void;
   setMapViewMode: (mode: MapViewMode) => void;
+  setForecastTheme: (theme: ForecastTheme) => void;
   setRecommendationThreshold: (threshold: number) => void;
   setObservingBortleLimit: (limit: 3 | 4) => void;
   setRecommendedOnly: (enabled: boolean) => void;
@@ -311,7 +321,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (isLegacyPlaceholder) {
           localStorage.removeItem(SELECTED_LOCATION_STORAGE_KEY);
         } else {
-          dispatch({ type: "HYDRATE_LOCATION", location: parsed });
+          // Legacy picks may carry traditional names from the geocoder; the
+          // debounced persist effect rewrites the stored value normalized.
+          dispatch({ type: "HYDRATE_LOCATION", location: normalizeLocationTexts(parsed) });
         }
       } else {
         localStorage.removeItem(SELECTED_LOCATION_STORAGE_KEY);
@@ -326,6 +338,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const mode = localStorage.getItem(OBSERVING_MAP_VIEW_STORAGE_KEY);
       if (mode === "satellite" || mode === "light-pollution" || mode === "combined") {
         dispatch({ type: "SET_MAP_VIEW_MODE", mode });
+      }
+      const theme = localStorage.getItem(FORECAST_THEME_STORAGE_KEY);
+      if (theme === "star" || theme === "cloud") {
+        dispatch({ type: "SET_FORECAST_THEME", theme });
       }
       const threshold = Number(localStorage.getItem(OBSERVING_THRESHOLD_STORAGE_KEY));
       if (Number.isFinite(threshold)) {
@@ -365,7 +381,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const raw = localStorage.getItem(CUSTOM_CANDIDATES_STORAGE_KEY);
       const parsed = raw ? (JSON.parse(raw) as CityCandidate[]) : [];
       if (Array.isArray(parsed) && parsed.length) {
-        dispatch({ type: "SET_CANDIDATES", candidates: parsed });
+        dispatch({ type: "SET_CANDIDATES", candidates: parsed.map(normalizeLocationTexts) });
       }
     } catch {
       // Ignore stale/corrupt local data.
@@ -634,6 +650,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Optional preference.
     }
   }, []);
+  const setForecastTheme = useCallback((theme: ForecastTheme) => {
+    dispatch({ type: "SET_FORECAST_THEME", theme });
+    try {
+      localStorage.setItem(FORECAST_THEME_STORAGE_KEY, theme);
+    } catch {
+      // Optional preference.
+    }
+  }, []);
   const setRecommendationThreshold = useCallback((threshold: number) => {
     dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });
     try {
@@ -688,6 +712,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cacheForecast,
       clearForecastCache,
       setMapViewMode,
+      setForecastTheme,
       setRecommendationThreshold,
       setObservingBortleLimit,
       setRecommendedOnly,
@@ -712,6 +737,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cacheForecast,
       clearForecastCache,
       setMapViewMode,
+      setForecastTheme,
       setRecommendationThreshold,
       setObservingBortleLimit,
       setRecommendedOnly,

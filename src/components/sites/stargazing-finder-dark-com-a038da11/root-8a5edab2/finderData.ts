@@ -13,6 +13,8 @@ interface SnapshotLocation {
   bortle: 1 | 2 | 3 | 4;
   cityCode: string;
   description: string;
+  /** Metres ASL; curated from descriptions or backfilled from Copernicus DEM (scripts/backfill-finder-elevations.mjs). */
+  elevation?: number;
 }
 
 export const FINDER_LOCATIONS: FinderLocation[] = (snapshot.locations as SnapshotLocation[]).map((location) => ({
@@ -22,7 +24,7 @@ export const FINDER_LOCATIONS: FinderLocation[] = (snapshot.locations as Snapsho
   province: location.province,
   latitude: location.lat,
   longitude: location.lng,
-  elevation: parseElevation(location.description),
+  elevation: location.elevation ?? parseElevation(location.description),
   bortle: location.bortle,
   cityCode: location.cityCode,
   reason: location.description,
