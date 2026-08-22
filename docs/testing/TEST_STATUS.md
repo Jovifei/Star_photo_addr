@@ -3,10 +3,9 @@
 > 对应方案：[`TEST_PLAN_V1.md`](./TEST_PLAN_V1.md)  
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)  
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)  
-> 状态日期：2026-08-21  
-> 当前 main：`50496e61f0be1cb666f344f36d832029df2e988e`  
-> 第一批实施：PR #12 已合并  
-> 当前跟踪分支：`test/ux-research-quality-v2-20260820`
+> 状态日期：2026-08-22  
+> 当前 main 已包含：PR #13 / `3a461c09a2cb450de710f87490ff9317b2d81a8e`  
+> 当前测试工作分支：无
 
 ## 状态定义
 
@@ -17,9 +16,9 @@
 | TODO | 尚未实现，但当前无外部阻塞 |
 | MANUAL | 需要人工/真机，自动化不能完全替代 |
 | BLOCKED | 缺少 ECS、域名、证书、授权数据或现场设备 |
-| DEFERRED | 已明确安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
+| DEFERRED | 已安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
 
-## 第一批自动化实施结果
+## 已完成自动化工作包
 
 | 工作包 | 状态 | 已验证内容 |
 | --- | --- | --- |
@@ -30,11 +29,11 @@
 | T5 核心导航 E2E | PASS | Chromium 参数保留测试；Firefox/WebKit `/sites` 上下文继承 |
 | T6 故障注入 E2E | PASS | 强刷返回 503 时保留旧云量 Canvas，并持续显示降级信息 |
 | T7 键盘与焦点 E2E | PASS | Dialog 初始焦点、Shift+Tab 焦点循环、Esc 关闭与焦点回归 |
-| T8 跨浏览器冒烟 | PASS | Firefox Desktop 2 项、WebKit iPhone 13 2 项，共 4/4 通过 |
+| T8 跨浏览器冒烟 | PASS | Firefox Desktop 与 WebKit iPhone 核心流程通过 |
 | T9 CI 失败产物 | PASS | Chromium 与跨浏览器 HTML、trace、video、screenshot artifact 可用 |
-| T10 测试状态回写 | PASS | 执行记录与工程变更记录写入精确结果和边界 |
+| T10 测试状态回写 | PASS | 执行记录、任务卡、提交台账与工程变更记录已进入 main |
 
-## 第一批最终结果
+## 第一阶段最终结果
 
 | 门禁 | 结果 |
 | --- | ---: |
@@ -46,35 +45,27 @@
 | Open-Meteo / NASA GIBS / Geocoding / AQI / Kp live smoke | PASS |
 | Compose / Nginx / production image / `/healthz` | PASS |
 | Chromium Desktop + Mobile | 54 PASS / 2 DEFERRED-BY-DEVICE / 0 FAIL |
-| Firefox Desktop + WebKit iPhone 13 | 4 PASS / 0 FAIL |
+| Firefox Desktop + WebKit iPhone | PASS |
 
-Chromium 中原有的 2 项设备条件跳过不属于失败；其具体适用条件保留在测试代码中。
+PR #13 的最终 HEAD `fa8f2996c1145fe69c251695eb6887fcde7a538f` 再次通过 quality、live-data-smoke、container-smoke、Chromium E2E 和 Firefox/WebKit；该轮还修复了测试对具体日历日期的隐式依赖。
 
-## 第一批发现并修复的 Bug
+## 测试发现并修复的 Bug
 
 ### BUG-T1：云量数组混入非法元素仍被接受
 
-旧契约只要求必需云层数组中“至少存在一个有限数字”，因此 `[10, "bad"]` 也可能进入 UI。现要求：
-
-```text
-数组长度 = 时间轴长度
-+ 每项只能为 null 或有限数字
-+ 至少一项为有限数字
-+ 时间值必须符合本地 ISO 墙钟格式
-```
+云量数组现要求与时间轴等长、每项只能为 `null` 或有限数字、至少包含一个有效数字，且时间值符合本地 ISO 墙钟格式。
 
 ### BUG-T2：跨浏览器配置误合并 Chromium 项目
 
-Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit Job 意外执行 Chromium。现已显式替换 `projects`。
+Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit Job 意外执行 Chromium；现已显式替换 `projects`。
 
 ### BUG-T3：移动端强刷失败提示被旧地图 debounce 掩盖
 
-移动端布局稳定过程留下旧 `moveend/zoomend` 定时器；强刷 503 后，旧定时器会发起非强刷请求并用缓存成功状态覆盖错误。现已：
+现已记录上下文/边界请求签名、阻止同签名普通请求重复执行、在人工刷新 revision 到来时取消旧 debounce，并在 503 时保留旧 Canvas 和降级提示。
 
-- 记录上下文/边界请求签名；
-- 禁止同签名普通请求重复执行；
-- 新人工刷新 revision 到来时取消旧 debounce；
-- 503 时保留旧 Canvas 和“已保留上一次结果”提示。
+### BUG-T4：评分档位 E2E 对日期分布存在硬编码
+
+旧测试固定取消“优先”档位；当当前日期对应的 Mock 分布中没有优先地点时，过滤结果合法地不变，测试却失败。现改为读取当前档位数量，动态选择第一个非空档位，并精确断言地图数量减少该档位的数量。业务过滤逻辑未被弱化。
 
 ## 剩余主测试项目
 
@@ -102,4 +93,4 @@ Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit
 
 ## 当前退出结论
 
-第一批自动化测试已经进入 `main` 并达到当期门禁。上述剩余项目均有唯一 ID、前置条件、执行步骤、通过标准和证据要求；在实际完成前保持 MANUAL、BLOCKED 或 DEFERRED，不作为已验证能力对外声明。
+第一阶段自动化测试和项目跟踪体系均已进入 `main` 并达到当期门禁。上述剩余项目都有唯一 ID、前置条件、执行步骤、通过标准和证据要求；在实际完成前保持 MANUAL、BLOCKED 或 DEFERRED，不作为已验证能力对外声明。
