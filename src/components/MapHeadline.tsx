@@ -1,24 +1,40 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { formatNightLabel } from "@/lib/nighttime";
 import { upcomingAstronomyEvents } from "@/lib/astronomyEvents";
 import { useStore } from "@/lib/store";
 
+/** Give the two map workspaces distinct jobs even though they share one map engine. */
 export default function MapHeadline() {
   const { state } = useStore();
+  const searchParams = useSearchParams();
   const events = upcomingAstronomyEvents();
   const primaryEvent = events[0];
+  const darkSkyWorkspace = searchParams.get("panel") === "sites";
 
   return (
-    <div className="map-headline">
-      <span>今夜观测 · {formatNightLabel(state.selectedNight, true)}</span>
-      <h1>今晚云量变化</h1>
-      <p>当前状态 → 次日 05:00 · 逐小时预报</p>
+    <div className="map-headline" data-workspace={darkSkyWorkspace ? "sites" : "tonight"}>
+      <span>
+        {darkSkyWorkspace
+          ? "暗夜选址 · 长期暗空基础"
+          : `今夜观测 · ${formatNightLabel(state.selectedNight, true)}`}
+      </span>
+      <h1>
+        {darkSkyWorkspace ? "寻找更暗的长期机位" : "今晚云量变化"}
+      </h1>
+      <p>
+        {darkSkyWorkspace
+          ? "VIIRS 夜光 · Bortle / 海拔 · 当前视野推荐"
+          : "当前状态 → 次日 05:00 · 逐小时预报"}
+      </p>
       <small>
         <i />
-        当地天气 · 卫星观测 · 任意地点取样
+        {darkSkyWorkspace
+          ? "先比较暗夜本底，再叠加今晚天气与出行条件"
+          : "当地天气 · 卫星观测 · 任意地点取样"}
       </small>
-      {primaryEvent && (
+      {!darkSkyWorkspace && primaryEvent && (
         <div className="astronomy-events" aria-label="最新天文事件">
           <div className="astronomy-event-primary">
             <span>最新天文事件</span>

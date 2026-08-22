@@ -1,9 +1,21 @@
 "use client";
 
-import { statusMeta } from "@/lib/scoring";
+import { hasDarkSkyLayer } from "@/lib/assets";
 import { describeDarkSkyStatus } from "@/lib/darksky";
+import { formatElevationMeters } from "@/lib/locationPresentation";
+import { statusMeta } from "@/lib/scoring";
 import type { DarkSkySample, Location, NightEvaluation } from "@/lib/types";
 import ScoreRing from "@/components/ScoreRing";
+
+function unavailableDarkSkyLabel(
+  sample: DarkSkySample | null,
+  installed: boolean,
+): string {
+  if (!installed || sample?.status === "layer-unavailable") return "未安装";
+  if (sample?.status === "unsupported-region") return "无覆盖";
+  if (sample?.status === "nodata") return "无有效像元";
+  return "无数据";
+}
 
 /** Observation detail: dark-sky, weather window, moon, galaxy, confidence. */
 export default function ObservationDetails({
@@ -20,11 +32,13 @@ export default function ObservationDetails({
   onAddCandidate?: () => void;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
-  // Never render a number the data does not support: nodata / unsupported
-  // region / missing bundle all show "无数据", not a plausible-looking value.
+  const darkSkyInstalled = hasDarkSkyLayer();
   const hasReading = sample != null && sample.status === "ok";
+  const unavailableLabel = unavailableDarkSkyLabel(sample, darkSkyInstalled);
   const mpsasText =
-    hasReading && sample.mpsas != null ? sample.mpsas.toFixed(2) : "无数据";
+    hasReading && sample.mpsas != null
+      ? sample.mpsas.toFixed(2)
+      : unavailableLabel;
   const snapshotBortle =
     location?.bortle != null && Number.isFinite(location.bortle)
       ? location.bortle
@@ -34,12 +48,14 @@ export default function ObservationDetails({
       ? `B${sample.bortle}`
       : snapshotBortle != null
         ? `B${snapshotBortle}`
-        : "无数据";
+        : unavailableLabel;
   const bortleName = hasReading
     ? (sample.bortleName ?? "")
     : snapshotBortle != null
       ? "地点快照"
-      : "";
+      : darkSkyInstalled
+        ? "本地栅格"
+        : "需安装栅格";
 
   return (
     <div className="panel-section">
@@ -53,7 +69,7 @@ export default function ObservationDetails({
           </h2>
           <div className="panel-coords">
             {location
-              ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)} · ${location.elevation} m`
+              ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)} · ${formatElevationMeters(location.elevation)}`
               : "点击地图或搜索以取样"}
           </div>
         </div>
@@ -88,14 +104,18 @@ export default function ObservationDetails({
             style={hasReading ? undefined : { fontSize: 15, color: "var(--muted)" }}
           >
             {mpsasText}
-            {hasReading && <small>mpsas</small>}
+            {hasReading ? <small>mpsas</small> : <small>本地栅格</small>}
           </div>
         </div>
         <div className="metric">
           <div className="label">波特尔</div>
           <div
             className="value"
-            style={hasReading ? undefined : { fontSize: 15, color: "var(--muted)" }}
+            style={
+              hasReading || snapshotBortle != null
+                ? undefined
+                : { fontSize: 15, color: "var(--muted)" }
+            }
           >
             {bortleText}
             {bortleName && <small>{bortleName}</small>}
@@ -130,7 +150,21 @@ export default function ObservationDetails({
         </div>
       </div>
 
-      {sample != null && sample.status !== "ok" && (
+      {location && !darkSkyInstalled && (
+        <p
+          className="dark-sky-unavailable-note"
+          style={{
+            marginTop: 10,
+            fontSize: 11,
+            color: "var(--amber)",
+            lineHeight: 1.55,
+          }}
+        >
+          “未安装”表示当前构建没有本地 Bortle/SQM 数值栅格；VIIRS
+          视觉夜光仍可用于空间参考，但不能冒充现场实测。
+        </p>
+      )}
+      {darkSkyInstalled && sample != null && sample.status !== "ok" && (
         <p
           style={{
             marginTop: 10,

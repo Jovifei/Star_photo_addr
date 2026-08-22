@@ -12,18 +12,30 @@ const PREFECTURE_INDEX_URL =
   "/images/perseids/data/china-prefecture-boundaries.index.json";
 const PREFECTURE_BASE = "/images/perseids/data/boundaries/prefectures";
 
-/** Prefecture files are fetched in small waves rather than 300+ at once. */
 const PREFECTURE_BATCH_SIZE = 8;
-/** Abort the whole prefecture load once this many files are missing. */
 const PREFECTURE_FAILURE_BUDGET = 3;
 
-const COUNTRY_STYLE: PathOptions = { color: "#d4b273", weight: 1, opacity: 0.7 };
-const PROVINCE_STYLE: PathOptions = { color: "#79cfe2", weight: 1, opacity: 0.6 };
+/* Hierarchy is expressed by weight, opacity and dash rhythm rather than color alone. */
+const COUNTRY_STYLE: PathOptions = {
+  color: "#e1c58a",
+  weight: 1.45,
+  opacity: 0.82,
+  dashArray: "7 5",
+  lineCap: "round",
+};
+const PROVINCE_STYLE: PathOptions = {
+  color: "#83d3e5",
+  weight: 1.15,
+  opacity: 0.7,
+  dashArray: "5 4",
+  lineCap: "round",
+};
 const PREFECTURE_STYLE: PathOptions = {
   color: "#b0e6ef",
-  weight: 0.8,
-  opacity: 0.5,
-  dashArray: "3 3",
+  weight: 0.85,
+  opacity: 0.52,
+  dashArray: "2 4",
+  lineCap: "round",
 };
 
 type GeoJsonData = Feature | FeatureCollection | Geometry;
@@ -50,22 +62,16 @@ async function loadGeoJson<T = GeoJsonData>(url: string): Promise<T | null> {
 function toFeatures(geo: GeoJsonData): Feature[] {
   if (geo.type === "FeatureCollection") return geo.features;
   if (geo.type === "Feature") return [geo];
-  // Bare geometry -> wrap in a minimal Feature so react-leaflet can render it.
   return [{ type: "Feature", geometry: geo, properties: {} } as Feature];
 }
 
 /**
  * Administrative boundaries, revealed by zoom level (country / province / prefecture).
  *
- * DEGRADATION: the boundary GeoJSON bundle is not distributed with this
- * repository — its provenance (Aliyun DataV, GCJ-02 derived) carries no 审图号,
- * and re-drawing Chinese national/provincial borders from unverified data is a
- * mapping-compliance risk. The layer therefore issues no requests unless the
- * operator installs a vetted bundle and opts in.
- *
- * Even when enabled the loader is defensive: prefecture files are fetched in
- * bounded waves and the whole pass is abandoned after a few misses, so a
- * partial bundle cannot turn into a 404 storm.
+ * The GeoJSON bundle remains opt-in because national/provincial geometry must
+ * come from a vetted, redistributable source. With a valid local package the
+ * map shows country outlines at overview zoom, provinces from zoom 4 and
+ * prefectures from zoom 6. Missing files fail closed without a request storm.
  */
 export default function BoundaryLayers() {
   const enabled = hasAsset("boundaries");
@@ -143,7 +149,9 @@ export default function BoundaryLayers() {
 
   return (
     <>
-      {country && <GeoJSON data={country} style={COUNTRY_STYLE} interactive={false} />}
+      {country && (
+        <GeoJSON data={country} style={COUNTRY_STYLE} interactive={false} />
+      )}
       {zoom >= 4 && province && (
         <GeoJSON data={province} style={PROVINCE_STYLE} interactive={false} />
       )}

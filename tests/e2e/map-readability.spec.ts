@@ -50,9 +50,29 @@ test("地图面板支持显示比例调整并将云量通道展示为横向进�
   await expect(bars.first()).toHaveCSS("display", "grid");
 });
 
+test("暗夜选址与今夜观测使用不同的任务说明", async ({ page }) => {
+  await page.goto("/sites");
+  await expect(page).toHaveURL(/panel=sites/);
+  const headline = page.locator('.map-headline[data-workspace="sites"]');
+  await expect(headline).toContainText("寻找更暗的长期机位");
+  await expect(headline).toContainText("先比较暗夜本底");
+  await expect(page.getByRole("link", { name: /暗夜选址/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});
+
 test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(
+    "/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",
+  );
   await expect(page.locator(".bortle-control")).toContainText("未安装");
+  await expect(page.locator(".dark-sky-unavailable-note")).toContainText(
+    "本地 Bortle/SQM 数值栅格",
+    { timeout: 15000 },
+  );
+  const metricValues = page.locator(".metric-grid .metric .value");
+  await expect(metricValues.first()).toContainText("未安装");
   await page.getByRole("button", { name: "Bortle、SQM 与未安装说明" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("有意的安全降级");
