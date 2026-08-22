@@ -146,15 +146,33 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
 
 test("地图评分颜色筛选只改变点位，不生成密集永久文字气泡", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".observing-map-control")).toBeVisible();
+  const control = page.locator(".observing-map-control");
+  const map = page.locator(".leaflet-container");
+  const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
+  const bandOptions = page.locator(".observing-band-option");
+
+  await expect(control).toBeVisible();
   await expect(page.locator(".observing-score-legend input")).toHaveCount(4);
   await expect(page.locator(".observing-site-label")).toHaveCount(0);
-  const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
-  await expect.poll(() => markers.count(), { timeout: 15000 }).toBeGreaterThan(0);
-  const before = await markers.count();
-  await page.getByRole("checkbox", { name: "显示优先地点" }).uncheck();
-  await expect.poll(() => markers.count(), { timeout: 5000 }).toBeLessThan(before);
-  await expect(page.getByRole("checkbox", { name: "显示优先地点" })).not.toBeChecked();
+  await expect(control).toHaveAttribute("data-score-status", "available", { timeout: 15000 });
+  await expect(map).toHaveAttribute("data-observing-snapshot-status", "available", { timeout: 15000 });
+
+  const bandCounts = (await bandOptions.locator("em").allTextContents()).map((value) => Number(value));
+  const activeBandIndex = bandCounts.findIndex((value) => Number.isFinite(value) && value > 0);
+  expect(activeBandIndex).toBeGreaterThanOrEqual(0);
+
+  const before = Number(await map.getAttribute("data-observing-site-count"));
+  const removedCount = bandCounts[activeBandIndex];
+  const expectedAfter = before - removedCount;
+  expect(before).toBeGreaterThan(0);
+  expect(removedCount).toBeGreaterThan(0);
+  await expect(markers).toHaveCount(before);
+
+  const bandCheckbox = bandOptions.nth(activeBandIndex).locator('input[type="checkbox"]');
+  await bandCheckbox.uncheck();
+  await expect(bandCheckbox).not.toBeChecked();
+  await expect(map).toHaveAttribute("data-observing-site-count", String(expectedAfter), { timeout: 5000 });
+  await expect(markers).toHaveCount(expectedAfter);
 });
 
 test("评分时间滑窗会改变当前时次、档位数量和地图筛选基准", async ({ page }) => {
