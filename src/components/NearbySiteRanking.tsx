@@ -18,6 +18,12 @@ import type { ForecastModel, ObservationSnapshot } from "@/lib/types";
 
 const RADIUS_OPTIONS = [10, 50, 100, 200] as const;
 
+type SnapshotState = {
+  key: string;
+  status: "ready" | "error";
+  snapshot: ObservationSnapshot | null;
+};
+
 function parseCoordinate(value: string | null, minimum: number, maximum: number) {
   if (value === null || value.trim() === "") return null;
   const parsed = Number(value);
@@ -50,20 +56,21 @@ export default function NearbySiteRanking() {
   const [radiusKm, setRadiusKm] = useState<(typeof RADIUS_OPTIONS)[number]>(
     100,
   );
-  const [snapshot, setSnapshot] = useState<ObservationSnapshot | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    "idle",
-  );
+  const [snapshotState, setSnapshotState] = useState<SnapshotState>({
+    key: "",
+    status: "error",
+    snapshot: null,
+  });
 
   const queryLatitude = parseCoordinate(searchParams.get("lat"), -90, 90);
   const queryLongitude = parseCoordinate(searchParams.get("lng"), -180, 180);
   const selected = state.selectedLocation;
+  const centerLatitude = queryLatitude ?? selected?.latitude ?? null;
+  const centerLongitude = queryLongitude ?? selected?.longitude ?? null;
   const center =
-    queryLatitude !== null && queryLongitude !== null
-      ? { latitude: queryLatitude, longitude: queryLongitude }
-      : selected
-        ? { latitude: selected.latitude, longitude: selected.longitude }
-        : null;
+    centerLatitude !== null && centerLongitude !== null
+      ? { latitude: centerLatitude, longitude: centerLongitude }
+      : null;
   const centerName =
     searchParams.get("name")?.trim() || selected?.name || "当前取样点";
   const night = searchParams.get("night") || state.selectedNight || currentNightKey();
@@ -74,9 +81,12 @@ export default function NearbySiteRanking() {
       : "icon";
   const focusTime =
     searchParams.get("forecastTime") || state.cloudState.activeForecastTime;
+  const requestKey = center
+    ? `${night}|${model}|${focusTime ?? ""}|${centerLatitude}|${centerLongitude}`
+    : "";
 
   useEffect(() => {
-    if (!open || !center) return;
+    if (!open || centerLatitude === null || centerLongitude === null) return;
     const controller = new AbortController();
     const params = new URLSearchParams({
       date: night,
@@ -84,7 +94,6 @@ export default function NearbySiteRanking() {
       model,
     });
     if (focusTime) params.set("time", focusTime);
-    setStatus("loading");
     fetch(`/api/observing/snapshot?${params.toString()}`, {
       signal: controller.signal,
       cache: "no-store",
@@ -99,19 +108,33 @@ export default function NearbySiteRanking() {
       })
       .then((payload) => {
         if (controller.signal.aborted) return;
-        setSnapshot(payload);
-        setStatus("ready");
+        setSnapshotState({ key: requestKey, status: "ready", snapshot: payload });
       })
       .catch((error) => {
         if (error?.name === "AbortError" || controller.signal.aborted) return;
-        setStatus("error");
+        setSnapshotState({ key: requestKey, status: "error", snapshot: null });
       });
     return () => controller.abort();
-  }, [center?.latitude, center?.longitude, focusTime, model, night, open]);
+  }, [
+    centerLatitude,
+    centerLongitude,
+    focusTime,
+    model,
+    night,
+    open,
+    requestKey,
+  ]);
 
+  const activeSnapshot =
+    snapshotState.key === requestKey ? snapshotState.snapshot : null;
+  const status = !open || !center
+    ? "idle"
+    : snapshotState.key === requestKey
+      ? snapshotState.status
+      : "loading";
   const ranked = useMemo(
-    () => (center ? rankNearbySites(center, radiusKm, snapshot, 10) : []),
-    [center, radiusKm, snapshot],
+    () => (center ? rankNearbySites(center, radiusKm, activeSnapshot, 10) : []),
+    [activeSnapshot, center, radiusKm],
   );
 
   return (

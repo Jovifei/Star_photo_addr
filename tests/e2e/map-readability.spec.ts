@@ -10,6 +10,19 @@ const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
 );
 
+function shanghaiDateKey(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
   await installOpenMeteoMock(page, fixture);
@@ -47,8 +60,9 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
 });
 
 test("观星计划可按 10/50/100/200 公里查看附近排行", async ({ page }) => {
+  const night = shanghaiDateKey();
   await page.goto(
-    "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=2026-08-22&model=icon",
+    `/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=${night}&model=icon`,
   );
   const toggle = page.getByRole("button", { name: /附近排行/ });
   await expect(toggle).toBeVisible({ timeout: 15000 });

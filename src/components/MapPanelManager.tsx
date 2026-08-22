@@ -83,6 +83,14 @@ function parseLayouts(raw: string | null): LayoutMap {
   }
 }
 
+function readStoredLayouts(): LayoutMap {
+  try {
+    return parseLayouts(localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return DEFAULT_LAYOUTS;
+  }
+}
+
 function isInteractiveTarget(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
@@ -97,28 +105,18 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 /**
  * Progressive enhancement for the three map panels.
  *
- * - Drag a panel by its title/strip.
- * - Scale the selected panel from 90% to 135%.
- * - Persist layout locally without changing URL or server state.
- * - Enhance cloud channel buttons with percentage bars while preserving the
- *   original accessible labels and button semantics.
+ * This component is mounted through `next/dynamic({ ssr: false })`, so its
+ * lazy state initializer may safely restore local browser preferences without
+ * an extra hydration render or a synchronous setState inside an effect.
  */
 export default function MapPanelManager() {
   const [selected, setSelected] = useState<PanelKey>("layers");
-  const [layouts, setLayouts] = useState<LayoutMap>(DEFAULT_LAYOUTS);
+  const [layouts, setLayouts] = useState<LayoutMap>(readStoredLayouts);
   const layoutsRef = useRef(layouts);
 
   useEffect(() => {
     layoutsRef.current = layouts;
   }, [layouts]);
-
-  useEffect(() => {
-    try {
-      setLayouts(parseLayouts(localStorage.getItem(STORAGE_KEY)));
-    } catch {
-      setLayouts(DEFAULT_LAYOUTS);
-    }
-  }, []);
 
   useEffect(() => {
     try {
