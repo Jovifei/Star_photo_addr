@@ -2,7 +2,7 @@
 
 > 状态日期：2026-08-22  
 > 记录范围：影响产品、数据、部署、测试体系或项目跟踪的主干提交。  
-> 规则：PR 合并后记录最终主干 SHA；未合并工作只放在“当前进行中”。
+> 规则：PR 合并后记录最终主干 SHA；未完成验证的直接提交必须明确标记，不得用旧绿灯代替。
 
 ## 1. 已进入 main
 
@@ -15,11 +15,16 @@
 | 2026-08-20 | UX-VIEWPORT-001 | PR #10 / [`94043d87`](https://github.com/Jovifei/Star_photo_addr/commit/94043d8715faefd79306c77998741cad44425da9) | 首页缺少省域/当前视野推荐和清晰排行 | 1–12 编号标记、推荐卡、视野筛选、移动端层级、Leaflet SSR | audit、lint、TS、168 unit、live/container、desktop/mobile E2E |
 | 2026-08-20 | QA-PLAN-001 | PR #11 / [`18e03cdf`](https://github.com/Jovifei/Star_photo_addr/commit/18e03cdf82f0e3154664a4e96543f0a45e81444d) | 测试缺少统一方案、状态和发布门禁 | TEST_PLAN_V1、初始状态、工程修改记录 | 文档基线；不等同于测试已实施 |
 | 2026-08-20 | QA-AUTO-001 | PR #12 / [`50496e61`](https://github.com/Jovifei/Star_photo_addr/commit/50496e61f0be1cb666f344f36d832029df2e988e) | 契约/API/故障/跨浏览器盲区，以及移动端刷新竞态 | contract/integration、503 故障注入、焦点、Firefox/WebKit、artifact | 28 files/186 Vitest、54+4 browser PASS、live/container PASS；真机/阿里云/性能未覆盖 |
-| 2026-08-22 | TRACK-001 | PR #13 / [`3a461c09`](https://github.com/Jovifei/Star_photo_addr/commit/3a461c09a2cb450de710f87490ff9317b2d81a8e) | 未完成测试散落在聊天和简表中，旧分支状态难以判断 | 项目状态、剩余测试任务卡、提交台账、Codex 接力、分支规则；修复评分档位 E2E 对日期的硬编码依赖 | quality、live-data、container、Chromium、Firefox/WebKit 全部通过；真机、ECS、TLS、性能和科学真值仍保持未完成状态 |
+| 2026-08-22 | TRACK-001 | PR #13 / [`3a461c09`](https://github.com/Jovifei/Star_photo_addr/commit/3a461c09a2cb450de710f87490ff9317b2d81a8e) | 未完成测试散落在聊天和简表中，旧分支状态难以判断 | 项目状态、剩余测试任务卡、提交台账、Codex 接力、分支规则；修复评分档位 E2E 的日期依赖 | quality、live-data、container、Chromium、Firefox/WebKit 全部通过；真机、ECS、TLS、性能和科学真值仍未覆盖 |
+| 2026-08-22 | UX-MAP-002A | Direct / [`1edbdbe2`](https://github.com/Jovifei/Star_photo_addr/commit/1edbdbe2bb58910c1593564c5f4af492a023d44c) | 截图中地图面板字体小、遮挡、云通道难比较，计划页缺少附近排行 | 可拖动/缩放面板、云量百分比条、暗夜安装说明、天地图境界入口、区域取样点、海拔保护、附近排行 | 新增 unit/E2E 与工程文档；后续两个提交继续加固客户端边界和产品语义 |
+| 2026-08-22 | UX-MAP-002B | Direct / [`4c6349cb`](https://github.com/Jovifei/Star_photo_addr/commit/4c6349cb8b0457f3cd2f6be24b27d2e7ccaa23bf) | localStorage/请求状态需要避免 SSR 与旧结果污染 | 面板管理器改为纯客户端动态边界；附近排行按请求键隔离；E2E 日期动态化 | 静态代码复核完成；完整 main push CI 需由 Actions 页面或本地命令确认 |
+| 2026-08-22 | UX-MAP-002C | Direct / [`3fc11fcb`](https://github.com/Jovifei/Star_photo_addr/commit/3fc11fcb00151b3ab8e80239137728132f51407e) | “无数据”含义不清、三级边界层次弱、两个地图工作区同质化 | 侧栏未安装/无覆盖状态、海拔统一显示、国家/省/市虚线层级、暗夜选址独立标题、星空/云海/晚霞规划 | 代码和回归测试已提交；直接推送的 Actions Check Run 当前连接器不可见，工作包暂不标 PASS |
 
 ## 2. 当前进行中
 
-当前没有活动工作包。下一项工作必须从最新 `main` 创建一个唯一分支，并在合并后删除。
+| 工作包 | 目标 | 已完成 | 剩余门禁 |
+| --- | --- | --- | --- |
+| UX-MAP-002 | 地图可读性、暗夜说明、行政边界和附近排行 | 所有可远端实现代码、测试和文档已进入 main | `npm run check`、Chromium E2E、桌面视觉验收；需要天地图令牌/栅格的能力单独保持 BLOCKED |
 
 ## 3. 以后每条台账必须回答的问题
 

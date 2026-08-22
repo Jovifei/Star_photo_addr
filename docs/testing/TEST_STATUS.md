@@ -4,8 +4,8 @@
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)  
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)  
 > 状态日期：2026-08-22  
-> 当前 main 已包含：PR #13 / `3a461c09a2cb450de710f87490ff9317b2d81a8e`  
-> 当前测试工作分支：无
+> 当前 main：`3fc11fcb00151b3ab8e80239137728132f51407e`  
+> 当前测试工作分支：无（本轮直接提交 main）
 
 ## 状态定义
 
@@ -18,7 +18,7 @@
 | BLOCKED | 缺少 ECS、域名、证书、授权数据或现场设备 |
 | DEFERRED | 已安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
 
-## 已完成自动化工作包
+## 第一阶段已完成自动化工作包
 
 | 工作包 | 状态 | 已验证内容 |
 | --- | --- | --- |
@@ -49,7 +49,21 @@
 
 PR #13 的最终 HEAD `fa8f2996c1145fe69c251695eb6887fcde7a538f` 再次通过 quality、live-data-smoke、container-smoke、Chromium E2E 和 Firefox/WebKit；该轮还修复了测试对具体日历日期的隐式依赖。
 
-## 测试发现并修复的 Bug
+## 第二阶段：地图可读性与附近排行
+
+| ID | 测试/门禁 | 状态 | 覆盖内容 |
+| --- | --- | --- | --- |
+| UXMAP-U01 | `tests/unit/locationPresentation.test.ts` | IMPLEMENTED | Haversine 距离、厘米样式海拔转米、异常海拔拒绝、区域取样点命名、半径排行 |
+| UXMAP-E01 | 面板比例与云量横条 | IMPLEMENTED | 90%–135% 滑杆生效，四个云量按钮转为横向百分比条 |
+| UXMAP-E02 | 今夜观测/暗夜选址职责区分 | IMPLEMENTED | `/sites` 重定向后显示长期暗空标题与说明，导航保持 active |
+| UXMAP-E03 | 暗夜数值栅格未安装状态 | IMPLEMENTED | 控件与侧栏显示“未安装”，弹窗说明许可/安装边界，不冒充天气故障 |
+| UXMAP-E04 | 附近观星地点排行 | IMPLEMENTED | Planner 10/50/100/200 km 半径、评分列表、距离、海拔和 Bortle 展示 |
+| UXMAP-CI | lint、TypeScript、Vitest、build、live/container、Chromium、Firefox/WebKit | IMPLEMENTED | CI 配置会在 main push 自动运行；当前连接器只可读取 PR 触发的 run，因此尚未取得最终 Check Run 证据 |
+| UXMAP-VIS | 桌面视觉验收 | MANUAL | 面板默认大小、拖动范围、遮挡、缩放后文字清晰度、地图可操作性 |
+
+本阶段测试代码已经进入 `main`，但在 GitHub Actions 或本地完整命令通过前不得把本表的 IMPLEMENTED 改为 PASS。执行后应把精确测试数、Run URL 和发现的 Bug 回写此处。
+
+## 测试发现并修复的既有 Bug
 
 ### BUG-T1：云量数组混入非法元素仍被接受
 
@@ -65,18 +79,20 @@ Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit
 
 ### BUG-T4：评分档位 E2E 对日期分布存在硬编码
 
-旧测试固定取消“优先”档位；当当前日期对应的 Mock 分布中没有优先地点时，过滤结果合法地不变，测试却失败。现改为读取当前档位数量，动态选择第一个非空档位，并精确断言地图数量减少该档位的数量。业务过滤逻辑未被弱化。
+测试现读取当前档位数量，动态选择第一个非空档位，并精确断言地图数量减少该档位的数量。
 
 ## 剩余主测试项目
 
 | ID | 项目 | 状态 | 原因 | 详细执行卡 |
 | --- | --- | --- | --- | --- |
+| UX-MAP-002-LOCAL | 本轮本地全量与视觉验收 | MANUAL | 当前执行容器无法解析 GitHub/npm，且连接器看不到 main push Check Run | [`PROJECT_STATUS`](../project-tracking/PROJECT_STATUS.md#6-本轮本地验收顺序) |
 | DEV-IOS-001 | iPhone Safari 真机 | MANUAL | 地址栏、安全区、定位、触控、横竖屏、后台恢复 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#2-dev-ios-001iphone-safari-真机) |
 | DEV-ANDROID-001 | Android 多厂商 | MANUAL | Chrome/WebView、字体缩放、手势导航、后台恢复 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#3-dev-android-001android-多厂商) |
 | UX-ZOOM-001 | 200% 浏览器缩放 | MANUAL | planner、地图浮层和按钮裁切需人工观察 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#4-ux-zoom-001200-浏览器缩放) |
 | A11Y-COLOR-001 | 高对比和色觉模式 | MANUAL | 状态不得只依赖颜色 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#5-a11y-color-001高对比与色觉模式) |
 | DEP-ECS-001 | 阿里云大陆 ECS 出口 | BLOCKED | 需要真实 ECS 的 DNS/TCP/TLS/TTFB | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#6-dep-ecs-001阿里云大陆-ecs-海外出口) |
 | DEP-TLS-001 | 正式域名 TLS | BLOCKED | 需要域名、证书链、跳转与续期 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#7-dep-tls-001正式域名-tls) |
+| DATA-DARKSKY-001 | Bortle/SQM 与本地边界资产安装 | BLOCKED | 需要有许可数据文件、令牌或服务器构建权限 | [`DARK_SKY_DATA_SETUP`](../DARK_SKY_DATA_SETUP.md) |
 | PERF-K6-050/100 | k6 50/100 用户压力 | DEFERRED | 后续独立性能阶段，需隔离预发布环境 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#8-perf-k6-050--perf-k6-100压力测试) |
 | PERF-SOAK-030 | 30 分钟 soak | DEFERRED | 需要长期资源指标和预发布环境 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#9-perf-soak-03030-分钟长稳测试) |
 | PERF-LHCI-001 | Lighthouse CI | DEFERRED | 需要稳定 Mock/性能基线 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#10-perf-lhci-001lighthouse-ci) |
@@ -93,4 +109,4 @@ Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit
 
 ## 当前退出结论
 
-第一阶段自动化测试和项目跟踪体系均已进入 `main` 并达到当期门禁。上述剩余项目都有唯一 ID、前置条件、执行步骤、通过标准和证据要求；在实际完成前保持 MANUAL、BLOCKED 或 DEFERRED，不作为已验证能力对外声明。
+第一阶段自动化测试已通过。第二阶段代码、测试和文档已进入 `main`，但最终全量门禁证据仍需从 GitHub Actions 或用户本地运行取得；在此之前保持 IMPLEMENTED / IN_PROGRESS。真机、阿里云、正式 TLS、授权暗夜资产和科学真值仍按 MANUAL/BLOCKED 管理。
