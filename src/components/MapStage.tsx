@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import type { Map as LeafletMap } from "leaflet";
 import { useStore } from "@/lib/store";
+import { describeSamplePoint } from "@/lib/locationPresentation";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import MapHeadline from "@/components/MapHeadline";
 import MapViewActions from "@/components/MapViewActions";
@@ -15,6 +16,8 @@ import CloudControl from "@/components/CloudControl";
 import CloudTimeline from "@/components/CloudTimeline";
 import ObservingMapControl from "@/components/ObservingMapControl";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
+import MapPanelManager from "@/components/MapPanelManager";
+import MapBoundaryStatus from "@/components/MapBoundaryStatus";
 
 // Leaflet touches `window`, so both the map and any child component importing
 // Leaflet at module scope must remain behind a client-only dynamic boundary.
@@ -49,9 +52,14 @@ export default function MapStage() {
           mapRef={mapRef}
           onReady={() => setReady(true)}
           onSample={(latitude: number, longitude: number) =>
-            void sampleAt(latitude, longitude)
+            void sampleAt(
+              latitude,
+              longitude,
+              0,
+              describeSamplePoint(latitude, longitude),
+            )
           }
-          center={[34, 108]}
+          center={[35.5, 104.5]}
           zoom={4}
           layers={{
             viirs: true,
@@ -76,6 +84,8 @@ export default function MapStage() {
           onRecommendationsChange={setViewportRecommendations}
         />
         <MapLegend />
+        <MapPanelManager />
+        <MapBoundaryStatus />
         <MapSetup hidden={ready} />
       </div>
       <CloudTimeline />

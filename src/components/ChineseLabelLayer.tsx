@@ -6,26 +6,32 @@ import {
   TIANDITU_ATTRIBUTION,
 } from "@/lib/constants";
 
+/** Official Tianditu global-boundary WMTS, enabled by the same build-time key. */
+function boundaryUrl(token: string): string {
+  return (
+    "https://t{s}.tianditu.gov.cn/ibo_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" +
+    "&LAYER=ibo&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles" +
+    "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=" +
+    encodeURIComponent(token)
+  );
+}
+
 /**
- * Tianditu `cia_w` (imagery annotation) tile layer — renders Chinese labels
- * on top of the dark CARTO basemap.
+ * Chinese annotations and official administrative boundary tiles.
  *
- * - `cia_w` uses light-coloured text designed for dark/satellite basemaps,
- *   so it blends naturally with the dark theme.
- * - Subdomains "01234567" map to t0..t7.tianditu.gov.cn.
- * - `zIndex: 10` places it above the basemap (zIndex 1) but below VIIRS (20),
- *   boundaries (30), and cloud overlay (40).
- * - If `NEXT_PUBLIC_TIANDITU_TOKEN` is not configured, the component returns
- *   `null` and the basemap displays without labels (graceful degradation).
+ * With `NEXT_PUBLIC_TIANDITU_TOKEN`, the map uses Tianditu `ibo_w` for global
+ * boundaries plus `cia_w` for Chinese annotations. Without a token it falls
+ * back to a small set of Chinese orientation labels and never draws an
+ * unverified national/provincial polygon.
  */
 export default function ChineseLabelLayer() {
-  // The URL constant already has the tk appended (or is empty string).
-  // If no token was configured, the URL ends with `tk=` (empty value).
-  // In that case we skip rendering to avoid 403 errors from Tianditu.
   const tk = process.env.NEXT_PUBLIC_TIANDITU_TOKEN ?? "";
   if (!tk) {
     return (
-      <Pane name="chinese-fallback-labels" style={{ zIndex: 450, pointerEvents: "none" }}>
+      <Pane
+        name="chinese-fallback-labels"
+        style={{ zIndex: 450, pointerEvents: "none" }}
+      >
         {CHINESE_FALLBACK_LABELS.map((label) => (
           <CircleMarker
             key={label.name}
@@ -49,18 +55,30 @@ export default function ChineseLabelLayer() {
   }
 
   return (
-    <TileLayer
-      url={TIANDITU_CIA_W_URL}
-      subdomains="01234567"
-      attribution={TIANDITU_ATTRIBUTION}
-      zIndex={10}
-      maxZoom={18}
-      opacity={0.85}
-    />
+    <>
+      <TileLayer
+        url={boundaryUrl(tk)}
+        subdomains="01234567"
+        attribution={TIANDITU_ATTRIBUTION}
+        zIndex={9}
+        maxZoom={18}
+        opacity={0.62}
+        className="tianditu-boundary-layer"
+      />
+      <TileLayer
+        url={TIANDITU_CIA_W_URL}
+        subdomains="01234567"
+        attribution={TIANDITU_ATTRIBUTION}
+        zIndex={10}
+        maxZoom={18}
+        opacity={0.88}
+      />
+    </>
   );
 }
 
 const CHINESE_FALLBACK_LABELS = [
+  { name: "中国", latitude: 35.5, longitude: 104.5 },
   { name: "北京", latitude: 39.9, longitude: 116.4 },
   { name: "上海", latitude: 31.23, longitude: 121.47 },
   { name: "广州", latitude: 23.13, longitude: 113.26 },

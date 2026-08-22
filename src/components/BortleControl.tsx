@@ -6,12 +6,7 @@ import { ASSET_UNAVAILABLE_HINT, hasDarkSkyLayer } from "@/lib/assets";
 import { BORTLE_CLASSES } from "@/data/viirsMeta";
 import BortleHelpPopover from "@/components/BortleHelpPopover";
 
-/**
- * Bortle layer toggle + B1–B9 colour strip + help entry.
- *
- * When no dark-sky raster is installed the toggle is rendered disabled with an
- * explicit "无数据" label, rather than silently doing nothing when clicked.
- */
+/** Bortle/SQM is optional local data; VIIRS visual tiles remain independent. */
 export default function BortleControl() {
   const { state, toggleBortle } = useStore();
   const [help, setHelp] = useState(false);
@@ -26,14 +21,14 @@ export default function BortleControl() {
         onClick={toggleBortle}
         aria-pressed={on}
         disabled={!available}
-        title={available ? "切换波特尔暗空图层" : ASSET_UNAVAILABLE_HINT}
-        style={available ? undefined : { opacity: 0.5, cursor: "not-allowed" }}
+        title={available ? "切换本地 Bortle/SQM 暗空图层" : ASSET_UNAVAILABLE_HINT}
+        style={available ? undefined : { opacity: 0.72, cursor: "not-allowed" }}
       >
         <span className="switch" />
-        波特尔暗空
+        {available ? "Bortle / SQM" : "暗夜数值栅格"}
         {!available && (
-          <span style={{ marginLeft: 6, fontSize: 10, color: "var(--muted)" }}>
-            无数据
+          <span className="bortle-unavailable-label">
+            未安装
           </span>
         )}
       </button>
@@ -53,7 +48,7 @@ export default function BortleControl() {
       <button
         type="button"
         className="bortle-help"
-        aria-label="波特尔说明"
+        aria-label="Bortle、SQM 与未安装说明"
         onClick={() => setHelp(true)}
       >
         ?

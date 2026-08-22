@@ -7,6 +7,7 @@ import "./theme-unified.css";
 import "./data-pipeline.css";
 import "./viewport-recommendations.css";
 import "./viewport-recommendations-mobile.css";
+import "./ux-map-v2.css";
 
 export const metadata: Metadata = {
   title: "逐星｜今夜观测",
@@ -30,12 +31,8 @@ export const metadata: Metadata = {
     url: "https://perseids.giraffetree.cn",
     type: "website",
     locale: "zh_CN",
-    // No `images`: the previous /images/perseids/og.png was never distributed
-    // with this repository (unlicensed copy, see docs/PUBLIC_ASSETS_AUDIT.md).
-    // Declaring it made every social crawler fetch a 404.
   },
   twitter: {
-    // `summary` rather than `summary_large_image` — we have no owned OG asset.
     card: "summary",
     title: "逐星｜今夜观测",
     description:
@@ -54,7 +51,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // No web fonts are loaded — the design uses system CJK font stacks only.
   return (
     <html lang="zh-CN" className="h-full">
       <body className="min-h-full antialiased">

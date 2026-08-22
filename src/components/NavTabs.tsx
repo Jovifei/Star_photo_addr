@@ -6,17 +6,11 @@ import { useSyncExternalStore } from "react";
 import { useStore } from "@/lib/store";
 import { buildProductHref } from "@/lib/productRoutes";
 
-/**
- * Shared product navigation. All three product entry points preserve the
- * current observation session so moving between 今夜观测、暗夜选址 and
- * 观星计划 does not silently reset the selected location/model/time.
- */
+/** Shared navigation with explicit workspace purpose, not three look-alike labels. */
 export default function NavTabs() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { state } = useStore();
-  // Keep the first client render identical to SSR. The store's current-hour
-  // snapshot is browser-owned and may tick between server and hydration.
   const hydrated = useSyncExternalStore(
     () => () => undefined,
     () => true,
@@ -45,28 +39,26 @@ export default function NavTabs() {
     pathname === "/sites" ||
     (pathname === "/" && searchParams.get("panel") === "sites");
 
-  const tabs: Array<{
-    id: "map" | "sites" | "planner";
-    href: string;
-    label: string;
-    active: boolean;
-  }> = [
+  const tabs = [
     {
       id: "map",
       href: homeHref,
       label: "今夜观测",
+      hint: "天气与窗口",
       active: pathname === "/" && !recommendationActive,
     },
     {
       id: "sites",
       href: sitesHref,
       label: "暗夜选址",
+      hint: "长期暗空",
       active: recommendationActive,
     },
     {
       id: "planner",
       href: plannerHref,
       label: "观星计划",
+      hint: "附近排行",
       active: pathname === "/planner",
     },
   ];
@@ -79,8 +71,10 @@ export default function NavTabs() {
           href={tab.href}
           className={`nav-tab${tab.active ? " active" : ""}`}
           aria-current={tab.active ? "page" : undefined}
+          title={`${tab.label}：${tab.hint}`}
         >
-          {tab.label}
+          <span>{tab.label}</span>
+          <small className="nav-tab-hint">{tab.hint}</small>
         </Link>
       ))}
     </nav>
