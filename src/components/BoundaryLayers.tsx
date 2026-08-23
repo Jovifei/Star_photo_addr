@@ -59,6 +59,27 @@ async function loadGeoJson<T = GeoJsonData>(url: string): Promise<T | null> {
   }
 }
 
+/**
+ * Remote province fallback (Aliyun DataV GeoAtlas): the licensed local bundle
+ * is opt-in and often absent, and a boundary-less China map is unreadable.
+ * Same third-party pattern as the VIIRS WMTS source — fetched at runtime,
+ * never redistributed, cached per browser session.
+ */
+const REMOTE_PROVINCE_URL = "https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json";
+const REMOTE_PROVINCE_ATTRIBUTION = "省界 © 阿里云 DataV GeoAtlas";
+let remoteProvinceCache: Promise<GeoJsonData | null> | null = null;
+
+function loadRemoteProvinces(): Promise<GeoJsonData | null> {
+  if (!remoteProvinceCache) {
+    remoteProvinceCache = loadGeoJson(REMOTE_PROVINCE_URL);
+    remoteProvinceCache.catch(() => {
+      // Allow a retry on the next mount after a transient failure.
+      remoteProvinceCache = null;
+    });
+  }
+  return remoteProvinceCache;
+}
+
 function toFeatures(geo: GeoJsonData): Feature[] {
   if (geo.type === "FeatureCollection") return geo.features;
   if (geo.type === "Feature") return [geo];
@@ -97,6 +118,19 @@ export default function BoundaryLayers() {
       if (!cancelled) setCountry(data);
     });
     void loadGeoJson(PROVINCE_URL).then((data) => {
+      if (!cancelled) setProvince(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  // No local bundle: fall back to the remote province source so every map
+  // still renders 省界 (see REMOTE_PROVINCE_URL note).
+  useEffect(() => {
+    if (enabled) return;
+    let cancelled = false;
+    void loadRemoteProvinces().then((data) => {
       if (!cancelled) setProvince(data);
     });
     return () => {
@@ -145,7 +179,16 @@ export default function BoundaryLayers() {
     };
   }, [enabled, zoom]);
 
-  if (!enabled) return null;
+  if (!enabled) {
+    return zoom >= 4 && province ? (
+      <GeoJSON
+        data={province}
+        style={PROVINCE_STYLE}
+        interactive={false}
+        attribution={REMOTE_PROVINCE_ATTRIBUTION}
+      />
+    ) : null;
+  }
 
   return (
     <>

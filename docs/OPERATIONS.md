@@ -64,3 +64,11 @@
 - `/api/data-sources` / `CloudControl` 源状态面板 — 上游健康
 - `/api/observing/snapshot?...` — 观测快照（看 `stale` 字段）
 - `/api/fireglow/snapshot?...` — 火烧云快照
+
+## 7. 第三方在线数据源（运行时调用，不随仓库分发）
+
+| 来源 | 用途 | 说明 |
+|---|---|---|
+| 阿里云 DataV GeoAtlas（geo.datav.aliyun.com） | 中国省级行政边界回退源 | 本地许可边界包（`NEXT_PUBLIC_ASSET_BOUNDARIES`）未启用时自动使用；浏览器会话内缓存；失败静默降级为无线 |
+| darkmap.cn WMTS | 光污染底图 | 既有 |
+| NASA GIBS / Himawari | 卫星云图 | 既有 |

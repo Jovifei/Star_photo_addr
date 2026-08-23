@@ -113,6 +113,14 @@ export type CloudOverlayMode = "satellite-cloud" | "forecast-cloud" | "night-lig
 export type MapViewMode = "satellite" | "light-pollution" | "combined";
 
 /**
+ * Which question the shared map is answering right now. `tonight` exposes the
+ * weather workspace (timeline, score time window); `sites` strips those and
+ * foregrounds the static dark-sky baseline (Bortle library, VIIRS). Set from
+ * the `panel=sites` URL handshake, not persisted.
+ */
+export type MapWorkspace = "tonight" | "sites";
+
+/**
  * Prediction theme shared by all products: same night-observation data,
  * different scoring lens. `star` ranks astro visibility, `cloud` ranks
  * cloud-sea potential (low-cloud driven). Future themes (e.g. fire glow)

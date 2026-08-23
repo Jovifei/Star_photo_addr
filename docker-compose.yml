@@ -16,6 +16,7 @@ services:
       - "${APP_BIND:-127.0.0.1}:${APP_PORT:-3100}:3000"
     environment:
       OBSERVING_SNAPSHOT_DIR: /app/data/snapshots
+      OPEN_METEO_API_KEY: ${OPEN_METEO_API_KEY:-}
       OPEN_METEO_FORECAST_URL: ${OPEN_METEO_FORECAST_URL:-https://api.open-meteo.com/v1/forecast}
       OPEN_METEO_GEOCODE_URL: ${OPEN_METEO_GEOCODE_URL:-https://geocoding-api.open-meteo.com/v1/search}
       OPEN_METEO_AIR_QUALITY_URL: ${OPEN_METEO_AIR_QUALITY_URL:-https://air-quality-api.open-meteo.com/v1/air-quality}

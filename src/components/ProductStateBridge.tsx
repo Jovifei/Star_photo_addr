@@ -23,6 +23,7 @@ export default function ProductStateBridge() {
     selectNight,
     setCloud,
     setMapViewMode,
+    setMapWorkspace,
     setDetailOpen,
   } = useStore();
   const applied = useRef<{
@@ -144,6 +145,10 @@ export default function ProductStateBridge() {
               : "night-lights",
       });
     }
+    // Workspace handshake: panel=sites switches the shared map to the
+    // long-term baseline lens (weather timeline/score window hidden); any
+    // other navigation returns it to the tonight workspace.
+    setMapWorkspace(panel === "sites" ? "sites" : "tonight");
     if (panel === "sites") {
       setDetailOpen(true);
     }
@@ -186,6 +191,7 @@ export default function ProductStateBridge() {
     setCloud,
     setDetailOpen,
     setMapViewMode,
+    setMapWorkspace,
     state.cloudState.activeForecastTime,
     state.cloudState.activeObservationTime,
     state.nightKeys,

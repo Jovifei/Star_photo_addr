@@ -18,6 +18,17 @@ const TIMEOUT_MS = 120_000;
 
 const cache = new Map<string, { snapshot: FireGlowSnapshot; at: number }>();
 const inFlight = new Map<string, Promise<FireGlowSnapshot>>();
+const CACHE_MAX_ENTRIES = 32;
+
+function rememberSnapshot(key: string, snapshot: FireGlowSnapshot) {
+  cache.set(key, { snapshot, at: Date.now() });
+  // Insertion-ordered map: drop the oldest entries past the cap.
+  while (cache.size > CACHE_MAX_ENTRIES) {
+    const oldest = cache.keys().next().value as string | undefined;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+}
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -71,7 +82,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const snapshot = await activeTask;
-    cache.set(key, { snapshot, at: Date.now() });
+    rememberSnapshot(key, snapshot);
     return NextResponse.json(snapshot, {
       headers: {
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",

@@ -39,6 +39,7 @@ import type {
   Location,
   LocationForecast,
   MapViewMode,
+  MapWorkspace,
   RecommendationBand,
   SatelliteFrame,
 } from "@/lib/types";
@@ -62,6 +63,8 @@ interface AppState {
   satelliteFrames: SatelliteFrame[];
   forecastCache: Map<string, LocationForecast>;
   mapViewMode: MapViewMode;
+  /** Which question the shared map answers tonight vs long-term baseline. */
+  mapWorkspace: MapWorkspace;
   /** Cross-product prediction lens (star vs cloud-sea scoring). */
   forecastTheme: ForecastTheme;
   recommendationThreshold: number;
@@ -97,6 +100,7 @@ const initialState: AppState = {
   satelliteFrames: [],
   forecastCache: new Map(),
   mapViewMode: "satellite",
+  mapWorkspace: "tonight",
   forecastTheme: "star",
   recommendationThreshold: 70,
   observingBortleLimit: 3,
@@ -129,6 +133,7 @@ type Action =
   | { type: "CACHE_FORECAST"; locationId: string; forecast: LocationForecast }
   | { type: "CLEAR_FORECAST_CACHE" }
   | { type: "SET_MAP_VIEW_MODE"; mode: MapViewMode }
+  | { type: "SET_MAP_WORKSPACE"; workspace: MapWorkspace }
   | { type: "SET_FORECAST_THEME"; theme: ForecastTheme }
   | { type: "SET_RECOMMENDATION_THRESHOLD"; threshold: number }
   | { type: "SET_OBSERVING_BORTLE_LIMIT"; limit: 3 | 4 }
@@ -203,6 +208,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, forecastCache: new Map() };
     case "SET_MAP_VIEW_MODE":
       return { ...state, mapViewMode: action.mode };
+    case "SET_MAP_WORKSPACE":
+      return { ...state, mapWorkspace: action.workspace };
     case "SET_FORECAST_THEME":
       return { ...state, forecastTheme: action.theme };
     case "SET_RECOMMENDATION_THRESHOLD":
@@ -275,6 +282,7 @@ interface StoreContextValue {
   cacheForecast: (locationId: string, forecast: LocationForecast) => void;
   clearForecastCache: () => void;
   setMapViewMode: (mode: MapViewMode) => void;
+  setMapWorkspace: (workspace: MapWorkspace) => void;
   setForecastTheme: (theme: ForecastTheme) => void;
   setRecommendationThreshold: (threshold: number) => void;
   setObservingBortleLimit: (limit: 3 | 4) => void;
@@ -650,6 +658,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Optional preference.
     }
   }, []);
+  const setMapWorkspace = useCallback((workspace: MapWorkspace) => {
+    dispatch({ type: "SET_MAP_WORKSPACE", workspace });
+  }, []);
   const setForecastTheme = useCallback((theme: ForecastTheme) => {
     dispatch({ type: "SET_FORECAST_THEME", theme });
     try {
@@ -712,6 +723,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cacheForecast,
       clearForecastCache,
       setMapViewMode,
+      setMapWorkspace,
       setForecastTheme,
       setRecommendationThreshold,
       setObservingBortleLimit,
@@ -737,6 +749,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cacheForecast,
       clearForecastCache,
       setMapViewMode,
+      setMapWorkspace,
       setForecastTheme,
       setRecommendationThreshold,
       setObservingBortleLimit,

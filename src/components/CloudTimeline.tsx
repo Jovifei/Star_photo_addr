@@ -81,10 +81,13 @@ function buildTrackSegments(
 ): TrackSegment[] {
   if (!items.length) return [];
   if (satellite) {
-    const step = Math.max(1, Math.ceil(items.length / 8));
-    const ticks = items
-      .filter((_, index) => index % step === 0 || index === items.length - 1)
-      .map((item) => ({ time: item.time, label: formatTimelineTime(item.time).slice(6) }));
+    // Evenly spaced probes including both ends, capped at eight.
+    const tickCount = Math.min(items.length, 8);
+    const ticks = Array.from({ length: tickCount }, (_, position) => {
+      const index = Math.round((position * (items.length - 1)) / Math.max(1, tickCount - 1));
+      const item = items[index];
+      return { time: item.time, label: formatTimelineTime(item.time).slice(6) };
+    });
     return [{ key: "obs-24h", kind: "night", label: "过去 24 小时", ticks }];
   }
   const segments: TrackSegment[] = [];
@@ -114,6 +117,8 @@ function buildTrackSegments(
 
 export default function CloudTimeline() {
   const { state, setCloud, selectNight } = useStore();
+  // 选址工作区回答的是长期本底问题：天气时间轴整体让位。
+  const isSitesWorkspace = state.mapWorkspace === "sites";
   const { cloudState, selectedNight, cloudGrid, forecast, selectedLocation } = state;
   const [expanded, setExpanded] = useState(false);
   const [playSpeed, setPlaySpeed] = useState<(typeof PLAY_SPEEDS)[number]>(1);
@@ -345,7 +350,7 @@ export default function CloudTimeline() {
     setCloud({ activeForecastTime: time, timeIndex: Math.max(0, index), playing: false });
   };
 
-  if (!cloudState.enabled) return null;
+  if (!cloudState.enabled || isSitesWorkspace) return null;
 
   return (
     <section className={`cloud-timeline${expanded ? " is-expanded" : " is-collapsed"}`} aria-label={isSatelliteMode ? "卫星云图时间工作台" : isNightLightsMode ? "光污染参考图层" : "逐小时预报时间工作台"} data-time-domain={isSatelliteMode ? "observation" : isNightLightsMode ? "reference" : "forecast"} data-active-time={activeTimelineTime ?? ""}>
@@ -466,4 +471,4 @@ export default function CloudTimeline() {
   );
 }
 
-export { buildSchedule, HOURS_PER_NIGHT, NIGHT_START, NIGHT_END, isInNight, getValuesAtTime };
+export { buildSchedule, buildTrackSegments, nightKeyOfTime, HOURS_PER_NIGHT, NIGHT_START, NIGHT_END, isInNight, getValuesAtTime };

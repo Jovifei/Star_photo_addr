@@ -35,10 +35,10 @@
 .hourly-matrix-head h3 { margin: 2px 0 0; color: #eef3ff; font-size: 14px; }
 .hourly-matrix-status { color: var(--amber); font-size: 12px; }
 .hourly-matrix-scroll { overflow-x: auto; overscroll-behavior-inline: contain; }
-.hourly-matrix table { min-width: 860px; width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+.hourly-matrix table { min-width: 700px; width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
 .hourly-matrix th, .hourly-matrix td { border-right: 1px solid rgba(128, 151, 215, .2); border-bottom: 1px solid rgba(128, 151, 215, .2); padding: 0; text-align: center; }
-.hourly-matrix thead th { position: sticky; top: 0; z-index: 3; min-width: 72px; background: #20295b; color: #dbe5ff; }
-.hourly-matrix thead th:first-child, .hourly-matrix tbody th { position: sticky; left: 0; z-index: 4; width: 108px; min-width: 108px; padding: 8px 10px; background: #20295b; color: #dbe5ff; text-align: left; font-size: 12px; }
+.hourly-matrix thead th { position: sticky; top: 0; z-index: 3; min-width: 56px; background: #20295b; color: #dbe5ff; }
+.hourly-matrix thead th:first-child, .hourly-matrix tbody th { position: sticky; left: 0; z-index: 4; width: 86px; min-width: 86px; padding: 6px 8px; background: #20295b; color: #dbe5ff; text-align: left; font-size: 11px; }
 .hourly-matrix tbody th { z-index: 2; background: #1a234d; font-weight: 600; }
 .hourly-matrix th small, .hourly-matrix tbody th small { display: block; margin-top: 2px; color: #8795bd; font-size: 10px; font-weight: 400; }
 .hourly-matrix-time, .hourly-matrix td button { display: flex; width: 100%; min-height: 38px; align-items: center; justify-content: center; border: 0; color: #edf2ff; background: transparent; cursor: pointer; font: inherit; }
@@ -61,8 +61,8 @@
 .cloud-night-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; }
 .cloud-night-tabs button { flex: 0 0 auto; border: 1px solid rgba(132, 158, 221, .35); border-radius: 999px; padding: 5px 10px; color: #aebbe0; background: rgba(20, 30, 72, .78); cursor: pointer; font-size: 11px; }
 .cloud-night-tabs button.active, .cloud-night-tabs button:hover { border-color: #7ab9ff; color: #fff; background: rgba(64, 105, 211, .5); }
-.cloud-summary-card { display: grid; grid-template-columns: repeat(5, minmax(72px, 1fr)); gap: 7px; margin: 4px 0 8px; }
-.cloud-summary-card span { display: flex; flex-direction: column; gap: 3px; border: 1px solid rgba(132, 158, 221, .22); border-radius: 9px; padding: 7px 8px; color: #eef3ff; font-size: 12px; }
+.cloud-summary-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(62px, 1fr)); gap: 5px; margin: 4px 0 8px; }
+.cloud-summary-card span { display: flex; flex-direction: column; gap: 2px; border: 1px solid rgba(132, 158, 221, .22); border-radius: 8px; padding: 5px 6px; color: #eef3ff; font-size: 11px; }
 .cloud-summary-card b { color: #8795bd; font-size: 10px; font-weight: 500; }
 .cloud-source-note { display: block; margin-top: 6px; color: #91a4c5; font-size: 10px; line-height: 1.4; }
 .source-status-panel { display: grid; gap: 4px; margin: 8px 0; padding: 8px 10px; border: 1px solid rgba(132, 158, 221, .22); border-radius: 9px; color: #aebbd6; font-size: 10px; }
@@ -566,9 +566,12 @@
 .cloud-control {
   position: absolute;
   right: 18px;
-  top: 18px;
+  /* 让出右上角给布局齿轮；云量高级项从其下方开始。 */
+  top: 64px;
   z-index: 700;
   width: 264px;
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
   border: 1px solid var(--line);
   background: var(--panel);
   border-radius: var(--radius);
@@ -682,7 +685,8 @@
 .bortle-control {
   position: absolute;
   left: 18px;
-  top: 18px;
+  /* 左下角排在搜索卡上方，避免与左上标题/观星地点面板叠位。 */
+  bottom: 100px;
   z-index: 700;
   display: flex;
   align-items: center;
@@ -1556,7 +1560,7 @@
 }
 .cloud-timeline-speed {
   display: inline-flex;
-  gap: 2px;
+  gap: 1px;
   flex-shrink: 0;
   padding: 2px;
   border: 1px solid var(--line);
@@ -1567,10 +1571,11 @@
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
   font-family: var(--font-mono);
-  padding: 3px 6px;
-  border-radius: 4px;
+  padding: 2px 4px;
+  min-width: 0;
+  border-radius: 3px;
   cursor: pointer;
   transition: all var(--transition);
 }
@@ -1735,6 +1740,11 @@
 .cloud-timeline-current {
   color: var(--text);
   font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-width: 172px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .cloud-timeline-loading {
   font-size: 11px;
@@ -3153,7 +3163,8 @@
 }
 .observing-map-control {
   position: absolute;
-  top: 14px;
+  /* 左侧排在标题区下方，不再与暗夜图层面板同钉左上角。 */
+  top: 150px;
   left: 14px;
   z-index: 710;
   display: grid;
@@ -3640,6 +3651,53 @@
   margin: 2px 0 6px;
 }
 .observing-mode-hint small {
+  color: var(--muted-2);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* 选址模式的本底档案块：按 Bortle 级的全国点位静态分布。 */
+.observing-baseline-stats {
+  display: grid;
+  gap: 7px;
+  margin: 4px 0 2px;
+  padding: 9px 10px;
+  border: 1px solid rgba(121, 207, 226, 0.26);
+  border-radius: var(--radius-sm);
+  background: rgba(121, 207, 226, 0.06);
+}
+.observing-baseline-title {
+  color: var(--green-soft, #79cfe2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.observing-baseline-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+.observing-baseline-grid i {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-style: normal;
+}
+.observing-baseline-grid i[data-bortle="1"] { border-color: rgba(121, 207, 226, 0.5); }
+.observing-baseline-grid i[data-bortle="1"] b,
+.observing-baseline-grid i[data-bortle="1"] span { color: #9ce1ee; }
+.observing-baseline-grid i b {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+.observing-baseline-grid i span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.observing-baseline-stats > small {
   color: var(--muted-2);
   font-size: 10px;
   line-height: 1.5;

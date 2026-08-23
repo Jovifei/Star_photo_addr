@@ -24,6 +24,7 @@ const BAND_FILTERS: Array<{ id: Exclude<RecommendationBand, "unknown">; label: s
 
 export default function ObservingMapControl() {
   const { state, setCloud, setRecommendationThreshold, setObservingBortleLimit, setRecommendedOnly, setRecommendationBands } = useStore();
+  const isSitesWorkspace = state.mapWorkspace === "sites";
   // The score window anchors on the current hour, which can tick between
   // server render and hydration (e.g. 17:59 -> 18:00) and break hydration.
   // Render the empty placeholder on both sides, then adopt the store value
@@ -96,6 +97,14 @@ export default function ObservingMapControl() {
     () => OBSERVING_SITES.filter((site) => site.bortle <= state.observingBortleLimit),
     [state.observingBortleLimit],
   );
+  // 选址模式的本底档案：全国点位库按 Bortle 级的静态分布。
+  const bortleCounts = useMemo(() => {
+    const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    for (const site of OBSERVING_SITES) {
+      counts[site.bortle] = (counts[site.bortle] ?? 0) + 1;
+    }
+    return counts;
+  }, []);
   const scoreByBand = useMemo(() => {
     const counts: Record<Exclude<RecommendationBand, "unknown">, number> = {
       priority: 0,
@@ -150,11 +159,13 @@ export default function ObservingMapControl() {
     >
       <div className="observing-map-control-title">
         <span><SlidersHorizontal size={14} aria-hidden="true" />观星地点</span>
-        <b>{activeSnapshot ? visibleCount : "—"} / {state.observingBortleLimit === 3 ? 222 : OBSERVING_SITE_COUNT} 个点</b>
+        <b>{isSitesWorkspace ? `${baseSites.length} / ${OBSERVING_SITE_COUNT} 个点` : `${activeSnapshot ? visibleCount : "—"} / ${state.observingBortleLimit === 3 ? 222 : OBSERVING_SITE_COUNT} 个点`}</b>
       </div>
       <div className="observing-mode-hint">
         <small>
-          图层（云图 · 预报/实况、光污染）请使用地图顶部图层条；本面板专注地点筛选与评分门槛。
+          {isSitesWorkspace
+            ? "选址模式：比较长期暗空本底（Bortle / 海拔 / 光污染），不依赖今晚天气。"
+            : "图层（云图 · 预报/实况、光污染）请使用地图顶部图层条；本面板专注地点筛选与评分门槛。"}
         </small>
       </div>
       <label className="observing-filter-row">
@@ -164,6 +175,23 @@ export default function ObservingMapControl() {
           <option value="4">B1–B4 · 242 个</option>
         </select>
       </label>
+      {isSitesWorkspace ? (
+        <>
+          <div className="observing-baseline-stats" aria-label="全国点位 Bortle 本底分布">
+            <span className="observing-baseline-title">本底分布 · 全国点位库</span>
+            <div className="observing-baseline-grid">
+              {[1, 2, 3, 4].map((band) => (
+                <i key={band} data-bortle={band}>
+                  <b>B{band}</b>
+                  <span>{bortleCounts[band] ?? 0} 个</span>
+                </i>
+              ))}
+            </div>
+            <small>先按本底圈出够暗的长期机位，再切回今夜观测核对当天云况与窗口。</small>
+          </div>
+        </>
+      ) : (
+        <>
       <label className="observing-threshold-row">
         <span>推荐门槛 <b>{state.recommendationThreshold}</b></span>
         <input type="range" min="50" max="90" step="5" value={state.recommendationThreshold} onChange={(event) => setRecommendationThreshold(Number(event.target.value))} aria-label="推荐分数门槛" />
@@ -215,7 +243,9 @@ export default function ObservingMapControl() {
           </label>
         ))}
       </div>
-      <small className="observing-map-control-note">勾选评分档位控制地图上的点；地图不常驻显示天气详情，点击地点查看完整数据。</small>
+        </>
+      )}
+      <small className="observing-map-control-note">{isSitesWorkspace ? "地图上的点按光污染本底着色；点击地点查看暗夜档案与海拔。" : "勾选评分档位控制地图上的点；地图不常驻显示天气详情，点击地点查看完整数据。"}</small>
     </section>
   );
 }

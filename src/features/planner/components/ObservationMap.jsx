@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
+import BoundaryLayers from "@/components/BoundaryLayers";
 import { searchChinaPlaces } from "../lib/geocoding";
 import { fetchSurfaceForecasts } from "../lib/openMeteo";
 import { evaluateNight, statusMeta } from "../lib/scoring";
@@ -215,6 +216,7 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
               url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
             />
             <ChineseLabelLayer />
+            <BoundaryLayers />
             <MapClick onPick={selectCandidate} />
             <FlyToSelection location={selected} />
             {locations.map((location) => (

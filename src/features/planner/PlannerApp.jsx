@@ -264,9 +264,9 @@ export function App() {
       ? bridge.night
       : sharedState.selectedNight,
   );
-  // URL-linked locations participate in ranking immediately, but landing from
-  // another product should not open a blocking detail drawer over navigation.
-  const [selectedLocationId, setSelectedLocationId] = useState(() => bridge.location?.id ?? null);
+  // URL 点位只参与排名与会话联动；落地时不再自动弹出地点详情抽屉，
+  // 让用户先看到观星计划全貌，需要下钻时自行点击。
+  const [selectedLocationId, setSelectedLocationId] = useState(null);
   const [forecasts, setForecasts] = useState(() => readForecastCache()?.forecasts ?? []);
   const [savedAt, setSavedAt] = useState(() => readForecastCache()?.savedAt ?? null);
   const [stale, setStale] = useState(() => readForecastCache()?.stale ?? false);

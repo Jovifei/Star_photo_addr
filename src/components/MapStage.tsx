@@ -44,7 +44,7 @@ export default function MapStage() {
   const [viewportRecommendations, setViewportRecommendations] = useState<
     ViewportRecommendation[]
   >([]);
-  const { sampleAt } = useStore();
+  const { state, sampleAt } = useStore();
 
   return (
     <section className="map-stage">
@@ -76,7 +76,7 @@ export default function MapStage() {
         <MapHeadline />
         <MapViewActions mapRef={mapRef} />
         <MapSearchCard />
-        <ForecastThemeSwitch />
+        {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
         <MapLayerBar />
         <BortleControl />
         <CloudControl />

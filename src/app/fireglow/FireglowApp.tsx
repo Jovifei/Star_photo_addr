@@ -1,27 +1,62 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Sunrise, Sunset, Flame, RefreshCw } from "lucide-react";
-import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Sunrise, Sunset, Flame, RefreshCw, MoonStar } from "lucide-react";
+import { CircleMarker, ImageOverlay, MapContainer, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Map as LeafletMap } from "leaflet";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 import BoundaryLayers from "@/components/BoundaryLayers";
+import NavTabs from "@/components/NavTabs";
 import { CARTO_ATTRIBUTION, CARTO_DARK_NOLABELS_URL } from "@/lib/constants";
 import { OBSERVING_SITES } from "@/lib/observingSites";
-import type { FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
+import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
 import { fireGlowBandLabel } from "@/lib/fireglow";
-import type { FireGlowBand } from "@/lib/fireglow";
+import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 
 type Phase = "evening" | "morning";
+/** today-0 / +1 / +2 / 三日总览 */
+type RangeMode = 0 | 1 | 2 | 3;
 
-const BAND_COLORS: Record<FireGlowBand, string> = {
-  strong: "#e8654f",
-  medium: "#d4915f",
-  light: "#c9b273",
-  faint: "#5f7078",
-  none: "#3c4a52",
-  unknown: "#3c4a52",
+// 概率分级色阶：低→高 灰/绿/黄/橙 + 红三级递深（80–88 正红、88–95 深红、95–100 绛红）。
+const LEVEL_COLORS: Record<FireGlowProbabilityLevel, string> = {
+  p20: "#5f7078",
+  p40: "#5da46b",
+  p60: "#d4b23c",
+  p80: "#e08a3f",
+  p88: "#e04f3a",
+  p95: "#ba2c20",
+  p100: "#800c0c",
+};
+const LEVEL_LABELS: Array<{ level: FireGlowProbabilityLevel; range: string }> = [
+  { level: "p20", range: "0–20%" },
+  { level: "p40", range: "20–40%" },
+  { level: "p60", range: "40–60%" },
+  { level: "p80", range: "60–80%" },
+  { level: "p88", range: "80–88%" },
+  { level: "p95", range: "88–95%" },
+  { level: "p100", range: "95–100%" },
+];
+
+const UNKNOWN_WINDOW: FireGlowWindowScore = {
+  score: null,
+  band: "unknown",
+  bandLabel: fireGlowBandLabel("unknown"),
+  probabilityLabel: null,
+  probabilityLevel: null,
+  vividness: null,
+  momentLabel: null,
+  peakTime: null,
+  deckCloud: null,
+  lowCloud: null,
+  midCloud: null,
+  highCloud: null,
+  visibilityKm: null,
+  sunAltitude: null,
+  goldenTime: null,
+  blueTime: null,
+  astroTime: null,
+  reason: "暂无数据",
 };
 
 function todayKey(): string {
@@ -49,6 +84,13 @@ function dateLabel(date: string): string {
   return `${month}/${day} 周${weekday}`;
 }
 
+const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = [
+  { value: 0, label: "今日", hint: "今晚 / 今晨窗口" },
+  { value: 1, label: "明日", hint: "明天窗口" },
+  { value: 2, label: "后日", hint: "后天窗口" },
+  { value: 3, label: "三日总览", hint: "今日 + 明日 + 后日 的逐日对比，排名取三日最佳" },
+];
+
 interface RankedSite {
   id: string;
   name: string;
@@ -57,77 +99,115 @@ interface RankedSite {
   longitude: number;
   altitude: number | null;
   window: FireGlowWindowScore;
+  /** 三日总览：每天的概率级（p20…p100）与分数。 */
+  days?: Array<{ date: string; score: number | null; level: FireGlowProbabilityLevel | null }>;
 }
 
 export default function FireglowApp() {
-  const [offset, setOffset] = useState(0);
+  const [rangeMode, setRangeMode] = useState<RangeMode>(0);
   const [phase, setPhase] = useState<Phase>("evening");
-  const [snapshot, setSnapshot] = useState<FireGlowSnapshot | null>(null);
+  const [snapshots, setSnapshots] = useState<Record<string, FireGlowSnapshot | null>>({});
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const loadTokenRef = useRef(0);
 
   const baseDate = todayKey();
-  const date = shiftDate(baseDate, offset);
-  const requestKey = `${date}|${phase}`;
+  const activeDates = useMemo(
+    () => (rangeMode === 3 ? [0, 1, 2].map((offset) => shiftDate(baseDate, offset)) : [shiftDate(baseDate, rangeMode)]),
+    [baseDate, rangeMode],
+  );
 
   const load = useCallback(
-    (silent = false) => {
+    (dates: string[]) => {
+      const token = loadTokenRef.current + 1;
+      loadTokenRef.current = token;
       const controller = new AbortController();
       queueMicrotask(() => {
-        if (!silent) setStatus("loading");
-        fetch(`/api/fireglow/snapshot?date=${date}`, { signal: controller.signal, cache: "no-store" })
-          .then(async (response) => {
-            const payload = await response.json().catch(() => null);
-            if (!response.ok || !payload?.sites) throw new Error(payload?.error ?? "火烧云快照不可用");
-            return payload as FireGlowSnapshot;
-          })
-          .then((payload) => {
-            setSnapshot(payload);
+        setStatus("loading");
+        Promise.all(
+          dates.map((date) =>
+            fetch(`/api/fireglow/snapshot?date=${date}`, { signal: controller.signal, cache: "no-store" })
+              .then(async (response) => {
+                const payload = await response.json().catch(() => null);
+                if (!response.ok || !payload?.sites) throw new Error(payload?.error ?? "火烧云快照不可用");
+                return payload as FireGlowSnapshot;
+              }),
+          ),
+        )
+          .then((results) => {
+            if (loadTokenRef.current !== token) return;
+            setSnapshots((current) => {
+              const next = { ...current };
+              results.forEach((snapshot) => {
+                next[snapshot.date] = snapshot;
+              });
+              return next;
+            });
             setStatus("ready");
-            setError(payload.stale ? "部分数据已降级，结果仅供参考。" : "");
+            setError(results.some((snapshot) => snapshot.stale) ? "部分数据已降级，结果仅供参考。" : "");
           })
           .catch((requestError) => {
-            if (requestError?.name === "AbortError") return;
+            if (requestError?.name === "AbortError" || loadTokenRef.current !== token) return;
             setStatus("error");
             setError(requestError instanceof Error ? requestError.message : "火烧云快照不可用");
           });
       });
       return () => controller.abort();
     },
-    [date],
+    [],
   );
 
   useEffect(() => {
-    const cleanup = load();
+    const missing = activeDates.filter((date) => !snapshots[date]);
+    if (!missing.length) return;
+    const cleanup = load(missing);
     return cleanup;
-  }, [load]);
+    // snapshots intentionally not a dependency: only fetch what's missing on range change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDates, load]);
 
   const ranked = useMemo<RankedSite[]>(() => {
-    if (!snapshot) return [];
-    return OBSERVING_SITES.map((site) => ({
-      id: site.id,
-      name: site.name,
-      province: site.province,
-      latitude: site.latitude,
-      longitude: site.longitude,
-      altitude: site.altitude,
-      window: snapshot.sites[site.id]?.[phase] ?? {
-        score: null,
-        band: "unknown" as FireGlowBand,
-        bandLabel: fireGlowBandLabel("unknown"),
-        peakTime: null,
-        deckCloud: null,
-        lowCloud: null,
-        visibilityKm: null,
-        sunAltitude: null,
-        reason: "暂无数据",
-      },
-    })).sort((left, right) => (right.window.score ?? -1) - (left.window.score ?? -1));
-  }, [phase, snapshot]);
+    const primary = snapshots[activeDates[0]];
+    if (!primary) return [];
+    return OBSERVING_SITES.map((site) => {
+      const windows = activeDates.map((date) => snapshots[date]?.sites[site.id]?.[phase] ?? UNKNOWN_WINDOW);
+      const scored = windows.filter((window) => window.score != null);
+      const best = scored.length
+        ? scored.reduce((top, window) => ((window.score ?? 0) > (top.score ?? 0) ? window : top))
+        : windows[0] ?? UNKNOWN_WINDOW;
+      return {
+        id: site.id,
+        name: site.name,
+        province: site.province,
+        latitude: site.latitude,
+        longitude: site.longitude,
+        altitude: site.altitude,
+        window: best,
+        days: rangeMode === 3
+          ? activeDates.map((date, index) => ({
+              date,
+              score: windows[index].score,
+              level: windows[index].probabilityLevel,
+            }))
+          : undefined,
+      };
+    }).sort((left, right) => (right.window.score ?? -1) - (left.window.score ?? -1));
+  }, [activeDates, phase, rangeMode, snapshots]);
 
-  const bestCount = ranked.filter((site) => site.window.band === "strong" || site.window.band === "medium").length;
+  /** 面状概率色块：IDW 插值出的连续色场，随窗口/日期重算。 */
+  const overlay = useMemo(() => {
+    if (!ranked.length) return null;
+    return buildProbabilityOverlay(
+      ranked.map((site) => ({ latitude: site.latitude, longitude: site.longitude, score: site.window.score })),
+    );
+  }, [ranked]);
+
+  const bestCount = ranked.filter((site) => {
+    const level = site.window.probabilityLevel;
+    return level === "p80" || level === "p100";
+  }).length;
 
   const focusSite = useCallback((site: RankedSite) => {
     setSelectedId(site.id);
@@ -136,31 +216,39 @@ export default function FireglowApp() {
 
   return (
     <div className="fireglow-root app-shell">
-      <header className="topbar fireglow-topbar">
+      <header className="fireglow-topbar">
         <div className="fireglow-head">
           <span className="fireglow-mark"><Flame size={18} aria-hidden="true" /></span>
           <div>
-            <span className="section-kicker">火烧云预测 · 晨昏窗口</span>
-            <h1>火烧云地图</h1>
+            <span className="section-kicker">逐霞 · 火烧云预测</span>
+            <h1>火烧云概率地图</h1>
           </div>
         </div>
+        <NavTabs />
         <div className="fireglow-controls">
-          <div className="segmented" role="group" aria-label="预测日期">
-            {[0, 1, 2].map((value) => (
-              <button key={value} type="button" aria-pressed={offset === value} className={offset === value ? "active" : ""} onClick={() => setOffset(value)}>
-                {value === 0 ? "今天" : value === 1 ? "明天" : "后天"}
+          <div className="segmented" role="group" aria-label="晨昏窗口">
+            <button type="button" aria-pressed={phase === "evening"} className={phase === "evening" ? "active" : ""} onClick={() => setPhase("evening")}>
+              <Sunset size={14} aria-hidden="true" /> 晚霞
+            </button>
+            <button type="button" aria-pressed={phase === "morning"} className={phase === "morning" ? "active" : ""} onClick={() => setPhase("morning")}>
+              <Sunrise size={14} aria-hidden="true" /> 朝霞
+            </button>
+          </div>
+          <div className="segmented" role="group" aria-label="预测日期" data-mode="range">
+            {RANGE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={rangeMode === option.value}
+                className={rangeMode === option.value ? "active" : ""}
+                title={option.hint}
+                onClick={() => setRangeMode(option.value)}
+              >
+                {option.label}
               </button>
             ))}
           </div>
-          <div className="segmented" role="group" aria-label="晨昏窗口">
-            <button type="button" aria-pressed={phase === "evening"} className={phase === "evening" ? "active" : ""} onClick={() => setPhase("evening")}>
-              <Sunset size={14} aria-hidden="true" /> 傍晚晚霞
-            </button>
-            <button type="button" aria-pressed={phase === "morning"} className={phase === "morning" ? "active" : ""} onClick={() => setPhase("morning")}>
-              <Sunrise size={14} aria-hidden="true" /> 清晨朝霞
-            </button>
-          </div>
-          <button type="button" className="fireglow-refresh" onClick={() => load()} disabled={status === "loading"}>
+          <button type="button" className="fireglow-refresh" onClick={() => load(activeDates)} disabled={status === "loading"}>
             <RefreshCw size={14} className={status === "loading" ? "is-spinning" : ""} aria-hidden="true" />
             {status === "loading" ? "读取中" : "刷新"}
           </button>
@@ -168,10 +256,10 @@ export default function FireglowApp() {
       </header>
 
       <main className="fireglow-workspace">
-        <aside className="fireglow-panel" aria-label="火烧云地点排行">
+        <aside className="fireglow-panel" aria-label="火烧云概率排行">
           <div className="fireglow-panel-head">
-            <strong>{phase === "evening" ? "傍晚窗口排行" : "清晨窗口排行"}</strong>
-            <span>{dateLabel(date)} · 中烧及以上 {bestCount} 个</span>
+            <strong>{phase === "evening" ? "晚霞概率排行" : "朝霞概率排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
+            <span>60% 以上 {bestCount} 个点位</span>
           </div>
           {status === "error" && <p className="fireglow-error" role="status">{error}</p>}
           {error && status === "ready" && <p className="fireglow-note" role="status">{error}</p>}
@@ -186,11 +274,28 @@ export default function FireglowApp() {
                   <span className="fireglow-rank">{index + 1}</span>
                   <span className="fireglow-site-copy">
                     <strong>{site.name}</strong>
-                    <small>{site.province} · {site.altitude == null ? "海拔待核" : `${Math.round(site.altitude)}m`}{site.window.peakTime ? ` · 最佳 ${site.window.peakTime}` : ""}</small>
-                    <em>{site.window.reason}</em>
+                    <small>
+                      {site.province}
+                      {site.window.peakTime ? ` · 最佳 ${site.window.peakTime}` : ""}
+                      {site.window.momentLabel ? ` · ${site.window.momentLabel}` : ""}
+                    </small>
+                    <em>
+                      {site.window.vividness != null ? `鲜艳度 ${site.window.vividness.toFixed(2)}` : "鲜艳度 —"}
+                      {site.window.goldenTime ? ` · 金色 ${site.window.goldenTime}` : ""}
+                      {site.window.blueTime ? ` · 蓝色 ${site.window.blueTime}` : ""}
+                    </em>
+                    {site.days && (
+                      <span className="fireglow-day-chips" aria-label="三日概率">
+                        {site.days.map((day) => (
+                          <i key={day.date} data-level={day.level ?? "none"}>
+                            {day.date.slice(5).replace("-", "/")} {day.score ?? "—"}
+                          </i>
+                        ))}
+                      </span>
+                    )}
                   </span>
-                  <span className="fireglow-score" data-band={site.window.band}>
-                    <b>{site.window.score ?? "—"}</b>
+                  <span className="fireglow-score" data-level={site.window.probabilityLevel ?? "none"}>
+                    <b>{site.window.probabilityLabel ?? "—"}</b>
                     <small>{site.window.bandLabel}</small>
                   </span>
                 </button>
@@ -198,12 +303,12 @@ export default function FireglowApp() {
             ))}
           </ol>
           <p className="fireglow-footnote">
-            评分 = 中高云量结构（点燃的画布）+ 太阳高度角（晨昏几何）+ 低云遮挡与能见度修正。
-            气溶胶（CAMS AOD）为规划中的增强项；出发前请对照实况云图。
+            概率 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
+            + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项。
           </p>
         </aside>
 
-        <div className="fireglow-map" aria-label="火烧云评分地图">
+        <div className="fireglow-map" aria-label="火烧云概率地图">
           <MapContainer
             ref={setMap}
             center={[35.5, 104.5]}
@@ -215,17 +320,26 @@ export default function FireglowApp() {
             style={{ width: "100%", height: "100%" }}
           >
             <TileLayer url={CARTO_DARK_NOLABELS_URL} attribution={CARTO_ATTRIBUTION} />
+            {overlay && (
+              <ImageOverlay
+                url={overlay.url}
+                bounds={overlay.bounds}
+                interactive={false}
+                zIndex={260}
+                alt="火烧云概率分布色块"
+              />
+            )}
             <ChineseLabelLayer />
             <BoundaryLayers />
             {ranked.map((site) => (
               <CircleMarker
                 key={site.id}
                 center={[site.latitude, site.longitude]}
-                radius={site.window.score == null ? 4 : 4 + (site.window.score / 100) * 8}
+                radius={site.window.score == null ? 3 : 3 + (site.window.score / 100) * 3.5}
                 pathOptions={{
-                  color: site.id === selectedId ? "#ffffff" : BAND_COLORS[site.window.band],
-                  fillColor: BAND_COLORS[site.window.band],
-                  fillOpacity: 0.8,
+                  color: site.id === selectedId ? "#ffffff" : LEVEL_COLORS[site.window.probabilityLevel ?? "p20"],
+                  fillColor: LEVEL_COLORS[site.window.probabilityLevel ?? "p20"],
+                  fillOpacity: 0.82,
                   weight: site.id === selectedId ? 3 : 1.5,
                 }}
                 eventHandlers={{ click: () => setSelectedId(site.id) }}
@@ -233,22 +347,38 @@ export default function FireglowApp() {
                 <Popup>
                   <div className="fireglow-popup">
                     <strong>{site.name}</strong>
-                    <span>{site.province}</span>
-                    <b data-band={site.window.band}>{site.window.score ?? "—"} · {site.window.bandLabel}</b>
-                    <small>{site.window.reason}</small>
+                    <span>{site.province} · {site.altitude == null ? "海拔待核" : `${Math.round(site.altitude)}m`}</span>
+                    <b data-level={site.window.probabilityLevel ?? "none"}>
+                      概率 {site.window.probabilityLabel ?? "—"} · {site.window.bandLabel}
+                    </b>
+                    <small>
+                      高云 {site.window.highCloud ?? "—"}% / 中云 {site.window.midCloud ?? "—"}% / 低云 {site.window.lowCloud ?? "—"}%
+                      {site.window.visibilityKm != null ? ` · 能见度 ${site.window.visibilityKm}km` : ""}
+                    </small>
+                    <small>
+                      {site.window.momentLabel ?? ""}
+                      {site.window.peakTime ? ` · 最佳 ${site.window.peakTime}` : ""}
+                      {site.window.vividness != null ? ` · 鲜艳度 ${site.window.vividness.toFixed(2)}` : ""}
+                    </small>
+                    <small className="fireglow-popup-twilight">
+                      <MoonStar size={11} aria-hidden="true" />
+                      金色 {site.window.goldenTime ?? "—"} · 蓝色 {site.window.blueTime ?? "—"} · 天文{phase === "evening" ? "昏影终" : "晨光始"} {site.window.astroTime ?? "—"}
+                    </small>
                   </div>
                 </Popup>
               </CircleMarker>
             ))}
           </MapContainer>
-          <div className="fireglow-legend" aria-label="火烧云等级图例">
-            {(["strong", "medium", "light", "faint"] as FireGlowBand[]).map((band) => (
-              <span key={band}><i style={{ background: BAND_COLORS[band] }} />{fireGlowBandLabel(band)}</span>
+          <div className="fireglow-legend" aria-label="概率等级色阶">
+            {LEVEL_LABELS.map((entry) => (
+              <span key={entry.level}>
+                <i style={{ background: LEVEL_COLORS[entry.level] }} />
+                {entry.range}
+              </span>
             ))}
           </div>
         </div>
       </main>
-      <span hidden data-request-key={requestKey} />
     </div>
   );
 }

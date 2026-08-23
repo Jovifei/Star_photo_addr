@@ -1,17 +1,21 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { formatNightLabel } from "@/lib/nighttime";
 import { upcomingAstronomyEvents } from "@/lib/astronomyEvents";
 import { useStore } from "@/lib/store";
 
-/** Give the two map workspaces distinct jobs even though they share one map engine. */
-export default function MapHeadline() {
+/**
+ * Give the two map workspaces distinct jobs even though they share one map
+ * engine. useSearchParams must sit behind a Suspense boundary for static
+ * prerendering; the fallback renders the default (tonight) headline so the
+ * shell never flashes empty.
+ */
+function HeadlineBody({ darkSkyWorkspace }: { darkSkyWorkspace: boolean }) {
   const { state } = useStore();
-  const searchParams = useSearchParams();
   const events = upcomingAstronomyEvents();
   const primaryEvent = events[0];
-  const darkSkyWorkspace = searchParams.get("panel") === "sites";
 
   return (
     <div className="map-headline" data-workspace={darkSkyWorkspace ? "sites" : "tonight"}>
@@ -52,5 +56,18 @@ export default function MapHeadline() {
         </div>
       )}
     </div>
+  );
+}
+
+function WorkspaceAwareHeadline() {
+  const searchParams = useSearchParams();
+  return <HeadlineBody darkSkyWorkspace={searchParams.get("panel") === "sites"} />;
+}
+
+export default function MapHeadline() {
+  return (
+    <Suspense fallback={<HeadlineBody darkSkyWorkspace={false} />}>
+      <WorkspaceAwareHeadline />
+    </Suspense>
   );
 }

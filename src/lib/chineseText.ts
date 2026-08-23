@@ -19,9 +19,14 @@ export function toSimplifiedChinese<T extends string | null | undefined>(input: 
 
 export function normalizeLocationTexts<T extends { name?: string | null; province?: string | null; area?: string | null }>(location: T): T {
   if (!location) return location;
-  const name = toSimplifiedChinese(location.name ?? null);
-  const province = toSimplifiedChinese(location.province ?? null);
-  const area = toSimplifiedChinese(location.area ?? null);
-  if (name === location.name && province === location.province && area === location.area) return location;
+  const rawName = location.name ?? null;
+  const rawProvince = location.province ?? null;
+  const rawArea = location.area ?? null;
+  const name = toSimplifiedChinese(rawName);
+  const province = toSimplifiedChinese(rawProvince);
+  const area = toSimplifiedChinese(rawArea);
+  // Preserve the original reference when nothing changed so memoized
+  // dependents keep their identity across hydration.
+  if (name === rawName && province === rawProvince && area === rawArea) return location;
   return { ...location, ...(name !== null ? { name } : {}), ...(province !== null ? { province } : {}), ...(area !== null ? { area } : {}) };
 }

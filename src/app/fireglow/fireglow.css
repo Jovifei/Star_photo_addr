@@ -394,3 +394,68 @@
     height: 52vh;
   }
 }
+
+/* 2026-08-23 v2: 莉景式五级概率色阶、三日总览、借签参数展示。 */
+.fireglow-score[data-level="p20"] b,
+.fireglow-score[data-level="p20"] small { color: #5f7078; }
+.fireglow-score[data-level="p40"] b,
+.fireglow-score[data-level="p40"] small { color: #6fb87d; }
+.fireglow-score[data-level="p60"] b,
+.fireglow-score[data-level="p60"] small { color: #d4b23c; }
+.fireglow-score[data-level="p80"] b,
+.fireglow-score[data-level="p80"] small { color: #e08a3f; }
+.fireglow-score[data-level="p100"] b,
+.fireglow-score[data-level="p100"] small { color: #e04f3a; }
+.fireglow-score b { font-size: 13px; font-variant-numeric: tabular-nums; }
+
+.fireglow-day-chips {
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 3px;
+}
+.fireglow-day-chips i {
+  font-style: normal;
+  font-size: 9px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--fg-line);
+  color: var(--fg-muted);
+  background: rgba(3, 13, 19, 0.6);
+}
+.fireglow-day-chips i[data-level="p60"] { color: #d4b23c; border-color: rgba(212, 178, 60, 0.4); }
+.fireglow-day-chips i[data-level="p80"] { color: #e08a3f; border-color: rgba(224, 138, 63, 0.45); }
+.fireglow-day-chips i[data-level="p100"] { color: #e04f3a; border-color: rgba(224, 79, 58, 0.5); }
+
+.fireglow-popup b[data-level="p100"] { color: #c7402d; }
+.fireglow-popup b[data-level="p80"] { color: #c4702a; }
+.fireglow-popup b[data-level="p60"] { color: #a3832a; }
+.fireglow-popup-twilight {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fireglow-legend {
+  gap: 8px;
+}
+.fireglow-legend i {
+  width: 10px;
+  height: 10px;
+}
+
+/* 顶部概率细分三级：红 → 深红 → 绛红，越高越深。 */
+.fireglow-score[data-level="p88"] b,
+.fireglow-score[data-level="p88"] small { color: #e04f3a; }
+.fireglow-score[data-level="p95"] b,
+.fireglow-score[data-level="p95"] small { color: #e0574a; }
+.fireglow-score[data-level="p100"] b,
+.fireglow-score[data-level="p100"] small { color: #ff6a55; text-shadow: 0 0 10px rgba(255, 80, 50, 0.45); }
+
+.fireglow-day-chips i[data-level="p88"] { color: #e04f3a; border-color: rgba(224, 79, 58, 0.45); }
+.fireglow-day-chips i[data-level="p95"] { color: #e0574a; border-color: rgba(186, 44, 32, 0.55); background: rgba(128, 12, 12, 0.25); }
+.fireglow-day-chips i[data-level="p100"] { color: #ff6a55; border-color: rgba(255, 106, 85, 0.6); background: rgba(128, 12, 12, 0.45); }
+
+.fireglow-popup b[data-level="p88"] { color: #c73a28; }
+.fireglow-popup b[data-level="p95"] { color: #a82214; }
+.fireglow-popup b[data-level="p100"] { color: #800c0c; font-weight: 800; }
