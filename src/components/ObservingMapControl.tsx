@@ -25,6 +25,13 @@ const BAND_FILTERS: Array<{ id: Exclude<RecommendationBand, "unknown">; label: s
 export default function ObservingMapControl() {
   const { state, setCloud, setRecommendationThreshold, setObservingBortleLimit, setRecommendedOnly, setRecommendationBands } = useStore();
   const isSitesWorkspace = state.mapWorkspace === "sites";
+  // 手机上面板默认折叠成标题条，点标题展开——把屏幕还给地图。
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 768px)");
+    if (!query.matches) return;
+    queueMicrotask(() => setCollapsed(true));
+  }, []);
   // The score window anchors on the current hour, which can tick between
   // server render and hydration (e.g. 17:59 -> 18:00) and break hydration.
   // Render the empty placeholder on both sides, then adopt the store value
@@ -152,6 +159,7 @@ export default function ObservingMapControl() {
   return (
     <section
       className="observing-map-control"
+      data-collapsed={collapsed ? "true" : "false"}
       aria-label="全国观星地点筛选与图层"
       data-score-time={activeScoreTime}
       data-score-status={snapshotStatus}
@@ -160,6 +168,15 @@ export default function ObservingMapControl() {
       <div className="observing-map-control-title">
         <span><SlidersHorizontal size={14} aria-hidden="true" />观星地点</span>
         <b>{isSitesWorkspace ? `${baseSites.length} / ${OBSERVING_SITE_COUNT} 个点` : `${activeSnapshot ? visibleCount : "—"} / ${state.observingBortleLimit === 3 ? 222 : OBSERVING_SITE_COUNT} 个点`}</b>
+        <button
+          type="button"
+          className="observing-collapse-toggle"
+          onClick={() => setCollapsed((value) => !value)}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "展开观星地点面板" : "折叠观星地点面板"}
+        >
+          {collapsed ? "▾" : "▴"}
+        </button>
       </div>
       <div className="observing-mode-hint">
         <small>

@@ -3749,3 +3749,28 @@
   /* 详情抽屉打开时云量面板让位（既有规则在窄屏的兜底）。 */
   .map-panel-manager { top: 10px; right: 12px; }
 }
+
+/* 折叠态：只保留标题行（含计数与切换钮），桌面/手机通用。 */
+.observing-map-control[data-collapsed="true"] > :not(.observing-map-control-title) {
+  display: none;
+}
+.observing-collapse-toggle {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+.observing-collapse-toggle:hover { color: var(--text); border-color: var(--line-strong); }
+
+@media (max-width: 768px) {
+  .map-panel-manager { display: none; }
+  /* 折叠后的观星地点只剩标题条，云量面板顺势上移。 */
+  .map-stage:has(.observing-map-control[data-collapsed="true"]) .cloud-control {
+    top: 148px;
+  }
+}

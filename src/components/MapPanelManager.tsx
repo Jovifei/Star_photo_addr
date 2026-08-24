@@ -150,6 +150,15 @@ function snapToNearestEdge(
 }
 
 /**
+ * Dragging is a desktop enhancement. On phones the panels are CSS-positioned
+ * bottom sheets; stale drag offsets from an earlier mobile session (or a
+ * rotated resize) would fight those positions and stack the panels again.
+ */
+function isMobileViewport(): boolean {
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
+}
+
+/**
  * Progressive enhancement for the three map panels.
  *
  * This component is mounted through `next/dynamic({ ssr: false })`, so its
@@ -159,6 +168,7 @@ function snapToNearestEdge(
 export default function MapPanelManager() {
   const [selected, setSelected] = useState<PanelKey>("layers");
   const [open, setOpen] = useState(false);
+  const [mobile, setMobile] = useState(isMobileViewport);
   const [layouts, setLayouts] = useState<LayoutMap>(readStoredLayouts);
   const layoutsRef = useRef(layouts);
 
@@ -167,6 +177,15 @@ export default function MapPanelManager() {
   }, [layouts]);
 
   useEffect(() => {
+    const query = window.matchMedia("(max-width: 768px)");
+    const onChange = (event: MediaQueryListEvent) => setMobile(event.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (mobile) return;
+
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(layouts));
     } catch {
@@ -186,12 +205,31 @@ export default function MapPanelManager() {
       panel.style.transformOrigin = panelDefinition.origin;
       panel.dataset.panelKey = panelDefinition.key;
     }
-  }, [layouts]);
+  }, [layouts, mobile]);
+
+  // Returning to a phone layout strips any transform so the CSS sheet
+  // positions apply cleanly.
+  useEffect(() => {
+    if (!mobile) return;
+    for (const panelDefinition of PANELS) {
+      const panel = document.querySelector<HTMLElement>(
+        panelDefinition.selector,
+      );
+      if (!panel) continue;
+      panel.classList.remove("map-panel-managed", "is-panel-dragging");
+      panel.style.removeProperty("--map-panel-x");
+      panel.style.removeProperty("--map-panel-y");
+      panel.style.removeProperty("--map-panel-scale");
+      panel.style.removeProperty("transform");
+      panel.style.removeProperty("transform-origin");
+    }
+  }, [mobile]);
 
   useEffect(() => {
     const cleanups = new Map<HTMLElement, () => void>();
 
     const bindPanels = () => {
+      if (isMobileViewport()) return;
       for (const panelDefinition of PANELS) {
         const panel = document.querySelector<HTMLElement>(
           panelDefinition.selector,
