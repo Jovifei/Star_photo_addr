@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { installGeocodingMock, installNextApiMock, installOpenMeteoMock } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"));
 
@@ -41,6 +42,7 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
   await expect(page.locator(".map-viewport")).toBeVisible();
   await expect(page.locator(".map-headline h1")).toHaveText("今晚云量变化");
   await expect(page.locator(".map-headline h1")).not.toContainText("英仙座流星雨");
+  await openMobileMapPanel(page, "cloud");
   const layerTabs = page.locator('.cloud-tabs[role="tablist"] [role="tab"]');
   await expect(layerTabs).toHaveCount(3);
   await expect(layerTabs.nth(0)).toHaveAttribute("aria-selected", "true");
@@ -95,6 +97,7 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
 
 test("取样点数据跟随指定模型刷新并说明数据语义", async ({ page }) => {
   await page.goto("/?lat=30.026&lng=119.007&name=%E7%89%B5%E7%89%9B%E5%B2%97&model=gfs&overlay=forecast-cloud");
+  await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".cloud-control")).toBeVisible();
   await expect(page.locator(".cloud-channel-note")).toContainText("取样点", { timeout: 15000 });
   await expect(page.locator(".cloud-channel-note")).toContainText("GFS");
@@ -146,6 +149,7 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
 
 test("地图评分颜色筛选只改变点位，不生成密集永久文字气泡", async ({ page }) => {
   await page.goto("/");
+  await openMobileMapPanel(page, "places");
   const control = page.locator(".observing-map-control");
   const map = page.locator(".leaflet-container");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
@@ -177,6 +181,7 @@ test("地图评分颜色筛选只改变点位，不生成密集永久文字气�
 
 test("评分时间滑窗会改变当前时次、档位数量和地图筛选基准", async ({ page }) => {
   await page.goto("/");
+  await openMobileMapPanel(page, "places");
   const control = page.locator(".observing-map-control");
   const slider = page.getByRole("slider", { name: "观星评分时间滑窗" });
   await expect(control).toBeVisible();
@@ -227,6 +232,7 @@ test("地图加入候选后观星计划保留同一地点", async ({ page }) => 
 
 test("卫星图层入口互斥，数据源状态面板可见", async ({ page }) => {
   await page.goto("/");
+  await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".source-status-panel")).toBeVisible();
   const layerTabs = page.locator('.cloud-tabs[role="tablist"] [role="tab"]');
   await expect(layerTabs).toHaveCount(3);

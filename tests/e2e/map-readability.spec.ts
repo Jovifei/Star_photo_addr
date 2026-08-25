@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -30,7 +31,8 @@ test.beforeEach(async ({ page }) => {
   await installNextApiMock(page, fixture);
 });
 
-test("地图面板支持显示比例调整并将云量通道展示为横向进度条", async ({ page }) => {
+test("桌面地图面板支持显示比例调整并将云量通道展示为横向进度条", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "移动端改用单一侧边栏，不提供浮动面板拖放设置");
   await page.goto("/?overlay=forecast-cloud&view=combined");
   const manager = page.locator(".map-panel-manager");
   const cloudControl = page.locator(".cloud-control");
@@ -66,6 +68,7 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
   await page.goto(
     "/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",
   );
+  await openMobileMapPanel(page, "layers");
   await expect(page.locator(".bortle-control")).toContainText("未安装");
   await expect(page.locator(".dark-sky-unavailable-note")).toContainText(
     "本地 Bortle/SQM 数值栅格",

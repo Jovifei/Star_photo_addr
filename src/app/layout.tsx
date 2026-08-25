@@ -8,6 +8,7 @@ import "./data-pipeline.css";
 import "./viewport-recommendations.css";
 import "./viewport-recommendations-mobile.css";
 import "./ux-map-v2.css";
+import "./mobile-map-controls.css";
 
 export const metadata: Metadata = {
   title: "逐星｜今夜观测",

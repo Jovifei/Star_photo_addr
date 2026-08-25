@@ -1,0 +1,359 @@
+/* Mobile map control dock.
+   Portrait phones and short landscape phones keep the map clear by moving all
+   floating tool panels into one right-side drawer. Desktop positioning and
+   draggable panels remain unchanged. */
+
+.mobile-map-panel-dock {
+  display: none;
+}
+
+@media (max-width: 768px), (max-height: 520px) and (max-width: 1024px) {
+  .mobile-map-panel-dock {
+    position: absolute;
+    inset: 0;
+    z-index: 1760;
+    display: block;
+    pointer-events: none;
+  }
+
+  .mobile-map-panel-rail {
+    position: absolute;
+    top: 50%;
+    right: max(8px, env(safe-area-inset-right));
+    z-index: 3;
+    display: grid;
+    gap: 5px;
+    padding: 5px;
+    border: 1px solid rgba(121, 207, 226, 0.34);
+    border-radius: 14px;
+    background: rgba(3, 14, 21, 0.9);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.46);
+    backdrop-filter: blur(14px);
+    transform: translateY(-50%);
+    pointer-events: auto;
+  }
+
+  .mobile-map-panel-rail button {
+    width: 46px;
+    min-height: 48px;
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    padding: 4px 2px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .mobile-map-panel-rail button.active,
+  .mobile-map-panel-rail button:focus-visible {
+    border-color: rgba(121, 207, 226, 0.52);
+    color: var(--green-soft);
+    background: rgba(121, 207, 226, 0.12);
+    outline: none;
+  }
+
+  .mobile-map-panel-dock.is-open .mobile-map-panel-rail {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .mobile-map-panel-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(0, 5, 9, 0.58);
+    backdrop-filter: blur(2px);
+    pointer-events: auto;
+  }
+
+  .mobile-map-panel-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    width: min(88vw, 420px);
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    overflow: hidden;
+    border-left: 1px solid rgba(121, 207, 226, 0.34);
+    background:
+      radial-gradient(circle at 100% 0%, rgba(121, 207, 226, 0.1), transparent 34%),
+      linear-gradient(180deg, rgba(5, 20, 29, 0.99), rgba(2, 10, 16, 0.99));
+    box-shadow: -18px 0 48px rgba(0, 0, 0, 0.52);
+    transform: translateX(102%);
+    transition: transform 180ms ease;
+    pointer-events: auto;
+  }
+
+  .mobile-map-panel-dock.is-open .mobile-map-panel-drawer {
+    transform: translateX(0);
+  }
+
+  .mobile-map-panel-drawer-head {
+    min-height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      10px
+      14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mobile-map-panel-drawer-head > div {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .mobile-map-panel-drawer-head span {
+    color: var(--green-soft);
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: 0.12em;
+  }
+
+  .mobile-map-panel-drawer-head strong {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-map-panel-drawer-head > button {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: rgba(7, 26, 35, 0.84);
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .mobile-map-panel-drawer-head > button:focus-visible {
+    border-color: var(--green);
+    color: var(--green-soft);
+    outline: 2px solid rgba(121, 207, 226, 0.25);
+    outline-offset: 2px;
+  }
+
+  .mobile-map-panel-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(2, 11, 17, 0.72);
+  }
+
+  .mobile-map-panel-tabs button {
+    min-width: 0;
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 4px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .mobile-map-panel-tabs button.active {
+    border-color: rgba(121, 207, 226, 0.42);
+    color: var(--green-soft);
+    background: rgba(121, 207, 226, 0.1);
+  }
+
+  .mobile-map-panel-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px max(10px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+
+  .mobile-map-panel-pane {
+    min-width: 0;
+    display: grid;
+    align-content: start;
+    gap: 12px;
+  }
+
+  .mobile-map-panel-pane[hidden] {
+    display: none !important;
+  }
+
+  /* Existing panels keep their internal styles, but no longer float over the
+     map while docked in the drawer. The higher specificity intentionally wins
+     over older mobile positioning rules imported earlier. */
+  .map-stage .mobile-map-panel-drawer .map-layer-bar,
+  .map-stage .mobile-map-panel-drawer .map-view-actions,
+  .map-stage .mobile-map-panel-drawer .forecast-theme-switch,
+  .map-stage .mobile-map-panel-drawer .bortle-control,
+  .map-stage .mobile-map-panel-drawer .cloud-control,
+  .map-stage .mobile-map-panel-drawer .observing-map-control,
+  .map-stage .mobile-map-panel-drawer .viewport-recommendation-panel,
+  .map-stage .mobile-map-panel-drawer .map-legend,
+  .map-stage .mobile-map-panel-drawer .map-boundary-status {
+    position: static !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  .map-stage .mobile-map-panel-drawer .map-layer-bar {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    overflow: visible;
+    border-radius: 12px;
+  }
+
+  .map-stage .mobile-map-panel-drawer .map-layer-bar > button {
+    flex: 1 1 112px;
+    justify-content: center;
+  }
+
+  .map-stage .mobile-map-panel-drawer .map-layer-sub {
+    flex: 1 1 100%;
+    justify-content: center;
+    margin: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 5px;
+  }
+
+  .map-stage .mobile-map-panel-drawer .forecast-theme-switch {
+    display: inline-flex !important;
+    justify-self: stretch;
+  }
+
+  .map-stage .mobile-map-panel-drawer .forecast-theme-switch button {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .map-stage .mobile-map-panel-drawer .map-view-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .map-stage .mobile-map-panel-drawer .boundary-legend {
+    grid-column: 1 / -1;
+  }
+
+  .map-stage .mobile-map-panel-drawer .bortle-control,
+  .map-stage .mobile-map-panel-drawer .map-legend,
+  .map-stage .mobile-map-panel-drawer .map-boundary-status {
+    display: flex !important;
+  }
+
+  .map-stage .mobile-map-panel-drawer .bortle-control {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .map-stage .mobile-map-panel-drawer .map-legend {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .map-stage .mobile-map-panel-drawer .cloud-control.compact,
+  .map-stage .mobile-map-panel-drawer .observing-map-control,
+  .map-stage .mobile-map-panel-drawer .viewport-recommendation-panel {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .map-stage .mobile-map-panel-drawer .observing-map-control[data-docked="true"] > :not(.observing-map-control-title) {
+    display: revert-layer;
+  }
+
+  .map-stage .mobile-map-panel-drawer .viewport-recommendation-panel.is-collapsed {
+    max-height: none !important;
+  }
+
+  .map-stage .mobile-map-panel-drawer .viewport-recommendation-panel.is-collapsed .viewport-recommendation-body {
+    display: block;
+  }
+
+  .map-stage .mobile-map-panel-drawer .viewport-recommendation-collapse {
+    display: none;
+  }
+
+  .map-stage .mobile-map-panel-drawer .viewport-recommendation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-stage .mobile-map-panel-drawer .source-status-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .map-stage .mobile-map-panel-drawer .cloud-control,
+  .map-stage .mobile-map-panel-drawer .observing-map-control,
+  .map-stage .mobile-map-panel-drawer .viewport-recommendation-panel {
+    box-shadow: none;
+  }
+}
+
+@media (max-height: 520px) and (max-width: 1024px) {
+  .mobile-map-panel-drawer {
+    width: min(66vw, 470px);
+  }
+
+  .mobile-map-panel-rail {
+    grid-template-columns: repeat(2, 46px);
+  }
+
+  .mobile-map-panel-drawer-head {
+    min-height: 54px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .mobile-map-panel-tabs {
+    padding-block: 5px;
+  }
+
+  .mobile-map-panel-tabs button {
+    min-height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-map-panel-drawer {
+    transition: none;
+  }
+}

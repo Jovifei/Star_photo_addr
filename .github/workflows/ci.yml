@@ -155,7 +155,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-chromium-${{ github.run_id }}
+          name: playwright-chromium-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-report
             node_modules/.cache/playwright-results
@@ -190,7 +190,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-cross-browser-${{ github.run_id }}
+          name: playwright-cross-browser-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-report-cross-browser
             node_modules/.cache/playwright-results-cross-browser

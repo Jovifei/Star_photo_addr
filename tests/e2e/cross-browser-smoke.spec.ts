@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -40,6 +41,9 @@ test("product navigation and source dialog remain keyboard operable", async ({
     "观星计划",
   ]);
 
+  // WebKit runs with an iPhone viewport, where low-frequency map controls are
+  // intentionally docked in the mobile sidebar. Desktop returns false/no-op.
+  await openMobileMapPanel(page, "layers");
   const trigger = page.getByRole("button", { name: "数据依据与局限" });
   await trigger.focus();
   await trigger.press("Enter");

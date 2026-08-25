@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -53,6 +54,7 @@ test("a failed forced cloud refresh keeps the last usable canvas", async ({
   );
   const canvas = page.locator(".cloud-canvas-overlay canvas");
   await expect(canvas).toBeVisible({ timeout: 15_000 });
+  await openMobileMapPanel(page, "cloud");
 
   rejectForcedRefresh = true;
   await page
