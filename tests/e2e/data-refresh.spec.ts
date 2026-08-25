@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 function hourlyTimes(): string[] {
   const date = new Intl.DateTimeFormat("en-CA", {
@@ -182,6 +183,7 @@ test("manual refresh bypasses application caches for weather, health and site sc
       "model=gfs&view=combined&overlay=forecast-cloud",
   );
   await expect(page.locator(".detail-overlay-host")).toHaveClass(/is-open/);
+  await openMobileMapPanel(page, "cloud");
   await expect(page.getByText("天气 / Open-Meteo")).toBeVisible();
 
   await page
