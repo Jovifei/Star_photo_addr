@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -65,6 +66,7 @@ test("手动刷新只启动一个云量网格请求并保留已有画布", async
   );
   const canvas = page.locator(".cloud-canvas-overlay canvas");
   await expect(canvas).toBeVisible({ timeout: 15000 });
+  await openMobileMapPanel(page, "cloud");
 
   await page
     .getByRole("button", {
@@ -84,6 +86,7 @@ test("手动刷新只启动一个云量网格请求并保留已有画布", async
 
 test("光污染瓦片不强制要求 CORS 响应头", async ({ page }) => {
   await page.goto("/");
+  await openMobileMapPanel(page, "layers");
   await page
     .getByLabel("地图模式")
     .getByRole("tab", { name: "光污染" })
