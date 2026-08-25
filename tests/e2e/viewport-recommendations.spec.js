@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -44,7 +45,10 @@ test("放大地图后生成编号推荐并可打开现有地点详情", async ({
   await page.getByRole("button", { name: "收起观测详情" }).first().click();
   await expect(detailHost).toHaveClass(/is-closed/);
 
-  await page.getByRole("button", { name: "展开当前视野推荐" }).click();
+  const docked = await openMobileMapPanel(page, "recommendations");
+  if (!docked) {
+    await page.getByRole("button", { name: "展开当前视野推荐" }).click();
+  }
   const generate = page.getByRole("button", { name: "生成区域推荐" });
   await expect(generate).toBeEnabled({ timeout: 15000 });
   await generate.click();
