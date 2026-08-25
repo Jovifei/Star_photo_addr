@@ -7,19 +7,11 @@ import { useStore } from "@/lib/store";
 import { describeSamplePoint } from "@/lib/locationPresentation";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import MapHeadline from "@/components/MapHeadline";
-import MapViewActions from "@/components/MapViewActions";
 import MapSearchCard from "@/components/MapSearchCard";
-import MapLayerBar from "@/components/MapLayerBar";
-import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import MapSetup from "@/components/MapSetup";
-import MapLegend from "@/components/MapLegend";
-import BortleControl from "@/components/BortleControl";
-import CloudControl from "@/components/CloudControl";
 import CloudTimeline from "@/components/CloudTimeline";
-import ObservingMapControl from "@/components/ObservingMapControl";
-import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 
-// Leaflet and the persisted panel manager are browser-owned. Keep both behind
+// Leaflet and viewport-dependent controls are browser-owned. Keep them behind
 // client-only boundaries so server prerendering never reads window/localStorage.
 const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
   ssr: false,
@@ -29,12 +21,8 @@ const ViewportRecommendationMarkers = dynamic(
   () => import("@/components/ViewportRecommendationMarkers"),
   { ssr: false },
 );
-const MapPanelManager = dynamic(
-  () => import("@/components/MapPanelManager"),
-  { ssr: false },
-);
-const MapBoundaryStatus = dynamic(
-  () => import("@/components/MapBoundaryStatus"),
+const ResponsiveMapControls = dynamic(
+  () => import("@/components/ResponsiveMapControls"),
   { ssr: false },
 );
 
@@ -44,7 +32,7 @@ export default function MapStage() {
   const [viewportRecommendations, setViewportRecommendations] = useState<
     ViewportRecommendation[]
   >([]);
-  const { state, sampleAt } = useStore();
+  const { sampleAt } = useStore();
 
   return (
     <section className="map-stage">
@@ -74,21 +62,12 @@ export default function MapStage() {
           />
         </MapCanvas>
         <MapHeadline />
-        <MapViewActions mapRef={mapRef} />
         <MapSearchCard />
-        {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
-        <MapLayerBar />
-        <BortleControl />
-        <CloudControl />
-        <ObservingMapControl />
-        <ViewportRecommendationPanel
+        <ResponsiveMapControls
           mapRef={mapRef}
           ready={ready}
           onRecommendationsChange={setViewportRecommendations}
         />
-        <MapLegend />
-        <MapPanelManager />
-        <MapBoundaryStatus />
         <MapSetup hidden={ready} />
       </div>
       <CloudTimeline />

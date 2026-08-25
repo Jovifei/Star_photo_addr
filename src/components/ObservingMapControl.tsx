@@ -15,6 +15,9 @@ import {
 } from "@/lib/nighttime";
 import type { ObservationSnapshot, RecommendationBand } from "@/lib/types";
 
+const MOBILE_PANEL_QUERY =
+  "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)";
+
 const BAND_FILTERS: Array<{ id: Exclude<RecommendationBand, "unknown">; label: string; range: string; color: string }> = [
   { id: "priority", label: "优先", range: "85–100", color: "#63e6e2" },
   { id: "recommended", label: "推荐", range: "70–84", color: "#76d69b" },
@@ -22,16 +25,23 @@ const BAND_FILTERS: Array<{ id: Exclude<RecommendationBand, "unknown">; label: s
   { id: "not-recommended", label: "不推荐", range: "0–54", color: "#e97979" },
 ];
 
-export default function ObservingMapControl() {
+export default function ObservingMapControl({
+  docked = false,
+}: {
+  docked?: boolean;
+} = {}) {
   const { state, setCloud, setRecommendationThreshold, setObservingBortleLimit, setRecommendedOnly, setRecommendationBands } = useStore();
   const isSitesWorkspace = state.mapWorkspace === "sites";
-  // 手机上面板默认折叠成标题条，点标题展开——把屏幕还给地图。
+  // Floating phone panels default to a title strip. Inside the mobile drawer
+  // the full form remains expanded because the drawer itself provides the
+  // space management and close control.
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    const query = window.matchMedia("(max-width: 768px)");
+    if (docked) return;
+    const query = window.matchMedia(MOBILE_PANEL_QUERY);
     if (!query.matches) return;
     queueMicrotask(() => setCollapsed(true));
-  }, []);
+  }, [docked]);
   // The score window anchors on the current hour, which can tick between
   // server render and hydration (e.g. 17:59 -> 18:00) and break hydration.
   // Render the empty placeholder on both sides, then adopt the store value
@@ -89,7 +99,7 @@ export default function ObservingMapControl() {
   }, [activeScoreTime, snapshotRequestKey, state.cloudState.model, state.selectedNight]);
 
   // A response for the previous slider position must not be used while the
-  // new hourly snapshot is in flight.  The API cache key includes focusTime,
+  // new hourly snapshot is in flight. The API cache key includes focusTime,
   // so this check keeps the numbers and marker colours on the same ISO hour.
   const activeSnapshot = snapshot?.focusTime === activeScoreTime && snapshot.model === state.cloudState.model
     ? snapshot
@@ -104,7 +114,6 @@ export default function ObservingMapControl() {
     () => OBSERVING_SITES.filter((site) => site.bortle <= state.observingBortleLimit),
     [state.observingBortleLimit],
   );
-  // 选址模式的本底档案：全国点位库按 Bortle 级的静态分布。
   const bortleCounts = useMemo(() => {
     const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
     for (const site of OBSERVING_SITES) {
@@ -160,6 +169,7 @@ export default function ObservingMapControl() {
     <section
       className="observing-map-control"
       data-collapsed={collapsed ? "true" : "false"}
+      data-docked={docked ? "true" : "false"}
       aria-label="全国观星地点筛选与图层"
       data-score-time={activeScoreTime}
       data-score-status={snapshotStatus}
@@ -168,15 +178,17 @@ export default function ObservingMapControl() {
       <div className="observing-map-control-title">
         <span><SlidersHorizontal size={14} aria-hidden="true" />观星地点</span>
         <b>{isSitesWorkspace ? `${baseSites.length} / ${OBSERVING_SITE_COUNT} 个点` : `${activeSnapshot ? visibleCount : "—"} / ${state.observingBortleLimit === 3 ? 222 : OBSERVING_SITE_COUNT} 个点`}</b>
-        <button
-          type="button"
-          className="observing-collapse-toggle"
-          onClick={() => setCollapsed((value) => !value)}
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? "展开观星地点面板" : "折叠观星地点面板"}
-        >
-          {collapsed ? "▾" : "▴"}
-        </button>
+        {!docked && (
+          <button
+            type="button"
+            className="observing-collapse-toggle"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "展开观星地点面板" : "折叠观星地点面板"}
+          >
+            {collapsed ? "▾" : "▴"}
+          </button>
+        )}
       </div>
       <div className="observing-mode-hint">
         <small>
@@ -193,73 +205,71 @@ export default function ObservingMapControl() {
         </select>
       </label>
       {isSitesWorkspace ? (
-        <>
-          <div className="observing-baseline-stats" aria-label="全国点位 Bortle 本底分布">
-            <span className="observing-baseline-title">本底分布 · 全国点位库</span>
-            <div className="observing-baseline-grid">
-              {[1, 2, 3, 4].map((band) => (
-                <i key={band} data-bortle={band}>
-                  <b>B{band}</b>
-                  <span>{bortleCounts[band] ?? 0} 个</span>
-                </i>
-              ))}
-            </div>
-            <small>先按本底圈出够暗的长期机位，再切回今夜观测核对当天云况与窗口。</small>
+        <div className="observing-baseline-stats" aria-label="全国点位 Bortle 本底分布">
+          <span className="observing-baseline-title">本底分布 · 全国点位库</span>
+          <div className="observing-baseline-grid">
+            {[1, 2, 3, 4].map((band) => (
+              <i key={band} data-bortle={band}>
+                <b>B{band}</b>
+                <span>{bortleCounts[band] ?? 0} 个</span>
+              </i>
+            ))}
           </div>
-        </>
+          <small>先按本底圈出够暗的长期机位，再切回今夜观测核对当天云况与窗口。</small>
+        </div>
       ) : (
         <>
-      <label className="observing-threshold-row">
-        <span>推荐门槛 <b>{state.recommendationThreshold}</b></span>
-        <input type="range" min="50" max="90" step="5" value={state.recommendationThreshold} onChange={(event) => setRecommendationThreshold(Number(event.target.value))} aria-label="推荐分数门槛" />
-      </label>
-      <div className="observing-score-window" aria-label="观星评分时间窗口">
-        <div className="observing-score-window-title">
-          <span>评分时次</span>
-          <strong>{describeScoreTime(activeScoreTime)}</strong>
-        </div>
-        <input
-          type="range"
-          min="0"
-          max={Math.max(0, scoreTimes.length - 1)}
-          value={Math.max(0, scoreTimes.indexOf(activeScoreTime))}
-          onChange={(event) => setScoreTime(Number(event.target.value))}
-          aria-label="观星评分时间滑窗"
-          aria-valuetext={describeScoreTime(activeScoreTime)}
-          disabled={!scoreTimes.length}
-        />
-        <div className="observing-score-window-ticks" aria-hidden="true">
-          <span>现在</span><span>明天</span><span>后天</span><span>+72h</span>
-        </div>
-        <small>{snapshotStatus === "loading" ? "正在按此时次刷新地点评分…" : snapshotStatus === "degraded" ? "当前时次评分暂不可用，地图不沿用旧时次颜色" : "分数、颜色和地点数量均按此时次的数值预报计算；卫星图层仍是独立观测"}</small>
-      </div>
-      <div className="observing-score-counts" aria-label="当前时次评分数量">
-        <span>当前显示 <b>{activeSnapshot ? visibleCount : "—"}</b></span>
-        <span>≥{state.recommendationThreshold}分 <b>{activeSnapshot ? thresholdCount : "—"}</b></span>
-      </div>
-      <label className="observing-check-row">
-        <input type="checkbox" checked={state.recommendedOnly} onChange={(event) => setRecommendedOnly(event.target.checked)} />
-        <span>仅显示达到推荐门槛的地点</span>
-      </label>
-      <div className="observing-score-legend" aria-label="推荐评分颜色筛选">
-        {BAND_FILTERS.map((filter) => (
-          <label className="observing-band-option" key={filter.id}>
-            <input
-              type="checkbox"
-              checked={state.visibleRecommendationBands.includes(filter.id)}
-              onChange={() => {
-                const next = state.visibleRecommendationBands.includes(filter.id)
-                  ? state.visibleRecommendationBands.filter((band) => band !== filter.id)
-                  : [...state.visibleRecommendationBands, filter.id];
-                setRecommendationBands(next);
-              }}
-              aria-label={`显示${filter.label}地点`}
-            />
-            <i style={{ background: filter.color }} />
-            <span><b>{filter.range}</b> {filter.label} <em>{activeSnapshot ? scoreByBand[filter.id] : "—"}</em></span>
+          <label className="observing-threshold-row">
+            <span>推荐门槛 <b>{state.recommendationThreshold}</b></span>
+            <input type="range" min="50" max="90" step="5" value={state.recommendationThreshold} onChange={(event) => setRecommendationThreshold(Number(event.target.value))} aria-label="推荐分数门槛" />
           </label>
-        ))}
-      </div>
+          <div className="observing-score-window" aria-label="观星评分时间窗口">
+            <div className="observing-score-window-title">
+              <span>评分时次</span>
+              <strong>{describeScoreTime(activeScoreTime)}</strong>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max={Math.max(0, scoreTimes.length - 1)}
+              value={Math.max(0, scoreTimes.indexOf(activeScoreTime))}
+              onChange={(event) => setScoreTime(Number(event.target.value))}
+              aria-label="观星评分时间滑窗"
+              aria-valuetext={describeScoreTime(activeScoreTime)}
+              disabled={!scoreTimes.length}
+            />
+            <div className="observing-score-window-ticks" aria-hidden="true">
+              <span>现在</span><span>明天</span><span>后天</span><span>+72h</span>
+            </div>
+            <small>{snapshotStatus === "loading" ? "正在按此时次刷新地点评分…" : snapshotStatus === "degraded" ? "当前时次评分暂不可用，地图不沿用旧时次颜色" : "分数、颜色和地点数量均按此时次的数值预报计算；卫星图层仍是独立观测"}</small>
+          </div>
+          <div className="observing-score-counts" aria-label="当前时次评分数量">
+            <span>当前显示 <b>{activeSnapshot ? visibleCount : "—"}</b></span>
+            <span>≥{state.recommendationThreshold}分 <b>{activeSnapshot ? thresholdCount : "—"}</b></span>
+          </div>
+          <label className="observing-check-row">
+            <input type="checkbox" checked={state.recommendedOnly} onChange={(event) => setRecommendedOnly(event.target.checked)} />
+            <span>仅显示达到推荐门槛的地点</span>
+          </label>
+          <div className="observing-score-legend" aria-label="推荐评分颜色筛选">
+            {BAND_FILTERS.map((filter) => (
+              <label className="observing-band-option" key={filter.id}>
+                <input
+                  type="checkbox"
+                  checked={state.visibleRecommendationBands.includes(filter.id)}
+                  onChange={() => {
+                    const next = state.visibleRecommendationBands.includes(filter.id)
+                      ? state.visibleRecommendationBands.filter((band) => band !== filter.id)
+                      : [...state.visibleRecommendationBands, filter.id];
+                    setRecommendationBands(next);
+                  }}
+                  aria-label={`显示${filter.label}地点`}
+                />
+                <i style={{ background: filter.color }} />
+                <span><b>{filter.range}</b> {filter.label} <em>{activeSnapshot ? scoreByBand[filter.id] : "—"}</em></span>
+              </label>
+            ))}
+          </div>
         </>
       )}
       <small className="observing-map-control-note">{isSitesWorkspace ? "地图上的点按光污染本底着色；点击地点查看暗夜档案与海拔。" : "勾选评分档位控制地图上的点；地图不常驻显示天气详情，点击地点查看完整数据。"}</small>
