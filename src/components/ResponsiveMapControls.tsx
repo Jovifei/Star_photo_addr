@@ -54,7 +54,6 @@ function useMobilePanelViewport(): boolean {
   useEffect(() => {
     const query = window.matchMedia(MOBILE_MAP_PANEL_QUERY);
     const onChange = (event: MediaQueryListEvent) => setMobile(event.matches);
-    setMobile(query.matches);
     query.addEventListener("change", onChange);
     return () => query.removeEventListener("change", onChange);
   }, []);
@@ -138,7 +137,9 @@ export default function ResponsiveMapControls({
   }, [activePanel, closePanel]);
 
   useEffect(() => {
-    if (!mobile && activePanel) setActivePanel(null);
+    if (!mobile && activePanel) {
+      queueMicrotask(() => setActivePanel(null));
+    }
   }, [activePanel, mobile]);
 
   if (!mobile) {
