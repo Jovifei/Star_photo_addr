@@ -204,8 +204,7 @@ export default function ResponsiveMapControls({
         id="mobile-map-panel-drawer"
         ref={drawerRef}
         className="mobile-map-panel-drawer"
-        role="dialog"
-        aria-modal="true"
+        role="complementary"
         aria-hidden={!activePanel}
         aria-label={activeTitle}
         data-testid="mobile-map-panel-drawer"
