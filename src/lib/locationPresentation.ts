@@ -19,6 +19,7 @@ export interface RankedNearbySite {
   site: ObservingSite;
   distanceKm: number;
   score: RecommendationScore | null;
+  isFallback?: boolean;
 }
 
 function degreesToRadians(value: number): number {
@@ -128,4 +129,47 @@ export function rankNearbySites(
       );
     })
     .slice(0, Math.max(1, limit));
+}
+
+/**
+ * Radius controls are useful when the catalog is dense, but a remote map
+ * sample can legitimately have no curated site inside 100–300 km. Keep the
+ * strict-radius result first and fill only the missing minimum with the
+ * nearest catalog sites, so the UI always has an actionable nearby list.
+ */
+export function rankNearbySitesWithFallback(
+  center: CoordinatePoint,
+  radiusKm: number,
+  snapshot: ObservationSnapshot | null | undefined,
+  limit = 8,
+  minimumResults = 3,
+): Array<RankedNearbySite & { isFallback: boolean }> {
+  const safeLimit = Math.max(1, Math.floor(limit));
+  const safeMinimum = Math.min(safeLimit, Math.max(1, Math.floor(minimumResults)));
+  const strict = rankNearbySites(center, radiusKm, snapshot, safeLimit).map((item) => ({
+    ...item,
+    isFallback: false,
+  }));
+  if (strict.length >= safeMinimum) return strict;
+
+  const strictIds = new Set(strict.map((item) => item.site.id));
+  const nearest = OBSERVING_SITES.map((site) => ({
+    site,
+    distanceKm: haversineDistanceKm(center, site),
+    score: snapshotScoreAtTime(snapshot, site.id),
+  }))
+    .filter((item) => !strictIds.has(item.site.id))
+    .sort((left, right) =>
+      left.distanceKm - right.distanceKm ||
+      (right.score?.score ?? -1) - (left.score?.score ?? -1) ||
+      left.site.name.localeCompare(right.site.name, "zh-CN"),
+    );
+
+  return [
+    ...strict,
+    ...nearest.slice(0, Math.max(0, safeLimit - strict.length)).map((item) => ({
+      ...item,
+      isFallback: true,
+    })),
+  ].slice(0, safeLimit);
 }

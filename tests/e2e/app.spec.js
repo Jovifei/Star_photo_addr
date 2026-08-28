@@ -43,22 +43,30 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
   await expect(page.locator(".map-headline h1")).toHaveText("今晚云量变化");
   await expect(page.locator(".map-headline h1")).not.toContainText("英仙座流星雨");
   await openMobileMapPanel(page, "cloud");
-  const layerTabs = page.locator('.cloud-tabs[role="tablist"] [role="tab"]');
-  await expect(layerTabs).toHaveCount(3);
-  await expect(layerTabs.nth(0)).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测");
-  const timelineToggle = page.locator(".cloud-timeline-toggle");
+  const timelineToggle = page.locator(".cloud-timeline-toggle:visible");
   await expect(timelineToggle).toHaveAttribute("aria-expanded", "false");
   await timelineToggle.click();
   await expect(page.locator(".cloud-observation-note")).toBeVisible();
-  await expect(page.locator('input[aria-label="过去 24 小时卫星观测时次"]')).toHaveCount(1);
-  await layerTabs.nth(1).click();
+  await expect(page.locator('.cloud-track[aria-label*="卫星观测时次轨道"]')).toBeVisible();
+  await expect(page.locator('.cloud-track[aria-label*="卫星观测时次轨道"] .cloud-tick')).toHaveCount(3);
+  if (testInfo.project.name === "mobile") {
+    await openMobileMapPanel(page, "layers");
+    await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "false");
+  }
+  const layerBar = page.locator(".map-layer-bar:visible");
+  await layerBar.getByRole("button", { name: "预报" }).click();
+  await openMobileMapPanel(page, "cloud");
+  const layerTabs = page.locator('.cloud-mode-tabs[role="tablist"] [role="tab"]:visible');
+  await expect(layerTabs).toHaveCount(4);
+  await expect(layerTabs.nth(0)).toHaveAttribute("aria-selected", "true");
   const matrix = page.locator(".hourly-matrix").first();
   await expect(matrix).toBeVisible({ timeout: 15000 });
   await expect(matrix.locator("tbody tr")).toHaveCount(12);
   await expect(matrix.locator("thead tr th")).toHaveCount(11);
-  await expect(page.locator('input[aria-label="当前至未来 72 小时预报时次"]')).toHaveCount(1);
-  await expect(page.locator('input[aria-label="当前至未来 72 小时预报时次"]')).toHaveAttribute("max", "72");
+  const forecastTrack = page.locator('.cloud-track[aria-label*="预报轨道"]');
+  await expect(forecastTrack).toBeVisible();
+  await expect(forecastTrack.locator(".cloud-tick")).not.toHaveCount(0);
   await expect(page.locator(".cloud-timeline")).toContainText("云");
 
   const mapBounds = await page.locator(".map-viewport").boundingBox();
@@ -98,11 +106,11 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
 test("取样点数据跟随指定模型刷新并说明数据语义", async ({ page }) => {
   await page.goto("/?lat=30.026&lng=119.007&name=%E7%89%B5%E7%89%9B%E5%B2%97&model=gfs&overlay=forecast-cloud");
   await openMobileMapPanel(page, "cloud");
-  await expect(page.locator(".cloud-control")).toBeVisible();
-  await expect(page.locator(".cloud-channel-note")).toContainText("取样点", { timeout: 15000 });
-  await expect(page.locator(".cloud-channel-note")).toContainText("GFS");
-  await expect(page.locator(".cloud-channel-note")).toContainText("天空覆盖百分比");
-  await expect(page.locator(".cloud-legend-ticks")).toContainText("100%");
+  await expect(page.locator(".cloud-control:visible")).toBeVisible();
+  await expect(page.locator(".cloud-channel-note:visible")).toContainText("取样点", { timeout: 15000 });
+  await expect(page.locator(".cloud-channel-note:visible")).toContainText("GFS");
+  await expect(page.locator(".cloud-channel-note:visible")).toContainText("天空覆盖百分比");
+  await expect(page.locator(".cloud-legend-ticks:visible")).toContainText("100%");
 });
 
 test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) => {
@@ -115,6 +123,8 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
   await expect(page.locator(".hero-card .section-kicker")).toContainText(`${Number(month)}月${Number(day)}日`);
   await expect(page.locator(".suite-nav a").first()).toHaveAttribute("href", /lat=30\.4694/);
   await expect(page.locator(".suite-nav a").first()).toHaveAttribute("href", /model=icon/);
+  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 15000 });
+  await page.locator(".rank-card").first().click();
   const detail = page.locator(".detail-drawer");
   await expect(detail).toBeVisible({ timeout: 15000 });
   const rangeTabs = detail.locator(".detail-range-tabs button");
@@ -150,10 +160,10 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
 test("地图评分颜色筛选只改变点位，不生成密集永久文字气泡", async ({ page }) => {
   await page.goto("/");
   await openMobileMapPanel(page, "places");
-  const control = page.locator(".observing-map-control");
+  const control = page.locator(".observing-map-control:visible");
   const map = page.locator(".leaflet-container");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
-  const bandOptions = page.locator(".observing-band-option");
+  const bandOptions = page.locator(".observing-band-option:visible");
 
   await expect(control).toBeVisible();
   await expect(page.locator(".observing-score-legend input")).toHaveCount(4);
@@ -182,7 +192,7 @@ test("地图评分颜色筛选只改变点位，不生成密集永久文字气�
 test("评分时间滑窗会改变当前时次、档位数量和地图筛选基准", async ({ page }) => {
   await page.goto("/");
   await openMobileMapPanel(page, "places");
-  const control = page.locator(".observing-map-control");
+  const control = page.locator(".observing-map-control:visible");
   const slider = page.getByRole("slider", { name: "观星评分时间滑窗" });
   await expect(control).toBeVisible();
   await expect(slider).toHaveAttribute("max", "72");
@@ -230,33 +240,33 @@ test("地图加入候选后观星计划保留同一地点", async ({ page }) => 
   await expect(page.locator(".planner-root")).toContainText(selectedName, { timeout: 15000 });
 });
 
-test("卫星图层入口互斥，数据源状态面板可见", async ({ page }) => {
+test("卫星图层入口互斥，数据源状态面板可见", async ({ page }, testInfo) => {
   await page.goto("/");
   await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".source-status-panel")).toBeVisible();
-  const layerTabs = page.locator('.cloud-tabs[role="tablist"] [role="tab"]');
-  await expect(layerTabs).toHaveCount(3);
-  await expect(layerTabs.nth(0)).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测");
-  const initialTile = await page.locator('img[src*="gibs.test"]').first().getAttribute("src");
-  await page.locator(".cloud-timeline-play").click();
-  await expect.poll(async () => page.locator('img[src*="gibs.test"]').first().getAttribute("src"), { timeout: 5000 }).not.toBe(initialTile);
-  await layerTabs.nth(1).click();
-  await expect(layerTabs.nth(1)).toHaveAttribute("aria-selected", "true");
+  if (testInfo.project.name === "mobile") {
+    await openMobileMapPanel(page, "layers");
+    await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "false");
+  }
+  const layerBar = page.locator(".map-layer-bar:visible");
+  await layerBar.getByRole("button", { name: "预报" }).click();
   await expect(page.locator(".cloud-canvas-overlay canvas")).toHaveCount(1);
   await expect(page.locator(".satellite-frame-badge")).toHaveCount(0);
-  await layerTabs.nth(0).click();
-  await expect(page.locator(".cloud-canvas-overlay canvas")).toHaveCount(0);
-  await layerTabs.nth(2).click();
-  await expect(layerTabs.nth(2)).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator(".cloud-source-note")).toContainText("VIIRS 2023");
-  await expect(page.locator(".cloud-source-note")).toContainText("非现场 Bortle/SQM");
+  await layerBar.getByRole("button", { name: "光污染" }).click();
+  // Mobile keeps the cloud control inside the drawer; bring it back to the
+  // foreground tab before asserting its layer note.
+  await openMobileMapPanel(page, "cloud");
+  await expect(page.locator(".cloud-active-layer-note:visible")).toContainText("VIIRS 2023");
+  await expect(page.locator(".cloud-active-layer-note:visible")).toContainText("非现场 Bortle/SQM");
   await expect(page.locator(".cloud-canvas-overlay canvas")).toHaveCount(0);
 });
 
 test("规划详情抽屉左边缘真实拖拽后宽度持久化", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "移动端使用底部抽屉，不启用桌面宽度拖拽");
   await page.goto("/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=2026-08-09&model=gfs");
+  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 15000 });
+  await page.locator(".rank-card").first().click();
   const drawer = page.locator(".detail-drawer");
   const resizer = page.locator('[data-testid="planner-detail-resizer"]');
   await expect(drawer).toBeVisible({ timeout: 15000 });
@@ -274,6 +284,8 @@ test("规划详情抽屉左边缘真实拖拽后宽度持久化", async ({ page 
   expect(after).toBeGreaterThan(before + 40);
   await expect(resizer).toHaveAttribute("aria-valuenow", String(Math.round(after)));
   await page.reload();
+  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 15000 });
+  await page.locator(".rank-card").first().click();
   await expect(drawer).toBeVisible({ timeout: 15000 });
   const restored = await drawer.evaluate((element) => element.getBoundingClientRect().width);
   expect(restored).toBeGreaterThan(before + 40);
@@ -290,6 +302,8 @@ test("375、768、1024、1440 宽度无页面级横向溢出", async ({ page }, 
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(overflow, `${route} at ${width}px`).toBeLessThanOrEqual(1);
       if (route === plannerDetailUrl) {
+        await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 15000 });
+        await page.locator(".rank-card").first().click();
         const drawer = page.locator(".detail-drawer");
         await expect(drawer).toBeVisible({ timeout: 15000 });
         if (width <= 768) {

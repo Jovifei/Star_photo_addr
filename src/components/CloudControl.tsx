@@ -264,6 +264,11 @@ export default function CloudControl() {
           </b>
         </span>
       </div>
+      {(sources?.["local-dark-sky"]?.status === "not-installed" || sources?.tianditu?.status === "unconfigured") && (
+        <p className="source-status-note">
+          服务器和主天气/卫星服务已运行；Bortle/SQM 本地栅格与天地图令牌属于可选增强，未配置时不会伪造数值，也不影响云图和观星点基本功能。
+        </p>
+      )}
 
       <details className="source-status-help">
         <summary>数据来源与部署说明</summary>

@@ -1,5 +1,18 @@
 # Website clone: stargazing-finder-dark (2026-08-12)
 
+## Full product integrity fixes (2026-08-26)
+
+- [x] Confirm current `main@bc8a964` and preserve user-owned mobile landscape edits.
+- [x] Write and run RED tests for Bortle multi-select, nearest-site fallback, and satellite refresh preservation.
+- [ ] Finish production implementation and browser regression coverage for score semantics, cloud degradation, nearby recommendations, and Fireglow geometry.
+- [ ] Run local quality gates and publish one unified change to `main`.
+- [ ] Rebuild the ECS `star-photo` Compose project and verify HTTP health/build revision.
+
+### Review
+
+- RED confirmed before implementation: missing Bortle helper, nearest fallback, and satellite preservation behavior each failed for the intended reason.
+- Targeted unit tests now pass; full browser and deployment evidence remain outstanding until the implementation is complete.
+
 - [x] Install and read the `clone-website` skill from `JCodesMore/ai-website-cloner-template`.
 - [x] Capture desktop/mobile reference screenshots and extract the target page behavior/topology.
 - [x] Build the isolated `/stargazing-finder-dark` route without replacing existing product routes.

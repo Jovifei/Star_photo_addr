@@ -10,6 +10,7 @@ import {
   recommendationColor,
   snapshotScoreAtTime,
 } from "@/lib/observingSites";
+import { filterSitesByBortleLevels } from "@/lib/bortleFilters";
 import { scoreDateForForecastTime } from "@/lib/nighttime";
 import type { ObservationSnapshot } from "@/lib/types";
 
@@ -107,8 +108,7 @@ export default function ObservingSitesLayer() {
 
   const visibleSites = useMemo(
     () =>
-      OBSERVING_SITES.filter((site) => {
-        if (site.bortle > state.observingBortleLimit) return false;
+      filterSitesByBortleLevels(OBSERVING_SITES, state.observingBortleLevels).filter((site) => {
         const score = snapshotScoreAtTime(activeSnapshot, site.id);
         if (
           state.recommendedOnly &&
@@ -128,7 +128,7 @@ export default function ObservingSitesLayer() {
       }),
     [
       activeSnapshot,
-      state.observingBortleLimit,
+      state.observingBortleLevels,
       state.recommendedOnly,
       state.recommendationThreshold,
       state.visibleRecommendationBands,

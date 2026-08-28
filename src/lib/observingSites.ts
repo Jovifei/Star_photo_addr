@@ -429,6 +429,6 @@ export function recommendationColor(band: RecommendationBand): string {
     recommended: "#76d69b",
     watch: "#e8bb72",
     "not-recommended": "#e97979",
-    unknown: "#8494a5",
+    unknown: "#526778",
   }[band];
 }

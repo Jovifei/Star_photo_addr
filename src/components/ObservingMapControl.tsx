@@ -9,11 +9,16 @@ import {
   snapshotScoreAtTime,
 } from "@/lib/observingSites";
 import {
+  describeBortleLevels,
+  filterSitesByBortleLevels,
+  toggleBortleLevel,
+} from "@/lib/bortleFilters";
+import {
   forecastTimeWindow,
   formatNightLabel,
   scoreDateForForecastTime,
 } from "@/lib/nighttime";
-import type { ObservationSnapshot, RecommendationBand } from "@/lib/types";
+import type { BortleLevel, ObservationSnapshot, RecommendationBand } from "@/lib/types";
 
 const MOBILE_PANEL_QUERY =
   "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)";
@@ -30,7 +35,7 @@ export default function ObservingMapControl({
 }: {
   docked?: boolean;
 } = {}) {
-  const { state, setCloud, setRecommendationThreshold, setObservingBortleLimit, setRecommendedOnly, setRecommendationBands } = useStore();
+  const { state, setCloud, setRecommendationThreshold, setObservingBortleLevels, setObservingBortleLimit, setRecommendedOnly, setRecommendationBands } = useStore();
   const isSitesWorkspace = state.mapWorkspace === "sites";
   // Floating phone panels default to a title strip. Inside the mobile drawer
   // the full form remains expanded because the drawer itself provides the
@@ -111,8 +116,8 @@ export default function ObservingMapControl({
       : "loading";
 
   const baseSites = useMemo(
-    () => OBSERVING_SITES.filter((site) => site.bortle <= state.observingBortleLimit),
-    [state.observingBortleLimit],
+    () => filterSitesByBortleLevels(OBSERVING_SITES, state.observingBortleLevels),
+    [state.observingBortleLevels],
   );
   const bortleCounts = useMemo(() => {
     const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
@@ -140,6 +145,10 @@ export default function ObservingMapControl({
       return score != null && score >= state.recommendationThreshold;
     }).length,
     [activeSnapshot, baseSites, state.recommendationThreshold],
+  );
+  const unknownCount = useMemo(
+    () => baseSites.filter((site) => snapshotScoreAtTime(activeSnapshot, site.id)?.band === "unknown" || !snapshotScoreAtTime(activeSnapshot, site.id)).length,
+    [activeSnapshot, baseSites],
   );
   const visibleCount = useMemo(
     () => baseSites.filter((site) => {
@@ -177,7 +186,7 @@ export default function ObservingMapControl({
     >
       <div className="observing-map-control-title">
         <span><SlidersHorizontal size={14} aria-hidden="true" />观星地点</span>
-        <b>{isSitesWorkspace ? `${baseSites.length} / ${OBSERVING_SITE_COUNT} 个点` : `${activeSnapshot ? visibleCount : "—"} / ${state.observingBortleLimit === 3 ? 222 : OBSERVING_SITE_COUNT} 个点`}</b>
+        <b>{isSitesWorkspace ? `${baseSites.length} / ${OBSERVING_SITE_COUNT} 个点` : `${activeSnapshot ? visibleCount : "—"} / ${baseSites.length} 个点`}</b>
         {!docked && (
           <button
             type="button"
@@ -198,10 +207,19 @@ export default function ObservingMapControl({
         </small>
       </div>
       <label className="observing-filter-row">
-        <span>Bortle ≤ {state.observingBortleLimit}</span>
-        <select value={state.observingBortleLimit} onChange={(event) => setObservingBortleLimit(Number(event.target.value) === 4 ? 4 : 3)} aria-label="Bortle 地点范围">
+        <span>Bortle 筛选 · {describeBortleLevels(state.observingBortleLevels)}</span>
+        <select
+          value={state.observingBortleLevels.length === 3 && state.observingBortleLevels.every((level, index) => level === index + 1) ? "3" : state.observingBortleLevels.length === 4 ? "4" : "custom"}
+          onChange={(event) => {
+            if (event.target.value === "3" || event.target.value === "4") {
+              setObservingBortleLimit(Number(event.target.value) as 3 | 4);
+            }
+          }}
+          aria-label="Bortle 地点范围"
+        >
           <option value="3">B1–B3 · 222 个</option>
           <option value="4">B1–B4 · 242 个</option>
+          <option value="custom" disabled>自定义档位</option>
         </select>
       </label>
       {isSitesWorkspace ? (
@@ -209,10 +227,18 @@ export default function ObservingMapControl({
           <span className="observing-baseline-title">本底分布 · 全国点位库</span>
           <div className="observing-baseline-grid">
             {[1, 2, 3, 4].map((band) => (
-              <i key={band} data-bortle={band}>
+              <button
+                key={band}
+                type="button"
+                className="observing-baseline-chip"
+                data-bortle={band}
+                aria-pressed={state.observingBortleLevels.includes(band as BortleLevel)}
+                aria-label={`筛选 B${band} 点位，${bortleCounts[band] ?? 0} 个`}
+                onClick={() => setObservingBortleLevels(toggleBortleLevel(state.observingBortleLevels, band as BortleLevel))}
+              >
                 <b>B{band}</b>
                 <span>{bortleCounts[band] ?? 0} 个</span>
-              </i>
+              </button>
             ))}
           </div>
           <small>先按本底圈出够暗的长期机位，再切回今夜观测核对当天云况与窗口。</small>
@@ -241,7 +267,7 @@ export default function ObservingMapControl({
             <div className="observing-score-window-ticks" aria-hidden="true">
               <span>现在</span><span>明天</span><span>后天</span><span>+72h</span>
             </div>
-            <small>{snapshotStatus === "loading" ? "正在按此时次刷新地点评分…" : snapshotStatus === "degraded" ? "当前时次评分暂不可用，地图不沿用旧时次颜色" : "分数、颜色和地点数量均按此时次的数值预报计算；卫星图层仍是独立观测"}</small>
+            <small>{snapshotStatus === "loading" ? "正在按此时次刷新地点评分…" : snapshotStatus === "degraded" ? "当前时次评分暂不可用；灰色点代表未知，不等同于低分" : "分数、颜色和地点数量均按此时次的数值预报计算；卫星图层仍是独立观测"}</small>
           </div>
           <div className="observing-score-counts" aria-label="当前时次评分数量">
             <span>当前显示 <b>{activeSnapshot ? visibleCount : "—"}</b></span>
@@ -269,10 +295,14 @@ export default function ObservingMapControl({
                 <span><b>{filter.range}</b> {filter.label} <em>{activeSnapshot ? scoreByBand[filter.id] : "—"}</em></span>
               </label>
             ))}
+            <span className="observing-unknown-option">
+              <i style={{ background: "#8494a5" }} />
+              <span><b>—</b> 数据不足 <em>{activeSnapshot ? unknownCount : "—"}</em></span>
+            </span>
           </div>
         </>
       )}
-      <small className="observing-map-control-note">{isSitesWorkspace ? "地图上的点按光污染本底着色；点击地点查看暗夜档案与海拔。" : "勾选评分档位控制地图上的点；地图不常驻显示天气详情，点击地点查看完整数据。"}</small>
+      <small className="observing-map-control-note">{isSitesWorkspace ? "点击 B1–B4 档位可组合筛选；地图上的点按光污染本底着色，点击地点查看暗夜档案与海拔。" : "Bortle 档位与评分档位共同控制地图上的点；灰色点为当前时次数据不足，不代表低分。"}</small>
     </section>
   );
 }

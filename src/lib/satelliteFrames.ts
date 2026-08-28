@@ -36,6 +36,15 @@ export function validSatelliteFrames(
   );
 }
 
+export function preserveLastValidSatelliteFrames(
+  previous: SatelliteFrame[],
+  next: SatelliteFrame[],
+  error: string,
+): { frames: SatelliteFrame[]; error: string; stale: boolean } {
+  if (next.length) return { frames: next, error: "", stale: false };
+  return { frames: previous, error, stale: true };
+}
+
 /** NASA GIBS matrix sets used by the server route stop at these zoom levels. */
 export function satelliteMaxNativeZoom(
   kind: SatelliteFrame["kind"],

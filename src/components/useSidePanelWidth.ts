@@ -24,7 +24,9 @@ function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 768px)");
+    const media = window.matchMedia(
+      "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)",
+    );
     const update = () => setIsMobile(media.matches);
     update();
     media.addEventListener("change", update);

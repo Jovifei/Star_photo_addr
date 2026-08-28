@@ -1,5 +1,6 @@
 import { snapshotScoreAtTime } from "@/lib/observingSites";
 import type {
+  BortleLevel,
   ObservationSnapshot,
   ObservingSite,
   RecommendationBand,
@@ -18,7 +19,10 @@ export interface MapViewport {
 }
 
 export interface ViewportRecommendationFilters {
-  bortleLimit: 3 | 4;
+  /** Legacy contiguous filter kept for old callers. */
+  bortleLimit?: 3 | 4;
+  /** Individually selected Bortle classes from the map control. */
+  bortleLevels?: BortleLevel[];
   recommendationThreshold: number;
   recommendedOnly: boolean;
   visibleBands: RecommendationBand[];
@@ -113,7 +117,11 @@ export function rankViewportRecommendations(
 
   const ranked = sites
     .filter((site) => siteInsideViewport(site, viewport))
-    .filter((site) => site.bortle <= filters.bortleLimit)
+    .filter((site) =>
+      filters.bortleLevels
+        ? filters.bortleLevels.includes(site.bortle)
+        : site.bortle <= (filters.bortleLimit ?? 4),
+    )
     .map((site) => ({ site, score: snapshotScoreAtTime(snapshot, site.id) }))
     .filter(({ score }) => {
       if (

@@ -112,6 +112,14 @@ export default function ResponsiveMapControls({
 
     window.requestAnimationFrame(() => closeButtonRef.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
+      // Layered-modal rule: when focus lives in a topmost dialog (e.g. the
+      // source popover) the drawer must not trap Tab or close on Escape.
+      if (
+        !drawerRef.current ||
+        !drawerRef.current.contains(document.activeElement)
+      ) {
+        return;
+      }
       if (event.key === "Escape") {
         event.preventDefault();
         closePanel();
@@ -137,9 +145,13 @@ export default function ResponsiveMapControls({
   }, [activePanel, closePanel]);
 
   useEffect(() => {
-    if (!mobile && activePanel) {
-      queueMicrotask(() => setActivePanel(null));
-    }
+    // The dynamic control shell can render one frame before matchMedia
+    // settles. Do not close a just-opened drawer merely because the hook's
+    // initial boolean was false while the viewport already matches mobile.
+    if (!activePanel || mobile || isMobilePanelViewport()) return;
+    // Deferred so the guard runs after paint instead of cascading a render.
+    const frame = window.setTimeout(() => setActivePanel(null), 0);
+    return () => window.clearTimeout(frame);
   }, [activePanel, mobile]);
 
   if (!mobile) {

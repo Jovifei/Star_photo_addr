@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  preserveLastValidSatelliteFrames,
   satelliteMaxNativeZoom,
   validSatelliteFrames,
 } from "@/lib/satelliteFrames";
@@ -52,5 +53,15 @@ describe("satellite frame catalogue", () => {
   it("matches the native zoom ceilings of the GIBS matrix sets", () => {
     expect(satelliteMaxNativeZoom("cloud")).toBe(6);
     expect(satelliteMaxNativeZoom("night-lights")).toBe(8);
+  });
+
+  it("keeps the last valid frame when a refresh returns no usable frame", () => {
+    expect(
+      preserveLastValidSatelliteFrames([cloudFrame], [], "卫星时次接口暂时不可达"),
+    ).toEqual({
+      frames: [cloudFrame],
+      error: "卫星时次接口暂时不可达",
+      stale: true,
+    });
   });
 });

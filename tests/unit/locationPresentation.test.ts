@@ -5,6 +5,7 @@ import {
   haversineDistanceKm,
   normalizeElevationMeters,
   rankNearbySites,
+  rankNearbySitesWithFallback,
 } from "@/lib/locationPresentation";
 import type { ObservationSnapshot } from "@/lib/types";
 
@@ -81,5 +82,19 @@ describe("location presentation and nearby ranking", () => {
         snapshot,
       ).every((entry) => entry.distanceKm <= 1),
     ).toBe(true);
+  });
+
+  it("fills a sparse radius with the nearest catalog sites and labels the fallback", () => {
+    const ranked = rankNearbySitesWithFallback(
+      { latitude: 42.97, longitude: 97.43 },
+      300,
+      null,
+      8,
+      3,
+    );
+    expect(ranked.length).toBeGreaterThanOrEqual(3);
+    expect(ranked.length).toBeLessThanOrEqual(8);
+    expect(ranked.filter((entry) => entry.isFallback).length).toBeGreaterThanOrEqual(3);
+    expect(ranked.some((entry) => entry.distanceKm > 300)).toBe(true);
   });
 });

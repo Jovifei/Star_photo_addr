@@ -5,7 +5,6 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
-import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -38,6 +37,7 @@ test("桌面地图面板支持显示比例调整并将云量通道展示为横�
   const cloudControl = page.locator(".cloud-control");
   await expect(manager).toBeVisible();
   await expect(cloudControl).toBeVisible();
+  await manager.getByRole("button", { name: "打开面板布局设置" }).click();
   const scale = page.getByRole("slider", { name: "云量与图层显示比例" });
   await scale.fill("1.2");
   await expect
@@ -64,11 +64,15 @@ test("暗夜选址与今夜观测使用不同的任务说明", async ({ page }) 
   );
 });
 
-test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据", async ({ page }) => {
+test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据", async ({ page }, testInfo) => {
   await page.goto(
     "/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",
   );
-  await openMobileMapPanel(page, "layers");
+  const drawer = page.getByTestId("mobile-map-panel-drawer");
+  if (testInfo.project.name === "mobile") {
+    await page.getByTestId("mobile-map-panel-open-layers").click();
+    await expect(drawer).toHaveAttribute("aria-hidden", "false");
+  }
   await expect(page.locator(".bortle-control")).toContainText("未安装");
   await expect(page.locator(".dark-sky-unavailable-note")).toContainText(
     "本地 Bortle/SQM 数值栅格",
@@ -76,7 +80,10 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
   );
   const metricValues = page.locator(".metric-grid .metric .value");
   await expect(metricValues.first()).toContainText("未安装");
-  await page.getByRole("button", { name: "Bortle、SQM 与未安装说明" }).click();
+  const helpButton = testInfo.project.name === "mobile"
+    ? drawer.getByRole("button", { name: "Bortle、SQM 与未安装说明" })
+    : page.locator(".bortle-control:visible").getByRole("button", { name: "Bortle、SQM 与未安装说明" });
+  await helpButton.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toContainText("有意的安全降级");
   await expect(dialog).toContainText("docs/DARK_SKY_DATA_SETUP.md");

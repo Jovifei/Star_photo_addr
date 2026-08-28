@@ -70,9 +70,15 @@ test("手机横屏仍使用侧边栏而不是恢复重叠的桌面浮窗", async
   await expect(drawer.locator(".map-view-actions")).toBeVisible();
   await expect(drawer.locator(".map-legend")).toBeVisible();
 
-  const contained = await drawer.evaluate((element) => {
+  const drawerBox = await drawer.boundingBox();
+  expect(drawerBox).not.toBeNull();
+  expect(drawerBox!.x).toBeGreaterThanOrEqual(-1);
+  expect(drawerBox!.x + drawerBox!.width).toBeLessThanOrEqual(812.5);
+
+  const layout = await drawer.evaluate((element) => {
     const drawerRect = element.getBoundingClientRect();
-    return Array.from(
+    const body = element.querySelector<HTMLElement>(".mobile-map-panel-body");
+    const childrenFitHorizontally = Array.from(
       element.querySelectorAll<HTMLElement>(
         ".map-layer-bar, .map-view-actions, .map-legend, .map-boundary-status",
       ),
@@ -80,13 +86,18 @@ test("手机横屏仍使用侧边栏而不是恢复重叠的桌面浮窗", async
       const rect = child.getBoundingClientRect();
       return (
         rect.left >= drawerRect.left - 1 &&
-        rect.right <= drawerRect.right + 1 &&
-        rect.top >= drawerRect.top - 1 &&
-        rect.bottom <= drawerRect.bottom + 1
+        rect.right <= drawerRect.right + 1
       );
     });
+    return {
+      childrenFitHorizontally,
+      bodyOverflowY: body ? getComputedStyle(body).overflowY : "",
+      bodyIsScrollable: Boolean(body && body.scrollHeight > body.clientHeight),
+    };
   });
-  expect(contained).toBe(true);
+  expect(layout.childrenFitHorizontally).toBe(true);
+  expect(layout.bodyOverflowY).toMatch(/auto|scroll/);
+  expect(layout.bodyIsScrollable).toBe(true);
 });
 
 test("桌面端保留原有浮动和可拖动面板", async ({ page }, testInfo) => {

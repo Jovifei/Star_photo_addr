@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { TileLayer } from "react-leaflet";
 import { useStore } from "@/lib/store";
 import {
+  preserveLastValidSatelliteFrames,
   satelliteMaxNativeZoom,
   validSatelliteFrames,
 } from "@/lib/satelliteFrames";
@@ -37,9 +38,14 @@ export default function SatelliteLayer() {
     error: "",
   });
   const [refreshTick, setRefreshTick] = useState(0);
+  const catalogueRef = useRef(catalogue);
   const lastManualRevision = useRef(0);
   const requestSequence = useRef(0);
   const activeProductRef = useRef("");
+
+  useEffect(() => {
+    catalogueRef.current = catalogue;
+  }, [catalogue]);
 
   useEffect(() => {
     if (activeMode === "forecast-cloud" || usesUnifiedViirs) return;
@@ -92,20 +98,26 @@ export default function SatelliteLayer() {
           return;
         }
         const nextFrames = validSatelliteFrames(kind, data.frames);
-        const nextError = nextFrames.length
-          ? data.stale
+        const previousFrames = catalogueRef.current.mode === activeMode ? catalogueRef.current.frames : [];
+        const preserved = preserveLastValidSatelliteFrames(
+          previousFrames,
+          nextFrames,
+          data.message ?? "最近没有可用卫星时次",
+        );
+        const nextError = preserved.stale
+          ? preserved.error
+          : data.stale
             ? data.message ?? "正在使用最近一次成功的卫星目录"
-            : ""
-          : data.message ?? "最近没有可用卫星时次";
+            : "";
         setCatalogue({
           mode: activeMode,
-          frames: nextFrames,
+          frames: preserved.frames,
           error: nextError,
         });
         // The shared timeline only represents satellite-cloud observations.
         // Night-light reference frames remain local to this layer.
-        setSatelliteFrames(kind === "cloud" ? nextFrames : []);
-        const nextFrame = nextFrames[0];
+        setSatelliteFrames(kind === "cloud" ? preserved.frames : []);
+        const nextFrame = preserved.frames[0];
         if (activeMode === "satellite-cloud" && nextFrame) {
           setCloud({ activeObservationTime: nextFrame.time });
         }
@@ -119,12 +131,18 @@ export default function SatelliteLayer() {
         ) {
           return;
         }
+        const previousFrames = catalogueRef.current.mode === activeMode ? catalogueRef.current.frames : [];
+        const preserved = preserveLastValidSatelliteFrames(
+          previousFrames,
+          [],
+          describeSatelliteError(requestError),
+        );
         setCatalogue({
           mode: activeMode,
-          frames: [],
-          error: describeSatelliteError(requestError),
+          frames: preserved.frames,
+          error: preserved.error,
         });
-        setSatelliteFrames([]);
+        setSatelliteFrames(kind === "cloud" ? preserved.frames : []);
       });
 
     return () => controller.abort();
@@ -193,6 +211,11 @@ export default function SatelliteLayer() {
         {formatFrameTime(displayedFrame.time, activeMode)}
         {catalogue.error ? " · 数据目录降级" : " · 已同步"}
       </div>
+      {catalogue.error && (
+        <div className="satellite-layer-error satellite-layer-degraded" role="status">
+          {catalogue.error} · 已保留上一帧
+        </div>
+      )}
     </>
   );
 }

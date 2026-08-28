@@ -16,6 +16,7 @@ import {
   CUSTOM_CANDIDATES_STORAGE_KEY,
   FORECAST_THEME_STORAGE_KEY,
   OBSERVING_BANDS_STORAGE_KEY,
+  OBSERVING_BORTLE_LEVELS_STORAGE_KEY,
   OBSERVING_BORTLE_LIMIT_STORAGE_KEY,
   OBSERVING_MAP_VIEW_STORAGE_KEY,
   OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY,
@@ -31,6 +32,7 @@ import {
 import { sampleBortle } from "@/lib/darksky";
 import { hasDarkSkyLayer } from "@/lib/assets";
 import type {
+  BortleLevel,
   CityCandidate,
   CloudGridData,
   CloudState,
@@ -43,6 +45,11 @@ import type {
   RecommendationBand,
   SatelliteFrame,
 } from "@/lib/types";
+import {
+  DEFAULT_BORTLE_LEVELS,
+  bortleLevelsForLimit,
+  normalizeBortleLevels,
+} from "@/lib/bortleFilters";
 import { MAX_SHORTLIST_SIZE } from "@/lib/observingSites";
 import { normalizeLocationTexts } from "@/lib/chineseText";
 
@@ -68,6 +75,9 @@ interface AppState {
   /** Cross-product prediction lens (star vs cloud-sea scoring). */
   forecastTheme: ForecastTheme;
   recommendationThreshold: number;
+  /** Individually selected Bortle classes; default is B1-B3. */
+  observingBortleLevels: BortleLevel[];
+  /** Legacy contiguous limit retained for old callers and localStorage migration. */
   observingBortleLimit: 3 | 4;
   recommendedOnly: boolean;
   visibleRecommendationBands: RecommendationBand[];
@@ -103,6 +113,7 @@ const initialState: AppState = {
   mapWorkspace: "tonight",
   forecastTheme: "star",
   recommendationThreshold: 70,
+  observingBortleLevels: [...DEFAULT_BORTLE_LEVELS],
   observingBortleLimit: 3,
   recommendedOnly: false,
   visibleRecommendationBands: [
@@ -136,6 +147,7 @@ type Action =
   | { type: "SET_MAP_WORKSPACE"; workspace: MapWorkspace }
   | { type: "SET_FORECAST_THEME"; theme: ForecastTheme }
   | { type: "SET_RECOMMENDATION_THRESHOLD"; threshold: number }
+  | { type: "SET_OBSERVING_BORTLE_LEVELS"; levels: BortleLevel[] }
   | { type: "SET_OBSERVING_BORTLE_LIMIT"; limit: 3 | 4 }
   | { type: "SET_RECOMMENDED_ONLY"; enabled: boolean }
   | { type: "SET_RECOMMENDATION_BANDS"; bands: RecommendationBand[] }
@@ -221,7 +233,19 @@ function reducer(state: AppState, action: Action): AppState {
         ),
       };
     case "SET_OBSERVING_BORTLE_LIMIT":
-      return { ...state, observingBortleLimit: action.limit };
+      return {
+        ...state,
+        observingBortleLevels: bortleLevelsForLimit(action.limit),
+        observingBortleLimit: action.limit,
+      };
+    case "SET_OBSERVING_BORTLE_LEVELS": {
+      const levels = normalizeBortleLevels(action.levels);
+      return {
+        ...state,
+        observingBortleLevels: levels,
+        observingBortleLimit: levels.includes(4) ? 4 : 3,
+      };
+    }
     case "SET_RECOMMENDED_ONLY":
       return { ...state, recommendedOnly: action.enabled };
     case "SET_RECOMMENDATION_BANDS":
@@ -285,6 +309,7 @@ interface StoreContextValue {
   setMapWorkspace: (workspace: MapWorkspace) => void;
   setForecastTheme: (theme: ForecastTheme) => void;
   setRecommendationThreshold: (threshold: number) => void;
+  setObservingBortleLevels: (levels: BortleLevel[]) => void;
   setObservingBortleLimit: (limit: 3 | 4) => void;
   setRecommendedOnly: (enabled: boolean) => void;
   setRecommendationBands: (bands: RecommendationBand[]) => void;
@@ -358,6 +383,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const limit = Number(localStorage.getItem(OBSERVING_BORTLE_LIMIT_STORAGE_KEY));
       if (limit === 3 || limit === 4) {
         dispatch({ type: "SET_OBSERVING_BORTLE_LIMIT", limit });
+      }
+      const levels = localStorage.getItem(OBSERVING_BORTLE_LEVELS_STORAGE_KEY);
+      if (levels) {
+        const parsed = JSON.parse(levels) as unknown;
+        if (Array.isArray(parsed)) {
+          dispatch({
+            type: "SET_OBSERVING_BORTLE_LEVELS",
+            levels: normalizeBortleLevels(parsed),
+          });
+        }
       }
       const recommendedOnly = localStorage.getItem(OBSERVING_RECOMMENDED_ONLY_STORAGE_KEY);
       if (recommendedOnly === "true" || recommendedOnly === "false") {
@@ -681,6 +716,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "SET_OBSERVING_BORTLE_LIMIT", limit });
     try {
       localStorage.setItem(OBSERVING_BORTLE_LIMIT_STORAGE_KEY, String(limit));
+      localStorage.setItem(
+        OBSERVING_BORTLE_LEVELS_STORAGE_KEY,
+        JSON.stringify(bortleLevelsForLimit(limit)),
+      );
+    } catch {
+      // Optional preference.
+    }
+  }, []);
+  const setObservingBortleLevels = useCallback((levels: BortleLevel[]) => {
+    const next = normalizeBortleLevels(levels);
+    dispatch({ type: "SET_OBSERVING_BORTLE_LEVELS", levels: next });
+    try {
+      localStorage.setItem(
+        OBSERVING_BORTLE_LEVELS_STORAGE_KEY,
+        JSON.stringify(next),
+      );
+      localStorage.setItem(
+        OBSERVING_BORTLE_LIMIT_STORAGE_KEY,
+        String(next.includes(4) ? 4 : 3),
+      );
     } catch {
       // Optional preference.
     }
@@ -726,6 +781,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setMapWorkspace,
       setForecastTheme,
       setRecommendationThreshold,
+      setObservingBortleLevels,
       setObservingBortleLimit,
       setRecommendedOnly,
       setRecommendationBands,
@@ -752,6 +808,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setMapWorkspace,
       setForecastTheme,
       setRecommendationThreshold,
+      setObservingBortleLevels,
       setObservingBortleLimit,
       setRecommendedOnly,
       setRecommendationBands,

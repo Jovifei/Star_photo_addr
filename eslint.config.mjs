@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     // Generated output is never source input.
     "dist/**",
+    "playwright-report/**",
     "next-env.d.ts",
     // Tests and local orchestration have their own runtime checks.
     "tests/**",

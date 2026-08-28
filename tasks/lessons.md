@@ -1,5 +1,8 @@
 # Lessons
 
+- 2026-08-26: 用户要求合并多个分支时，先以当前 main 的树和提交拓扑为唯一基线；已 squash 到 main 的 PR 分支不能再次原样合并。功能缺口要在当前基线上用行为测试补齐，发布前再核对唯一主线和远端 HEAD。
+- 2026-08-26: 地图半径筛选不能把“半径内无点”呈现为空白；对稀疏区域保留严格半径结果，并明确标记最近点兜底，至少补齐 3 个、最多 8 个，关闭后必须恢复基础点位池。
+
 - 2026-08-13: 地图点击或地理搜索的地点可能没有海拔；天文引擎不能接收 `null`。计算边界应使用海平面作为几何兜底，但不能把未知海拔写回地点显示或评分来源。
 
 - 2026-08-12: A cloned Leaflet route needs a real browser screenshot after CSS changes; a descendant selector can miss the same MapContainer element and leave Leaflet's default gray background in place. Verify the computed background and use a same-element scoped rule before accepting a dark map.

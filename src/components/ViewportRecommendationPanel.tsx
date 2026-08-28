@@ -113,7 +113,7 @@ export default function ViewportRecommendationPanel({
     scoreDate,
     activeForecastTime ?? "night-summary",
     state.cloudState.model,
-    state.observingBortleLimit,
+    state.observingBortleLevels.join(","),
     state.recommendationThreshold,
     state.recommendedOnly,
     [...state.visibleRecommendationBands].sort().join(","),
@@ -132,9 +132,9 @@ export default function ViewportRecommendationPanel({
     return OBSERVING_SITES.filter(
       (site) =>
         siteInsideViewport(site, liveViewport) &&
-        site.bortle <= state.observingBortleLimit,
+        state.observingBortleLevels.includes(site.bortle),
     ).length;
-  }, [liveViewport, state.observingBortleLimit]);
+  }, [liveViewport, state.observingBortleLevels]);
 
   const applyRecommendations = useCallback(
     (snapshot: ObservationSnapshot | null, viewport: MapViewport) => {
@@ -143,7 +143,7 @@ export default function ViewportRecommendationPanel({
         snapshot,
         viewport,
         {
-          bortleLimit: state.observingBortleLimit,
+          bortleLevels: state.observingBortleLevels,
           recommendationThreshold: state.recommendationThreshold,
           recommendedOnly: state.recommendedOnly,
           visibleBands: state.visibleRecommendationBands,
@@ -158,7 +158,7 @@ export default function ViewportRecommendationPanel({
     [
       contextKey,
       onRecommendationsChange,
-      state.observingBortleLimit,
+      state.observingBortleLevels,
       state.recommendationThreshold,
       state.recommendedOnly,
       state.visibleRecommendationBands,
@@ -175,7 +175,7 @@ export default function ViewportRecommendationPanel({
     const currentViewportSiteCount = OBSERVING_SITES.filter(
       (site) =>
         siteInsideViewport(site, viewport) &&
-        site.bortle <= state.observingBortleLimit,
+        state.observingBortleLevels.includes(site.bortle),
     ).length;
     if (currentViewportSiteCount === 0) {
       applyRecommendations(null, viewport);
@@ -277,7 +277,7 @@ export default function ViewportRecommendationPanel({
     scoreDate,
     state.cloudState.model,
     state.dataRefreshRevision,
-    state.observingBortleLimit,
+    state.observingBortleLevels,
   ]);
 
   const pickRecommendation = useCallback(
