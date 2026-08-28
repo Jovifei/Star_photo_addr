@@ -148,7 +148,9 @@
   grid-template-columns: minmax(320px, 400px) 1fr;
   gap: 14px;
   min-height: 0;
-  padding: 14px max(18px, calc((100vw - 1680px) / 2)) 16px;
+  /* The map is the primary workspace; keep only a small safe gutter instead
+     of imposing a 1680px centered canvas that leaves large empty side bands. */
+  padding: 14px 18px 16px;
 }
 
 .fireglow-panel {

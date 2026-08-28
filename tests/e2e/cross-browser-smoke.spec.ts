@@ -35,9 +35,10 @@ test("product navigation and source dialog remain keyboard operable", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(page.locator(".nav-tabs .nav-tab")).toHaveText([
+  await expect(page.locator(".nav-tabs .nav-tab > span")).toHaveText([
     "今夜观测",
     "暗夜选址",
+    "火烧云",
     "观星计划",
   ]);
 
@@ -80,7 +81,8 @@ test("dark-sky compatibility route preserves a shared observation context", asyn
   expect(current.searchParams.get("view")).toBe("light-pollution");
   expect(current.searchParams.get("panel")).toBe("sites");
   await expect(page.locator(".leaflet-container")).toBeVisible();
-  await expect(
-    page.getByRole("navigation", { name: "页面导航" }).getByText("暗夜选址"),
-  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: /暗夜选址/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });

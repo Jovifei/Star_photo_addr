@@ -128,6 +128,8 @@ export type MapWorkspace = "tonight" | "sites";
  */
 export type ForecastTheme = "star" | "cloud";
 
+export type BortleLevel = 1 | 2 | 3 | 4;
+
 export type RecommendationBand =
   | "priority"
   | "recommended"
@@ -146,7 +148,7 @@ export interface ObservingSite {
   latitude: number;
   longitude: number;
   altitude: number | null;
-  bortle: 1 | 2 | 3 | 4;
+  bortle: BortleLevel;
   description?: string;
 }
 

@@ -86,12 +86,13 @@ test("sites compatibility route preserves context and opens the dark-sky site pa
   await page.goto("/?view=light-pollution&panel=sites");
   await expect(page.locator(".detail-overlay-host")).toHaveClass(/is-open/);
   await expect(page.locator(".nav-tabs .nav-tab")).toHaveText([
-    "今夜观测",
-    "暗夜选址",
-    "观星计划",
+    "今夜观测天气与窗口",
+    "暗夜选址长期暗空",
+    "火烧云晨晚霞窗口",
+    "观星计划附近排行",
   ]);
   await expect(
-    page.getByRole("navigation", { name: "页面导航" }).getByText("暗夜选址"),
+    page.getByRole("navigation", { name: "页面导航" }).locator("a.nav-tab", { hasText: "暗夜选址" }),
   ).toHaveAttribute("aria-current", "page");
 });
 
@@ -200,7 +201,7 @@ test("source disclosure keeps the current observation context when opening dark-
   expect(finalUrl.searchParams.get("model")).toBe("gfs");
   expect(finalUrl.searchParams.get("view")).toBe("light-pollution");
   await expect(
-    page.getByRole("navigation", { name: "页面导航" }).getByText("暗夜选址"),
+    page.getByRole("navigation", { name: "页面导航" }).locator("a.nav-tab", { hasText: "暗夜选址" }),
   ).toHaveAttribute("aria-current", "page");
 });
 

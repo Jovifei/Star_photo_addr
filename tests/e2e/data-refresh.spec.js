@@ -87,10 +87,7 @@ test("手动刷新只启动一个云量网格请求并保留已有画布", async
 test("光污染瓦片不强制要求 CORS 响应头", async ({ page }) => {
   await page.goto("/");
   await openMobileMapPanel(page, "layers");
-  await page
-    .getByLabel("地图模式")
-    .getByRole("tab", { name: "光污染" })
-    .click();
+  await page.locator(".map-layer-bar:visible").getByRole("button", { name: "光污染" }).click();
 
   // ObservingViirsLayer writes status on Leaflet's actual map container, not
   // the outer layout wrapper.

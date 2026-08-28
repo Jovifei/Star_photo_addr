@@ -34,7 +34,7 @@ import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
 import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import { useStore } from "@/lib/store";
 import { OBSERVING_SITES, observingSiteToLocation, recommendationLabel } from "@/lib/observingSites";
-import { rankNearbySites } from "@/lib/locationPresentation";
+import { rankNearbySitesWithFallback } from "@/lib/locationPresentation";
 import { toSimplifiedChinese } from "@/lib/chineseText";
 
 const NAV_ITEMS = [
@@ -60,6 +60,7 @@ const NEARBY_RADIUS_OPTIONS = [
   { value: 300, label: "300 km" },
 ];
 const NEARBY_RECOMMEND_LIMIT = 8;
+const NEARBY_MINIMUM_RESULTS = 3;
 const DETAIL_RANGE_OPTIONS = [
   { value: 1, label: "今日", hint: "当前夜" },
   { value: 3, label: "3 天", hint: "短期" },
@@ -294,12 +295,20 @@ export function App() {
   const recommendedLocations = useMemo(() => {
     if (!nearbyRadiusKm || !nearbyAnchor) return [];
     const existingIds = new Set(locations.map((item) => item.id));
-    return rankNearbySites(nearbyAnchor, nearbyRadiusKm, activeObservationSnapshot, NEARBY_RECOMMEND_LIMIT)
+    return rankNearbySitesWithFallback(
+      nearbyAnchor,
+      nearbyRadiusKm,
+      activeObservationSnapshot,
+      NEARBY_RECOMMEND_LIMIT + existingIds.size,
+      NEARBY_MINIMUM_RESULTS + existingIds.size,
+    )
       .filter((item) => !existingIds.has(item.site.id))
+      .slice(0, NEARBY_RECOMMEND_LIMIT)
       .map((item) => ({
         ...observingSiteToLocation(item.site),
         source: "附近推荐",
         distanceKm: Math.round(item.distanceKm),
+        nearbyFallback: item.isFallback,
       }));
   }, [activeObservationSnapshot, locations, nearbyAnchor, nearbyRadiusKm]);
   const rankingPool = useMemo(
@@ -598,7 +607,7 @@ export function App() {
             isLinkedLocation={Boolean(detail)}
             observationSnapshot={activeObservationSnapshot}
             snapshotStartNight={snapshotStartNight}
-            nearby={{ enabled: nearbyRadiusKm > 0, radiusKm: nearbyRadiusKm, anchorName: nearbyAnchor?.name ?? "", count: recommendedLocations.length }}
+            nearby={{ enabled: nearbyRadiusKm > 0, radiusKm: nearbyRadiusKm, anchorName: nearbyAnchor?.name ?? "", count: recommendedLocations.length, fallbackCount: recommendedLocations.filter((item) => item.nearbyFallback).length }}
           />
         )}
         {locations.length > 0 && forecasts.length > 0 && view === "matrix" && (
@@ -734,7 +743,7 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
             <span className="section-kicker">地点排名</span>
             <h2>{mode === "star" ? "点位星空排名" : "点位云海潜力"}</h2>
             {nearby?.enabled && nearby.count > 0 && (
-              <p className="nearby-hint">已并入 {nearby.anchorName} 周边 {nearby.radiusKm} km 内的 {nearby.count} 个推荐点位（仅作参考，不写入本机列表）</p>
+              <p className="nearby-hint">已并入 {nearby.anchorName} 周边 {nearby.radiusKm} km 内的 {nearby.count - (nearby.fallbackCount ?? 0)} 个点位{nearby.fallbackCount ? `，另补最近 ${nearby.fallbackCount} 个` : ""}（仅作参考，不写入本机列表）</p>
             )}
           </div>
           <span className="count-label">{rankings.length} 个点位</span>
@@ -814,7 +823,7 @@ function RankCard({ item, rank, mode, onOpen }) {
     <button className="rank-card" type="button" onClick={onOpen}>
       <span className={`rank-number ${rank <= 3 ? "top" : ""}`}>{String(rank).padStart(2, "0")}</span>
       <div className="rank-main">
-        <div className="rank-title"><div><h3>{item.location.name}{item.location.source === "附近推荐" && <span className="recommend-chip">推荐 · {item.location.distanceKm} km</span>}</h3><p>{formatSiteElevation(item.location.elevation)} · {evaluation?.confidence.level ?? "—"}置信度</p></div><span className={`status-pill ${meta.tone}`}>{meta.label}</span></div>
+        <div className="rank-title"><div><h3>{item.location.name}{item.location.source === "附近推荐" && <span className="recommend-chip">{item.location.nearbyFallback ? "最近补充" : "附近推荐"} · {item.location.distanceKm} km</span>}</h3><p>{formatSiteElevation(item.location.elevation)} · {evaluation?.confidence.level ?? "—"}置信度</p></div><span className={`status-pill ${meta.tone}`}>{meta.label}</span></div>
         <div className="rank-stats">
           <span><Cloud />云量 {cloud == null ? "—" : `${cloud}%`}</span>
           <span><CloudRain />降水 {formatNullable(bestHour?.precipitationProbability, "%", Math.round)}</span>
