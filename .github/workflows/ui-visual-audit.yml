@@ -1,0 +1,285 @@
+name: UI visual audit
+
+on:
+  push:
+    branches:
+      - audit/ui-information-architecture-20260829
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture deployed product pages
+        env:
+          AUDIT_BASE_URL: https://photo.joviluma.com
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from "@playwright/test";
+          import fs from "node:fs/promises";
+
+          const baseUrl = process.env.AUDIT_BASE_URL;
+          const outputDir = "ui-audit-output";
+          const routes = [
+            { id: "01-home", label: "今夜观测", path: "/" },
+            { id: "02-sites", label: "暗夜选址", path: "/sites" },
+            { id: "03-fireglow", label: "火烧云", path: "/fireglow" },
+            { id: "04-planner", label: "观星计划", path: "/planner" },
+          ];
+          const profiles = [
+            {
+              id: "desktop",
+              viewport: { width: 1440, height: 1000 },
+              userAgent:
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36",
+              isMobile: false,
+              hasTouch: false,
+            },
+            {
+              id: "mobile-390",
+              viewport: { width: 390, height: 844 },
+              userAgent:
+                "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 Chrome/151 Mobile Safari/537.36",
+              isMobile: true,
+              hasTouch: true,
+            },
+          ];
+
+          await fs.mkdir(outputDir, { recursive: true });
+          const browser = await chromium.launch({ headless: true });
+          const report = {
+            generatedAt: new Date().toISOString(),
+            baseUrl,
+            profiles: [],
+          };
+
+          for (const profile of profiles) {
+            const context = await browser.newContext({
+              viewport: profile.viewport,
+              userAgent: profile.userAgent,
+              isMobile: profile.isMobile,
+              hasTouch: profile.hasTouch,
+              locale: "zh-CN",
+              timezoneId: "Asia/Shanghai",
+              ignoreHTTPSErrors: true,
+              deviceScaleFactor: 1,
+            });
+            await context.addInitScript(() => {
+              try {
+                localStorage.clear();
+                sessionStorage.clear();
+              } catch {
+                // Storage is not available for about:blank; the same script
+                // runs again after the application origin is established.
+              }
+            });
+
+            const profileReport = {
+              id: profile.id,
+              viewport: profile.viewport,
+              pages: [],
+            };
+
+            for (const route of routes) {
+              const page = await context.newPage();
+              const consoleErrors = [];
+              const failedRequests = [];
+              page.on("console", (message) => {
+                if (message.type() === "error") consoleErrors.push(message.text());
+              });
+              page.on("pageerror", (error) => consoleErrors.push(error.message));
+              page.on("requestfailed", (request) => {
+                failedRequests.push({
+                  url: request.url(),
+                  error: request.failure()?.errorText ?? "unknown",
+                });
+              });
+
+              const startedAt = Date.now();
+              let navigationError = null;
+              let responseStatus = null;
+              try {
+                const response = await page.goto(`${baseUrl}${route.path}`, {
+                  waitUntil: "domcontentloaded",
+                  timeout: 120000,
+                });
+                responseStatus = response?.status() ?? null;
+              } catch (error) {
+                navigationError = error instanceof Error ? error.message : String(error);
+              }
+
+              await page
+                .locator(".leaflet-container")
+                .first()
+                .waitFor({ state: "visible", timeout: 30000 })
+                .catch(() => undefined);
+              await page.waitForTimeout(route.id === "03-fireglow" ? 20000 : 15000);
+              await page
+                .evaluate(async () => {
+                  if (document.fonts?.ready) await document.fonts.ready;
+                })
+                .catch(() => undefined);
+
+              const metrics = await page.evaluate(() => {
+                const visible = (element) => {
+                  const style = getComputedStyle(element);
+                  const rect = element.getBoundingClientRect();
+                  return (
+                    style.display !== "none" &&
+                    style.visibility !== "hidden" &&
+                    Number(style.opacity || "1") > 0 &&
+                    rect.width > 1 &&
+                    rect.height > 1
+                  );
+                };
+                const selectors = [
+                  "aside",
+                  "[class*='panel']",
+                  "[class*='card']",
+                  "[class*='control']",
+                  "[class*='timeline']",
+                  "[class*='legend']",
+                  "[class*='filter']",
+                ].join(",");
+                const regions = Array.from(document.querySelectorAll(selectors))
+                  .filter(visible)
+                  .slice(0, 120)
+                  .map((element) => {
+                    const rect = element.getBoundingClientRect();
+                    const style = getComputedStyle(element);
+                    return {
+                      tag: element.tagName.toLowerCase(),
+                      className: String(element.className || "").slice(0, 180),
+                      text: String(element.textContent || "")
+                        .replace(/\s+/g, " ")
+                        .trim()
+                        .slice(0, 220),
+                      rect: {
+                        x: Math.round(rect.x),
+                        y: Math.round(rect.y),
+                        width: Math.round(rect.width),
+                        height: Math.round(rect.height),
+                      },
+                      position: style.position,
+                      zIndex: style.zIndex,
+                    };
+                  });
+                return {
+                  title: document.title,
+                  url: location.href,
+                  viewport: {
+                    width: innerWidth,
+                    height: innerHeight,
+                  },
+                  document: {
+                    scrollWidth: document.documentElement.scrollWidth,
+                    scrollHeight: document.documentElement.scrollHeight,
+                    bodyScrollWidth: document.body.scrollWidth,
+                    bodyScrollHeight: document.body.scrollHeight,
+                  },
+                  horizontalOverflow:
+                    document.documentElement.scrollWidth > innerWidth + 1,
+                  regions,
+                };
+              });
+
+              const screenshotPath = `${outputDir}/${profile.id}-${route.id}-full.png`;
+              await page.screenshot({ path: screenshotPath, fullPage: true });
+
+              const pageReport = {
+                id: route.id,
+                label: route.label,
+                requestedPath: route.path,
+                finalUrl: page.url(),
+                responseStatus,
+                navigationError,
+                durationMs: Date.now() - startedAt,
+                screenshot: screenshotPath,
+                consoleErrors,
+                failedRequests: failedRequests.slice(0, 80),
+                metrics,
+              };
+
+              if (profile.id === "mobile-390" && route.id === "01-home") {
+                pageReport.mobilePanels = [];
+                for (const panel of ["layers", "places", "cloud", "recommendations"]) {
+                  const trigger = page.getByTestId(`mobile-map-panel-open-${panel}`);
+                  if (!(await trigger.isVisible().catch(() => false))) continue;
+                  await trigger.click();
+                  await page.getByTestId("mobile-map-panel-drawer").waitFor({
+                    state: "visible",
+                    timeout: 10000,
+                  });
+                  await page.waitForTimeout(1000);
+                  const panelPath = `${outputDir}/${profile.id}-${route.id}-${panel}.png`;
+                  await page.screenshot({ path: panelPath, fullPage: false });
+                  pageReport.mobilePanels.push({ panel, screenshot: panelPath });
+                  await page
+                    .getByRole("button", { name: "关闭地图工具侧边栏" })
+                    .last()
+                    .click();
+                  await page.waitForTimeout(300);
+                }
+              }
+
+              profileReport.pages.push(pageReport);
+              await page.close();
+            }
+
+            report.profiles.push(profileReport);
+            await context.close();
+          }
+
+          await browser.close();
+          await fs.writeFile(
+            `${outputDir}/audit-report.json`,
+            JSON.stringify(report, null, 2),
+            "utf8",
+          );
+
+          const lines = [
+            "# 逐星线上 UI 视觉审计采集",
+            "",
+            `- 生成时间：${report.generatedAt}`,
+            `- 线上地址：${baseUrl}`,
+            "- 桌面视口：1440 × 1000",
+            "- 手机视口：390 × 844",
+            "",
+          ];
+          for (const profile of report.profiles) {
+            lines.push(`## ${profile.id}`, "");
+            for (const item of profile.pages) {
+              lines.push(
+                `- ${item.label}: HTTP ${item.responseStatus ?? "n/a"}; 最终 URL ${item.finalUrl}; 横向溢出 ${item.metrics.horizontalOverflow ? "是" : "否"}; 截图 \`${item.screenshot}\``,
+              );
+            }
+            lines.push("");
+          }
+          await fs.writeFile(`${outputDir}/README.md`, lines.join("\n"), "utf8");
+          NODE
+
+      - name: Upload visual audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-visual-audit-${{ github.run_id }}
+          path: ui-audit-output
+          if-no-files-found: error
+          retention-days: 7
