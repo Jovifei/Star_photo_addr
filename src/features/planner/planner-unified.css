@@ -46,7 +46,7 @@
   min-height: 58px;
   height: auto;
   gap: 14px;
-  padding: 9px max(18px, calc((100vw - 1680px) / 2));
+  padding: 9px 18px;
   border-bottom-color: var(--line-strong);
   background: linear-gradient(180deg, rgba(6, 20, 27, 0.97), rgba(4, 16, 24, 0.91));
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2);
@@ -162,7 +162,9 @@
 
 /* Main surfaces ----------------------------------------------------------------- */
 .planner-root .main-content {
-  width: min(1680px, calc(100% - 48px));
+  /* 全宽工作区：数据铺满左右，只保留与顶栏一致的窄边距。 */
+  width: calc(100% - 36px);
+  max-width: none;
   padding-top: 20px;
 }
 
@@ -436,7 +438,7 @@
   }
 
   .planner-root .main-content {
-    width: min(calc(100% - 24px), 1680px);
+    width: calc(100% - 24px);
   }
 }
 

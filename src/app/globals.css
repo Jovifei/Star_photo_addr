@@ -3821,3 +3821,30 @@
   font-size: 10px;
   line-height: 1.55;
 }
+
+/* 2026-08-29 unified header geometry: 四个页面的品牌+产品导航保持同一位置——
+   成组水平居中，页面自有控件钉右侧；tab 等宽并列。 */
+.fireglow-topbar .fireglow-head,
+.planner-root .topbar .brand-lockup { margin-left: auto; }
+.fireglow-topbar .nav-tabs,
+.planner-root .topbar .suite-nav { margin-right: auto; }
+.fireglow-topbar .nav-tabs .nav-tab,
+.planner-root .topbar .suite-nav a,
+.planner-root .topbar .suite-nav span {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+.fireglow-topbar .nav-tabs { flex: 0 1 auto; min-width: 0; }
+.planner-root .topbar .suite-nav { flex: 0 1 auto; min-width: 0; }
+.planner-root .topbar .suite-nav a,
+.planner-root .topbar .suite-nav span { display: flex; align-items: center; }
+
+@media (max-width: 768px) {
+  .fireglow-topbar .fireglow-head,
+  .planner-root .topbar .brand-lockup { margin-left: 0; }
+  .fireglow-topbar .nav-tabs,
+  .planner-root .topbar .suite-nav { margin-right: 0; }
+}
