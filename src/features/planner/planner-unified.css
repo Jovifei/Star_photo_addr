@@ -42,11 +42,11 @@
 }
 
 /* Header ------------------------------------------------------------------------ */
-.planner-root .topbar {
+.planner-root .app-header {
   min-height: 58px;
   height: auto;
   gap: 14px;
-  padding: 9px 18px;
+  padding: 10px 18px;
   border-bottom-color: var(--line-strong);
   background: linear-gradient(180deg, rgba(6, 20, 27, 0.97), rgba(4, 16, 24, 0.91));
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.2);
@@ -88,41 +88,6 @@
   font-size: 20px;
   font-weight: 650;
   letter-spacing: 0.1em;
-}
-
-.planner-root .suite-nav {
-  gap: 3px;
-  min-width: 0;
-  padding: 3px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(2, 9, 14, 0.72);
-}
-
-.planner-root .suite-nav a,
-.planner-root .suite-nav span {
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  transition:
-    color var(--transition),
-    border-color var(--transition),
-    background-color var(--transition);
-}
-
-.planner-root .suite-nav a:hover {
-  border-color: transparent;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.planner-root .suite-nav span[aria-current="page"] {
-  border-color: rgba(121, 207, 226, 0.28);
-  color: #b0e6ef;
-  background: linear-gradient(180deg, rgba(121, 207, 226, 0.15), rgba(121, 207, 226, 0.08));
 }
 
 .planner-root .desktop-nav {
@@ -402,8 +367,8 @@
     min-width: 168px;
   }
 
-  .planner-root .suite-nav a,
-  .planner-root .suite-nav span,
+  .planner-root .app-header .nav-tabs a,
+  .planner-root .app-header .nav-tabs span,
   .planner-root .desktop-nav button {
     padding-inline: 9px;
   }
@@ -420,18 +385,18 @@
     min-width: 0;
   }
 
-  .planner-root .suite-nav {
+  .planner-root .app-header .nav-tabs {
     order: 3;
     width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
   }
 
-  .planner-root .suite-nav::-webkit-scrollbar {
+  .planner-root .app-header .nav-tabs::-webkit-scrollbar {
     display: none;
   }
 
-  .planner-root .suite-nav a,
+  .planner-root .app-header .nav-tabs a,
   .planner-root .suite-nav span {
     flex: 1 0 auto;
     justify-content: center;
@@ -457,7 +422,7 @@
     display: none;
   }
 
-  .planner-root .suite-nav a,
+  .planner-root .app-header .nav-tabs a,
   .planner-root .suite-nav span {
     min-height: 34px;
     font-size: 10px;
@@ -473,8 +438,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .planner-root .suite-nav a,
-  .planner-root .suite-nav span,
+  .planner-root .app-header .nav-tabs a,
+  .planner-root .app-header .nav-tabs span,
   .planner-root .desktop-nav button,
   .planner-root .refresh-button {
     transition: none;

@@ -7,7 +7,7 @@ import "leaflet/dist/leaflet.css";
 import type { Map as LeafletMap } from "leaflet";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 import BoundaryLayers from "@/components/BoundaryLayers";
-import NavTabs from "@/components/NavTabs";
+import ProductHeader from "@/components/ProductHeader";
 import { CARTO_ATTRIBUTION, CARTO_DARK_NOLABELS_URL } from "@/lib/constants";
 import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
@@ -216,15 +216,12 @@ export default function FireglowApp() {
 
   return (
     <div className="fireglow-root app-shell">
-      <header className="fireglow-topbar">
-        <div className="fireglow-head">
-          <span className="fireglow-mark"><Flame size={18} aria-hidden="true" /></span>
-          <div>
-            <span className="section-kicker">逐霞 · 火烧云预测</span>
-            <h1>火烧云概率地图</h1>
-          </div>
-        </div>
-        <NavTabs />
+      <ProductHeader
+        mark={<Flame size={18} aria-hidden="true" />}
+        markClassName="fireglow-mark"
+        eyebrow="逐霞"
+        title="火烧云概率地图"
+      >
         <div className="fireglow-controls">
           <div className="segmented" role="group" aria-label="晨昏窗口">
             <button type="button" aria-pressed={phase === "evening"} className={phase === "evening" ? "active" : ""} onClick={() => setPhase("evening")}>
@@ -253,7 +250,7 @@ export default function FireglowApp() {
             {status === "loading" ? "读取中" : "刷新"}
           </button>
         </div>
-      </header>
+      </ProductHeader>
 
       <main className="fireglow-workspace">
         <aside className="fireglow-panel" aria-label="火烧云概率排行">

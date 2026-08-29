@@ -121,8 +121,8 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
   await expect(page.locator(".hero-card")).toBeVisible({ timeout: 15000 });
   await expect(page.locator(".hero-card h2")).toHaveCount(1);
   await expect(page.locator(".hero-card .section-kicker")).toContainText(`${Number(month)}月${Number(day)}日`);
-  await expect(page.locator(".suite-nav a").first()).toHaveAttribute("href", /lat=30\.4694/);
-  await expect(page.locator(".suite-nav a").first()).toHaveAttribute("href", /model=icon/);
+  await expect(page.locator(".nav-tabs a").first()).toHaveAttribute("href", /lat=30\.4694/);
+  await expect(page.locator(".nav-tabs a").first()).toHaveAttribute("href", /model=icon/);
   await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 15000 });
   await page.locator(".rank-card").first().click();
   const detail = page.locator(".detail-drawer");
@@ -147,13 +147,15 @@ test("规划器使用同源天气网关并复用小时矩阵", async ({ page }) 
   await expect(targetNight).toHaveAttribute("aria-pressed", "true");
   await expect(detail.locator(".detail-range-panel")).toHaveAttribute("data-active-night", targetNightKey);
   await expect(weatherChart).not.toHaveAttribute("data-chart-key", initialWeatherChartKey);
-  const plannerHomeLink = page.locator(".suite-nav a").first();
-  await expect.poll(async () => new URL(await plannerHomeLink.getAttribute("href"), "http://local.test").searchParams.get("night")).toBe(targetNightKey);
+  // The home link is tonight-first (night intentionally stripped); the
+  // dark-sky link carries the full observation context including night.
+  const plannerContextLink = page.locator(".nav-tabs a").nth(1);
+  await expect.poll(async () => new URL(await plannerContextLink.getAttribute("href"), "http://local.test").searchParams.get("night")).toBe(targetNightKey);
   const targetHour = detail.locator(".hour-chips button").nth(2);
   const targetTime = await targetHour.getAttribute("data-time");
   await targetHour.click();
   await expect(targetHour).toHaveAttribute("aria-pressed", "true");
-  await expect.poll(async () => new URL(await plannerHomeLink.getAttribute("href"), "http://local.test").searchParams.get("forecastTime")).toBe(targetTime);
+  await expect.poll(async () => new URL(await plannerContextLink.getAttribute("href"), "http://local.test").searchParams.get("forecastTime")).toBe(targetTime);
   await expect(detail.locator(".hourly-matrix")).toBeVisible();
 });
 

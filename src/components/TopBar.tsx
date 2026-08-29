@@ -1,50 +1,25 @@
 "use client";
 
-import Link from "next/link";
-import { Suspense, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { Info, Telescope } from "lucide-react";
 import EventStatus from "@/components/EventStatus";
 import SourcePopover from "@/components/SourcePopover";
-import NavTabs from "@/components/NavTabs";
-
-function NavTabsFallback() {
-  return (
-    <nav className="nav-tabs" aria-label="页面导航">
-      <Link href="/" className="nav-tab active" aria-current="page">
-        今夜观测
-      </Link>
-      <Link href="/sites" className="nav-tab">
-        暗夜选址
-      </Link>
-      <Link href="/planner" className="nav-tab">
-        观星计划
-      </Link>
-    </nav>
-  );
-}
+import ProductHeader from "@/components/ProductHeader";
 
 /**
- * Top bar: one shared brand, three product workspaces, live event status and
- * the data-source disclosure entry point.
+ * 今夜观测 workspace header: shared ProductHeader geometry with the map's
+ * own data-source disclosure pinned right.
  */
 export default function TopBar() {
   const [sourceOpen, setSourceOpen] = useState(false);
   const closeSource = useCallback(() => setSourceOpen(false), []);
 
   return (
-    <header className="topbar">
-      <div className="brand-block">
-        <div className="brand-mark" aria-hidden="true">
-          <Telescope size={18} strokeWidth={1.8} />
-        </div>
-        <div>
-          <strong>逐星</strong>
-          <span>星空摄影观测平台</span>
-        </div>
-      </div>
-      <Suspense fallback={<NavTabsFallback />}>
-        <NavTabs />
-      </Suspense>
+    <ProductHeader
+      mark={<Telescope size={18} strokeWidth={1.8} />}
+      eyebrow="逐星"
+      title="星空摄影观测平台"
+    >
       <EventStatus />
       <button
         type="button"
@@ -59,6 +34,6 @@ export default function TopBar() {
         <span className="source-button-label">数据依据与局限</span>
       </button>
       <SourcePopover open={sourceOpen} onClose={closeSource} />
-    </header>
+    </ProductHeader>
   );
 }

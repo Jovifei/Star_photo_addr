@@ -31,6 +31,7 @@ import { fetchPressureForecast, fetchSurfaceForecasts } from "./lib/openMeteo";
 import { evaluateNight, statusMeta } from "./lib/scoring";
 import { addDays, formatHour, formatNightLabel, nextNightKeys, relativeFreshness } from "./lib/time";
 import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
+import ProductHeader from "@/components/ProductHeader";
 import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import { useStore } from "@/lib/store";
 import { OBSERVING_SITES, observingSiteToLocation, recommendationLabel } from "@/lib/observingSites";
@@ -200,25 +201,6 @@ function readProductBridge() {
       source: "今夜观测联动",
     },
   };
-}
-
-function productHref(path, location, night, session = {}) {
-  const params = new URLSearchParams();
-  if (location) {
-    params.set("lat", String(location.latitude));
-    params.set("lng", String(location.longitude));
-    params.set("name", location.name);
-    if (location.elevation != null && Number.isFinite(location.elevation)) {
-      params.set("elevation", String(location.elevation));
-    }
-  }
-  if (night) params.set("night", night);
-  if (session.model) params.set("model", session.model);
-  if (session.forecastTime) params.set("forecastTime", session.forecastTime);
-  if (session.observationTime) params.set("observationTime", session.observationTime);
-  if (session.overlayMode) params.set("overlay", session.overlayMode);
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
 }
 
 export function App() {
@@ -494,15 +476,6 @@ export function App() {
   // The currently opened detail is the latest explicit user choice. The
   // incoming bridge location is only a fallback until the user picks another
   // place inside the planner.
-  const linkedLocation = detail?.location ?? bridge.location ?? best?.location;
-  const sessionLink = {
-    model: sharedModel,
-    forecastTime: sharedState.cloudState.activeForecastTime,
-    observationTime: sharedState.cloudState.activeObservationTime,
-    overlayMode: sharedState.cloudState.overlayMode,
-  };
-  const perseidsHref = productHref("/", linkedLocation, selectedNight, sessionLink);
-  const sitesHref = productHref("/sites", linkedLocation, selectedNight, sessionLink);
 
   const handleSelectNight = useCallback((night) => {
     setSelectedNight(night);
@@ -540,20 +513,11 @@ export function App() {
   return (
     <div className="planner-root app-shell">
       <a className="skip-link" href="#main-content">跳到主要内容</a>
-      <header className="topbar">
-        <div className="brand-lockup">
-            <span className="brand-mark"><Telescope strokeWidth={2.1} /></span>
-          <div>
-            <p className="eyebrow">逐星</p>
-            <h1>观星计划</h1>
-          </div>
-        </div>
-        <nav className="suite-nav" aria-label="产品导航">
-          <a href={perseidsHref}>今夜观测</a>
-          <a href={sitesHref}>暗夜选址</a>
-          <a href="/fireglow">火烧云</a>
-          <span aria-current="page">观星计划</span>
-        </nav>
+      <ProductHeader
+        mark={<Telescope strokeWidth={2.1} />}
+        eyebrow="逐星"
+        title="观星计划"
+      >
         <nav className="desktop-nav" aria-label="主导航">
           {NAV_ITEMS.map((item) => (
             <NavButton key={item.id} item={item} active={view === item.id} onClick={() => setView(item.id)} />
@@ -563,7 +527,7 @@ export function App() {
           <ArrowsClockwise className={loading ? "spin" : ""} />
           <span>{loading ? "更新中" : "刷新"}</span>
         </button>
-      </header>
+      </ProductHeader>
 
       <main className="main-content" id="main-content" tabIndex="-1">
         <section className="control-strip" aria-label="预测范围与推荐设置">

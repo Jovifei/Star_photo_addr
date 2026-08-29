@@ -590,7 +590,8 @@ th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--lin
 .hour-chips button.active { box-shadow: inset 0 0 0 1px rgba(91, 216, 235, .28); }
 .ranking-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(430px, 100%), 1fr));
+  /* auto-fit collapses empty tracks: 2 candidates stretch full width. */
+  grid-template-columns: repeat(auto-fit, minmax(min(430px, 100%), 1fr));
   align-items: stretch;
   gap: 10px;
 }

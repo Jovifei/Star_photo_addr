@@ -3797,54 +3797,90 @@
   }
 }
 
-/* 2026-08-29 header pass: 品牌 + 四个工作区成组居中，右侧数据源入口保持钉边；
-   四个 tab 等宽并列，提示文案不再造成宽度不均。 */
-.topbar .brand-block { margin-left: auto; }
-.topbar .nav-tabs { margin-right: auto; flex: 0 1 auto; min-width: 0; }
-.topbar .nav-tabs .nav-tab {
+/* 2026-08-29 one header for every product: ProductHeader owns the geometry.
+   Grid 1fr auto 1fr keeps the four product tabs exactly viewport-centred,
+   the brand hugging them from the left and page controls pinned right. */
+.app-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  background: linear-gradient(180deg, #06141bF2, #06141bcc);
+  border-bottom: 1px solid var(--line);
+  z-index: var(--z-header, 60);
+  backdrop-filter: blur(10px);
+}
+.app-header-brand {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.app-header-mark {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--amber, #d4b273);
+  background: radial-gradient(circle at 30% 30%, #2a2113, #0b0d10);
+  box-shadow:
+    rgba(212, 178, 115, 0.16) 0 0 28px,
+    rgba(212, 178, 115, 0.1) 0 0 16px inset;
+}
+.app-header-mark.fireglow-mark {
+  color: #f0a88f;
+  background: radial-gradient(circle at 30% 30%, #2a1713, #0b0d10);
+  box-shadow: rgba(232, 101, 79, 0.22) 0 0 24px;
+}
+.app-header-brand-copy { min-width: 0; }
+.app-header-eyebrow {
+  margin: 0 0 1px;
+  color: var(--amber, #d4b273);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+.app-header-title {
+  margin: 0;
+  color: var(--text, #e7e7e0);
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.app-header .nav-tabs {
+  display: flex;
+  gap: 4px;
+  /* One fixed band so the four tabs land on identical positions everywhere. */
+  width: clamp(480px, 40vw, 720px);
+}
+.app-header .nav-tabs .nav-tab {
   flex: 1 1 0;
   min-width: 0;
   justify-content: center;
   text-align: center;
   white-space: nowrap;
 }
-.topbar .nav-tabs .nav-tab small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.app-header .nav-tab small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-header-controls {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
 
 @media (max-width: 900px) {
-  /* 回归堆叠布局：品牌占整行，tab 等宽铺满。 */
-  .topbar .brand-block { margin-left: 0; }
-  .topbar .nav-tabs { margin-right: 0; width: 100%; }
-}
-
-.observing-bortle-legend {
-  color: var(--muted-2);
-  font-size: 10px;
-  line-height: 1.55;
-}
-
-/* 2026-08-29 unified header geometry: 四个页面的品牌+产品导航保持同一位置——
-   成组水平居中，页面自有控件钉右侧；tab 等宽并列。 */
-.fireglow-topbar .fireglow-head,
-.planner-root .topbar .brand-lockup { margin-left: auto; }
-.fireglow-topbar .nav-tabs,
-.planner-root .topbar .suite-nav { margin-right: auto; }
-.fireglow-topbar .nav-tabs .nav-tab,
-.planner-root .topbar .suite-nav a,
-.planner-root .topbar .suite-nav span {
-  flex: 1 1 0;
-  min-width: 0;
-  justify-content: center;
-  text-align: center;
-  white-space: nowrap;
-}
-.fireglow-topbar .nav-tabs { flex: 0 1 auto; min-width: 0; }
-.planner-root .topbar .suite-nav { flex: 0 1 auto; min-width: 0; }
-.planner-root .topbar .suite-nav a,
-.planner-root .topbar .suite-nav span { display: flex; align-items: center; }
-
-@media (max-width: 768px) {
-  .fireglow-topbar .fireglow-head,
-  .planner-root .topbar .brand-lockup { margin-left: 0; }
-  .fireglow-topbar .nav-tabs,
-  .planner-root .topbar .suite-nav { margin-right: 0; }
+  .app-header { display: flex; flex-wrap: wrap; row-gap: 8px; }
+  .app-header-brand { order: 1; margin-right: auto; justify-self: auto; }
+  .app-header-controls { order: 2; }
+  .app-header .nav-tabs { order: 3; width: 100%; }
+  .app-header .nav-tabs .nav-tab small { display: none; }
 }

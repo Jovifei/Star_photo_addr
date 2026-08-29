@@ -28,43 +28,6 @@
   font-size: 13px;
 }
 
-.fireglow-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--fg-line-strong);
-  background: rgba(4, 16, 24, 0.92);
-  backdrop-filter: blur(12px);
-}
-
-.fireglow-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.fireglow-mark {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: #f0a88f;
-  background: radial-gradient(circle at 30% 30%, #2a1713, #0b0d10);
-  box-shadow: rgba(232, 101, 79, 0.22) 0 0 24px;
-}
-
-.fireglow-head h1 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  color: var(--fg-text);
-}
-
 .fireglow-controls {
   display: flex;
   align-items: center;

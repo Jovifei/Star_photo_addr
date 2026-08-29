@@ -6,6 +6,24 @@ import { useSyncExternalStore } from "react";
 import { useStore } from "@/lib/store";
 import { buildProductHref } from "@/lib/productRoutes";
 
+/** Prerender skeleton: same four entries so header width never jumps. */
+export function NavTabsFallback() {
+  return (
+    <nav className="nav-tabs" aria-label="页面导航">
+      {["今夜观测", "暗夜选址", "火烧云", "观星计划"].map((label, index) => (
+        <Link
+          key={label}
+          href={index === 0 ? "/" : "#"}
+          className={`nav-tab${index === 0 ? " active" : ""}`}
+          aria-current={index === 0 ? "page" : undefined}
+        >
+          <span>{label}</span>
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 /** Shared navigation with explicit workspace purpose, not three look-alike labels. */
 export default function NavTabs() {
   const pathname = usePathname();
