@@ -49,119 +49,56 @@ jobs:
             { id: "simingshan", name: "四明山", latitude: 29.6352, longitude: 120.9819, elevation: 1018, timezone: "Asia/Shanghai", source: "审计点位" },
           ];
           const routes = [
-            { id: "00-reference", label: "参考站", absoluteUrl: "https://perseids.giraffetree.cn/", waitMs: 18000 },
-            { id: "01-home-selected", label: "今夜观测 · 已选地点", path: `/?${selectedQuery}`, waitMs: 24000 },
-            { id: "02-sites-selected", label: "暗夜选址 · 已选地点", path: `/sites?${selectedQuery}`, waitMs: 24000 },
-            { id: "03-fireglow", label: "火烧云", path: "/fireglow", waitMs: 22000 },
-            { id: "04-planner-populated", label: "观星计划 · 已填充", path: `/planner?${selectedQuery}`, waitMs: 32000 },
+            { id: "00-reference", label: "参考站", url: "https://perseids.giraffetree.cn/", waitMs: 16000 },
+            { id: "01-home-selected", label: "今夜观测 · 已选地点", url: `${baseUrl}/?${selectedQuery}`, waitMs: 22000 },
+            { id: "02-sites-selected", label: "暗夜选址 · 已选地点", url: `${baseUrl}/sites?${selectedQuery}`, waitMs: 22000 },
+            { id: "03-fireglow", label: "火烧云", url: `${baseUrl}/fireglow`, waitMs: 20000 },
+            { id: "04-planner-populated", label: "观星计划 · 已填充", url: `${baseUrl}/planner?${selectedQuery}`, waitMs: 32000 },
           ];
           const profiles = [
-            {
-              id: "desktop",
-              viewport: { width: 1440, height: 1000 },
-              userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36",
-              isMobile: false,
-              hasTouch: false,
-            },
-            {
-              id: "mobile-390",
-              viewport: { width: 390, height: 844 },
-              userAgent: "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 Chrome/151 Mobile Safari/537.36",
-              isMobile: true,
-              hasTouch: true,
-            },
+            { id: "desktop", viewport: { width: 1440, height: 1000 }, isMobile: false, hasTouch: false },
+            { id: "mobile-390", viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
           ];
 
           await fs.mkdir(outputDir, { recursive: true });
+          const report = { generatedAt: new Date().toISOString(), baseUrl, profiles: [] };
           const browser = await chromium.launch({ headless: true });
-          const report = {
-            generatedAt: new Date().toISOString(),
-            baseUrl,
-            seededLocations: seedLocations.map(({ id, name }) => ({ id, name })),
-            profiles: [],
-          };
 
-          const evaluateMetrics = () => {
-            const visible = (element) => {
-              const style = getComputedStyle(element);
-              const rect = element.getBoundingClientRect();
-              return (
-                style.display !== "none" &&
-                style.visibility !== "hidden" &&
-                Number(style.opacity || "1") > 0 &&
-                rect.width > 1 &&
-                rect.height > 1
-              );
-            };
-            const selectors = [
-              "header",
-              "nav",
-              "aside",
-              "[class*='panel']",
-              "[class*='card']",
-              "[class*='control']",
-              "[class*='timeline']",
-              "[class*='legend']",
-              "[class*='filter']",
-              "[class*='drawer']",
-              "[class*='matrix']",
-            ].join(",");
-            const regions = Array.from(document.querySelectorAll(selectors))
-              .filter(visible)
-              .slice(0, 180)
+          const metrics = () => ({
+            title: document.title,
+            url: location.href,
+            viewport: { width: innerWidth, height: innerHeight },
+            document: {
+              scrollWidth: document.documentElement.scrollWidth,
+              scrollHeight: document.documentElement.scrollHeight,
+              bodyScrollWidth: document.body.scrollWidth,
+              bodyScrollHeight: document.body.scrollHeight,
+            },
+            horizontalOverflow:
+              document.documentElement.scrollWidth > innerWidth + 1 ||
+              document.body.scrollWidth > innerWidth + 1,
+            fixedRegions: Array.from(document.querySelectorAll("header,nav,aside,[class*='panel'],[class*='drawer'],[class*='timeline']"))
               .map((element) => {
-                const rect = element.getBoundingClientRect();
                 const style = getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
                 return {
-                  tag: element.tagName.toLowerCase(),
-                  className: String(element.className || "").slice(0, 180),
-                  text: String(element.textContent || "")
-                    .replace(/\s+/g, " ")
-                    .trim()
-                    .slice(0, 240),
-                  rect: {
-                    x: Math.round(rect.x),
-                    y: Math.round(rect.y),
-                    width: Math.round(rect.width),
-                    height: Math.round(rect.height),
-                  },
+                  className: String(element.className || "").slice(0, 160),
+                  text: String(element.textContent || "").replace(/\s+/g, " ").trim().slice(0, 200),
                   position: style.position,
                   zIndex: style.zIndex,
+                  rect: {
+                    x: Math.round(rect.x), y: Math.round(rect.y),
+                    width: Math.round(rect.width), height: Math.round(rect.height),
+                  },
                 };
-              });
-            return {
-              title: document.title,
-              url: location.href,
-              viewport: { width: innerWidth, height: innerHeight },
-              document: {
-                scrollWidth: document.documentElement.scrollWidth,
-                scrollHeight: document.documentElement.scrollHeight,
-                bodyScrollWidth: document.body.scrollWidth,
-                bodyScrollHeight: document.body.scrollHeight,
-              },
-              horizontalOverflow:
-                document.documentElement.scrollWidth > innerWidth + 1 ||
-                document.body.scrollWidth > innerWidth + 1,
-              regions,
-            };
-          };
-
-          async function clickFirstVisible(locator) {
-            const count = await locator.count();
-            for (let index = 0; index < count; index += 1) {
-              const item = locator.nth(index);
-              if (await item.isVisible().catch(() => false)) {
-                await item.click();
-                return true;
-              }
-            }
-            return false;
-          }
+              })
+              .filter((item) => item.rect.width > 1 && item.rect.height > 1)
+              .slice(0, 160),
+          });
 
           for (const profile of profiles) {
             const context = await browser.newContext({
               viewport: profile.viewport,
-              userAgent: profile.userAgent,
               isMobile: profile.isMobile,
               hasTouch: profile.hasTouch,
               locale: "zh-CN",
@@ -177,146 +114,120 @@ jobs:
                   localStorage.setItem("perseids-locations-v1", JSON.stringify(locations));
                 }
               } catch {
-                // about:blank and blocked third-party storage are harmless.
+                // about:blank and foreign origins may not expose storage.
               }
             }, seedLocations);
 
-            const profileReport = {
-              id: profile.id,
-              viewport: profile.viewport,
-              pages: [],
-            };
-
+            const profileReport = { id: profile.id, viewport: profile.viewport, pages: [] };
             for (const route of routes) {
               const page = await context.newPage();
-              const consoleErrors = [];
-              const failedRequests = [];
-              page.on("console", (message) => {
-                if (message.type() === "error") consoleErrors.push(message.text());
-              });
-              page.on("pageerror", (error) => consoleErrors.push(error.message));
-              page.on("requestfailed", (request) => {
-                failedRequests.push({
-                  url: request.url(),
-                  error: request.failure()?.errorText ?? "unknown",
-                });
-              });
-
-              const targetUrl = route.absoluteUrl ?? `${baseUrl}${route.path}`;
-              const startedAt = Date.now();
-              let navigationError = null;
-              let responseStatus = null;
-              try {
-                const response = await page.goto(targetUrl, {
-                  waitUntil: "domcontentloaded",
-                  timeout: 120000,
-                });
-                responseStatus = response?.status() ?? null;
-              } catch (error) {
-                navigationError = error instanceof Error ? error.message : String(error);
-              }
-
-              await page
-                .locator(".leaflet-container")
-                .first()
-                .waitFor({ state: "visible", timeout: 30000 })
-                .catch(() => undefined);
-              await page.waitForTimeout(route.waitMs);
-              await page
-                .evaluate(async () => {
-                  if (document.fonts?.ready) await document.fonts.ready;
-                })
-                .catch(() => undefined);
-
-              const screenshotPath = `${outputDir}/${profile.id}-${route.id}-full.png`;
-              await page.screenshot({ path: screenshotPath, fullPage: true });
               const pageReport = {
                 id: route.id,
                 label: route.label,
-                requestedUrl: targetUrl,
-                finalUrl: page.url(),
-                responseStatus,
-                navigationError,
-                durationMs: Date.now() - startedAt,
-                screenshot: screenshotPath,
-                consoleErrors,
-                failedRequests: failedRequests.slice(0, 100),
-                metrics: await page.evaluate(evaluateMetrics),
+                requestedUrl: route.url,
+                responseStatus: null,
+                finalUrl: null,
+                navigationError: null,
+                consoleErrors: [],
+                failedRequests: [],
+                screenshot: null,
+                metrics: null,
                 states: [],
+                interactionFindings: [],
               };
+              page.on("console", (message) => {
+                if (message.type() === "error") pageReport.consoleErrors.push(message.text());
+              });
+              page.on("pageerror", (error) => pageReport.consoleErrors.push(error.message));
+              page.on("requestfailed", (request) => pageReport.failedRequests.push({
+                url: request.url(), error: request.failure()?.errorText ?? "unknown",
+              }));
 
-              if (profile.id === "mobile-390" && route.id === "01-home-selected") {
-                for (const panel of ["layers", "places", "cloud", "recommendations"]) {
-                  const trigger = page.getByTestId(`mobile-map-panel-open-${panel}`);
-                  if (!(await trigger.isVisible().catch(() => false))) continue;
-                  await trigger.click();
-                  await page.getByTestId("mobile-map-panel-drawer").waitFor({ state: "visible", timeout: 10000 });
-                  await page.waitForTimeout(1000);
-                  const statePath = `${outputDir}/${profile.id}-${route.id}-${panel}.png`;
-                  await page.screenshot({ path: statePath, fullPage: false });
-                  pageReport.states.push({ id: panel, screenshot: statePath, metrics: await page.evaluate(evaluateMetrics) });
-                  await page.getByRole("button", { name: "关闭地图工具侧边栏" }).last().click();
-                  await page.waitForTimeout(300);
+              try {
+                const response = await page.goto(route.url, { waitUntil: "domcontentloaded", timeout: 120000 });
+                pageReport.responseStatus = response?.status() ?? null;
+                await page.locator(".leaflet-container").first().waitFor({ state: "visible", timeout: 30000 }).catch(() => undefined);
+                await page.waitForTimeout(route.waitMs);
+                await page.evaluate(async () => { if (document.fonts?.ready) await document.fonts.ready; }).catch(() => undefined);
+                pageReport.finalUrl = page.url();
+                pageReport.metrics = await page.evaluate(metrics);
+                pageReport.screenshot = `${outputDir}/${profile.id}-${route.id}-full.png`;
+                await page.screenshot({ path: pageReport.screenshot, fullPage: true });
+
+                if (route.id === "04-planner-populated") {
+                  const detailButton = page.locator(".detail-cta").first();
+                  if (await detailButton.isVisible().catch(() => false)) {
+                    await detailButton.click({ force: true, timeout: 8000 });
+                    await page.locator(".detail-drawer").waitFor({ state: "visible", timeout: 15000 }).catch(() => undefined);
+                    await page.waitForTimeout(1800);
+                    const detailPath = `${outputDir}/${profile.id}-${route.id}-detail.png`;
+                    await page.screenshot({ path: detailPath, fullPage: false });
+                    const state = { id: "detail", screenshot: detailPath, metrics: await page.evaluate(metrics) };
+                    const closeButton = page.getByRole("button", { name: "关闭详情" }).first();
+                    if (await closeButton.isVisible().catch(() => false)) {
+                      try {
+                        await closeButton.click({ timeout: 3500 });
+                      } catch (error) {
+                        const message = error instanceof Error ? error.message : String(error);
+                        state.closeButtonBlocked = message;
+                        pageReport.interactionFindings.push("详情关闭按钮被顶部控件拦截点击；改用 Escape 关闭");
+                        await page.keyboard.press("Escape");
+                      }
+                    }
+                    pageReport.states.push(state);
+                    await page.waitForTimeout(600);
+                  }
+
+                  const matrixButton = page.getByRole("button", { name: "对比", exact: true }).first();
+                  if (await matrixButton.isVisible().catch(() => false)) {
+                    await matrixButton.click({ force: true, timeout: 8000 });
+                    await page.waitForTimeout(1600);
+                    const matrixPath = `${outputDir}/${profile.id}-${route.id}-matrix-full.png`;
+                    await page.screenshot({ path: matrixPath, fullPage: true });
+                    pageReport.states.push({ id: "matrix", screenshot: matrixPath, metrics: await page.evaluate(metrics) });
+                  }
                 }
+              } catch (error) {
+                pageReport.navigationError = error instanceof Error ? error.message : String(error);
+                const failurePath = `${outputDir}/${profile.id}-${route.id}-failure.png`;
+                await page.screenshot({ path: failurePath, fullPage: true }).catch(() => undefined);
+                pageReport.failureScreenshot = failurePath;
               }
 
-              if (route.id === "04-planner-populated") {
-                const detailOpened = await clickFirstVisible(page.locator(".detail-cta"));
-                if (detailOpened) {
-                  await page.locator(".detail-drawer").waitFor({ state: "visible", timeout: 15000 }).catch(() => undefined);
-                  await page.waitForTimeout(2000);
-                  const detailPath = `${outputDir}/${profile.id}-${route.id}-detail.png`;
-                  await page.screenshot({ path: detailPath, fullPage: false });
-                  pageReport.states.push({ id: "detail", screenshot: detailPath, metrics: await page.evaluate(evaluateMetrics) });
-                  await clickFirstVisible(page.getByRole("button", { name: "关闭详情" }));
-                  await page.waitForTimeout(800);
-                }
-
-                const matrixOpened = await clickFirstVisible(page.getByRole("button", { name: "对比", exact: true }));
-                if (matrixOpened) {
-                  await page.waitForTimeout(1800);
-                  const matrixPath = `${outputDir}/${profile.id}-${route.id}-matrix-full.png`;
-                  await page.screenshot({ path: matrixPath, fullPage: true });
-                  pageReport.states.push({ id: "matrix", screenshot: matrixPath, metrics: await page.evaluate(evaluateMetrics) });
-                }
-              }
-
+              pageReport.failedRequests = pageReport.failedRequests.slice(0, 100);
               profileReport.pages.push(pageReport);
+              await fs.writeFile(`${outputDir}/audit-report.partial.json`, JSON.stringify(report, null, 2), "utf8");
               await page.close();
             }
-
             report.profiles.push(profileReport);
             await context.close();
           }
 
           await browser.close();
           await fs.writeFile(`${outputDir}/audit-report.json`, JSON.stringify(report, null, 2), "utf8");
-
-          const lines = [
-            "# 逐星线上 UI 典型任务态视觉审计采集",
+          await fs.writeFile(`${outputDir}/README.md`, [
+            "# 逐星线上 UI 典型任务态视觉审计",
             "",
-            `- 生成时间：${report.generatedAt}`,
-            `- 线上地址：${baseUrl}`,
-            "- 桌面视口：1440 × 1000",
-            "- 手机视口：390 × 844",
-            "- 观星计划预置：牵牛岗、太子尖、百丈岭、天荒坪、四明山",
+            `生成时间：${report.generatedAt}`,
             "",
-          ];
-          for (const profile of report.profiles) {
-            lines.push(`## ${profile.id}`, "");
-            for (const item of profile.pages) {
-              lines.push(`- ${item.label}: HTTP ${item.responseStatus ?? "n/a"}; 横向溢出 ${item.metrics.horizontalOverflow ? "是" : "否"}; 截图 \`${item.screenshot}\``);
-              for (const state of item.states) lines.push(`  - 状态 ${state.id}: \`${state.screenshot}\``);
-            }
-            lines.push("");
-          }
-          await fs.writeFile(`${outputDir}/README.md`, lines.join("\n"), "utf8");
+            ...report.profiles.flatMap((profile) => [
+              `## ${profile.id}`,
+              "",
+              ...profile.pages.flatMap((page) => [
+                `- ${page.label}: HTTP ${page.responseStatus ?? "n/a"}; 横向溢出 ${page.metrics?.horizontalOverflow ? "是" : "否"}; 截图 ${page.screenshot ?? page.failureScreenshot ?? "无"}`,
+                ...page.states.map((state) => `  - ${state.id}: ${state.screenshot}`),
+                ...page.interactionFindings.map((finding) => `  - 交互缺陷：${finding}`),
+              ]),
+              "",
+            ]),
+          ].join("\n"), "utf8");
           NODE
 
       - name: Upload visual audit evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ui-visual-audit-${{ github.run_id }}
           path: ui-audit-output
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
