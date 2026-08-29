@@ -222,6 +222,11 @@ export default function ObservingMapControl({
           <option value="custom" disabled>自定义档位</option>
         </select>
       </label>
+      <small className="observing-bortle-legend">
+        Bortle 是 1–9 级夜空亮度分级，数字越小越暗、越适合星空摄影：
+        B1 极佳暗夜（银河细节清晰）· B2 典型自然暗夜 · B3 乡村夜空 · B4 乡村/郊区过渡（银河可见但发灰）。
+        本库只收录 B1–B4，它描述的是光污染本底，与今晚天气评分无关。
+      </small>
       {isSitesWorkspace ? (
         <div className="observing-baseline-stats" aria-label="全国点位 Bortle 本底分布">
           <span className="observing-baseline-title">本底分布 · 全国点位库</span>

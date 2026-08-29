@@ -3796,3 +3796,28 @@
     top: 148px;
   }
 }
+
+/* 2026-08-29 header pass: 品牌 + 四个工作区成组居中，右侧数据源入口保持钉边；
+   四个 tab 等宽并列，提示文案不再造成宽度不均。 */
+.topbar .brand-block { margin-left: auto; }
+.topbar .nav-tabs { margin-right: auto; flex: 0 1 auto; min-width: 0; }
+.topbar .nav-tabs .nav-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+.topbar .nav-tabs .nav-tab small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 900px) {
+  /* 回归堆叠布局：品牌占整行，tab 等宽铺满。 */
+  .topbar .brand-block { margin-left: 0; }
+  .topbar .nav-tabs { margin-right: 0; width: 100%; }
+}
+
+.observing-bortle-legend {
+  color: var(--muted-2);
+  font-size: 10px;
+  line-height: 1.55;
+}
