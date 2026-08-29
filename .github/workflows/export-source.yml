@@ -1,0 +1,27 @@
+name: Export source
+
+on:
+  push:
+    branches:
+      - audit/ui-information-architecture-20260829
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package source
+        run: |
+          tar --exclude=.git --exclude=node_modules --exclude=.next \
+            -czf /tmp/star-photo-source.tar.gz .
+      - name: Upload source
+        uses: actions/upload-artifact@v4
+        with:
+          name: star-photo-source-${{ github.run_id }}
+          path: /tmp/star-photo-source.tar.gz
+          if-no-files-found: error
+          retention-days: 2
