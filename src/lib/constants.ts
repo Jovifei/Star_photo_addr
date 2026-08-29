@@ -68,9 +68,13 @@ export const BASEMAP_TILE_URL =
 export const BASEMAP_ATTRIBUTION =
   configuredBasemapAttribution ||
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
-export const BASEMAP_SUBDOMAINS = BASEMAP_TILE_URL.includes("{s}")
-  ? "abcd"
-  : undefined;
+/**
+ * Keep a non-empty subdomain value even when the URL has no `{s}` token.
+ * React-Leaflet forwards explicit `undefined` and overwrites Leaflet's default;
+ * Firefox/WebKit then throw while reading `options.subdomains.length`.
+ * Leaflet simply ignores this option when the URL does not contain `{s}`.
+ */
+export const BASEMAP_SUBDOMAINS = "abcd";
 export const BASEMAP_TILE_CLASS_NAME = BASEMAP_USES_DEFAULT_OSM
   ? "base-map-tile base-map-tile--darkened"
   : "base-map-tile";
