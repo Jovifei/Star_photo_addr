@@ -90,11 +90,21 @@
   letter-spacing: 0.1em;
 }
 
+.planner-root .app-header-controls {
+  min-width: max-content;
+  flex-wrap: nowrap;
+}
+
 .planner-root .desktop-nav {
+  flex: 0 0 auto;
+  min-width: max-content;
   gap: 3px;
+  flex-wrap: nowrap;
 }
 
 .planner-root .desktop-nav button {
+  flex: 0 0 auto;
+  white-space: nowrap;
   min-height: 36px;
   padding: 8px 11px;
   border: 1px solid transparent;

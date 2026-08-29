@@ -13,8 +13,10 @@ import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useStore } from "@/lib/store";
 import {
-  CARTO_ATTRIBUTION,
-  CARTO_DARK_NOLABELS_URL,
+  BASEMAP_ATTRIBUTION,
+  BASEMAP_SUBDOMAINS,
+  BASEMAP_TILE_CLASS_NAME,
+  BASEMAP_TILE_URL,
 } from "@/lib/constants";
 import WorldAtlasOverlay from "@/components/WorldAtlasOverlay";
 import BoundaryLayers from "@/components/BoundaryLayers";
@@ -112,7 +114,7 @@ export interface MapCanvasProps {
  * Reusable Leaflet map canvas.
  *
  * v2 changes:
- *   - Basemap switched from CARTO `dark_all` to `dark_nolabels` (no English labels).
+ *   - Basemap is configured centrally; the zero-config fallback is OSM with a dark client filter.
  *   - `ChineseLabelLayer` (Tianditu cia_w) overlaid for Chinese annotations.
  *   - `layers` props allow callers to toggle VIIRS / cloud / boundary / recommendation
  *     layers independently. The `/viirs` recommendation page uses this to show only
@@ -157,9 +159,10 @@ export default function MapCanvas({
     >
       {/* z-index 1: dark basemap without labels */}
       <TileLayer
-        url={CARTO_DARK_NOLABELS_URL}
-        subdomains="abcd"
-        attribution={CARTO_ATTRIBUTION}
+        url={BASEMAP_TILE_URL}
+        subdomains={BASEMAP_SUBDOMAINS}
+        attribution={BASEMAP_ATTRIBUTION}
+        className={BASEMAP_TILE_CLASS_NAME}
         maxZoom={19}
       />
       {/* z-index 10: Chinese annotation labels (Tianditu cia_w) */}

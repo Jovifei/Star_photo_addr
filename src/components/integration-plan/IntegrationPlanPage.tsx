@@ -24,7 +24,7 @@ interface AuditRow {
 }
 
 const auditRows: AuditRow[] = [
-  { title: "地图与光污染图层", status: "已覆盖", target: "Leaflet、VIIRS 2023、暗色底图、省界与地点标记", current: "已接入 242 个地点和 35 个省界；VIIRS 失败自动降级 CARTO" },
+  { title: "地图与光污染图层", status: "已覆盖", target: "Leaflet、VIIRS 2023、暗色底图、省界与地点标记", current: "已接入 242 个地点和 35 个省界；VIIRS 失败自动降级基础底图" },
   { title: "筛选与搜索", status: "已覆盖", target: "Bortle 1–4、标签模式、摄影/肉眼、地点与日期", current: "筛选、搜索结果、今晚及未来 4 天均已联动地图和统计" },
   { title: "天气与评分", status: "已覆盖", target: "33 小时 Open-Meteo、分层云量、降水、风、评级", current: "同源 API、空值 `—`、陈旧/错误状态和评分风险链已统一" },
   { title: "地点详情与复查", status: "已覆盖", target: "底部详情、逐小时表、图表、风险、复查", current: "详情支持上下拖动、内部滚动、复查清单和数据状态" },

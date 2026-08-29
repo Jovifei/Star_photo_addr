@@ -54,7 +54,7 @@ export default function FinderLegend({ collapsed, mode, viirsEnabled, weatherSta
           <span>{refreshedAt ? `最近刷新：${refreshedAt}` : "等待首轮请求"}</span>
         </div>
         <div className={styles.sourceNotes}>
-          <span><Layers size={11} aria-hidden="true" /> {viirsEnabled ? FINDER_MAP_SOURCE : "CARTO 暗色底图（降级/关闭 VIIRS）"}</span>
+          <span><Layers size={11} aria-hidden="true" /> {viirsEnabled ? FINDER_MAP_SOURCE : "暗色基础地图（降级/关闭 VIIRS）"}</span>
           <span>天气：Open-Meteo · 日期：{selectedDate} · 夜间：19:00–次日 04:00</span>
           <span>地点来源：{FINDER_SOURCE}</span>
           <span>颜色 + 文字共同表达评级，缺失数据显示为 —</span>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
 import { buildPlannerHref } from "@/lib/utils";
+import { sameLocationIdentity } from "@/lib/locationIdentity";
 import type { CityCandidate } from "@/lib/types";
 import ObservationDetails from "@/components/ObservationDetails";
 import DecisionBrief from "@/components/DecisionBrief";
@@ -119,7 +120,12 @@ export default function SidePanel({ widthControls }: { widthControls: SidePanelW
               sample={state.sample}
               evaluation={evaluation}
               location={state.selectedLocation}
-              isCandidate={Boolean(state.selectedLocation && state.candidates.some((candidate) => candidate.id === state.selectedLocation?.id))}
+              isCandidate={Boolean(
+                state.selectedLocation &&
+                  state.candidates.some((candidate) =>
+                    sameLocationIdentity(candidate, state.selectedLocation),
+                  ),
+              )}
               onAddCandidate={state.selectedLocation ? () => addCandidate(state.selectedLocation as NonNullable<typeof state.selectedLocation>) : undefined}
             />
             <DecisionBrief evaluation={evaluation} />

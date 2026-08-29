@@ -12,7 +12,12 @@ import {
 import L from "leaflet";
 import type { FeatureCollection, GeoJsonObject, Geometry } from "geojson";
 import { useEffect, useMemo, useState } from "react";
-import { CARTO_ATTRIBUTION, CARTO_DARK_NOLABELS_URL } from "@/lib/constants";
+import {
+  BASEMAP_ATTRIBUTION,
+  BASEMAP_SUBDOMAINS,
+  BASEMAP_TILE_CLASS_NAME,
+  BASEMAP_TILE_URL,
+} from "@/lib/constants";
 import { evaluateFinderLocation, ratingColor } from "@/lib/stargazingFinder";
 import type { FinderLocation, FinderMode, FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
 import { FINDER_GEOJSON_URL, FINDER_MAP_SOURCE } from "./finderData";
@@ -114,7 +119,13 @@ export default function FinderMap({ locations, weather, selectedId, targetDate, 
   return (
     <div className={styles.mapShell}>
       <MapContainer className={styles.leafletMap} center={[36, 105]} zoom={4} minZoom={3} maxZoom={18} zoomControl={false} worldCopyJump={false} preferCanvas attributionControl>
-        <TileLayer url={CARTO_DARK_NOLABELS_URL} subdomains="abcd" attribution={CARTO_ATTRIBUTION} opacity={usingFallback ? 0.94 : 0.56} />
+        <TileLayer
+          url={BASEMAP_TILE_URL}
+          subdomains={BASEMAP_SUBDOMAINS}
+          attribution={BASEMAP_ATTRIBUTION}
+          className={BASEMAP_TILE_CLASS_NAME}
+          opacity={usingFallback ? 0.94 : 0.56}
+        />
         {viirsEnabled && !viirsFailed && <TileLayer url={VIIRS_WMTS_URL} attribution={FINDER_MAP_SOURCE} opacity={0.98} maxZoom={18} eventHandlers={{ tileerror: onViirsTileError }} />}
         <ProvinceLayers boundaries={boundaries} />
         <ViewportSync selectedId={selectedId} locations={locations} />
@@ -141,9 +152,9 @@ export default function FinderMap({ locations, weather, selectedId, targetDate, 
       </MapContainer>
       <div className={styles.mapModeBadge}>
         <span className={styles.livePulse} aria-hidden="true" />
-        {viirsEnabled && !viirsFailed ? "VIIRS 2023 光污染底图" : "CARTO 暗色底图"}
+        {viirsEnabled && !viirsFailed ? "VIIRS 2023 光污染底图" : "暗色基础地图"}
       </div>
-      <div className={styles.mapAttributionNote}>{viirsEnabled && !viirsFailed ? FINDER_MAP_SOURCE : "CARTO 暗色底图 · VIIRS 不可用或已关闭"}</div>
+      <div className={styles.mapAttributionNote}>{viirsEnabled && !viirsFailed ? FINDER_MAP_SOURCE : "暗色基础地图 · VIIRS 不可用或已关闭"}</div>
       <div className={styles.mapHint}><span>点击地点标记</span>查看详情 · 地图可拖动缩放</div>
     </div>
   );

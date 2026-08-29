@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
   await installOpenMeteoMock(page, fixture);
   await installGeocodingMock(page);
   await installNextApiMock(page, fixture);
-  await page.route(/https:\/\/[^/]+\.basemaps\.cartocdn\.com\/.*/, (route) => route.fulfill({
+  await page.route(/https:\/\/(?:[^/]+\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org)\/.*/, (route) => route.fulfill({
     status: 200,
     contentType: "image/png",
     body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"),

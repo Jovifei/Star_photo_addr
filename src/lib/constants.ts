@@ -48,16 +48,32 @@ export const WORLD_ATLAS_IMAGE = "/images/perseids/data/world-atlas-2015.webp";
 export const CITY_CANDIDATES_URL = "/images/perseids/data/cities.json";
 export const VIIRS_META_URL = "/images/perseids/data/vnp46a4-2024.json";
 
-/** CARTO dark basemap with labels (original — kept as fallback). */
-export const CARTO_DARK_URL =
-  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+/**
+ * Configurable raster basemap. The former anonymous CARTO endpoint now paints
+ * an "API KEY REQUIRED" watermark over every map. Until a controlled vector
+ * basemap is introduced, the safe zero-config fallback is the standard OSM
+ * raster with a client-side dark treatment and mandatory attribution.
+ *
+ * Production operators can override both values at build time. Do not point a
+ * public deployment at a tile service unless its usage policy permits it.
+ */
+const configuredBasemapUrl =
+  process.env.NEXT_PUBLIC_BASEMAP_TILE_URL?.trim() ?? "";
+const configuredBasemapAttribution =
+  process.env.NEXT_PUBLIC_BASEMAP_ATTRIBUTION?.trim() ?? "";
 
-/** CARTO dark basemap WITHOUT labels (used as v2 base layer). */
-export const CARTO_DARK_NOLABELS_URL =
-  "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png";
-
-export const CARTO_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+export const BASEMAP_USES_DEFAULT_OSM = configuredBasemapUrl.length === 0;
+export const BASEMAP_TILE_URL =
+  configuredBasemapUrl || "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+export const BASEMAP_ATTRIBUTION =
+  configuredBasemapAttribution ||
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
+export const BASEMAP_SUBDOMAINS = BASEMAP_TILE_URL.includes("{s}")
+  ? "abcd"
+  : undefined;
+export const BASEMAP_TILE_CLASS_NAME = BASEMAP_USES_DEFAULT_OSM
+  ? "base-map-tile base-map-tile--darkened"
+  : "base-map-tile";
 
 /**
  * Tianditu cia_w (imagery annotation) tile URL template.

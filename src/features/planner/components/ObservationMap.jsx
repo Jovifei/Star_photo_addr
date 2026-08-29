@@ -16,6 +16,12 @@ import { searchChinaPlaces } from "../lib/geocoding";
 import { fetchSurfaceForecasts } from "../lib/openMeteo";
 import { evaluateNight, statusMeta } from "../lib/scoring";
 import { formatNightLabel } from "../lib/time";
+import {
+  BASEMAP_ATTRIBUTION,
+  BASEMAP_SUBDOMAINS,
+  BASEMAP_TILE_CLASS_NAME,
+  BASEMAP_TILE_URL,
+} from "@/lib/constants";
 
 const DEFAULT_CENTER = [29.7, 120.1];
 
@@ -212,8 +218,10 @@ export function ObservationMap({ locations, forecasts, days, nightKeys, selected
           )}
           <MapContainer center={DEFAULT_CENTER} zoom={7} minZoom={3} className="observation-map" aria-label="观测点位地图" zoomControl>
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+              attribution={BASEMAP_ATTRIBUTION}
+              url={BASEMAP_TILE_URL}
+              subdomains={BASEMAP_SUBDOMAINS}
+              className={BASEMAP_TILE_CLASS_NAME}
             />
             <ChineseLabelLayer />
             <BoundaryLayers />

@@ -52,6 +52,11 @@ import {
 } from "@/lib/bortleFilters";
 import { MAX_SHORTLIST_SIZE } from "@/lib/observingSites";
 import { normalizeLocationTexts } from "@/lib/chineseText";
+import {
+  dedupeLocationIdentities,
+  sameLocationIdentity,
+  stableSampleLocationId,
+} from "@/lib/locationIdentity";
 
 interface AppState {
   sample: DarkSkySample | null;
@@ -173,18 +178,17 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_CANDIDATES":
       return {
         ...state,
-        candidates: [
-          ...action.candidates.slice(0, MAX_SHORTLIST_SIZE),
-          ...state.candidates.filter(
-            (candidate) =>
-              !action.candidates.some(
-                (incoming) => incoming.id === candidate.id,
-              ),
-          ),
-        ].slice(0, MAX_SHORTLIST_SIZE),
+        candidates: dedupeLocationIdentities([
+          ...action.candidates,
+          ...state.candidates,
+        ]).slice(0, MAX_SHORTLIST_SIZE),
       };
     case "ADD_CANDIDATE":
-      if (state.candidates.some((candidate) => candidate.id === action.candidate.id)) {
+      if (
+        state.candidates.some((candidate) =>
+          sameLocationIdentity(candidate, action.candidate),
+        )
+      ) {
         return state;
       }
       return {
@@ -507,7 +511,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const selectedModel = model ?? state.cloudState.model;
       const requestId = ++latestForecastRequestRef.current;
       const location: Location = {
-        id: `custom-${Date.now()}`,
+        id: stableSampleLocationId(latitude, longitude),
         name: name ?? "取样点",
         latitude,
         longitude,
@@ -615,6 +619,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           name: location.name,
           longitude: location.longitude,
           latitude: location.latitude,
+          elevation: location.elevation ?? null,
           bortle: location.bortle ?? 0,
           kind: "自定义",
           note: location.description ?? location.area ?? "",

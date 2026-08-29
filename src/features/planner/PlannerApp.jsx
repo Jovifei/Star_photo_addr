@@ -37,6 +37,10 @@ import { useStore } from "@/lib/store";
 import { OBSERVING_SITES, observingSiteToLocation, recommendationLabel } from "@/lib/observingSites";
 import { rankNearbySitesWithFallback } from "@/lib/locationPresentation";
 import { toSimplifiedChinese } from "@/lib/chineseText";
+import {
+  dedupeLocationIdentities,
+  sameLocationIdentity,
+} from "@/lib/locationIdentity";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "今晚", icon: Binoculars },
@@ -56,9 +60,10 @@ const PLANNER_NEARBY_KEY = "perseids-planner-nearby-v1";
 // 0 关闭；开启后推荐站点会并入排名，但不会写入本机点位列表。
 const NEARBY_RADIUS_OPTIONS = [
   { value: 0, label: "关闭" },
+  { value: 10, label: "10 km" },
+  { value: 50, label: "50 km" },
   { value: 100, label: "100 km" },
   { value: 200, label: "200 km" },
-  { value: 300, label: "300 km" },
 ];
 const NEARBY_RECOMMEND_LIMIT = 8;
 const NEARBY_MINIMUM_RESULTS = 3;
@@ -204,15 +209,17 @@ function readProductBridge() {
 }
 
 export function App() {
-  const { state: sharedState, selectLocation: selectSharedLocation, selectNight: selectSharedNight, setCloud: setSharedCloud, addCandidate } = useStore();
+  const {
+    state: sharedState,
+    selectLocation: selectSharedLocation,
+    selectNight: selectSharedNight,
+    setCloud: setSharedCloud,
+    addCandidate,
+  } = useStore();
   const bridge = useMemo(() => readProductBridge(), []);
-  const [customLocations, setCustomLocations] = useState(() => {
-    const saved = readCustomLocations();
-    if (!bridge.location || saved.some((item) => item.id === bridge.location.id)) {
-      return saved;
-    }
-    return [...saved, bridge.location];
-  });
+  const [customLocations, setCustomLocations] = useState(() =>
+    dedupeLocationIdentities(readCustomLocations()),
+  );
   const locations = useMemo(() => {
     const sharedLocations = sharedState.candidates.map((candidate) => {
       const site = OBSERVING_SITES.find((item) => item.id === candidate.id);
@@ -229,9 +236,13 @@ export function App() {
       };
     });
     const inbound = bridge.location ? [bridge.location] : [];
-    return [...sharedLocations, ...inbound, ...customLocations].filter(
-      (location, index, all) => all.findIndex((item) => item.id === location.id) === index,
-    );
+    // A deep-link record carries the freshest name/elevation, so it wins when
+    // older persisted records describe the same coordinates under another ID.
+    return dedupeLocationIdentities([
+      ...inbound,
+      ...sharedLocations,
+      ...customLocations,
+    ]);
   }, [bridge.location, customLocations, sharedState.candidates]);
   const [days, setDays] = useState(7);
   // 预测主题（星空/云海）是跨产品共享的观察口径，不再作为本页局部参数。
@@ -341,7 +352,8 @@ export function App() {
       });
     }
     if (bridge.location) {
-      addCandidate(bridge.location);
+      // A deep link participates in this planning session but is not silently
+      // persisted as a user candidate. Saving remains an explicit action.
       void selectSharedLocation(bridge.location, bridge.model);
     }
     // The bridge is a mount-time protocol; user edits thereafter remain local
@@ -497,8 +509,12 @@ export function App() {
 
   function addLocation(form) {
     const nextLocation = createLocation(form);
+    if (locations.some((location) => sameLocationIdentity(location, nextLocation))) {
+      setError("该坐标已在候选列表中；未重复保存同一观测点。");
+      return;
+    }
     addCandidate(nextLocation);
-    const next = [...customLocations, nextLocation];
+    const next = dedupeLocationIdentities([...customLocations, nextLocation]);
     setCustomLocations(next);
     writeCustomLocations(next);
     setError("新点位已保存到本机；点击刷新获取天气数据。");
@@ -650,7 +666,7 @@ function LoadingState() {
 }
 
 function EmptyState({ hasLocations, onRefresh }) {
-  return <section className="empty-state"><Cloud size={36} /><h2>{hasLocations ? "还没有天气数据" : "还没有候选观测点"}</h2><p>{hasLocations ? "连接网络后刷新，页面会保留最近一次成功数据。" : "请先回到今夜观测地图，点击地点并加入观星计划；这里会比较今晚、3/5/7 天。"}</p>{!hasLocations && <Link className="primary-button" href="/">回到今夜观测</Link>}<button className="secondary-button" type="button" onClick={onRefresh}>重新读取</button></section>;
+  return <section className="empty-state"><Cloud size={36} /><h2>{hasLocations ? "还没有天气数据" : "还没有候选观测点"}</h2><p>{hasLocations ? "连接网络后刷新，页面会保留最近一次成功数据。" : "请先从今夜观测或暗夜选址加入地点。观星计划会比较今晚及未来 3、5、7 个观测夜，并生成地点排行。"}</p>{!hasLocations && <Link className="primary-button" href="/">回到今夜观测</Link>}<button className="secondary-button" type="button" onClick={onRefresh}>重新读取</button></section>;
 }
 
 function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mode, onOpenDetail, isSpecifiedNight, onReturnTonight, isLinkedLocation, observationSnapshot, snapshotStartNight, nearby }) {

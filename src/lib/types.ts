@@ -363,6 +363,8 @@ export interface CityCandidate {
   name: string;
   longitude: number;
   latitude: number;
+  /** Optional user/curated elevation in metres; old persisted records may omit it. */
+  elevation?: number | null;
   bortle: number;
   kind: string;
   note: string;

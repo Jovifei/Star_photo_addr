@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
   await installOpenMeteoMock(page, fixture);
   await installGeocodingMock(page);
   await installNextApiMock(page, fixture);
-  await page.route(/https:\/\/[^/]+\.basemaps\.cartocdn\.com\/.*/, (route) =>
+  await page.route(/https:\/\/(?:[^/]+\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org)\/.*/, (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: onePixelPng }),
   );
   await page.route(/https:\/\/lpm\.darkmap\.cn\/.*/, (route) =>

@@ -1,3 +1,14 @@
+# UI information architecture batch 0 (2026-08-29)
+
+- [x] Replace the watermarked anonymous CARTO default with one configurable basemap boundary and a zero-config OSM fallback.
+- [x] Deduplicate candidate locations by stable coordinate identity across Store, deep links and Planner.
+- [x] Stop Planner deep links from silently persisting a candidate.
+- [x] Repair blocker-only copy, Planner empty copy and header chip wrapping.
+- [x] Remove the duplicate fixed nearby-ranking overlay; keep one in-flow 10/50/100/200 km control.
+- [x] Add unit/E2E regression coverage and engineering change record.
+- [ ] Complete remote quality, E2E, live-data and container gates on the branch.
+- [ ] Capture and review desktop/mobile screenshots, then mark the PR ready.
+
 # Website clone: stargazing-finder-dark (2026-08-12)
 
 ## Full product integrity fixes (2026-08-26)
