@@ -1,0 +1,40 @@
+name: Apply UI foundation batch 0
+
+on:
+  push:
+    branches:
+      - fix/ui-foundation-batch0-20260829
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-ui-foundation-batch0
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply reviewed batch-0 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/patches/ui-foundation-batch0.part* > /tmp/ui-foundation-batch0.patch.xz.b64
+          base64 --decode /tmp/ui-foundation-batch0.patch.xz.b64 \
+            | xz --decompress > /tmp/ui-foundation-batch0.patch
+          git apply --index --whitespace=error /tmp/ui-foundation-batch0.patch
+          rm -rf .github/patches
+          rm .github/workflows/apply-ui-foundation-batch0.yml
+          git add -A
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'fix(ui): establish clean basemap and candidate identity foundation'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
