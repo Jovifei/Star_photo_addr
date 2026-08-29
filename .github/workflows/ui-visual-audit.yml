@@ -11,7 +11,7 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Capture deployed product pages
+      - name: Capture populated product workflows
         env:
           AUDIT_BASE_URL: https://photo.joviluma.com
         run: |
@@ -38,26 +38,35 @@ jobs:
 
           const baseUrl = process.env.AUDIT_BASE_URL;
           const outputDir = "ui-audit-output";
+          const selectedQuery =
+            "lat=30.1734&lng=118.9057&name=%E5%A4%AA%E5%AD%90%E5%B0%96&" +
+            "elevation=1557&model=icon&overlay=forecast-cloud";
+          const seedLocations = [
+            { id: "qianniugang", name: "牵牛岗", latitude: 30.026, longitude: 119.007, elevation: 1489.9, timezone: "Asia/Shanghai", source: "审计点位" },
+            { id: "taizijian", name: "太子尖", latitude: 30.1734, longitude: 118.9057, elevation: 1557, timezone: "Asia/Shanghai", source: "审计点位" },
+            { id: "baizhangling", name: "百丈岭", latitude: 30.1839, longitude: 119.0129, elevation: 1558, timezone: "Asia/Shanghai", source: "审计点位" },
+            { id: "tianhuangping", name: "天荒坪", latitude: 30.4694, longitude: 119.5978, elevation: 958.4, timezone: "Asia/Shanghai", source: "审计点位" },
+            { id: "simingshan", name: "四明山", latitude: 29.6352, longitude: 120.9819, elevation: 1018, timezone: "Asia/Shanghai", source: "审计点位" },
+          ];
           const routes = [
-            { id: "01-home", label: "今夜观测", path: "/" },
-            { id: "02-sites", label: "暗夜选址", path: "/sites" },
-            { id: "03-fireglow", label: "火烧云", path: "/fireglow" },
-            { id: "04-planner", label: "观星计划", path: "/planner" },
+            { id: "00-reference", label: "参考站", absoluteUrl: "https://perseids.giraffetree.cn/", waitMs: 18000 },
+            { id: "01-home-selected", label: "今夜观测 · 已选地点", path: `/?${selectedQuery}`, waitMs: 24000 },
+            { id: "02-sites-selected", label: "暗夜选址 · 已选地点", path: `/sites?${selectedQuery}`, waitMs: 24000 },
+            { id: "03-fireglow", label: "火烧云", path: "/fireglow", waitMs: 22000 },
+            { id: "04-planner-populated", label: "观星计划 · 已填充", path: `/planner?${selectedQuery}`, waitMs: 32000 },
           ];
           const profiles = [
             {
               id: "desktop",
               viewport: { width: 1440, height: 1000 },
-              userAgent:
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36",
+              userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36",
               isMobile: false,
               hasTouch: false,
             },
             {
               id: "mobile-390",
               viewport: { width: 390, height: 844 },
-              userAgent:
-                "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 Chrome/151 Mobile Safari/537.36",
+              userAgent: "Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 Chrome/151 Mobile Safari/537.36",
               isMobile: true,
               hasTouch: true,
             },
@@ -68,8 +77,86 @@ jobs:
           const report = {
             generatedAt: new Date().toISOString(),
             baseUrl,
+            seededLocations: seedLocations.map(({ id, name }) => ({ id, name })),
             profiles: [],
           };
+
+          const evaluateMetrics = () => {
+            const visible = (element) => {
+              const style = getComputedStyle(element);
+              const rect = element.getBoundingClientRect();
+              return (
+                style.display !== "none" &&
+                style.visibility !== "hidden" &&
+                Number(style.opacity || "1") > 0 &&
+                rect.width > 1 &&
+                rect.height > 1
+              );
+            };
+            const selectors = [
+              "header",
+              "nav",
+              "aside",
+              "[class*='panel']",
+              "[class*='card']",
+              "[class*='control']",
+              "[class*='timeline']",
+              "[class*='legend']",
+              "[class*='filter']",
+              "[class*='drawer']",
+              "[class*='matrix']",
+            ].join(",");
+            const regions = Array.from(document.querySelectorAll(selectors))
+              .filter(visible)
+              .slice(0, 180)
+              .map((element) => {
+                const rect = element.getBoundingClientRect();
+                const style = getComputedStyle(element);
+                return {
+                  tag: element.tagName.toLowerCase(),
+                  className: String(element.className || "").slice(0, 180),
+                  text: String(element.textContent || "")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .slice(0, 240),
+                  rect: {
+                    x: Math.round(rect.x),
+                    y: Math.round(rect.y),
+                    width: Math.round(rect.width),
+                    height: Math.round(rect.height),
+                  },
+                  position: style.position,
+                  zIndex: style.zIndex,
+                };
+              });
+            return {
+              title: document.title,
+              url: location.href,
+              viewport: { width: innerWidth, height: innerHeight },
+              document: {
+                scrollWidth: document.documentElement.scrollWidth,
+                scrollHeight: document.documentElement.scrollHeight,
+                bodyScrollWidth: document.body.scrollWidth,
+                bodyScrollHeight: document.body.scrollHeight,
+              },
+              horizontalOverflow:
+                document.documentElement.scrollWidth > innerWidth + 1 ||
+                document.body.scrollWidth > innerWidth + 1,
+              regions,
+            };
+          };
+
+          async function clickFirstVisible(locator) {
+            const count = await locator.count();
+            for (let index = 0; index < count; index += 1) {
+              const item = locator.nth(index);
+              if (await item.isVisible().catch(() => false)) {
+                await item.click();
+                return true;
+              }
+            }
+            return false;
+          }
 
           for (const profile of profiles) {
             const context = await browser.newContext({
@@ -82,15 +169,17 @@ jobs:
               ignoreHTTPSErrors: true,
               deviceScaleFactor: 1,
             });
-            await context.addInitScript(() => {
+            await context.addInitScript((locations) => {
               try {
                 localStorage.clear();
                 sessionStorage.clear();
+                if (location.hostname === "photo.joviluma.com") {
+                  localStorage.setItem("perseids-locations-v1", JSON.stringify(locations));
+                }
               } catch {
-                // Storage is not available for about:blank; the same script
-                // runs again after the application origin is established.
+                // about:blank and blocked third-party storage are harmless.
               }
-            });
+            }, seedLocations);
 
             const profileReport = {
               id: profile.id,
@@ -113,11 +202,12 @@ jobs:
                 });
               });
 
+              const targetUrl = route.absoluteUrl ?? `${baseUrl}${route.path}`;
               const startedAt = Date.now();
               let navigationError = null;
               let responseStatus = null;
               try {
-                const response = await page.goto(`${baseUrl}${route.path}`, {
+                const response = await page.goto(targetUrl, {
                   waitUntil: "domcontentloaded",
                   timeout: 120000,
                 });
@@ -131,112 +221,63 @@ jobs:
                 .first()
                 .waitFor({ state: "visible", timeout: 30000 })
                 .catch(() => undefined);
-              await page.waitForTimeout(route.id === "03-fireglow" ? 20000 : 15000);
+              await page.waitForTimeout(route.waitMs);
               await page
                 .evaluate(async () => {
                   if (document.fonts?.ready) await document.fonts.ready;
                 })
                 .catch(() => undefined);
 
-              const metrics = await page.evaluate(() => {
-                const visible = (element) => {
-                  const style = getComputedStyle(element);
-                  const rect = element.getBoundingClientRect();
-                  return (
-                    style.display !== "none" &&
-                    style.visibility !== "hidden" &&
-                    Number(style.opacity || "1") > 0 &&
-                    rect.width > 1 &&
-                    rect.height > 1
-                  );
-                };
-                const selectors = [
-                  "aside",
-                  "[class*='panel']",
-                  "[class*='card']",
-                  "[class*='control']",
-                  "[class*='timeline']",
-                  "[class*='legend']",
-                  "[class*='filter']",
-                ].join(",");
-                const regions = Array.from(document.querySelectorAll(selectors))
-                  .filter(visible)
-                  .slice(0, 120)
-                  .map((element) => {
-                    const rect = element.getBoundingClientRect();
-                    const style = getComputedStyle(element);
-                    return {
-                      tag: element.tagName.toLowerCase(),
-                      className: String(element.className || "").slice(0, 180),
-                      text: String(element.textContent || "")
-                        .replace(/\s+/g, " ")
-                        .trim()
-                        .slice(0, 220),
-                      rect: {
-                        x: Math.round(rect.x),
-                        y: Math.round(rect.y),
-                        width: Math.round(rect.width),
-                        height: Math.round(rect.height),
-                      },
-                      position: style.position,
-                      zIndex: style.zIndex,
-                    };
-                  });
-                return {
-                  title: document.title,
-                  url: location.href,
-                  viewport: {
-                    width: innerWidth,
-                    height: innerHeight,
-                  },
-                  document: {
-                    scrollWidth: document.documentElement.scrollWidth,
-                    scrollHeight: document.documentElement.scrollHeight,
-                    bodyScrollWidth: document.body.scrollWidth,
-                    bodyScrollHeight: document.body.scrollHeight,
-                  },
-                  horizontalOverflow:
-                    document.documentElement.scrollWidth > innerWidth + 1,
-                  regions,
-                };
-              });
-
               const screenshotPath = `${outputDir}/${profile.id}-${route.id}-full.png`;
               await page.screenshot({ path: screenshotPath, fullPage: true });
-
               const pageReport = {
                 id: route.id,
                 label: route.label,
-                requestedPath: route.path,
+                requestedUrl: targetUrl,
                 finalUrl: page.url(),
                 responseStatus,
                 navigationError,
                 durationMs: Date.now() - startedAt,
                 screenshot: screenshotPath,
                 consoleErrors,
-                failedRequests: failedRequests.slice(0, 80),
-                metrics,
+                failedRequests: failedRequests.slice(0, 100),
+                metrics: await page.evaluate(evaluateMetrics),
+                states: [],
               };
 
-              if (profile.id === "mobile-390" && route.id === "01-home") {
-                pageReport.mobilePanels = [];
+              if (profile.id === "mobile-390" && route.id === "01-home-selected") {
                 for (const panel of ["layers", "places", "cloud", "recommendations"]) {
                   const trigger = page.getByTestId(`mobile-map-panel-open-${panel}`);
                   if (!(await trigger.isVisible().catch(() => false))) continue;
                   await trigger.click();
-                  await page.getByTestId("mobile-map-panel-drawer").waitFor({
-                    state: "visible",
-                    timeout: 10000,
-                  });
+                  await page.getByTestId("mobile-map-panel-drawer").waitFor({ state: "visible", timeout: 10000 });
                   await page.waitForTimeout(1000);
-                  const panelPath = `${outputDir}/${profile.id}-${route.id}-${panel}.png`;
-                  await page.screenshot({ path: panelPath, fullPage: false });
-                  pageReport.mobilePanels.push({ panel, screenshot: panelPath });
-                  await page
-                    .getByRole("button", { name: "关闭地图工具侧边栏" })
-                    .last()
-                    .click();
+                  const statePath = `${outputDir}/${profile.id}-${route.id}-${panel}.png`;
+                  await page.screenshot({ path: statePath, fullPage: false });
+                  pageReport.states.push({ id: panel, screenshot: statePath, metrics: await page.evaluate(evaluateMetrics) });
+                  await page.getByRole("button", { name: "关闭地图工具侧边栏" }).last().click();
                   await page.waitForTimeout(300);
+                }
+              }
+
+              if (route.id === "04-planner-populated") {
+                const detailOpened = await clickFirstVisible(page.locator(".detail-cta"));
+                if (detailOpened) {
+                  await page.locator(".detail-drawer").waitFor({ state: "visible", timeout: 15000 }).catch(() => undefined);
+                  await page.waitForTimeout(2000);
+                  const detailPath = `${outputDir}/${profile.id}-${route.id}-detail.png`;
+                  await page.screenshot({ path: detailPath, fullPage: false });
+                  pageReport.states.push({ id: "detail", screenshot: detailPath, metrics: await page.evaluate(evaluateMetrics) });
+                  await clickFirstVisible(page.getByRole("button", { name: "关闭详情" }));
+                  await page.waitForTimeout(800);
+                }
+
+                const matrixOpened = await clickFirstVisible(page.getByRole("button", { name: "对比", exact: true }));
+                if (matrixOpened) {
+                  await page.waitForTimeout(1800);
+                  const matrixPath = `${outputDir}/${profile.id}-${route.id}-matrix-full.png`;
+                  await page.screenshot({ path: matrixPath, fullPage: true });
+                  pageReport.states.push({ id: "matrix", screenshot: matrixPath, metrics: await page.evaluate(evaluateMetrics) });
                 }
               }
 
@@ -249,27 +290,23 @@ jobs:
           }
 
           await browser.close();
-          await fs.writeFile(
-            `${outputDir}/audit-report.json`,
-            JSON.stringify(report, null, 2),
-            "utf8",
-          );
+          await fs.writeFile(`${outputDir}/audit-report.json`, JSON.stringify(report, null, 2), "utf8");
 
           const lines = [
-            "# 逐星线上 UI 视觉审计采集",
+            "# 逐星线上 UI 典型任务态视觉审计采集",
             "",
             `- 生成时间：${report.generatedAt}`,
             `- 线上地址：${baseUrl}`,
             "- 桌面视口：1440 × 1000",
             "- 手机视口：390 × 844",
+            "- 观星计划预置：牵牛岗、太子尖、百丈岭、天荒坪、四明山",
             "",
           ];
           for (const profile of report.profiles) {
             lines.push(`## ${profile.id}`, "");
             for (const item of profile.pages) {
-              lines.push(
-                `- ${item.label}: HTTP ${item.responseStatus ?? "n/a"}; 最终 URL ${item.finalUrl}; 横向溢出 ${item.metrics.horizontalOverflow ? "是" : "否"}; 截图 \`${item.screenshot}\``,
-              );
+              lines.push(`- ${item.label}: HTTP ${item.responseStatus ?? "n/a"}; 横向溢出 ${item.metrics.horizontalOverflow ? "是" : "否"}; 截图 \`${item.screenshot}\``);
+              for (const state of item.states) lines.push(`  - 状态 ${state.id}: \`${state.screenshot}\``);
             }
             lines.push("");
           }
