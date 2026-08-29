@@ -4,9 +4,16 @@
 
 - [x] Confirm current `main@bc8a964` and preserve user-owned mobile landscape edits.
 - [x] Write and run RED tests for Bortle multi-select, nearest-site fallback, and satellite refresh preservation.
-- [ ] Finish production implementation and browser regression coverage for score semantics, cloud degradation, nearby recommendations, and Fireglow geometry.
-- [ ] Run local quality gates and publish one unified change to `main`.
-- [ ] Rebuild the ECS `star-photo` Compose project and verify HTTP health/build revision.
+- [x] Finish production implementation and browser regression coverage for score semantics, cloud degradation, nearby recommendations, and Fireglow geometry.
+- [x] Run local quality gates and publish one unified change to `main`.
+- [x] Rebuild the ECS `star-photo` Compose project and verify HTTP health/build revision.
+
+### Review (2026-08-29 verification pass)
+
+- `main@85bc933` 与 origin/main 一致；`npm run check`（lint/typecheck/单测/构建）与 `npm run test:e2e`（70 passed, 10 skipped by design）全绿。
+- ECS `/opt/star-photo` 运行镜像确认由 85bc933 构建；`.env` 补 `BUILD_REVISION=85bc9336cdf8` 后重建，公网 `/healthz` 返回真实版本号。
+- 线上 `check:data-sources` 全部 available（weather/satellite/light-pollution），Himawari 143 帧，预报 48 小时；worker healthy 且完成 gfs 7d 刷新。
+- 运维注意：ECS 仅 1.8GiB 内存，构建期间曾触发 OOM kill；本次通过「先停 worker + 临时 2G swapfile」完成重建，结束后已清理。后续部署建议沿用该顺序。
 
 ### Review
 
