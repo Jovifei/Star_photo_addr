@@ -410,12 +410,27 @@
 }
 
 /* 顶部概率细分三级：红 → 深红 → 绛红，越高越深。 */
+.fireglow-inspector {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--fg-line);
+  border-radius: 10px;
+  background: rgba(3, 13, 19, 0.72);
+  color: var(--fg-text, inherit);
+}
+.fireglow-inspector strong { font-size: 15px; }
+.fireglow-inspector span,
+.fireglow-inspector small { color: var(--fg-muted); font-size: 12px; }
+.fireglow-inspector b { font-size: 13px; color: #e08a3f; }
+
 .fireglow-score[data-level="p88"] b,
-.fireglow-score[data-level="p88"] small { color: #e04f3a; }
+.fireglow-score[data-level="p88"] small { color: #e07a2f; }
 .fireglow-score[data-level="p95"] b,
-.fireglow-score[data-level="p95"] small { color: #e0574a; }
+.fireglow-score[data-level="p95"] small { color: #c45c1e; }
 .fireglow-score[data-level="p100"] b,
-.fireglow-score[data-level="p100"] small { color: #ff6a55; text-shadow: 0 0 10px rgba(255, 80, 50, 0.45); }
+.fireglow-score[data-level="p100"] small { color: #a84814; text-shadow: none; }
 
 .fireglow-day-chips i[data-level="p88"] { color: #e04f3a; border-color: rgba(224, 79, 58, 0.45); }
 .fireglow-day-chips i[data-level="p95"] { color: #e0574a; border-color: rgba(186, 44, 32, 0.55); background: rgba(128, 12, 12, 0.25); }

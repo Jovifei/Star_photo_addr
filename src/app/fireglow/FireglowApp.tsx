@@ -27,11 +27,11 @@ type RangeMode = 0 | 1 | 2 | 3;
 const LEVEL_COLORS: Record<FireGlowProbabilityLevel, string> = {
   p20: "#5f7078",
   p40: "#5da46b",
-  p60: "#d4b23c",
+  p60: "#d4b273",
   p80: "#e08a3f",
-  p88: "#e04f3a",
-  p95: "#ba2c20",
-  p100: "#800c0c",
+  p88: "#e07a2f",
+  p95: "#c45c1e",
+  p100: "#a84814",
 };
 const LEVEL_LABELS: Array<{ level: FireGlowProbabilityLevel; range: string }> = [
   { level: "p20", range: "0–20%" },
@@ -213,6 +213,7 @@ export default function FireglowApp() {
     const level = site.window.probabilityLevel;
     return level === "p80" || level === "p100";
   }).length;
+  const selectedSite = ranked.find((site) => site.id === selectedId) ?? null;
 
   const focusSite = useCallback((site: RankedSite) => {
     setSelectedId(site.id);
@@ -308,6 +309,30 @@ export default function FireglowApp() {
             概率 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
             + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项。
           </p>
+          {selectedSite ? (
+            <aside className="fireglow-inspector" aria-label="选中点详情">
+              <strong>{selectedSite.name}</strong>
+              <span>
+                {selectedSite.province} · {selectedSite.altitude == null ? "海拔待核" : `${Math.round(selectedSite.altitude)}m`}
+              </span>
+              <b data-level={selectedSite.window.probabilityLevel ?? "none"}>
+                概率 {selectedSite.window.probabilityLabel ?? "—"} · {selectedSite.window.bandLabel}
+              </b>
+              <small>
+                高云 {selectedSite.window.highCloud ?? "—"}% / 中云 {selectedSite.window.midCloud ?? "—"}% / 低云 {selectedSite.window.lowCloud ?? "—"}%
+                {selectedSite.window.visibilityKm != null ? ` · 能见度 ${selectedSite.window.visibilityKm}km` : ""}
+              </small>
+              <small>
+                {selectedSite.window.momentLabel ?? ""}
+                {selectedSite.window.peakTime ? ` · 最佳 ${selectedSite.window.peakTime}` : ""}
+                {selectedSite.window.vividness != null ? ` · 鲜艳度 ${selectedSite.window.vividness.toFixed(2)}` : ""}
+              </small>
+              <small className="fireglow-popup-twilight">
+                <MoonStar size={11} aria-hidden="true" />
+                金色 {selectedSite.window.goldenTime ?? "—"} · 蓝色 {selectedSite.window.blueTime ?? "—"} · 天文{phase === "evening" ? "昏影终" : "晨光始"} {selectedSite.window.astroTime ?? "—"}
+              </small>
+            </aside>
+          ) : null}
         </aside>
 
         <div className="fireglow-map" aria-label="火烧云概率地图">
@@ -354,29 +379,13 @@ export default function FireglowApp() {
                 <Popup>
                   <div className="fireglow-popup">
                     <strong>{site.name}</strong>
-                    <span>{site.province} · {site.altitude == null ? "海拔待核" : `${Math.round(site.altitude)}m`}</span>
-                    <b data-level={site.window.probabilityLevel ?? "none"}>
-                      概率 {site.window.probabilityLabel ?? "—"} · {site.window.bandLabel}
-                    </b>
-                    <small>
-                      高云 {site.window.highCloud ?? "—"}% / 中云 {site.window.midCloud ?? "—"}% / 低云 {site.window.lowCloud ?? "—"}%
-                      {site.window.visibilityKm != null ? ` · 能见度 ${site.window.visibilityKm}km` : ""}
-                    </small>
-                    <small>
-                      {site.window.momentLabel ?? ""}
-                      {site.window.peakTime ? ` · 最佳 ${site.window.peakTime}` : ""}
-                      {site.window.vividness != null ? ` · 鲜艳度 ${site.window.vividness.toFixed(2)}` : ""}
-                    </small>
-                    <small className="fireglow-popup-twilight">
-                      <MoonStar size={11} aria-hidden="true" />
-                      金色 {site.window.goldenTime ?? "—"} · 蓝色 {site.window.blueTime ?? "—"} · 天文{phase === "evening" ? "昏影终" : "晨光始"} {site.window.astroTime ?? "—"}
-                    </small>
                   </div>
                 </Popup>
               </CircleMarker>
             ))}
           </MapContainer>
-          <div className="fireglow-legend" aria-label="概率等级色阶">
+          <div className="fireglow-legend" aria-label="火烧云概率等级色阶">
+            <span>火烧云概率</span>
             {LEVEL_LABELS.map((entry) => (
               <span key={entry.level}>
                 <i style={{ background: LEVEL_COLORS[entry.level] }} />
