@@ -398,12 +398,13 @@
 - [x] Install the required Firefox/WebKit runtimes in the approved download directory and pass cross-browser smoke tests (4 passed).
 - [x] Re-run `npm run check`, inspect the current production UI at desktop/mobile sizes, and record final evidence.
 - [x] Commit and push the completed branch, then open PR #16 against `main` without merging it.
+- [x] Close the CI-only WebKit source-dialog focus-loop failure and rerun PR checks.
 
 ## Review
 
 - `npm run check`: PASS — ESLint, TypeScript, 40 Vitest files / 231 tests, Next.js 16.3 production build.
 - `npm run test:e2e`: PASS — 91 passed, 19 project-specific skips, 0 failed in 2.2 minutes.
-- `npm run test:e2e:cross-browser`: PASS — Firefox desktop and WebKit mobile, 4 passed, 0 failed.
+- Local `npm run test:e2e:cross-browser`: PASS — Firefox desktop and WebKit mobile, 4 passed, 0 failed. The CI-only WebKit Shift+Tab race was fixed at the dialog capture boundary and also passed 6 repeated focus-loop runs.
 - Production visual smoke: PASS — 24 desktop/tablet/phone/landscape states, all with zero page overflow, zero CARTO requests, and zero duplicate nearby panels.
 - Visual smoke found and closed one extra defect through RED/GREEN: direct Planner map entry lacked Leaflet CSS and leaked tiles; the final Planner map overflow is 0.
 - Integration boundary: push this branch and create a PR against `main`; do not merge without Jovi's explicit approval.

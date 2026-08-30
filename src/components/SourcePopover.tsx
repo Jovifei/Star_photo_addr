@@ -58,17 +58,23 @@ export default function SourcePopover({
       if (!items.length) return;
       const first = items[0];
       const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      // Handle the boundary on the dialog during capture. WebKit can update
+      // document.activeElement before a document-level bubbling listener sees
+      // Shift+Tab, while the event target still identifies the boundary item.
+      const origin = event.target instanceof HTMLElement
+        ? event.target
+        : document.activeElement;
+      if (event.shiftKey && origin === first) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && origin === last) {
         event.preventDefault();
         first.focus();
       }
     };
-    document.addEventListener("keydown", onKeyDown);
+    dialog?.addEventListener("keydown", onKeyDown, true);
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
+      dialog?.removeEventListener("keydown", onKeyDown, true);
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };
