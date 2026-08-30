@@ -74,6 +74,49 @@ test("火烧云地图在宽屏占满工作区而不是被 1680px 中心限宽", 
   expect((map?.x ?? 0) + (map?.width ?? 0)).toBeGreaterThanOrEqual(1900);
 });
 
+test("火烧云主要控制保持至少 44px 触控高度", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "触控高度只需桌面项目验证一次");
+  await page.goto("/fireglow");
+  const controls = page.locator(".fireglow-controls button:visible");
+  await expect(controls).toHaveCount(7);
+  const heights = await controls.evaluateAll((buttons) =>
+    buttons.map((button) => button.getBoundingClientRect().height),
+  );
+  expect(heights.every((height) => height >= 44)).toBe(true);
+});
+
+test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "三栏结构只需桌面验证");
+  await page.route("**/api/fireglow/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-08-30";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "icon",
+        generatedAt: "2026-08-30T12:00:00.000Z",
+        source: "E2E fireglow snapshot",
+        stale: false,
+        sites: {},
+      }),
+    });
+  });
+  await page.goto("/fireglow");
+  await page.locator(".fireglow-list button").first().click();
+  const inspector = page.locator(".fireglow-workspace > .fireglow-inspector");
+  await expect(inspector).toBeVisible();
+  await expect(page.locator(".fireglow-panel .fireglow-inspector")).toHaveCount(0);
+  const panelBox = await page.locator(".fireglow-panel").boundingBox();
+  const mapBox = await page.locator(".fireglow-map").boundingBox();
+  const inspectorBox = await inspector.boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(mapBox).not.toBeNull();
+  expect(inspectorBox).not.toBeNull();
+  expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(mapBox!.x + 1);
+  expect(mapBox!.x + mapBox!.width).toBeLessThanOrEqual(inspectorBox!.x + 1);
+});
+
 test("当前时次评分不可用时明确显示数据不足，不把未知点当低分", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "评分未知态只需桌面主地图回归一次");
   await page.route("**/api/observing/snapshot**", async (route) => {

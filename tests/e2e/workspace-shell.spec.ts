@@ -35,6 +35,35 @@ test("desktop shell keeps search off the map and inspector in flow", async ({
   await expect(page.locator(".nearby-ranking-panel")).toHaveCount(0);
 });
 
+test("desktop inspector lazily mounts inactive evidence panes", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "证据页懒挂载只测桌面");
+  await page.goto("/?overlay=forecast-cloud&view=combined");
+  await expect(page.getByRole("tabpanel", { name: "摘要" })).toBeVisible();
+  await expect(
+    page.getByRole("tabpanel", { name: "推荐", includeHidden: true }),
+  ).toHaveCount(0);
+  await page.getByRole("tab", { name: "推荐" }).click();
+  await expect(page.getByRole("tabpanel", { name: "推荐" })).toBeVisible();
+});
+
+test("desktop inspector arrow keys move selection and keyboard focus", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "证据页键盘行为只测桌面");
+  await page.goto("/?overlay=forecast-cloud&view=combined");
+  const summaryTab = page.getByRole("tab", { name: "摘要" });
+  const placesTab = page.getByRole("tab", { name: "地点" });
+  await summaryTab.focus();
+  await summaryTab.press("ArrowRight");
+  await expect(placesTab).toHaveAttribute("aria-selected", "true");
+  await expect(placesTab).toBeFocused();
+  await placesTab.press("ArrowLeft");
+  await expect(summaryTab).toHaveAttribute("aria-selected", "true");
+  await expect(summaryTab).toBeFocused();
+});
+
 test("sampling a point updates summary without a covering overlay", async ({
   page,
 }, testInfo) => {

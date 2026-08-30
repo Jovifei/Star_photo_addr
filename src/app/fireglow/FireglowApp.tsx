@@ -258,7 +258,10 @@ export default function FireglowApp() {
         </div>
       </ProductHeader>
 
-      <main className="fireglow-workspace">
+      <main
+        className="fireglow-workspace"
+        data-inspector-open={selectedSite ? "true" : "false"}
+      >
         <aside className="fireglow-panel" aria-label="火烧云概率排行">
           <div className="fireglow-panel-head">
             <strong>{phase === "evening" ? "晚霞概率排行" : "朝霞概率排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
@@ -309,30 +312,6 @@ export default function FireglowApp() {
             概率 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
             + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项。
           </p>
-          {selectedSite ? (
-            <aside className="fireglow-inspector" aria-label="选中点详情">
-              <strong>{selectedSite.name}</strong>
-              <span>
-                {selectedSite.province} · {selectedSite.altitude == null ? "海拔待核" : `${Math.round(selectedSite.altitude)}m`}
-              </span>
-              <b data-level={selectedSite.window.probabilityLevel ?? "none"}>
-                概率 {selectedSite.window.probabilityLabel ?? "—"} · {selectedSite.window.bandLabel}
-              </b>
-              <small>
-                高云 {selectedSite.window.highCloud ?? "—"}% / 中云 {selectedSite.window.midCloud ?? "—"}% / 低云 {selectedSite.window.lowCloud ?? "—"}%
-                {selectedSite.window.visibilityKm != null ? ` · 能见度 ${selectedSite.window.visibilityKm}km` : ""}
-              </small>
-              <small>
-                {selectedSite.window.momentLabel ?? ""}
-                {selectedSite.window.peakTime ? ` · 最佳 ${selectedSite.window.peakTime}` : ""}
-                {selectedSite.window.vividness != null ? ` · 鲜艳度 ${selectedSite.window.vividness.toFixed(2)}` : ""}
-              </small>
-              <small className="fireglow-popup-twilight">
-                <MoonStar size={11} aria-hidden="true" />
-                金色 {selectedSite.window.goldenTime ?? "—"} · 蓝色 {selectedSite.window.blueTime ?? "—"} · 天文{phase === "evening" ? "昏影终" : "晨光始"} {selectedSite.window.astroTime ?? "—"}
-              </small>
-            </aside>
-          ) : null}
         </aside>
 
         <div className="fireglow-map" aria-label="火烧云概率地图">
@@ -394,6 +373,30 @@ export default function FireglowApp() {
             ))}
           </div>
         </div>
+        {selectedSite ? (
+          <aside className="fireglow-inspector" aria-label="选中点详情">
+            <strong>{selectedSite.name}</strong>
+            <span>
+              {selectedSite.province} · {selectedSite.altitude == null ? "海拔待核" : `${Math.round(selectedSite.altitude)}m`}
+            </span>
+            <b data-level={selectedSite.window.probabilityLevel ?? "none"}>
+              概率 {selectedSite.window.probabilityLabel ?? "—"} · {selectedSite.window.bandLabel}
+            </b>
+            <small>
+              高云 {selectedSite.window.highCloud ?? "—"}% / 中云 {selectedSite.window.midCloud ?? "—"}% / 低云 {selectedSite.window.lowCloud ?? "—"}%
+              {selectedSite.window.visibilityKm != null ? ` · 能见度 ${selectedSite.window.visibilityKm}km` : ""}
+            </small>
+            <small>
+              {selectedSite.window.momentLabel ?? ""}
+              {selectedSite.window.peakTime ? ` · 最佳 ${selectedSite.window.peakTime}` : ""}
+              {selectedSite.window.vividness != null ? ` · 鲜艳度 ${selectedSite.window.vividness.toFixed(2)}` : ""}
+            </small>
+            <small className="fireglow-popup-twilight">
+              <MoonStar size={11} aria-hidden="true" />
+              金色 {selectedSite.window.goldenTime ?? "—"} · 蓝色 {selectedSite.window.blueTime ?? "—"} · 天文{phase === "evening" ? "昏影终" : "晨光始"} {selectedSite.window.astroTime ?? "—"}
+            </small>
+          </aside>
+        ) : null}
       </main>
     </div>
   );

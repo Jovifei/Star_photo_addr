@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 export const INSPECTOR_TABS = [
   { id: "summary", label: "摘要" },
@@ -23,8 +23,9 @@ export default function ContextInspector({
 }) {
   const baseId = useId();
   const [mounted, setMounted] = useState<Set<InspectorTabId>>(
-    () => new Set<InspectorTabId>([activeTab, "recommendations"]),
+    () => new Set<InspectorTabId>([activeTab]),
   );
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   useEffect(() => {
     setMounted((current) => new Set(current).add(activeTab));
@@ -32,14 +33,18 @@ export default function ContextInspector({
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const index = INSPECTOR_TABS.findIndex((tab) => tab.id === activeTab);
+    let nextIndex: number | null = null;
     if (event.key === "ArrowRight") {
       event.preventDefault();
-      onTabChange(INSPECTOR_TABS[(index + 1) % INSPECTOR_TABS.length]!.id);
+      nextIndex = (index + 1) % INSPECTOR_TABS.length;
     }
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      onTabChange(INSPECTOR_TABS[(index - 1 + INSPECTOR_TABS.length) % INSPECTOR_TABS.length]!.id);
+      nextIndex = (index - 1 + INSPECTOR_TABS.length) % INSPECTOR_TABS.length;
     }
+    if (nextIndex === null) return;
+    onTabChange(INSPECTOR_TABS[nextIndex]!.id);
+    tabRefs.current[nextIndex]?.focus();
   }
 
   return (
@@ -50,13 +55,16 @@ export default function ContextInspector({
         aria-label="证据页签"
         onKeyDown={onKeyDown}
       >
-        {INSPECTOR_TABS.map((tab) => {
+        {INSPECTOR_TABS.map((tab, index) => {
           const selected = tab.id === activeTab;
           return (
             <button
               key={tab.id}
               type="button"
               role="tab"
+              ref={(node) => {
+                tabRefs.current[index] = node;
+              }}
               id={`${baseId}-${tab.id}`}
               aria-selected={selected}
               aria-controls={`${baseId}-panel-${tab.id}`}
