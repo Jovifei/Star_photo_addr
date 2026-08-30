@@ -58,7 +58,7 @@ describe("buildDecisionSummary", () => {
     expect(model.gradeLabel).toBe("数据不足");
     expect(model.locationName).toBe("天荒坪");
     expect(model.riskTitle).toBe("评分未知");
-    expect(model.riskText).not.toMatch(/安全|无主要安全门禁/);
+    expect(model.riskText).not.toMatch(/一般|安全|无主要安全门禁/);
   });
 
   it("lists real blockers and never claims safety when blockers are empty", () => {
@@ -89,7 +89,7 @@ describe("buildDecisionSummary", () => {
     expect(clear.gradeLabel).toBe("推荐");
     expect(clear.riskTitle).toBe("未见已接入门禁");
     expect(clear.riskText).toContain("降水");
-    expect(clear.riskText).toContain("当地气象预警");
-    expect(clear.riskText).not.toContain("无主要安全门禁");
+    expect(clear.riskText).toContain("当地预警");
+    expect(clear.riskText).not.toMatch(/安全|无雷暴|无主要安全门禁/);
   });
 });

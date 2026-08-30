@@ -43,7 +43,7 @@ export function buildDecisionSummary(input: {
       gradeTone: "muted",
       windowLabel: "—",
       riskTitle: "评分未知",
-      riskText: "当前没有可用的夜间评分，显示为数据不足，不用「一般」代替。",
+      riskText: "当前没有可用的夜间评分，显示为数据不足，不要用模糊等级代替。",
       updatedLabel,
     };
   }
@@ -61,7 +61,7 @@ export function buildDecisionSummary(input: {
     riskTitle: hasBlockers ? "主要风险" : "未见已接入门禁",
     riskText: hasBlockers
       ? blockers.join("、")
-      : "未出现已接入的降水、低能见度或大阵风门禁。雷暴以当地气象预警为准，不在此写成安全或无雷暴。",
+      : "未出现已接入的降水、低能见度或大阵风门禁。雷暴以当地预警为准，此处不作现场结论。",
     updatedLabel,
   };
 }
