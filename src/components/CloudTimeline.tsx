@@ -19,7 +19,6 @@ const RANGE_OPTIONS: Array<{ value: 1 | 5 | 7; label: string }> = [
 ];
 const PLAY_BASE_INTERVAL_MS = 1500;
 const PLAY_SPEEDS = [0.5, 1, 2] as const;
-const EXPAND_PREF_KEY = "perseids-cloud-timeline-expand-v1";
 
 function buildSchedule(nightKeys: string[]): Array<{ time: string; nightKey: string }> {
   return nightKeys.flatMap((nightKey) =>
@@ -124,9 +123,6 @@ export default function CloudTimeline() {
   const [playSpeed, setPlaySpeed] = useState<(typeof PLAY_SPEEDS)[number]>(1);
   const [aqiValue, setAqiValue] = useState<number | null>(null);
   const [kpValue, setKpValue] = useState<number | null>(null);
-  // Auto-expanding the matrix for a fresh selection is a default, not a law:
-  // once the user toggles the panel we persist their preference and stop.
-  const expandTouchedRef = useRef(false);
   const autoExpandedLocationRef = useRef<string | null>(null);
   const nightKeys = useMemo(
     () => nightRangeKeys(selectedNight, cloudState.range),
@@ -135,6 +131,8 @@ export default function CloudTimeline() {
   const schedule = useMemo(() => buildSchedule(nightKeys), [nightKeys]);
   const isSatelliteMode = cloudState.overlayMode === "satellite-cloud";
   const isNightLightsMode = cloudState.overlayMode === "night-lights";
+  const canExpandDetails = !isNightLightsMode;
+  const timelineExpanded = canExpandDetails && expanded;
   const pointForecast = forecast?.metadata?.model === cloudState.model ? forecast : null;
   const gridForecast = cloudGrid?.model === cloudState.model ? cloudGrid.forecasts[0] ?? null : null;
   const forecastSource = pointForecast
@@ -212,35 +210,14 @@ export default function CloudTimeline() {
   );
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(EXPAND_PREF_KEY);
-      if (saved) {
-        expandTouchedRef.current = true;
-        if (saved === "1") queueMicrotask(() => setExpanded(true));
-      }
-    } catch {
-      // Preference storage is optional.
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!selectedLocation || expandTouchedRef.current) return;
+    if (!selectedLocation || !canExpandDetails) return;
     if (autoExpandedLocationRef.current === selectedLocation.id) return;
     autoExpandedLocationRef.current = selectedLocation.id;
     queueMicrotask(() => setExpanded(true));
-  }, [selectedLocation]);
+  }, [canExpandDetails, selectedLocation]);
 
   const toggleExpanded = useCallback(() => {
-    setExpanded((value) => {
-      const next = !value;
-      expandTouchedRef.current = true;
-      try {
-        localStorage.setItem(EXPAND_PREF_KEY, next ? "1" : "0");
-      } catch {
-        // Preference storage is optional.
-      }
-      return next;
-    });
+    setExpanded((value) => !value);
   }, []);
 
   useEffect(() => {
@@ -353,7 +330,7 @@ export default function CloudTimeline() {
   if (!cloudState.enabled || isSitesWorkspace) return null;
 
   return (
-    <section className={`cloud-timeline${expanded ? " is-expanded" : " is-collapsed"}`} aria-label={isSatelliteMode ? "卫星云图时间工作台" : isNightLightsMode ? "光污染参考图层" : "逐小时预报时间工作台"} data-time-domain={isSatelliteMode ? "observation" : isNightLightsMode ? "reference" : "forecast"} data-active-time={activeTimelineTime ?? ""}>
+    <section className={`cloud-timeline${timelineExpanded ? " is-expanded" : " is-collapsed"}`} aria-label={isSatelliteMode ? "卫星云图时间工作台" : isNightLightsMode ? "光污染参考图层" : "逐小时预报时间工作台"} data-time-domain={isSatelliteMode ? "observation" : isNightLightsMode ? "reference" : "forecast"} data-active-time={activeTimelineTime ?? ""}>
       <div className="cloud-timeline-bar">
         <div className="cloud-timeline-title">
           <span className="section-kicker">{isSatelliteMode ? "卫星观测" : isNightLightsMode ? "光污染基准" : "逐小时预报"}</span>
@@ -420,16 +397,17 @@ export default function CloudTimeline() {
            {RANGE_OPTIONS.map((option) => <button key={option.value} type="button" className={cloudState.range === option.value ? "active" : ""} aria-pressed={cloudState.range === option.value} onClick={() => changeRange(option.value)}>{option.label}</button>)}
           </div>}
           <span className="cloud-timeline-current" title={activeTimelineTime ?? undefined}>{isNightLightsMode ? "静态参考，无时间轴" : activeTimelineTime ? (isSatelliteMode ? formatTimelineTime(activeTimelineTime) : `${formatNightLabel(current.nightKey, true)} ${formatHourWithDate(activeTimelineTime, current.nightKey)}`) : "暂无时次"}</span>
-        <button
+        {canExpandDetails ? <button
           type="button"
           className="cloud-timeline-toggle"
-          aria-expanded={expanded}
+          aria-expanded={timelineExpanded}
           aria-controls="hourly-forecast-panel"
+          aria-label={timelineExpanded ? "收起逐小时预报" : "展开逐小时预报"}
           onClick={toggleExpanded}
         >
-          {expanded ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
-          <span>{expanded ? "收起数据" : "展开数据"}</span>
-        </button>
+          {timelineExpanded ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
+          <span>{timelineExpanded ? "收起逐小时预报" : "展开逐小时预报"}</span>
+        </button> : null}
       </div>
 
       <div className="cloud-timeline-data-card" aria-live="polite">
@@ -446,7 +424,7 @@ export default function CloudTimeline() {
         </>}
       </div>
 
-      {expanded && (
+      {timelineExpanded && (
         <div className="cloud-timeline-body" id="hourly-forecast-panel">
           {!isSatelliteMode && !isNightLightsMode && <div className="cloud-night-tabs" role="tablist" aria-label="观测夜选择">
             {nightKeys.map((nightKey) => <button key={nightKey} type="button" role="tab" aria-selected={displayNight === nightKey} className={displayNight === nightKey ? "active" : ""} onClick={() => changeNight(nightKey)}>{formatNightLabel(nightKey, true)}</button>)}

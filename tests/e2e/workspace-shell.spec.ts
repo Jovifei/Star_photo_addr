@@ -80,6 +80,115 @@ test("sampling a point updates summary without a covering overlay", async ({
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
+test("desktop inspector can be resized without sacrificing readable evidence copy", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "证据栏尺寸只测桌面");
+  await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA");
+  const inspector = page.getByTestId("workspace-inspector");
+  const canvas = page.getByTestId("workspace-canvas");
+  const rail = page.getByTestId("workspace-inspector-resizer");
+  const standard = page.getByRole("button", { name: "证据栏标准宽度" });
+  const wide = page.getByRole("button", { name: "证据栏加宽" });
+  await expect(rail).toBeVisible();
+  await expect(standard).toBeVisible();
+  await expect(wide).toBeVisible();
+  await expect(rail).toHaveAttribute("aria-valuenow", "360");
+  const before = await inspector.boundingBox();
+  const canvasBefore = await canvas.boundingBox();
+  expect(before).not.toBeNull();
+  expect(canvasBefore).not.toBeNull();
+
+  await wide.click();
+  await expect(rail).toHaveAttribute("aria-valuenow", "480");
+  const widened = await inspector.boundingBox();
+  const canvasAfter = await canvas.boundingBox();
+  expect(widened).not.toBeNull();
+  expect(canvasAfter).not.toBeNull();
+  expect(widened!.width).toBeGreaterThan(before!.width);
+  expect(canvasAfter!.width).toBeLessThan(canvasBefore!.width);
+
+  await rail.focus();
+  await rail.press("ArrowRight");
+  await expect(rail).toHaveAttribute("aria-valuenow", "464");
+  await standard.click();
+  await expect(rail).toHaveAttribute("aria-valuenow", "360");
+
+  const railBeforeDrag = await rail.boundingBox();
+  expect(railBeforeDrag).not.toBeNull();
+  await page.mouse.move(
+    railBeforeDrag!.x + railBeforeDrag!.width / 2,
+    railBeforeDrag!.y + railBeforeDrag!.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    railBeforeDrag!.x + railBeforeDrag!.width / 2 - 64,
+    railBeforeDrag!.y + railBeforeDrag!.height / 2,
+  );
+  await page.mouse.up();
+  await expect(rail).toHaveAttribute("aria-valuenow", "424");
+
+  const railBeforeNarrowing = await rail.boundingBox();
+  expect(railBeforeNarrowing).not.toBeNull();
+  await page.mouse.move(
+    railBeforeNarrowing!.x + railBeforeNarrowing!.width / 2,
+    railBeforeNarrowing!.y + railBeforeNarrowing!.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    railBeforeNarrowing!.x + railBeforeNarrowing!.width / 2 + 64,
+    railBeforeNarrowing!.y + railBeforeNarrowing!.height / 2,
+  );
+  await page.mouse.up();
+  await expect(rail).toHaveAttribute("aria-valuenow", "360");
+
+  const riskCopy = page.getByTestId("observation-reason-card").locator("dd").nth(1);
+  const typography = await riskCopy.evaluate((element) => {
+    const styles = getComputedStyle(element);
+    return { fontSize: Number.parseFloat(styles.fontSize), lineHeight: Number.parseFloat(styles.lineHeight) };
+  });
+  expect(typography.fontSize).toBeGreaterThanOrEqual(16);
+  expect(typography.lineHeight).toBeGreaterThanOrEqual(24);
+});
+
+test("a new location raises the hourly forecast even after a saved collapse", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "时间轴提升交互先测桌面");
+  await page.addInitScript(() => {
+    localStorage.setItem("perseids-cloud-timeline-expand-v1", "0");
+  });
+  await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA");
+  const lift = page.getByRole("button", { name: /逐小时预报/ });
+  await expect(lift).toBeVisible({ timeout: 20000 });
+  await expect(lift).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#hourly-forecast-panel")).toBeVisible();
+});
+
+test("mobile forecast lift remains fully above the timeline instead of behind the drawer", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "手机把手几何只测移动端");
+  await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA");
+  const lift = page.getByRole("button", { name: /逐小时预报/ });
+  const timeline = page.locator(".cloud-timeline");
+  await expect(lift).toHaveAttribute("aria-expanded", "true");
+  const liftBox = await lift.boundingBox();
+  const timelineBox = await timeline.boundingBox();
+  expect(liftBox).not.toBeNull();
+  expect(timelineBox).not.toBeNull();
+  expect(liftBox!.y).toBeGreaterThanOrEqual(timelineBox!.y);
+});
+
+test("static night-light reference does not masquerade as an expanded hourly forecast", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "静态参考语义先测桌面");
+  await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&overlay=night-lights");
+  await expect(page.locator(".cloud-timeline")).toHaveClass(/is-collapsed/);
+  await expect(page.getByRole("button", { name: /逐小时预报/ })).toHaveCount(0);
+});
+
 test("planner map clips Leaflet tiles when entered directly", async ({
   page,
 }, testInfo) => {

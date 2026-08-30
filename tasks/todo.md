@@ -408,3 +408,20 @@
 - Production visual smoke: PASS — 24 desktop/tablet/phone/landscape states, all with zero page overflow, zero CARTO requests, and zero duplicate nearby panels.
 - Visual smoke found and closed one extra defect through RED/GREEN: direct Planner map entry lacked Leaflet CSS and leaked tiles; the final Planner map overflow is 0.
 - Integration boundary: push this branch and create a PR against `main`; do not merge without Jovi's explicit approval.
+
+# Adjustable inspector and hourly lift (2026-08-30)
+
+- [x] Use the approved A layout: desktop evidence rail defaults to 360px, supports pointer/keyboard/preset adjustment, and keeps the map in flow.
+- [x] Re-space the decision summary with a 12/16/20px type hierarchy and grouped evidence rows.
+- [x] Automatically raise the hourly forecast for every newly selected location; retain an explicit 44px control and keep it unobscured on mobile.
+- [x] Keep static VIIRS night-light reference collapsed and free of misleading hourly-forecast controls.
+- [x] Add RED/GREEN browser coverage for width defaults, left/right drag, keyboard/preset alternatives, text metrics, selection expansion, static-reference semantics, and mobile lift geometry.
+- [x] Pass local check, full Chromium E2E, Firefox/WebKit smoke, and visual review.
+- [ ] Commit/push the exact UI change, await PR #16 CI, then deploy that exact SHA to ECS without merging the PR.
+
+## Review
+
+- `npm run check`: PASS — ESLint, TypeScript, 40 Vitest files / 231 tests, production build.
+- `npm run test:e2e`: PASS — 95 passed, 23 project-specific skips, 0 failed.
+- `npm run test:e2e:cross-browser`: PASS — Firefox desktop plus WebKit mobile, 4 passed.
+- Visual review: PASS at 1440×1000, 390×844 and 844×390. Desktop inspector defaults to 360px; mobile control remains inside the timeline; static night-light mode has no false hourly expansion.
