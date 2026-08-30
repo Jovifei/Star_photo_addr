@@ -31,23 +31,23 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-test("放大地图后生成编号推荐并可打开现有地点详情", async ({ page }) => {
+test("放大地图后生成编号推荐并可打开现有地点详情", async ({ page }, testInfo) => {
   await page.goto(
     "/?lat=30.2741&lng=120.1551&name=%E6%9D%AD%E5%B7%9E&model=gfs&view=combined&overlay=forecast-cloud",
   );
   await expect(page.locator(".leaflet-container")).toBeVisible();
+  await expect(page.getByTestId("observation-reason-card")).toBeAttached();
 
-  // The deep link intentionally opens the existing detail drawer and recentres
-  // the map to Zhejiang. Close it before opening the alternative regional
-  // shortlist; selecting a recommendation below must open the same drawer again.
-  const detailHost = page.locator(".detail-overlay-host");
-  await expect(detailHost).toHaveClass(/is-open/);
-  await page.getByRole("button", { name: "收起观测详情" }).first().click();
-  await expect(detailHost).toHaveClass(/is-closed/);
+  if (testInfo.project.name === "mobile") {
+    const drawer = page.getByTestId("mobile-map-panel-drawer");
+    await expect(drawer).toHaveAttribute("aria-hidden", "false");
+    await page.getByRole("button", { name: "收起观测详情" }).first().click();
+    await expect(drawer).toHaveAttribute("aria-hidden", "true");
+  }
 
   const docked = await openMobileMapPanel(page, "recommendations");
   if (!docked) {
-    await page.getByRole("button", { name: "展开当前视野推荐" }).click();
+    await page.getByRole("tab", { name: "推荐" }).click();
   }
   const generate = page.getByRole("button", { name: "生成区域推荐" });
   await expect(generate).toBeEnabled({ timeout: 15000 });
@@ -58,5 +58,5 @@ test("放大地图后生成编号推荐并可打开现有地点详情", async ({
   await expect(page.locator(".viewport-rank-marker-dot").first()).toHaveText("1");
 
   await firstCard.click();
-  await expect(detailHost).toHaveClass(/is-open/);
+  await expect(page.getByTestId("observation-reason-card")).toBeVisible();
 });

@@ -84,7 +84,7 @@ test("sites compatibility route preserves context and opens the dark-sky site pa
   expect(target.searchParams.get("panel")).toBe("sites");
 
   await page.goto("/?view=light-pollution&panel=sites");
-  await expect(page.locator(".detail-overlay-host")).toHaveClass(/is-open/);
+  await expect(page.getByTestId("workspace-shell")).toBeVisible();
   await expect(page.locator(".nav-tabs .nav-tab")).toHaveText([
     "今夜观测天气与窗口",
     "暗夜选址长期暗空",
@@ -150,7 +150,7 @@ test("historical home links are normalized without re-running the bridge", async
     const target = new URL(page.url());
     return `${target.searchParams.has("night")}|${target.searchParams.has("forecastTime")}`;
   }).toBe("false|false");
-  await expect(page.locator(".detail-overlay-host")).toHaveClass(/is-open/);
+  await expect(page.getByTestId("observation-reason-card")).toBeVisible();
   await expect.poll(() => selectedLocationRequests).toBe(1);
 });
 
@@ -169,7 +169,7 @@ test("source disclosure keeps the current observation context when opening dark-
     "/?lat=30.1234&lng=120.5678&name=%E4%B8%9C%E7%99%BD%E5%B1%B1&" +
       "elevation=1188&model=gfs&overlay=forecast-cloud",
   );
-  await expect(page.locator(".detail-overlay-host")).toHaveClass(/is-open/);
+  await expect(page.getByTestId("observation-reason-card")).toBeVisible();
 
   await page.getByRole("button", { name: "数据依据与局限" }).click();
   const dialog = page.getByRole("dialog", { name: "数据依据与局限" });

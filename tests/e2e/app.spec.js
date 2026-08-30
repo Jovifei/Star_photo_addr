@@ -40,8 +40,8 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
   await page.goto("/");
   await expect(page.locator(".map-stage")).toBeVisible();
   await expect(page.locator(".map-viewport")).toBeVisible();
-  await expect(page.locator(".map-headline h1")).toHaveText("今晚云量变化");
-  await expect(page.locator(".map-headline h1")).not.toContainText("英仙座流星雨");
+  await expect(page.getByTestId("observation-reason-card")).toBeAttached();
+  await expect(page.getByTestId("observation-reason-card")).not.toContainText("英仙座流星雨");
   await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测");
   const timelineToggle = page.locator(".cloud-timeline-toggle:visible");
@@ -100,7 +100,10 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
   await expect(page.locator(".cloud-timeline-current")).toBeVisible();
   await expect(page.locator(".cloud-canvas-overlay canvas")).toBeVisible({ timeout: 15000 });
 
-  if (testInfo.project.name === "desktop") await expect(page.locator(".cloud-control")).toBeVisible();
+  if (testInfo.project.name === "desktop") {
+    await page.getByRole("tab", { name: "云量" }).click();
+    await expect(page.locator(".cloud-control")).toBeVisible();
+  }
 });
 
 test("取样点数据跟随指定模型刷新并说明数据语义", async ({ page }) => {

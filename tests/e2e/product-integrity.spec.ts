@@ -25,6 +25,9 @@ test("暗夜选址的 B1-B4 卡片可组合筛选并同步点位数量", async (
     const drawer = page.getByTestId("mobile-map-panel-drawer");
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
     panel = drawer.locator(".observing-map-control");
+  } else {
+    await page.getByRole("tab", { name: "地点" }).click();
+    panel = page.locator(".observing-map-control:visible");
   }
   await expect(panel).toBeVisible();
   const cards = panel.locator(".observing-baseline-chip");
@@ -89,6 +92,7 @@ test("当前时次评分不可用时明确显示数据不足，不把未知点�
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
   await page.goto("/?overlay=forecast-cloud&view=combined");
+  await page.getByRole("tab", { name: "地点" }).click();
   const panel = page.locator(".observing-map-control:visible");
   await expect(panel).toHaveAttribute("data-score-status", "degraded", { timeout: 15000 });
   await expect(panel).toContainText("灰色点代表未知，不等同于低分");
