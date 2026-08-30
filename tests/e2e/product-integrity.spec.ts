@@ -45,6 +45,56 @@ test("暗夜选址的 B1-B4 卡片可组合筛选并同步点位数量", async (
   await expect(panel).toContainText("B1、B3、B4");
 });
 
+test("sites workspace shows a B1–B4 filter bar above the map with visible colors and synced markers", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Bortle 过滤条几何只测桌面");
+  await page.goto("/sites");
+  const bar = page.getByTestId("bortle-filter-bar");
+  await expect(bar).toBeVisible();
+  const mapBox = await page.locator(".leaflet-container").first().boundingBox();
+  const barBox = await bar.boundingBox();
+  expect(mapBox).not.toBeNull();
+  expect(barBox).not.toBeNull();
+  expect(barBox!.y).toBeGreaterThanOrEqual(mapBox!.y - 8);
+  expect(barBox!.y).toBeLessThanOrEqual(mapBox!.y + 140);
+  const barCenter = barBox!.x + barBox!.width / 2;
+  const mapCenter = mapBox!.x + mapBox!.width / 2;
+  expect(Math.abs(barCenter - mapCenter)).toBeLessThanOrEqual(280);
+
+  const buttons = bar.getByRole("button");
+  await expect(buttons).toHaveCount(4);
+  for (let index = 0; index < 4; index += 1) {
+    await expect(buttons.nth(index)).toHaveAttribute(
+      "aria-pressed",
+      index < 3 ? "true" : "false",
+    );
+    await expect(buttons.nth(index)).toContainText(`B${index + 1}`);
+  }
+  const fills = await buttons.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const swatch = node.querySelector("i");
+      return swatch ? getComputedStyle(swatch).backgroundColor : "";
+    }),
+  );
+  expect(new Set(fills).size).toBe(4);
+  for (const fill of fills) {
+    expect(fill === "rgb(0, 0, 0)" || fill === "rgb(34, 34, 34)").toBe(false);
+  }
+
+  const container = page.locator(".leaflet-container").first();
+  await expect(container).toHaveAttribute("data-observing-site-count", "222");
+  await expect(page.locator('.observing-site-dot[data-bortle="1"]').first()).toBeAttached();
+
+  await buttons.nth(3).click();
+  await expect(buttons.nth(3)).toHaveAttribute("aria-pressed", "true");
+  await expect(container).toHaveAttribute("data-observing-site-count", "242");
+
+  await buttons.nth(0).click();
+  await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "false");
+  await expect(container).toHaveAttribute("data-observing-site-count", "205");
+});
+
 test("稀疏坐标启用附近推荐时自动补最近观测点，关闭后恢复基础池", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "桌面仪表盘负责验证附近推荐列表的数量变化");
   await page.goto("/planner?lat=42.97&lng=97.43&name=%E5%8F%96%E6%A0%B7%E7%82%B9");

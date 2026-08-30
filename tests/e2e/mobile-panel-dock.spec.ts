@@ -109,6 +109,6 @@ test("桌面端在证据页签中打开云量和地点，而不是地图浮层",
   await expect(page.locator(".cloud-control")).toBeVisible();
   await page.getByRole("tab", { name: "地点" }).click();
   await expect(page.locator(".observing-map-control")).toBeVisible();
-  await page.getByRole("tab", { name: "图层" }).click();
+  await page.getByRole("tab", { name: "设置" }).click();
   await expect(page.locator(".map-panel-manager")).toBeVisible();
 });

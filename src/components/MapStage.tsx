@@ -29,6 +29,7 @@ export default function MapStage({
   viewportRecommendations,
   onRecommendationsChange,
   summaryPane = null,
+  viewportOverlay = null,
 }: {
   mapRef: RefObject<LeafletMap | null>;
   ready: boolean;
@@ -36,6 +37,8 @@ export default function MapStage({
   viewportRecommendations: ViewportRecommendation[];
   onRecommendationsChange: (items: ViewportRecommendation[]) => void;
   summaryPane?: ReactNode;
+  /** Workspace-owned floating control pinned over the map (e.g. B1–B4 filter). */
+  viewportOverlay?: ReactNode;
 }) {
   const { sampleAt } = useStore();
 
@@ -45,7 +48,7 @@ export default function MapStage({
         <MapCanvas
           mapRef={mapRef}
           onReady={onReady}
-          onSample={(latitude: number, longitude: number) =>
+          onSample={(latitude, longitude) =>
             void sampleAt(
               latitude,
               longitude,
@@ -66,6 +69,7 @@ export default function MapStage({
             recommendations={viewportRecommendations}
           />
         </MapCanvas>
+        {viewportOverlay}
         <ResponsiveMapControls
           variant="canvas"
           mapRef={mapRef}

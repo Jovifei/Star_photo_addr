@@ -15,9 +15,13 @@ export const dynamic = "force-dynamic";
 const VALID_MODELS = new Set<ForecastModel>(["best_match", "icon", "gfs", "aifs"]);
 const TTL_MS = 30 * 60_000;
 const TIMEOUT_MS = 120_000;
+/** Forced refreshes per date|model are throttled so page retries and the
+ * worker cannot stampede the upstream quota. */
+const FORCE_REFRESH_COOLDOWN_MS = 60_000;
 
 const cache = new Map<string, { snapshot: FireGlowSnapshot; at: number }>();
 const inFlight = new Map<string, Promise<FireGlowSnapshot>>();
+const lastForceAt = new Map<string, number>();
 const CACHE_MAX_ENTRIES = 32;
 
 function rememberSnapshot(key: string, snapshot: FireGlowSnapshot) {
@@ -34,6 +38,7 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const date = params.get("date") ?? getShanghaiDate();
   const model = (params.get("model") ?? "icon") as ForecastModel;
+  const forceRefresh = params.get("refresh") === "1";
 
   if (!isFinderDateAllowed(date) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return NextResponse.json(
@@ -49,8 +54,30 @@ export async function GET(request: NextRequest) {
   }
 
   const key = `${date}|${model}`;
+  if (forceRefresh) {
+    const last = lastForceAt.get(key) ?? 0;
+    const elapsed = Date.now() - last;
+    if (elapsed < FORCE_REFRESH_COOLDOWN_MS) {
+      const cached = cache.get(key);
+      if (cached) {
+        return NextResponse.json(
+          { ...cached.snapshot, stale: true, refreshError: "强制刷新冷却中" },
+          {
+            headers: {
+              "Cache-Control": "no-store",
+              "X-Fireglow-Cache": "refresh-cooldown",
+              "Retry-After": String(Math.ceil((FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000)),
+            },
+          },
+        );
+      }
+    } else {
+      lastForceAt.set(key, Date.now());
+    }
+  }
+
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.at < TTL_MS) {
+  if (cached && Date.now() - cached.at < TTL_MS && !forceRefresh) {
     return NextResponse.json(cached.snapshot, {
       headers: {
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
@@ -65,7 +92,7 @@ export async function GET(request: NextRequest) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {
-        const weather = await fetchFinderWeatherRange([date], controller.signal, false, model);
+        const weather = await fetchFinderWeatherRange([date], controller.signal, Boolean(forceRefresh), model);
         const weatherByDate = Object.fromEntries(
           Object.entries(weather).map(([night, response]) => [night, response.data]),
         );
@@ -86,18 +113,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(snapshot, {
       headers: {
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
-        "X-Fireglow-Cache": "fresh",
+        "X-Fireglow-Cache": forceRefresh ? "forced-fresh" : "fresh",
       },
     });
   } catch (error) {
     const fallback = cache.get(key);
     if (fallback) {
-      return NextResponse.json(fallback.snapshot, {
-        headers: {
-          "Cache-Control": "no-store",
-          "X-Fireglow-Cache": "stale-memory",
+      const timedOut =
+        error instanceof Error &&
+        (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
+      return NextResponse.json(
+        {
+          ...fallback.snapshot,
+          stale: true,
+          refreshError: timedOut ? "强制刷新超时，展示最近成功快照" : "强制刷新失败，展示最近成功快照",
         },
-      });
+        {
+          headers: {
+            "Cache-Control": "no-store",
+            "X-Fireglow-Cache": "stale-memory",
+          },
+        },
+      );
     }
     const timedOut =
       error instanceof Error &&

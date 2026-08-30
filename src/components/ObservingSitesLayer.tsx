@@ -12,14 +12,15 @@ import {
 } from "@/lib/observingSites";
 import { filterSitesByBortleLevels } from "@/lib/bortleFilters";
 import { scoreDateForForecastTime } from "@/lib/nighttime";
+import { siteBortleColor } from "@/components/BortleFilterBar";
 import type { ObservationSnapshot } from "@/lib/types";
 
-function markerIcon(color: string, selected: boolean): L.DivIcon {
+function markerIcon(color: string, selected: boolean, bortle: number): L.DivIcon {
   return L.divIcon({
     className: "observing-site-marker",
     iconSize: [28, 28],
     iconAnchor: [14, 14],
-    html: `<span class="observing-site-dot" style="--site-color:${color};--site-scale:${selected ? "1.28" : "1"}"></span>`,
+    html: `<span class="observing-site-dot" data-bortle="${bortle}" style="--site-color:${color};--site-scale:${selected ? "1.28" : "1"}"></span>`,
   });
 }
 
@@ -153,11 +154,16 @@ export default function ObservingSitesLayer() {
         const score = snapshotScoreAtTime(activeSnapshot, site.id);
         const band = score?.band ?? "unknown";
         const selected = state.selectedLocation?.id === site.id;
+        // 选址工作区按长期光污染本底着色；今夜观测按当前时次评分着色。
+        const color =
+          state.mapWorkspace === "sites"
+            ? siteBortleColor(site.bortle)
+            : recommendationColor(band);
         return (
           <Marker
             key={site.id}
             position={[site.latitude, site.longitude]}
-            icon={markerIcon(recommendationColor(band), selected)}
+            icon={markerIcon(color, selected, site.bortle)}
             title={site.name}
             eventHandlers={{
               click: () => {

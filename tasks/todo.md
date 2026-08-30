@@ -426,3 +426,9 @@
 - `npm run test:e2e:cross-browser`: PASS — Firefox desktop plus WebKit mobile, 4 passed.
 - Visual review: PASS at 1440×1000, 390×844 and 844×390. Desktop inspector defaults to 360px; mobile control remains inside the timeline; static night-light mode has no false hourly expansion.
 - Source dialog focus recovery: PASS — Chromium core 4/4, Firefox/WebKit core 4/4, and Firefox/WebKit focus-loop repeat 8/8.
+
+# Data refresh and map controls follow-up (2026-08-30)
+
+- [x] Diagnose local/public API, browser requests, fireglow phase behavior, worker scope, asset flags, and deployment state.
+- [x] Write the evidence-first repair plan at `docs/superpowers/plans/2026-08-30-data-refresh-and-map-controls.md` (local ignored plan; do not depend on GitHub visibility).
+- [ ] Get Jovi's approval for the follow-up plan before changing source code.

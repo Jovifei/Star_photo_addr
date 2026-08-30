@@ -117,6 +117,11 @@ export default function FireglowApp() {
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const loadTokenRef = useRef(0);
+  /** Dates already given their one automatic forced retry after a degraded read. */
+  const autoForcedRef = useRef<Set<string>>(new Set());
+  const loadRef = useRef<(dates: string[], options?: { force?: boolean }) => () => void>(
+    () => () => undefined,
+  );
 
   const baseDate = todayKey();
   const activeDates = useMemo(
@@ -125,7 +130,7 @@ export default function FireglowApp() {
   );
 
   const load = useCallback(
-    (dates: string[]) => {
+    (dates: string[], { force = false }: { force?: boolean } = {}) => {
       const token = loadTokenRef.current + 1;
       loadTokenRef.current = token;
       const controller = new AbortController();
@@ -133,7 +138,10 @@ export default function FireglowApp() {
         setStatus("loading");
         Promise.all(
           dates.map((date) =>
-            fetch(`/api/fireglow/snapshot?date=${date}`, { signal: controller.signal, cache: "no-store" })
+            fetch(
+              `/api/fireglow/snapshot?date=${date}${force ? "&refresh=1" : ""}`,
+              { signal: controller.signal, cache: "no-store" },
+            )
               .then(async (response) => {
                 const payload = await response.json().catch(() => null);
                 if (!response.ok || !payload?.sites) throw new Error(payload?.error ?? "火烧云快照不可用");
@@ -151,7 +159,29 @@ export default function FireglowApp() {
               return next;
             });
             setStatus("ready");
-            setError(results.some((snapshot) => snapshot.stale) ? "部分数据已降级，结果仅供参考。" : "");
+            const degraded = results.filter((snapshot) => snapshot.stale || snapshot.refreshError);
+            setError(
+              degraded.length
+                ? degraded
+                    .map((snapshot) => snapshot.refreshError ?? "部分数据已降级，结果仅供参考。")
+                    .join(" ")
+                : "",
+            );
+            // One silent forced retry per date when the plain read came back
+            // degraded or without a single usable score.
+            const needForce = results.filter(
+              (snapshot) =>
+                (snapshot.stale || snapshot.refreshError) &&
+                !autoForcedRef.current.has(`${snapshot.date}|${snapshot.model}`),
+            );
+            if (needForce.length && !force) {
+              needForce.forEach((snapshot) =>
+                autoForcedRef.current.add(`${snapshot.date}|${snapshot.model}`),
+              );
+              queueMicrotask(() =>
+                loadRef.current(needForce.map((snapshot) => snapshot.date), { force: true }),
+              );
+            }
           })
           .catch((requestError) => {
             if (requestError?.name === "AbortError" || loadTokenRef.current !== token) return;
@@ -163,6 +193,9 @@ export default function FireglowApp() {
     },
     [],
   );
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useEffect(() => {
     const missing = activeDates.filter((date) => !snapshots[date]);
@@ -251,7 +284,13 @@ export default function FireglowApp() {
               </button>
             ))}
           </div>
-          <button type="button" className="fireglow-refresh" onClick={() => load(activeDates)} disabled={status === "loading"}>
+          <button
+            type="button"
+            className="fireglow-refresh"
+            onClick={() => load(activeDates, { force: true })}
+            disabled={status === "loading"}
+            aria-label="强制刷新火烧云快照"
+          >
             <RefreshCw size={14} className={status === "loading" ? "is-spinning" : ""} aria-hidden="true" />
             {status === "loading" ? "读取中" : "刷新"}
           </button>

@@ -42,10 +42,10 @@ test("desktop inspector lazily mounts inactive evidence panes", async ({
   await page.goto("/?overlay=forecast-cloud&view=combined");
   await expect(page.getByRole("tabpanel", { name: "摘要" })).toBeVisible();
   await expect(
-    page.getByRole("tabpanel", { name: "推荐", includeHidden: true }),
+    page.getByRole("tabpanel", { name: "设置", includeHidden: true }),
   ).toHaveCount(0);
-  await page.getByRole("tab", { name: "推荐" }).click();
-  await expect(page.getByRole("tabpanel", { name: "推荐" })).toBeVisible();
+  await page.getByRole("tab", { name: "设置" }).click();
+  await expect(page.getByRole("tabpanel", { name: "设置" })).toBeVisible();
 });
 
 test("desktop inspector arrow keys move selection and keyboard focus", async ({
@@ -163,6 +163,64 @@ test("a new location raises the hourly forecast even after a saved collapse", as
   await expect(lift).toBeVisible({ timeout: 20000 });
   await expect(lift).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator("#hourly-forecast-panel")).toBeVisible();
+});
+
+test("workspace command bar carries search and locate above the three columns", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "顶部命令栏几何只测桌面");
+  await page.goto("/?overlay=forecast-cloud&view=combined");
+  const commandBar = page.getByTestId("workspace-commandbar");
+  await expect(commandBar).toBeVisible();
+  await expect(commandBar.getByRole("combobox")).toBeVisible();
+  await expect(commandBar.getByRole("button", { name: /当前位置/ })).toBeVisible();
+  const barBox = await commandBar.boundingBox();
+  const bodyBox = await page.locator(".workspace-shell-body").boundingBox();
+  expect(barBox).not.toBeNull();
+  expect(bodyBox).not.toBeNull();
+  expect(barBox!.y + barBox!.height).toBeLessThanOrEqual(bodyBox!.y + 2);
+  await expect(page.getByTestId("workspace-input").locator(".map-search-card")).toHaveCount(0);
+});
+
+test("left input column is adjustable by pointer, keyboard, presets and reset", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "输入栏宽度只测桌面");
+  await page.goto("/?overlay=forecast-cloud&view=combined");
+  const rail = page.getByTestId("workspace-input-resizer");
+  const input = page.getByTestId("workspace-input");
+  await expect(rail).toBeVisible();
+  await expect(rail).toHaveAttribute("role", "separator");
+  await expect(rail).toHaveAttribute("aria-valuemin", "260");
+  await expect(rail).toHaveAttribute("aria-valuemax", "420");
+  await expect(rail).toHaveAttribute("aria-valuenow", "300");
+  const before = await input.boundingBox();
+  expect(before).not.toBeNull();
+
+  const standard = page.getByRole("button", { name: "输入栏标准宽度" });
+  const wide = page.getByRole("button", { name: "输入栏加宽" });
+  await expect(standard).toBeVisible();
+  await wide.click();
+  await expect(rail).toHaveAttribute("aria-valuenow", "420");
+  const widened = await input.boundingBox();
+  expect(widened!.width).toBeGreaterThan(before!.width);
+
+  await rail.focus();
+  await rail.press("ArrowRight");
+  await expect(rail).toHaveAttribute("aria-valuenow", "316");
+
+  const railBox = await rail.boundingBox();
+  expect(railBox).not.toBeNull();
+  await page.mouse.move(railBox!.x + railBox!.width / 2, railBox!.y + railBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(railBox!.x + railBox!.width / 2 + 60, railBox!.y + railBox!.height / 2);
+  await page.mouse.up();
+  await expect(rail).toHaveAttribute("aria-valuenow", "376");
+
+  await rail.press("Enter");
+  await expect(rail).toHaveAttribute("aria-valuenow", "300");
+  const reset = await input.boundingBox();
+  expect(Math.abs(reset!.width - before!.width)).toBeLessThanOrEqual(2);
 });
 
 test("mobile forecast lift remains fully above the timeline instead of behind the drawer", async ({

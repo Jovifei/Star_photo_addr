@@ -12,11 +12,16 @@ import ObservationDetails from "@/components/ObservationDetails";
 import StarWindowTable from "@/components/StarWindowTable";
 import CloudControl from "@/components/CloudControl";
 import BortleControl from "@/components/BortleControl";
+import BortleFilterBar from "@/components/BortleFilterBar";
 import MapLegend from "@/components/MapLegend";
 import MapViewActions from "@/components/MapViewActions";
 import MapPanelManager from "@/components/MapPanelManager";
+import MapLayerBar from "@/components/MapLayerBar";
+import MapBoundaryStatus from "@/components/MapBoundaryStatus";
+import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 import DecisionSummary from "@/components/workspace/DecisionSummary";
+import ForecastAvailability from "@/components/workspace/ForecastAvailability";
 import MapHeadline from "@/components/MapHeadline";
 import WorkspaceShell from "@/components/workspace/WorkspaceShell";
 import { useStore } from "@/lib/store";
@@ -47,6 +52,7 @@ function TonightEvidence({
   return (
     <>
       <DecisionSummary onJumpToEvidence={onJumpToEvidence} />
+      <ForecastAvailability />
       {state.selectedLocation ? (
         <ObservationDetails
           sample={state.sample}
@@ -117,22 +123,20 @@ export default function PerseidsApp() {
   return (
     <WorkspaceShell
       header={<TopBar />}
+      commandBar={<MapSearchCard />}
       activeTab={tab}
       onTabChange={setTab}
       input={
-        <>
-          <MapSearchCard />
-          <CandidateList
-            candidates={state.candidates}
-            status={state.candidates.length ? "ok" : "empty"}
-            activeId={state.selectedLocation?.id}
-            onPick={(candidate) =>
-              void sampleAt(candidate.latitude, candidate.longitude, 0, candidate.name)
-            }
-            onRemove={removeCandidate}
-            onTrack={handleTrack}
-          />
-        </>
+        <CandidateList
+          candidates={state.candidates}
+          status={state.candidates.length ? "ok" : "empty"}
+          activeId={state.selectedLocation?.id}
+          onPick={(candidate) =>
+            void sampleAt(candidate.latitude, candidate.longitude, 0, candidate.name)
+          }
+          onRemove={removeCandidate}
+          onTrack={handleTrack}
+        />
       }
       canvas={
         <>
@@ -143,7 +147,10 @@ export default function PerseidsApp() {
             onReady={() => setReady(true)}
             viewportRecommendations={viewportRecommendations}
             onRecommendationsChange={setViewportRecommendations}
-            summaryPane={<TonightEvidence />}
+            summaryPane={evidence}
+            viewportOverlay={
+              state.mapWorkspace === "sites" ? <BortleFilterBar /> : null
+            }
           />
         </>
       }
@@ -155,20 +162,21 @@ export default function PerseidsApp() {
             <BortleControl />
           </>
         ),
-        layers: (
+        cloud: <CloudControl />,
+        settings: (
           <>
+            <MapLayerBar />
+            <ForecastThemeSwitch />
             <MapLegend />
             <MapViewActions mapRef={mapRef} />
             <MapPanelManager />
+            <MapBoundaryStatus />
+            <ViewportRecommendationPanel
+              mapRef={mapRef}
+              ready={ready}
+              onRecommendationsChange={setViewportRecommendations}
+            />
           </>
-        ),
-        cloud: <CloudControl />,
-        recommendations: (
-          <ViewportRecommendationPanel
-            mapRef={mapRef}
-            ready={ready}
-            onRecommendationsChange={setViewportRecommendations}
-          />
         ),
       }}
     />

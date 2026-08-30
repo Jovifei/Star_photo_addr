@@ -65,6 +65,8 @@ export interface FireGlowSnapshot {
   generatedAt: string;
   source: string;
   stale: boolean;
+  /** Set when a forced refresh failed and an older snapshot was served. */
+  refreshError?: string;
   sites: Record<string, FireGlowSiteScore>;
 }
 
