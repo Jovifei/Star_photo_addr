@@ -397,7 +397,7 @@
 - [x] Fix the production visual-smoke regression where direct Planner map entry leaked Leaflet tiles outside the map viewport, and lock it with E2E coverage.
 - [x] Install the required Firefox/WebKit runtimes in the approved download directory and pass cross-browser smoke tests (4 passed).
 - [x] Re-run `npm run check`, inspect the current production UI at desktop/mobile sizes, and record final evidence.
-- [ ] Commit and push the completed branch, then open a PR against `main` without merging it.
+- [x] Commit and push the completed branch, then open PR #16 against `main` without merging it.
 
 ## Review
 
