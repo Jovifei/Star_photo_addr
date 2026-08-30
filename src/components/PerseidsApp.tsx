@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Map as LeafletMap } from "leaflet";
 import TopBar from "@/components/TopBar";
@@ -17,6 +17,7 @@ import MapViewActions from "@/components/MapViewActions";
 import MapPanelManager from "@/components/MapPanelManager";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 import DecisionSummary from "@/components/workspace/DecisionSummary";
+import MapHeadline from "@/components/MapHeadline";
 import WorkspaceShell from "@/components/workspace/WorkspaceShell";
 import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
@@ -72,6 +73,10 @@ export default function PerseidsApp() {
     ViewportRecommendation[]
   >([]);
 
+  useEffect(() => {
+    if (state.selectedLocation) setTab("summary");
+  }, [state.selectedLocation?.id]);
+
   const handleTrack = useCallback(
     (candidate: CityCandidate) => {
       router.push(
@@ -121,14 +126,17 @@ export default function PerseidsApp() {
         </>
       }
       canvas={
-        <MapStage
-          mapRef={mapRef}
-          ready={ready}
-          onReady={() => setReady(true)}
-          viewportRecommendations={viewportRecommendations}
-          onRecommendationsChange={setViewportRecommendations}
-          summaryPane={<TonightEvidence />}
-        />
+        <>
+          <MapHeadline />
+          <MapStage
+            mapRef={mapRef}
+            ready={ready}
+            onReady={() => setReady(true)}
+            viewportRecommendations={viewportRecommendations}
+            onRecommendationsChange={setViewportRecommendations}
+            summaryPane={<TonightEvidence />}
+          />
+        </>
       }
       inspectorPanes={{
         summary: evidence,

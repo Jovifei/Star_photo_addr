@@ -90,6 +90,7 @@
 .workspace-inspector .map-panel-manager,
 .workspace-inspector .viewport-recommendation-panel,
 .workspace-inspector .bortle-control,
+.workspace-canvas .map-headline,
 .workspace-inspector .map-headline {
   position: static !important;
   inset: auto !important;
@@ -107,6 +108,13 @@
 
 .workspace-inspector .map-legend {
   display: block;
+}
+
+.workspace-canvas .map-headline h1,
+.workspace-inspector .map-headline h1 {
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  text-shadow: none;
 }
 
 @media (max-width: 1023px) {

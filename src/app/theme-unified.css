@@ -337,6 +337,18 @@ body {
   }
 }
 
+@media (max-width: 840px) {
+  .app-header-title {
+    font-size: 16px;
+  }
+  .app-header-eyebrow + .app-header-title {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .nav-tab,
   .source-button,
