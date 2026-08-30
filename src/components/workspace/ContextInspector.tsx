@@ -22,7 +22,9 @@ export default function ContextInspector({
   onTabChange: (tab: InspectorTabId) => void;
 }) {
   const baseId = useId();
-  const [mounted, setMounted] = useState<Set<InspectorTabId>>(new Set([activeTab]));
+  const [mounted, setMounted] = useState<Set<InspectorTabId>>(
+    () => new Set<InspectorTabId>([activeTab, "recommendations"]),
+  );
 
   useEffect(() => {
     setMounted((current) => new Set(current).add(activeTab));
