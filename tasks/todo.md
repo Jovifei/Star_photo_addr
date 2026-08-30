@@ -425,3 +425,4 @@
 - `npm run test:e2e`: PASS — 95 passed, 23 project-specific skips, 0 failed.
 - `npm run test:e2e:cross-browser`: PASS — Firefox desktop plus WebKit mobile, 4 passed.
 - Visual review: PASS at 1440×1000, 390×844 and 844×390. Desktop inspector defaults to 360px; mobile control remains inside the timeline; static night-light mode has no false hourly expansion.
+- Source dialog focus recovery: PASS — Chromium core 4/4, Firefox/WebKit core 4/4, and Firefox/WebKit focus-loop repeat 8/8.
