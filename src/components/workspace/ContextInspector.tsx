@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 export const INSPECTOR_TABS = [
   { id: "summary", label: "摘要" },
@@ -22,14 +22,7 @@ export default function ContextInspector({
   onTabChange: (tab: InspectorTabId) => void;
 }) {
   const baseId = useId();
-  const [mounted, setMounted] = useState<Set<InspectorTabId>>(
-    () => new Set<InspectorTabId>([activeTab]),
-  );
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
-  useEffect(() => {
-    setMounted((current) => new Set(current).add(activeTab));
-  }, [activeTab]);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const index = INSPECTOR_TABS.findIndex((tab) => tab.id === activeTab);
@@ -78,14 +71,13 @@ export default function ContextInspector({
         })}
       </div>
       {INSPECTOR_TABS.map((tab) => {
-        if (!mounted.has(tab.id)) return null;
+        if (tab.id !== activeTab) return null;
         return (
           <div
             key={tab.id}
             role="tabpanel"
             id={`${baseId}-panel-${tab.id}`}
             aria-labelledby={`${baseId}-${tab.id}`}
-            hidden={tab.id !== activeTab}
             className="context-inspector-panel"
           >
             {panes[tab.id] ?? null}

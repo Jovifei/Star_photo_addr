@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -21,7 +22,7 @@ test("暗夜选址的 B1-B4 卡片可组合筛选并同步点位数量", async (
   await page.goto("/sites");
   let panel = page.locator(".observing-map-control:visible");
   if (testInfo.project.name === "mobile") {
-    await page.getByTestId("mobile-map-panel-open-places").click();
+    await openMobileMapPanel(page, "places");
     const drawer = page.getByTestId("mobile-map-panel-drawer");
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
     panel = drawer.locator(".observing-map-control");
@@ -154,6 +155,7 @@ test("卫星强制刷新失败时保留上一帧并标记降级", async ({ page 
   });
   await page.goto("/?overlay=satellite-cloud&view=satellite");
   await expect(page.locator(".satellite-frame-badge")).toBeVisible({ timeout: 15000 });
+  await page.getByRole("tab", { name: "云量", exact: true }).click();
   const refresh = page.getByRole("button", { name: "强制刷新天气、卫星目录和数据源状态" });
   await refresh.click();
   await expect(page.locator(".satellite-layer-error")).toContainText("测试中的卫星上游不可用", { timeout: 15000 });

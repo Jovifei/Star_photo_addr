@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Map as LeafletMap } from "leaflet";
 import TopBar from "@/components/TopBar";
@@ -68,14 +68,23 @@ export default function PerseidsApp() {
   const router = useRouter();
   const mapRef = useRef<LeafletMap | null>(null);
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<InspectorTabId>("summary");
+  const selectedLocationId = state.selectedLocation?.id ?? null;
+  const [tabState, setTabState] = useState<{
+    locationId: string | null;
+    tab: InspectorTabId;
+  }>(() => ({ locationId: selectedLocationId, tab: "summary" }));
+  const tab = tabState.locationId === selectedLocationId
+    ? tabState.tab
+    : "summary";
+  const setTab = useCallback(
+    (nextTab: InspectorTabId) => {
+      setTabState({ locationId: selectedLocationId, tab: nextTab });
+    },
+    [selectedLocationId],
+  );
   const [viewportRecommendations, setViewportRecommendations] = useState<
     ViewportRecommendation[]
   >([]);
-
-  useEffect(() => {
-    if (state.selectedLocation) setTab("summary");
-  }, [state.selectedLocation?.id]);
 
   const handleTrack = useCallback(
     (candidate: CityCandidate) => {

@@ -40,8 +40,12 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
   await page.goto("/");
   await expect(page.locator(".map-stage")).toBeVisible();
   await expect(page.locator(".map-viewport")).toBeVisible();
-  await expect(page.getByTestId("observation-reason-card")).toBeAttached();
-  await expect(page.getByTestId("observation-reason-card")).not.toContainText("英仙座流星雨");
+  if (testInfo.project.name === "desktop") {
+    await expect(page.getByTestId("observation-reason-card")).toBeAttached();
+    await expect(page.getByTestId("observation-reason-card")).not.toContainText("英仙座流星雨");
+  } else {
+    await expect(page.getByTestId("mobile-map-panel-dock")).toBeVisible();
+  }
   await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测");
   const timelineToggle = page.locator(".cloud-timeline-toggle:visible");
@@ -101,7 +105,7 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
   await expect(page.locator(".cloud-canvas-overlay canvas")).toBeVisible({ timeout: 15000 });
 
   if (testInfo.project.name === "desktop") {
-    await page.getByRole("tab", { name: "云量" }).click();
+    await page.getByRole("tab", { name: "云量", exact: true }).click();
     await expect(page.locator(".cloud-control")).toBeVisible();
   }
 });

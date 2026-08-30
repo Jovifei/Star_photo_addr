@@ -215,7 +215,7 @@ test.describe("mobile product header", () => {
 
     const sourceButton = page.getByRole("button", { name: "数据依据与局限" });
     await expect(sourceButton).toBeVisible();
-    await expect(sourceButton).toHaveCSS("width", "36px");
+    await expect(sourceButton).toHaveCSS("width", "44px");
 
     await sourceButton.click();
     await expect(

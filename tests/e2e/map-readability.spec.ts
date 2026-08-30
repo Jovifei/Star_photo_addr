@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -33,8 +34,8 @@ test.beforeEach(async ({ page }) => {
 test("云量通道展示为横向进度条", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "移动端改用单一侧边栏");
   await page.goto("/?overlay=forecast-cloud&view=combined");
-  await page.getByRole("tab", { name: "云量" }).click();
-  const bars = page.locator(".cloud-mode-tabs button.cloud-channel-bar");
+  await page.getByRole("tab", { name: "云量", exact: true }).click();
+  const bars = page.locator(".cloud-mode-tabs button");
   await expect(bars).toHaveCount(4);
   await expect(bars.first()).toHaveCSS("display", "grid");
 });
@@ -66,7 +67,7 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
   const metricValues = page.locator(".metric-grid .metric .value");
   await expect(metricValues.first()).toContainText("未安装");
   if (testInfo.project.name === "mobile") {
-    await page.getByTestId("mobile-map-panel-open-layers").click();
+    await openMobileMapPanel(page, "layers");
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
   } else {
     await page.getByRole("tab", { name: "地点" }).click();

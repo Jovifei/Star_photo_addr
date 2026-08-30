@@ -87,11 +87,14 @@ export default function ResponsiveMapControls({
 }) {
   const mobile = useMobilePanelViewport();
   const { state, setDetailOpen } = useStore();
-  const [activePanel, setActivePanel] = useState<MobilePanelKey | null>(null);
+  const [requestedPanel, setRequestedPanel] = useState<MobilePanelKey | null>(null);
   const drawerRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastTriggerRef = useRef<HTMLElement | null>(null);
   const showMobileDock = variant === "mobile" || (variant === "canvas" && mobile);
+  const activePanel = showMobileDock && state.detailOpen
+    ? "summary"
+    : requestedPanel;
 
   const activeTitle = useMemo(() => {
     if (activePanel === "summary") return "今晚判断";
@@ -99,17 +102,27 @@ export default function ResponsiveMapControls({
   }, [activePanel]);
 
   const closePanel = useCallback(() => {
-    setActivePanel(null);
+    setRequestedPanel(null);
     setDetailOpen(false);
     window.requestAnimationFrame(() => lastTriggerRef.current?.focus());
   }, [setDetailOpen]);
 
-  const openPanel = useCallback((panel: MobilePanelKey) => {
-    if (document.activeElement instanceof HTMLElement) {
-      lastTriggerRef.current = document.activeElement;
-    }
-    setActivePanel(panel);
-  }, []);
+  const selectPanel = useCallback(
+    (panel: MobilePanelKey) => {
+      if (panel !== "summary") setDetailOpen(false);
+      setRequestedPanel(panel);
+    },
+    [setDetailOpen],
+  );
+  const openPanel = useCallback(
+    (panel: MobilePanelKey) => {
+      if (document.activeElement instanceof HTMLElement) {
+        lastTriggerRef.current = document.activeElement;
+      }
+      selectPanel(panel);
+    },
+    [selectPanel],
+  );
 
   useEffect(() => {
     const drawer = drawerRef.current;
@@ -154,16 +167,11 @@ export default function ResponsiveMapControls({
     // The dynamic control shell can render one frame before matchMedia
     // settles. Do not close a just-opened drawer merely because the hook's
     // initial boolean was false while the viewport already matches mobile.
-    if (!activePanel || mobile || isMobilePanelViewport()) return;
+    if (!requestedPanel || mobile || isMobilePanelViewport()) return;
     // Deferred so the guard runs after paint instead of cascading a render.
-    const frame = window.setTimeout(() => setActivePanel(null), 0);
+    const frame = window.setTimeout(() => setRequestedPanel(null), 0);
     return () => window.clearTimeout(frame);
-  }, [activePanel, mobile]);
-
-  useEffect(() => {
-    if (!showMobileDock || !state.detailOpen) return;
-    setActivePanel("summary");
-  }, [showMobileDock, state.detailOpen, state.selectedLocation?.id]);
+  }, [mobile, requestedPanel]);
 
   if (variant === "inspector") {
     return null;
@@ -264,7 +272,7 @@ export default function ResponsiveMapControls({
                 role="tab"
                 aria-selected={active}
                 className={active ? "active" : ""}
-                onClick={() => setActivePanel(item.id)}
+                onClick={() => selectPanel(item.id)}
               >
                 <Icon size={15} aria-hidden="true" />
                 {item.label}
@@ -274,59 +282,44 @@ export default function ResponsiveMapControls({
         </div>
 
         <div className="mobile-map-panel-body">
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="layers"
-            hidden={activePanel !== "layers"}
-          >
-            <MapLayerBar />
-            {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
-            <MapViewActions mapRef={mapRef} />
-            <BortleControl />
-            <MapLegend />
-            <MapBoundaryStatus />
-          </div>
+          {activePanel === "layers" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="layers">
+              <MapLayerBar />
+              {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
+              <MapViewActions mapRef={mapRef} />
+              <BortleControl />
+              <MapLegend />
+              <MapBoundaryStatus />
+            </div>
+          ) : null}
 
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="places"
-            hidden={activePanel !== "places"}
-          >
-            <ObservingMapControl docked />
-          </div>
+          {activePanel === "places" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="places">
+              <ObservingMapControl docked />
+            </div>
+          ) : null}
 
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="cloud"
-            hidden={activePanel !== "cloud"}
-          >
-            <CloudControl />
-          </div>
+          {activePanel === "cloud" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="cloud">
+              <CloudControl />
+            </div>
+          ) : null}
 
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="recommendations"
-            hidden={activePanel !== "recommendations"}
-          >
-            <ViewportRecommendationPanel
-              mapRef={mapRef}
-              ready={ready}
-              onRecommendationsChange={onRecommendationsChange}
-            />
-          </div>
+          {activePanel === "recommendations" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="recommendations">
+              <ViewportRecommendationPanel
+                mapRef={mapRef}
+                ready={ready}
+                onRecommendationsChange={onRecommendationsChange}
+              />
+            </div>
+          ) : null}
 
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="summary"
-            hidden={activePanel !== "summary"}
-          >
-            {summaryPane}
-          </div>
+          {activePanel === "summary" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="summary">
+              {summaryPane}
+            </div>
+          ) : null}
         </div>
       </aside>
     </section>

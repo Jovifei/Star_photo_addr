@@ -7,8 +7,12 @@ export async function openMobileMapPanel(page, panel) {
     cloud: "云量",
     recommendations: "推荐",
   };
-  const width = page.viewportSize()?.width ?? 0;
-  if (width > 768) {
+  const mobile = await page.evaluate(() =>
+    window.matchMedia(
+      "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)",
+    ).matches,
+  );
+  if (!mobile) {
     const tab = page.getByRole("tab", { name: labels[panel], exact: true });
     if ((await tab.count()) === 0) return false;
     await tab.click();

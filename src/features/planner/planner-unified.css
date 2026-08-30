@@ -190,12 +190,44 @@
     display: grid;
     grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
     gap: 16px;
+    align-items: start;
     width: min(1280px, calc(100% - 40px));
     margin: 0 auto;
+  }
+  .planner-root .planner-input {
+    position: relative;
+    z-index: 2;
+    min-width: 0;
+  }
+  .planner-root .planner-canvas {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
   }
   .planner-root .control-strip {
     flex-direction: column;
     align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+  .planner-root .planner-input .nearby-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+  .planner-root .planner-input .nearby-switch .segmented-caption {
+    grid-column: 1 / -1;
+  }
+  .planner-root .planner-input .nearby-switch button {
+    width: 100%;
+    min-width: 0;
+    padding-inline: 6px;
+  }
+  .planner-root .planner-input .freshness {
+    width: 100%;
+    margin-left: 0;
   }
 }
 

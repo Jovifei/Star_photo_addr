@@ -80,6 +80,21 @@ test("sampling a point updates summary without a covering overlay", async ({
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
+test("planner map clips Leaflet tiles when entered directly", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "规划地图几何只测桌面");
+  await page.goto("/planner");
+  await page.getByRole("button", { name: "地图", exact: true }).click();
+  const map = page.locator(".observation-map");
+  await expect(map).toBeVisible();
+  await expect(map).toHaveCSS("overflow", "hidden");
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
 test("mobile still uses one drawer and can open summary from the map dock", async ({
   page,
 }, testInfo) => {

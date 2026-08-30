@@ -10,6 +10,7 @@ import {
   TriangleAlert as Warning,
 } from "lucide-react";
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 import BoundaryLayers from "@/components/BoundaryLayers";
 import { searchChinaPlaces } from "../lib/geocoding";
