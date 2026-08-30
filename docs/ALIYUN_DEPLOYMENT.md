@@ -61,12 +61,15 @@ SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS=150000
 可选配置：
 
 - `NEXT_PUBLIC_TIANDITU_TOKEN`：天地图中文注记；
+- `NEXT_PUBLIC_BASEMAP_TILE_URL` / `NEXT_PUBLIC_BASEMAP_ATTRIBUTION`：自有或授权基础底图；留空时使用 OSM 标准瓦片暗色回退；
 - `NEXT_PUBLIC_LIGHT_POLLUTION_TILE_URL`：自有或授权光污染瓦片模板；
 - `NEXT_PUBLIC_ASSET_*`：只有真实资产已放入 `public/images/perseids/` 后才设为 `true`；
 - `OPEN_METEO_*`、`GIBS_CAPABILITIES_URL`、`NOAA_KP_URL`：企业代理或内部缓存；
 - `*_TTL_MS`、`*_TIMEOUT_MS`、`*_FORCE_REFRESH_COOLDOWN_MS`：数据缓存、超时和公开刷新保护。
 
 `NEXT_PUBLIC_*` 在 `next build` 阶段写入浏览器包。修改此类值后必须重新构建镜像，单纯重启容器不会生效。
+
+> 基础底图提示：默认 OSM 回退用于消除匿名 CARTO 的 `API KEY REQUIRED` 水印，适合个人低流量验证。公开流量增长后应切换到符合授权/用量政策的自有瓦片、受控服务或后续 OpenFreeMap/PMTiles 方案，并保留可见署名。
 
 ### 光污染模板要求
 

@@ -173,7 +173,7 @@ export default function StargazingFinderApp({ initialDate }: StargazingFinderApp
       />
 
       <section className={styles.mapStage} aria-label="全国观星地点地图">
-        <FinderMap key={viirsEnabled ? "viirs-layer" : "carto-layer"} locations={visibleLocations} weather={weather?.data ?? {}} selectedId={selectedId} targetDate={date} mode={mode} onSelect={(location) => { setSelectedId(location.id); setSearch(""); }} showLabels={labelMode !== "off"} viirsEnabled={viirsEnabled} onViirsError={() => { setMapDegraded(true); setNotice("VIIRS 2023 底图暂不可用，已切换 CARTO 暗色底图"); }} />
+        <FinderMap key={viirsEnabled ? "viirs-layer" : "base-layer"} locations={visibleLocations} weather={weather?.data ?? {}} selectedId={selectedId} targetDate={date} mode={mode} onSelect={(location) => { setSelectedId(location.id); setSearch(""); }} showLabels={labelMode !== "off"} viirsEnabled={viirsEnabled} onViirsError={() => { setMapDegraded(true); setNotice("VIIRS 2023 底图暂不可用，已切换暗色基础地图"); }} />
         <FinderLegend collapsed={legendCollapsed} mode={mode} viirsEnabled={viirsEnabled && !mapDegraded} weatherStatus={isRefreshing && !weather ? "loading" : weather?.stale || mapDegraded ? "degraded" : weather ? "available" : "loading"} refreshedAt={weather?.fetchedAt ? new Date(weather.fetchedAt).toLocaleString("zh-CN", { hour12: false }) : null} selectedDate={dateLabel(date, date === today)} visibleCount={visibleLocations.length} totalCount={FINDER_LOCATIONS.length} onToggle={() => setLegendCollapsed((current) => !current)} onCloseMobile={() => setLegendCollapsed(true)} />
         <FinderStatus {...stats} date={dateLabel(date, date === today)} isRefreshing={isRefreshing} />
 

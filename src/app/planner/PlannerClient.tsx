@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import NearbySiteRanking from "@/components/NearbySiteRanking";
 
 const PlannerApp = dynamic(
   () => import("@/features/planner/PlannerApp").then((module) => module.App),
@@ -20,12 +19,7 @@ const PlannerApp = dynamic(
 function PlannerRuntime() {
   const searchParams = useSearchParams();
   const sessionKey = searchParams.toString();
-  return (
-    <>
-      <PlannerApp key={sessionKey} />
-      <NearbySiteRanking />
-    </>
-  );
+  return <PlannerApp key={sessionKey} />;
 }
 
 export default function PlannerClient() {

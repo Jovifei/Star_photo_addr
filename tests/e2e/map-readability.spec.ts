@@ -89,20 +89,18 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
   await expect(dialog).toContainText("docs/DARK_SKY_DATA_SETUP.md");
 });
 
-test("观星计划可按 10/50/100/200 公里查看附近排行", async ({ page }) => {
+test("观星计划使用单一内嵌附近推荐，支持 10/50/100/200 公里", async ({ page }) => {
   const night = shanghaiDateKey();
   await page.goto(
     `/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=${night}&model=icon`,
   );
-  const toggle = page.getByRole("button", { name: /附近排行/ });
-  await expect(toggle).toBeVisible({ timeout: 15000 });
-  await toggle.click();
-  const radius = page.getByRole("combobox", { name: "附近地点排行半径" });
-  await expect(radius).toHaveValue("100");
-  await radius.selectOption("200");
-  await expect(page.locator(".nearby-ranking-list li").first()).toBeVisible({
-    timeout: 15000,
-  });
-  await expect(page.locator(".nearby-ranking-list")).toContainText("km");
-  await expect(page.locator(".nearby-ranking-list")).toContainText("海拔");
+  const nearby = page.locator('[aria-label="附近观星点推荐范围"]');
+  await expect(nearby).toBeVisible({ timeout: 15000 });
+  await expect(nearby.getByRole("button", { name: "10 km" })).toBeVisible();
+  await expect(nearby.getByRole("button", { name: "50 km" })).toBeVisible();
+  await expect(nearby.getByRole("button", { name: "100 km" })).toBeVisible();
+  await expect(nearby.getByRole("button", { name: "200 km" })).toBeVisible();
+  await expect(page.locator(".nearby-ranking-panel")).toHaveCount(0);
+  await nearby.getByRole("button", { name: "200 km" }).click();
+  await expect(page.locator(".rank-card").first()).toBeVisible({ timeout: 20000 });
 });

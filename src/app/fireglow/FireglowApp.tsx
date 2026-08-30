@@ -8,7 +8,12 @@ import type { Map as LeafletMap } from "leaflet";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 import BoundaryLayers from "@/components/BoundaryLayers";
 import ProductHeader from "@/components/ProductHeader";
-import { CARTO_ATTRIBUTION, CARTO_DARK_NOLABELS_URL } from "@/lib/constants";
+import {
+  BASEMAP_ATTRIBUTION,
+  BASEMAP_SUBDOMAINS,
+  BASEMAP_TILE_CLASS_NAME,
+  BASEMAP_TILE_URL,
+} from "@/lib/constants";
 import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
 import { fireGlowBandLabel } from "@/lib/fireglow";
@@ -316,7 +321,12 @@ export default function FireglowApp() {
             attributionControl
             style={{ width: "100%", height: "100%" }}
           >
-            <TileLayer url={CARTO_DARK_NOLABELS_URL} attribution={CARTO_ATTRIBUTION} />
+            <TileLayer
+              url={BASEMAP_TILE_URL}
+              subdomains={BASEMAP_SUBDOMAINS}
+              attribution={BASEMAP_ATTRIBUTION}
+              className={BASEMAP_TILE_CLASS_NAME}
+            />
             {overlay && (
               <ImageOverlay
                 url={overlay.url}

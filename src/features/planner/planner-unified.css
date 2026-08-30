@@ -90,12 +90,24 @@
   letter-spacing: 0.1em;
 }
 
+.planner-root .app-header-controls {
+  min-width: max-content;
+  flex-wrap: nowrap;
+}
+
 .planner-root .desktop-nav {
+  flex: 0 0 auto;
+  min-width: max-content;
   gap: 3px;
+  flex-wrap: nowrap;
 }
 
 .planner-root .desktop-nav button {
-  min-height: 36px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  min-height: 44px;
   padding: 8px 11px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -113,7 +125,7 @@
 }
 
 .planner-root .refresh-button {
-  min-height: 36px;
+  min-height: 44px;
   border-color: var(--line-strong);
   border-radius: 8px;
   background: rgba(8, 27, 36, 0.9);
@@ -186,6 +198,10 @@
 
 .planner-root .segmented button {
   border-radius: 7px;
+}
+
+.planner-root .nearby-switch button {
+  min-height: 44px;
 }
 
 .planner-root .segmented button.active {

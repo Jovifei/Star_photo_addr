@@ -3884,3 +3884,36 @@
   .app-header .nav-tabs { order: 3; width: 100%; }
   .app-header .nav-tabs .nav-tab small { display: none; }
 }
+
+
+/* UI foundation batch 0 --------------------------------------------------------- */
+/* Standard OSM is the zero-config fallback. Preserve legibility in the night UI
+   without baking a commercial provider key into client code. Configured custom
+   basemaps are not filtered. */
+.leaflet-tile.base-map-tile--darkened {
+  filter: invert(1) hue-rotate(180deg) saturate(0.38) brightness(0.68) contrast(1.16);
+}
+
+.panel-reason-card {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  border-radius: 9px;
+  background: rgba(9, 30, 39, 0.76);
+}
+.panel-reason-card strong {
+  color: var(--warn-strong, #e6c98f);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.panel-reason-card p {
+  margin: 0;
+  color: var(--text-soft, #d7e4e6);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.panel-reason-card.is-neutral { border-left-color: var(--cyan, #79cfe2); }
+.panel-reason-card.is-neutral strong { color: var(--cyan, #79cfe2); }

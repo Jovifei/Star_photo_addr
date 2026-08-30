@@ -24,7 +24,7 @@ test.beforeEach(async ({ page }) => {
   await installGeocodingMock(page);
   await installNextApiMock(page, fixture);
   await page.route(
-    /https:\/\/[^/]+\.basemaps\.cartocdn\.com\/.*/,
+    /https:\/\/(?:[^/]+\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org)\/.*/,
     (route) =>
       route.fulfill({
         status: 200,
