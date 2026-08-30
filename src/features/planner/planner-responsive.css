@@ -1,10 +1,11 @@
 /* Mobile-only layout corrections that must load after planner-unified.css.
    Keep these rules isolated so the upcoming WorkspaceShell migration can
    remove them as one rollback unit instead of editing legacy layout blocks. */
-@media (max-width: 640px) {
+@media (max-width: 768px), (max-height: 520px) and (max-width: 1024px) {
   /* A caption plus five radius choices cannot fit safely in one phone-width
-     flex row. The grid gives every choice a real 44px touch target and stops
-     neighbouring buttons or the sticky product header intercepting taps. */
+     or short landscape row. The grid gives every choice a real 44px touch
+     target and stops neighbouring buttons or the sticky ProductHeader
+     intercepting taps. */
   .planner-root .nearby-switch {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

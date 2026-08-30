@@ -6,8 +6,9 @@
 - [x] Repair blocker-only copy, Planner empty copy and header chip wrapping.
 - [x] Remove the duplicate fixed nearby-ranking overlay; keep one in-flow 10/50/100/200 km control.
 - [x] Add unit/E2E regression coverage and engineering change record.
-- [ ] Complete remote quality, E2E, live-data and container gates on the branch.
-- [ ] Capture and review desktop/mobile screenshots, then mark the PR ready.
+- [x] Complete local quality, E2E, and production visual review on 2026-08-30.
+- [ ] Mark PR #15 ready after GitHub Actions on the close-out SHA are green. Do not merge.
+- [x] Close batch-0 regressions found in 2026-08-30 review: candidate persist clobber, 44px targets, landscape nearby grid, ranking-pool identity.
 
 # Website clone: stargazing-finder-dark (2026-08-12)
 

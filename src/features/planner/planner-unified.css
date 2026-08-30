@@ -104,8 +104,10 @@
 
 .planner-root .desktop-nav button {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
-  min-height: 36px;
+  min-height: 44px;
   padding: 8px 11px;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -123,7 +125,7 @@
 }
 
 .planner-root .refresh-button {
-  min-height: 36px;
+  min-height: 44px;
   border-color: var(--line-strong);
   border-radius: 8px;
   background: rgba(8, 27, 36, 0.9);
@@ -196,6 +198,10 @@
 
 .planner-root .segmented button {
   border-radius: 7px;
+}
+
+.planner-root .nearby-switch button {
+  min-height: 44px;
 }
 
 .planner-root .segmented button.active {

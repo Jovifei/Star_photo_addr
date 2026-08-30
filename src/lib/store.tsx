@@ -324,6 +324,7 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [candidatesHydrated, setCandidatesHydrated] = useState(false);
+  const allowEmptyCandidatePersistRef = useRef(false);
   const forecastHydrationKeyRef = useRef<string | null>(null);
   const selectedLocationIdRef = useRef<string | null>(null);
   const latestForecastRequestRef = useRef(0);
@@ -458,6 +459,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!candidatesHydrated) return;
     try {
+      if (state.candidates.length === 0 && !allowEmptyCandidatePersistRef.current) {
+        const raw = localStorage.getItem(CUSTOM_CANDIDATES_STORAGE_KEY);
+        const stored = raw ? (JSON.parse(raw) as unknown) : [];
+        if (Array.isArray(stored) && stored.length > 0) {
+          // The first empty snapshot after mount must not wipe restored records.
+          return;
+        }
+      }
+      allowEmptyCandidatePersistRef.current = true;
       localStorage.setItem(
         CUSTOM_CANDIDATES_STORAGE_KEY,
         JSON.stringify(state.candidates),

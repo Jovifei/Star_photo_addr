@@ -36,4 +36,27 @@ describe("location identity", () => {
       "custom-30.12346-120.65432",
     );
   });
+
+  it("treats sub-metre floating-point noise as the same station", () => {
+    const first = { id: "a", latitude: 30.4694, longitude: 119.5978 };
+    const second = { id: "b", latitude: 30.469404, longitude: 119.597801 };
+    expect(sameLocationIdentity(first, second)).toBe(true);
+    expect(dedupeLocationIdentities([first, second])).toEqual([first]);
+  });
+
+  it("keeps the first record when duplicate aliases carry different scores", () => {
+    const first = {
+      id: "official",
+      latitude: 30.4694,
+      longitude: 119.5978,
+      score: 45,
+    };
+    const second = {
+      id: "alias",
+      latitude: 30.4694,
+      longitude: 119.5978,
+      score: 38,
+    };
+    expect(dedupeLocationIdentities([first, second])).toEqual([first]);
+  });
 });

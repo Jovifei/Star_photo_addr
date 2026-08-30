@@ -287,15 +287,18 @@ export function App() {
   const nearbyAnchor = locations[0] ?? null;
   const recommendedLocations = useMemo(() => {
     if (!nearbyRadiusKm || !nearbyAnchor) return [];
-    const existingIds = new Set(locations.map((item) => item.id));
     return rankNearbySitesWithFallback(
       nearbyAnchor,
       nearbyRadiusKm,
       activeObservationSnapshot,
-      NEARBY_RECOMMEND_LIMIT + existingIds.size,
-      NEARBY_MINIMUM_RESULTS + existingIds.size,
+      NEARBY_RECOMMEND_LIMIT + locations.length,
+      NEARBY_MINIMUM_RESULTS + locations.length,
     )
-      .filter((item) => !existingIds.has(item.site.id))
+      .filter((item) =>
+        !locations.some((location) =>
+          sameLocationIdentity(location, observingSiteToLocation(item.site)),
+        ),
+      )
       .slice(0, NEARBY_RECOMMEND_LIMIT)
       .map((item) => ({
         ...observingSiteToLocation(item.site),
@@ -305,9 +308,7 @@ export function App() {
       }));
   }, [activeObservationSnapshot, locations, nearbyAnchor, nearbyRadiusKm]);
   const rankingPool = useMemo(
-    () => [...locations, ...recommendedLocations].filter(
-      (item, index, all) => all.findIndex((candidate) => candidate.id === item.id) === index,
-    ),
+    () => dedupeLocationIdentities([...locations, ...recommendedLocations]),
     [locations, recommendedLocations],
   );
 

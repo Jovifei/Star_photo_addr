@@ -39,8 +39,14 @@
 
 - 风险原因改成“主要风险/当前结论”结构卡，已知风险附行动建议；
 - Planner 空状态明确说明输入来源和 3/5/7 夜比较；
-- Planner 页头控件设置 `max-content + nowrap`，避免按钮竖排；
-- 删除 PlannerClient 中重复的固定附近排行挂载，统一使用页面内 10/50/100/200 km 推荐。
+- Planner 页头控件设置 `max-content + nowrap`，视图按钮和刷新按钮最小高度 44px，避免按钮竖排；
+- 删除 PlannerClient 中重复的固定附近排行挂载，统一使用页面内 10/50/100/200 km 推荐；
+- 附近推荐在窄屏与短横屏（max-width 768px 或 max-height 520px）使用 3 列网格，避免 100 km 挡住 200 km。
+
+### 2.4 候选恢复与排行身份
+
+- Store 在水合完成前不会用空数组覆盖已保存的候选；
+- Planner 附近推荐和最终排行池按坐标身份去重，避免同站两行。
 
 ## 3. 测试
 
@@ -51,6 +57,15 @@
 - 更新 Planner 附近推荐 E2E 和底图请求 Mock。
 
 发布门禁：`npm run check`、Chromium 全量 E2E、Firefox/WebKit 核心冒烟、live-data、container smoke。
+
+2026-08-30 收口复核（本机 Node v24.18.0）：
+
+- `npm audit --omit=dev`：0 vulnerabilities
+- `npm run check`：ESLint PASS，TypeScript PASS，Vitest 38 files / 227 tests PASS，Next.js 16.3.0 production build PASS
+- `npm run test:e2e`：94 tests，83 passed，11 skipped，0 failed，2.2m
+- `npm run test:e2e:cross-browser`：4 passed（Firefox 2 + WebKit 2），19.2s
+- production 截图（未提交）写入 `tmp/ui-batch0-validation/`：桌面 1440×1000、平板 1024×768、手机 390×844、横屏 844×390；四入口均请求 OSM、0 次 `cartocdn.com`、署名含 OpenStreetMap、无 `API KEY REQUIRED`
+- Planner 地图视图的 `documentElement.scrollWidth` 会被 Leaflet `.leaflet-proxy` 撑大，但 `body { overflow-x: hidden }`，截图无用户可滚动的横向溢出
 
 ## 4. 明确不在本批次
 
