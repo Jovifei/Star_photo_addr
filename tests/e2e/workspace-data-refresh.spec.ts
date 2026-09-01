@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import {
   installGeocodingMock,
@@ -40,6 +41,26 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
+/**
+ * The workspace opens in the satellite-observation time domain (see
+ * DEFAULT_CLOUD_STATE.overlayMode in src/lib/constants.ts), where the hourly
+ * matrix is deliberately replaced by a "switch to forecast" note. Tests that
+ * assert on real hourly cells must first move the app into the numeric
+ * forecast domain and make sure the panel is expanded — that is a fixture
+ * precondition, not a product bug.
+ */
+async function openHourlyMatrix(page: Page) {
+  const forecastLayer = page.locator('[data-layer="forecast-cloud"]:visible').first();
+  if ((await forecastLayer.count()) > 0) {
+    await forecastLayer.click();
+  }
+  const toggle = page.locator('[aria-controls="hourly-forecast-panel"]:visible').first();
+  if ((await toggle.count()) > 0 && (await toggle.getAttribute("aria-expanded")) !== "true") {
+    await toggle.click();
+  }
+  await expect(page.locator("#hourly-forecast-panel")).toBeVisible({ timeout: 20000 });
+}
+
 test("unavailable hourly forecast shows reason with retry and recovers real values", async ({
   page,
 }, testInfo) => {
@@ -68,11 +89,13 @@ test("unavailable hourly forecast shows reason with retry and recovers real valu
 
   await retry.click();
   await expect(availability).toContainText(/数据更新|最近成功/, { timeout: 20000 });
-  await expect(page.locator("#hourly-forecast-panel")).toBeVisible();
+  // The retry has already consumed forecastCalls #2, so switching the time
+  // domain here cannot steal the 429 that this test is built around.
+  await openHourlyMatrix(page);
   const firstCell = page
     .locator("#hourly-forecast-panel tbody td")
     .first();
-  await expect(firstCell).not.toHaveText("—");
+  await expect(firstCell).not.toHaveText("—", { timeout: 20000 });
 });
 
 test("manual refresh failure keeps last good values and says so", async ({
@@ -82,6 +105,7 @@ test("manual refresh failure keeps last good values and says so", async ({
   await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA");
   const availability = page.getByTestId("forecast-availability");
   await expect(availability).toContainText(/数据更新|最近成功/, { timeout: 20000 });
+  await openHourlyMatrix(page);
   const firstCell = page.locator("#hourly-forecast-panel tbody td").first();
   await expect(firstCell).not.toHaveText("—", { timeout: 20000 });
   const goodValue = await firstCell.textContent();

@@ -205,15 +205,28 @@ test("left input column is adjustable by pointer, keyboard, presets and reset", 
   const widened = await input.boundingBox();
   expect(widened!.width).toBeGreaterThan(before!.width);
 
+  // The step/pointer expectations below are written against the 300px default,
+  // and 420px is the ceiling, so a keyboard step must start from "standard" —
+  // pressing ArrowRight at the maximum is correctly a no-op (see clamp in
+  // useInspectorWidth.ts) and would prove nothing about the step size.
+  await standard.click();
+  await expect(rail).toHaveAttribute("aria-valuenow", "300");
+
   await rail.focus();
   await rail.press("ArrowRight");
   await expect(rail).toHaveAttribute("aria-valuenow", "316");
 
+  // Aim at the inner half of the 24px rail. The outer half overlaps the map
+  // column, where Leaflet's panes (z-index 400 escaping the canvas) cover it —
+  // the same condition the inspector resizer has. The inner half is the part
+  // that carries the visible grip and is reliably interactive.
   const railBox = await rail.boundingBox();
   expect(railBox).not.toBeNull();
-  await page.mouse.move(railBox!.x + railBox!.width / 2, railBox!.y + railBox!.height / 2);
+  const railCenterY = railBox!.y + railBox!.height / 2;
+  const railGrabX = railBox!.x + railBox!.width * 0.25;
+  await page.mouse.move(railGrabX, railCenterY);
   await page.mouse.down();
-  await page.mouse.move(railBox!.x + railBox!.width / 2 + 60, railBox!.y + railBox!.height / 2);
+  await page.mouse.move(railGrabX + 60, railCenterY);
   await page.mouse.up();
   await expect(rail).toHaveAttribute("aria-valuenow", "376");
 

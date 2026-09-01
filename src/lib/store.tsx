@@ -519,6 +519,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const selectedModel = model ?? state.cloudState.model;
       const requestId = ++latestForecastRequestRef.current;
       selectedLocationIdRef.current = location.id;
+      // This location+model pair now has an explicit request in flight. Mark it
+      // so the background hydration effect does not silently retry it: such a
+      // retry used to land after a 429 and hide the failure from the user.
+      forecastHydrationKeyRef.current = `${location.id}|${selectedModel}`;
       dispatch({ type: "SET_LOCATION", location });
       dispatch({ type: "SET_DETAIL_OPEN", open: true });
       dispatch({ type: "SET_LOADING", loading: true });
@@ -529,15 +533,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const forecast = await fetchForecastFor(location, selectedModel);
         if (requestId !== latestForecastRequestRef.current) return;
         dispatch({ type: "SET_FORECAST", forecast });
+        // Record the success so the availability line can show "数据更新".
+        // Without this a deep-linked location never reported its freshness,
+        // because selectLocation used to skip the availability reducer.
+        dispatch({
+          type: "SET_FORECAST_SUCCESS",
+          fetchedAt: forecast?.fetchedAt ?? new Date().toISOString(),
+        });
         if (forecast) {
           dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
         }
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current) return;
-        dispatch({
-          type: "SET_ERROR",
-          error: error instanceof Error ? error.message : "天气请求失败",
-        });
+        const message = error instanceof Error ? error.message : "天气请求失败";
+        dispatch({ type: "SET_ERROR", error: message });
+        // Surface the upstream failure (429 / timeout) in the availability
+        // line instead of only in the generic error slot, which the hourly
+        // panel never shows.
+        dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: message });
       } finally {
         if (requestId === latestForecastRequestRef.current) {
           dispatch({ type: "SET_LOADING", loading: false });
@@ -581,6 +594,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
       lastForecastAttemptRef.current = { key: locationId, at: requestStartedAt };
+      // Same contract as selectLocation: an explicit request owns this
+      // location+model pair, so the hydration effect must not retry it and
+      // mask a 429 the user is supposed to see.
+      forecastHydrationKeyRef.current = `${locationId}|${selectedModel}`;
       const requestId = ++latestForecastRequestRef.current;
       forecastInFlightRef.current = true;
       dispatch({ type: "SET_LOADING", loading: true });
@@ -594,9 +611,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (requestId !== latestForecastRequestRef.current) return;
         dispatch({ type: "SET_SAMPLE", sample });
         dispatch({ type: "SET_FORECAST", forecast });
+        // The plan asks for an explicit "last successful update" timestamp.
+        // Use the upstream-provided `fetchedAt` when present; otherwise fall
+        // back to the moment the response arrived at the client. We never
+        // fabricate upstream time, but we also don't leave the success
+        // surface empty when the API omits the field.
         dispatch({
           type: "SET_FORECAST_SUCCESS",
-          fetchedAt: forecast?.fetchedAt ?? null,
+          fetchedAt: forecast?.fetchedAt ?? new Date().toISOString(),
         });
         if (forecast) {
           dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
@@ -618,22 +640,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshData = useCallback(async () => {
     const location = state.selectedLocation;
-    if (!location) return;
     const requestStartedAt = Date.now();
     const lastAttempt = lastForecastAttemptRef.current;
     // A forced refresh bypasses the HTTP cache and hits the upstream directly,
-    // so stacked clicks inside the cooldown window must not both go out.
+    // so stacked clicks inside the cooldown window must not both go out. The
+    // cooldown only gates the location-bound forecast request; the revision
+    // below still fires so satellite/cloud/status layers can refresh.
     if (
+      location &&
       lastAttempt &&
       lastAttempt.key === location.id &&
       requestStartedAt - lastAttempt.at < FORECAST_SAMPLE_COOLDOWN_MS
     ) {
       return;
     }
-    lastForecastAttemptRef.current = { key: location.id, at: requestStartedAt };
+    // Publish the revision even without a selected location: the satellite
+    // catalogue, cloud grid and data-source status are location-independent,
+    // and the refresh button promises all of them ("刷新天气、卫星目录和数据源状态").
+    // Previously the early return above skipped this dispatch, so the manual
+    // refresh was a silent no-op for those layers.
     const revision = Date.now();
     dispatch({ type: "REFRESH_DATA", revision });
     dispatch({ type: "SET_ERROR", error: "" });
+    if (!location) return;
+    lastForecastAttemptRef.current = { key: location.id, at: requestStartedAt };
     const requestId = ++latestForecastRequestRef.current;
     forecastInFlightRef.current = true;
     dispatch({ type: "SET_LOADING", loading: true });
@@ -652,7 +682,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "SET_FORECAST", forecast });
       dispatch({
         type: "SET_FORECAST_SUCCESS",
-        fetchedAt: forecast?.fetchedAt ?? null,
+        fetchedAt: forecast?.fetchedAt ?? new Date().toISOString(),
       });
       if (forecast) {
         dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
@@ -749,6 +779,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return;
         }
         dispatch({ type: "SET_FORECAST", forecast });
+        // A hydrated forecast is real data too, so it must publish its
+        // freshness; otherwise the availability line stayed blank for any
+        // location that was restored without an explicit request.
+        dispatch({
+          type: "SET_FORECAST_SUCCESS",
+          fetchedAt: forecast.fetchedAt ?? new Date().toISOString(),
+        });
         dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
       })
       .catch(() => {

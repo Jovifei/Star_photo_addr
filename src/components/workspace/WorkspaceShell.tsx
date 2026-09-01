@@ -81,21 +81,26 @@ export default function WorkspaceShell({
           "--workspace-input-width": `${inputWidth.width}px`,
         } as CSSProperties}
       >
-        <aside className="workspace-input" data-testid="workspace-input">
-          {!mobile ? (
-            <WidthControls
-              label="输入栏宽度"
-              unit="输入栏"
-              controls={inputWidth}
-              presets={{
-                standard: INPUT_WIDTH_DEFAULT,
-                labelNarrow: "输入栏窄宽度",
-                labelStandard: "输入栏标准宽度",
-                labelWide: "输入栏加宽",
-              }}
-            />
-          ) : null}
-          {input}
+        {/* The resizer must be a sibling of the aside, not a child: the aside
+            scrolls (overflow: auto), which would clip the outer half of the
+            24px grab rail. This mirrors .workspace-inspector-frame. */}
+        <div className="workspace-input-frame">
+          <aside className="workspace-input" data-testid="workspace-input">
+            {!mobile ? (
+              <WidthControls
+                label="输入栏宽度"
+                unit="输入栏"
+                controls={inputWidth}
+                presets={{
+                  standard: INPUT_WIDTH_DEFAULT,
+                  labelNarrow: "输入栏窄宽度",
+                  labelStandard: "输入栏标准宽度",
+                  labelWide: "输入栏加宽",
+                }}
+              />
+            ) : null}
+            {input}
+          </aside>
           {!mobile ? (
             <div
               className="workspace-input-resizer"
@@ -117,7 +122,7 @@ export default function WorkspaceShell({
               onDoubleClick={inputWidth.reset}
             />
           ) : null}
-        </aside>
+        </div>
         <div className="workspace-canvas" data-testid="workspace-canvas">
           {canvas}
         </div>

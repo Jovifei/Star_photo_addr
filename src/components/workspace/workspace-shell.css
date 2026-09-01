@@ -1,13 +1,18 @@
 .workspace-shell {
   --workspace-inspector-width: 360px;
   display: grid;
-  grid-template-rows: auto 1fr;
+  /* Three children are possible (header, command bar, body), so three rows:
+     with only "auto 1fr" the command bar landed in the 1fr row and absorbed
+     the viewport on mobile, collapsing the map (and the panel dock) to zero
+     height. The body is pinned to row 3 so a missing command bar still fills. */
+  grid-template-rows: auto auto 1fr;
   min-height: 100dvh;
   background: var(--night-0);
 }
 
 .workspace-shell-body {
   display: grid;
+  grid-row: 3;
   --workspace-inspector-resolved-width: max(320px, min(var(--workspace-inspector-width), calc(100vw - 620px)));
   --workspace-input-resolved-width: max(260px, min(var(--workspace-input-width), calc(100vw - 700px)));
   grid-template-columns: var(--workspace-input-resolved-width) minmax(360px, 1fr) var(--workspace-inspector-resolved-width);
@@ -30,6 +35,17 @@
   inset: auto !important;
   width: 100% !important;
   transform: none !important;
+}
+
+.workspace-input-frame {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace-input-frame .workspace-input {
+  width: 100%;
+  height: 100%;
 }
 
 .workspace-input,
@@ -409,6 +425,7 @@
   .workspace-shell-body {
     grid-template-columns: 1fr;
   }
+  .workspace-input-frame,
   .workspace-input,
   .workspace-inspector,
   .workspace-inspector-frame {

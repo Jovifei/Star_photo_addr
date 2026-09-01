@@ -60,10 +60,15 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run build && npm run start:e2e",
+    // Start the prebuilt standalone server only. A cold `next build` inside
+    // the webServer cannot fit in any sane timeout (it takes ~4 minutes
+    // locally and more on CI runners), which made every e2e job die before
+    // running a single test. Build first (CI has a dedicated step; locally
+    // run `npm run build` once), then boot the server here.
+    command: "npm run start:e2e",
     url: BASE_URL,
     reuseExistingServer: false,
-    timeout: 180000,
+    timeout: 120000,
     env: {
       NODE_OPTIONS: "--max-old-space-size=2048",
       NODE_ENV: "production",
