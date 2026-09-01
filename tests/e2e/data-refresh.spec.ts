@@ -182,7 +182,7 @@ test("manual refresh bypasses application caches for weather, health and site sc
     "/?lat=30.2741&lng=120.1551&name=%E6%9D%AD%E5%B7%9E%E6%B5%8B%E8%AF%95%E7%82%B9&" +
       "model=gfs&view=combined&overlay=forecast-cloud",
   );
-  await expect(page.locator(".detail-overlay-host")).toHaveClass(/is-open/);
+  await expect(page.getByTestId("observation-reason-card")).toBeVisible();
   await openMobileMapPanel(page, "cloud");
   await expect(page.getByText("天气 / Open-Meteo")).toBeVisible();
 

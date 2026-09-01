@@ -100,12 +100,15 @@ test("手机横屏仍使用侧边栏而不是恢复重叠的桌面浮窗", async
   expect(layout.bodyIsScrollable).toBe(true);
 });
 
-test("桌面端保留原有浮动和可拖动面板", async ({ page }, testInfo) => {
+test("桌面端在证据页签中打开云量和地点，而不是地图浮层", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "仅验证桌面布局");
   await page.goto("/?overlay=forecast-cloud&view=combined");
 
   await expect(page.getByTestId("mobile-map-panel-dock")).toHaveCount(0);
+  await page.getByRole("tab", { name: "云量" }).click();
   await expect(page.locator(".cloud-control")).toBeVisible();
+  await page.getByRole("tab", { name: "地点" }).click();
   await expect(page.locator(".observing-map-control")).toBeVisible();
+  await page.getByRole("tab", { name: "设置" }).click();
   await expect(page.locator(".map-panel-manager")).toBeVisible();
 });

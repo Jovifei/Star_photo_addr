@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -30,24 +31,11 @@ test.beforeEach(async ({ page }) => {
   await installNextApiMock(page, fixture);
 });
 
-test("桌面地图面板支持显示比例调整并将云量通道展示为横向进度条", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "移动端改用单一侧边栏，不提供浮动面板拖放设置");
+test("云量通道展示为横向进度条", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "移动端改用单一侧边栏");
   await page.goto("/?overlay=forecast-cloud&view=combined");
-  const manager = page.locator(".map-panel-manager");
-  const cloudControl = page.locator(".cloud-control");
-  await expect(manager).toBeVisible();
-  await expect(cloudControl).toBeVisible();
-  await manager.getByRole("button", { name: "打开面板布局设置" }).click();
-  const scale = page.getByRole("slider", { name: "云量与图层显示比例" });
-  await scale.fill("1.2");
-  await expect
-    .poll(() =>
-      cloudControl.evaluate((element) =>
-        getComputedStyle(element).getPropertyValue("--map-panel-scale").trim(),
-      ),
-    )
-    .toBe("1.2");
-  const bars = page.locator(".cloud-mode-tabs button.cloud-channel-bar");
+  await page.getByRole("tab", { name: "云量", exact: true }).click();
+  const bars = page.locator(".cloud-mode-tabs button");
   await expect(bars).toHaveCount(4);
   await expect(bars.first()).toHaveCSS("display", "grid");
 });
@@ -70,16 +58,21 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
   );
   const drawer = page.getByTestId("mobile-map-panel-drawer");
   if (testInfo.project.name === "mobile") {
-    await page.getByTestId("mobile-map-panel-open-layers").click();
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
   }
-  await expect(page.locator(".bortle-control")).toContainText("未安装");
   await expect(page.locator(".dark-sky-unavailable-note")).toContainText(
     "本地 Bortle/SQM 数值栅格",
     { timeout: 15000 },
   );
   const metricValues = page.locator(".metric-grid .metric .value");
   await expect(metricValues.first()).toContainText("未安装");
+  if (testInfo.project.name === "mobile") {
+    await openMobileMapPanel(page, "layers");
+    await expect(drawer).toHaveAttribute("aria-hidden", "false");
+  } else {
+    await page.getByRole("tab", { name: "地点" }).click();
+  }
+  await expect(page.locator(".bortle-control")).toContainText("未安装");
   const helpButton = testInfo.project.name === "mobile"
     ? drawer.getByRole("button", { name: "Bortle、SQM 与未安装说明" })
     : page.locator(".bortle-control:visible").getByRole("button", { name: "Bortle、SQM 与未安装说明" });

@@ -9,6 +9,7 @@ import {
   type CSSProperties,
 } from "react";
 import { useStore } from "@/lib/store";
+import ForecastAvailability from "@/components/workspace/ForecastAvailability";
 import {
   getCloudCoverAtTime,
   getValuesAtTime,
@@ -246,6 +247,7 @@ export default function CloudControl() {
       </div>
 
       <div className="source-status-panel" aria-label="数据源状态">
+        <ForecastAvailability />
         <span className="source-status-title">
           数据源状态
           <small title={health?.nextRefreshAt}>{healthSummary}</small>

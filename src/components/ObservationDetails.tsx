@@ -17,35 +17,6 @@ function unavailableDarkSkyLabel(
   return "无数据";
 }
 
-const REASON_EXPLANATIONS: Record<string, string> = {
-  降水风险:
-    "预报窗口存在降水或较高降水概率。请查看逐小时数据，并准备改期或备选地点。",
-  雷暴风险:
-    "预报窗口可能出现雷暴。应取消或改期，并以当地气象预警和现场安全信息为准。",
-  阵风过大:
-    "阵风可能影响脚架稳定和户外安全。建议降低迎风暴露，必要时改期。",
-  低能见度:
-    "能见度偏低会削弱通透度和星点对比度，建议比较附近地点或其他夜晚。",
-};
-
-function explainEvaluationReason(reason: string | null | undefined): {
-  title: string;
-  text: string;
-  tone: "risk" | "neutral";
-} {
-  if (!reason) {
-    return {
-      title: "等待地点结论",
-      text: "选择地点后，将按当地时区计算 20:00–次日 05:00 的天气与天文窗口。",
-      tone: "neutral",
-    };
-  }
-  const explanation = REASON_EXPLANATIONS[reason];
-  return explanation
-    ? { title: "主要风险", text: explanation, tone: "risk" }
-    : { title: "当前结论", text: reason, tone: "neutral" };
-}
-
 /** Observation detail: dark-sky, weather window, moon, galaxy, confidence. */
 export default function ObservationDetails({
   sample,
@@ -62,7 +33,6 @@ export default function ObservationDetails({
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
   const darkSkyInstalled = hasDarkSkyLayer();
-  const reasonSummary = explainEvaluationReason(evaluation?.reason);
   const hasReading = sample != null && sample.status === "ok";
   const unavailableLabel = unavailableDarkSkyLabel(sample, darkSkyInstalled);
   const mpsasText =
@@ -206,13 +176,6 @@ export default function ObservationDetails({
         </p>
       )}
 
-      <div
-        className={`panel-reason-card${reasonSummary.tone === "neutral" ? " is-neutral" : ""}`}
-        data-testid="observation-reason-card"
-      >
-        <strong>{reasonSummary.title}</strong>
-        <p>{reasonSummary.text}</p>
-      </div>
       {location && onAddCandidate && (
         <button
           type="button"

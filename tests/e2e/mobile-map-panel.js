@@ -1,16 +1,23 @@
 import { expect } from "@playwright/test";
 
 export async function openMobileMapPanel(page, panel) {
-  // Desktop renders floating controls, not the mobile dock: calling this
-  // helper there is a no-op so specs can share one flow across projects.
-  const width = page.viewportSize()?.width ?? 0;
-  if (width > 768) return false;
   const labels = {
     layers: "图层",
     places: "地点",
     cloud: "云量",
     recommendations: "推荐",
   };
+  const mobile = await page.evaluate(() =>
+    window.matchMedia(
+      "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)",
+    ).matches,
+  );
+  if (!mobile) {
+    const tab = page.getByRole("tab", { name: labels[panel], exact: true });
+    if ((await tab.count()) === 0) return false;
+    await tab.click();
+    return false;
+  }
   await page.getByTestId("mobile-map-panel-dock").waitFor({ state: "visible", timeout: 15000 });
   const drawer = page.getByTestId("mobile-map-panel-drawer");
   if ((await drawer.count()) > 0 && (await drawer.getAttribute("aria-hidden")) === "false") {

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { VIIRS_SCIENTIFIC_BOUNDARY } from "@/data/viirsMeta";
@@ -33,7 +33,7 @@ export default function SourcePopover({
     overlay: state.cloudState.overlayMode,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
@@ -45,7 +45,7 @@ export default function SourcePopover({
           'button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
         ) ?? [],
       );
-    focusable()[0]?.focus();
+    focusable()[0]?.focus({ preventScroll: true });
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -58,17 +58,23 @@ export default function SourcePopover({
       if (!items.length) return;
       const first = items[0];
       const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      // Handle the boundary on the dialog during capture. WebKit can update
+      // document.activeElement before a document-level bubbling listener sees
+      // Shift+Tab, while the event target still identifies the boundary item.
+      const origin = event.target instanceof HTMLElement
+        ? event.target
+        : document.activeElement;
+      if (event.shiftKey && origin === first) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && origin === last) {
         event.preventDefault();
         first.focus();
       }
     };
-    document.addEventListener("keydown", onKeyDown);
+    dialog?.addEventListener("keydown", onKeyDown, true);
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
+      dialog?.removeEventListener("keydown", onKeyDown, true);
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };

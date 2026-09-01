@@ -389,3 +389,46 @@
 - 完整检查：`npm run check` 通过，16 个 Vitest 文件 / 121 个测试、Lint、TypeScript、Next 16.3.0 构建均通过。
 - E2E：独立 `PORT=3110` 运行，桌面 9/9、移动端 7/7 通过，2 个移动端不适用用例按设计跳过。
 - 浏览器现场：`/planner` 地图直接点击生成“地图选点 30.643, 119.309”，完成评分与天气渲染；控制台错误 0。
+# WorkspaceShell display architecture close-out (2026-08-30)
+
+- [x] Audit the interrupted `refactor/ui-workspace-shell-v1` implementation against the local plan and current `main`.
+- [x] Close the inspector lazy-mount/focus, mobile drawer, Fireglow shell/palette, Planner geometry, and migrated E2E gaps.
+- [x] Pass the full Chromium suite with the current working tree (90 passed, 18 skipped by project, 0 failed).
+- [x] Fix the production visual-smoke regression where direct Planner map entry leaked Leaflet tiles outside the map viewport, and lock it with E2E coverage.
+- [x] Install the required Firefox/WebKit runtimes in the approved download directory and pass cross-browser smoke tests (4 passed).
+- [x] Re-run `npm run check`, inspect the current production UI at desktop/mobile sizes, and record final evidence.
+- [x] Commit and push the completed branch, then open PR #16 against `main` without merging it.
+- [x] Close the CI-only WebKit source-dialog focus-loop failure and rerun PR checks.
+
+## Review
+
+- `npm run check`: PASS — ESLint, TypeScript, 40 Vitest files / 231 tests, Next.js 16.3 production build.
+- `npm run test:e2e`: PASS — 91 passed, 19 project-specific skips, 0 failed in 2.2 minutes.
+- Local `npm run test:e2e:cross-browser`: PASS — Firefox desktop and WebKit mobile, 4 passed, 0 failed. The CI-only WebKit Shift+Tab race was fixed at the dialog capture boundary and also passed 6 repeated focus-loop runs.
+- Production visual smoke: PASS — 24 desktop/tablet/phone/landscape states, all with zero page overflow, zero CARTO requests, and zero duplicate nearby panels.
+- Visual smoke found and closed one extra defect through RED/GREEN: direct Planner map entry lacked Leaflet CSS and leaked tiles; the final Planner map overflow is 0.
+- Integration boundary: push this branch and create a PR against `main`; do not merge without Jovi's explicit approval.
+
+# Adjustable inspector and hourly lift (2026-08-30)
+
+- [x] Use the approved A layout: desktop evidence rail defaults to 360px, supports pointer/keyboard/preset adjustment, and keeps the map in flow.
+- [x] Re-space the decision summary with a 12/16/20px type hierarchy and grouped evidence rows.
+- [x] Automatically raise the hourly forecast for every newly selected location; retain an explicit 44px control and keep it unobscured on mobile.
+- [x] Keep static VIIRS night-light reference collapsed and free of misleading hourly-forecast controls.
+- [x] Add RED/GREEN browser coverage for width defaults, left/right drag, keyboard/preset alternatives, text metrics, selection expansion, static-reference semantics, and mobile lift geometry.
+- [x] Pass local check, full Chromium E2E, Firefox/WebKit smoke, and visual review.
+- [ ] Commit/push the exact UI change, await PR #16 CI, then deploy that exact SHA to ECS without merging the PR.
+
+## Review
+
+- `npm run check`: PASS — ESLint, TypeScript, 40 Vitest files / 231 tests, production build.
+- `npm run test:e2e`: PASS — 95 passed, 23 project-specific skips, 0 failed.
+- `npm run test:e2e:cross-browser`: PASS — Firefox desktop plus WebKit mobile, 4 passed.
+- Visual review: PASS at 1440×1000, 390×844 and 844×390. Desktop inspector defaults to 360px; mobile control remains inside the timeline; static night-light mode has no false hourly expansion.
+- Source dialog focus recovery: PASS — Chromium core 4/4, Firefox/WebKit core 4/4, and Firefox/WebKit focus-loop repeat 8/8.
+
+# Data refresh and map controls follow-up (2026-08-30)
+
+- [x] Diagnose local/public API, browser requests, fireglow phase behavior, worker scope, asset flags, and deployment state.
+- [x] Write the evidence-first repair plan at `docs/superpowers/plans/2026-08-30-data-refresh-and-map-controls.md` (local ignored plan; do not depend on GitHub visibility).
+- [ ] Get Jovi's approval for the follow-up plan before changing source code.

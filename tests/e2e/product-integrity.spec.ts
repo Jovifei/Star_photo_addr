@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -21,10 +22,13 @@ test("暗夜选址的 B1-B4 卡片可组合筛选并同步点位数量", async (
   await page.goto("/sites");
   let panel = page.locator(".observing-map-control:visible");
   if (testInfo.project.name === "mobile") {
-    await page.getByTestId("mobile-map-panel-open-places").click();
+    await openMobileMapPanel(page, "places");
     const drawer = page.getByTestId("mobile-map-panel-drawer");
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
     panel = drawer.locator(".observing-map-control");
+  } else {
+    await page.getByRole("tab", { name: "地点" }).click();
+    panel = page.locator(".observing-map-control:visible");
   }
   await expect(panel).toBeVisible();
   const cards = panel.locator(".observing-baseline-chip");
@@ -39,6 +43,56 @@ test("暗夜选址的 B1-B4 卡片可组合筛选并同步点位数量", async (
   await cards.nth(1).click();
   await expect(cards.nth(1)).toHaveAttribute("aria-pressed", "false");
   await expect(panel).toContainText("B1、B3、B4");
+});
+
+test("sites workspace shows a B1–B4 filter bar above the map with visible colors and synced markers", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Bortle 过滤条几何只测桌面");
+  await page.goto("/sites");
+  const bar = page.getByTestId("bortle-filter-bar");
+  await expect(bar).toBeVisible();
+  const mapBox = await page.locator(".leaflet-container").first().boundingBox();
+  const barBox = await bar.boundingBox();
+  expect(mapBox).not.toBeNull();
+  expect(barBox).not.toBeNull();
+  expect(barBox!.y).toBeGreaterThanOrEqual(mapBox!.y - 8);
+  expect(barBox!.y).toBeLessThanOrEqual(mapBox!.y + 140);
+  const barCenter = barBox!.x + barBox!.width / 2;
+  const mapCenter = mapBox!.x + mapBox!.width / 2;
+  expect(Math.abs(barCenter - mapCenter)).toBeLessThanOrEqual(280);
+
+  const buttons = bar.getByRole("button");
+  await expect(buttons).toHaveCount(4);
+  for (let index = 0; index < 4; index += 1) {
+    await expect(buttons.nth(index)).toHaveAttribute(
+      "aria-pressed",
+      index < 3 ? "true" : "false",
+    );
+    await expect(buttons.nth(index)).toContainText(`B${index + 1}`);
+  }
+  const fills = await buttons.evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const swatch = node.querySelector("i");
+      return swatch ? getComputedStyle(swatch).backgroundColor : "";
+    }),
+  );
+  expect(new Set(fills).size).toBe(4);
+  for (const fill of fills) {
+    expect(fill === "rgb(0, 0, 0)" || fill === "rgb(34, 34, 34)").toBe(false);
+  }
+
+  const container = page.locator(".leaflet-container").first();
+  await expect(container).toHaveAttribute("data-observing-site-count", "222");
+  await expect(page.locator('.observing-site-dot[data-bortle="1"]').first()).toBeAttached();
+
+  await buttons.nth(3).click();
+  await expect(buttons.nth(3)).toHaveAttribute("aria-pressed", "true");
+  await expect(container).toHaveAttribute("data-observing-site-count", "242");
+
+  await buttons.nth(0).click();
+  await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "false");
+  await expect(container).toHaveAttribute("data-observing-site-count", "205");
 });
 
 test("稀疏坐标启用附近推荐时自动补最近观测点，关闭后恢复基础池", async ({ page }, testInfo) => {
@@ -71,6 +125,49 @@ test("火烧云地图在宽屏占满工作区而不是被 1680px 中心限宽", 
   expect((map?.x ?? 0) + (map?.width ?? 0)).toBeGreaterThanOrEqual(1900);
 });
 
+test("火烧云主要控制保持至少 44px 触控高度", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "触控高度只需桌面项目验证一次");
+  await page.goto("/fireglow");
+  const controls = page.locator(".fireglow-controls button:visible");
+  await expect(controls).toHaveCount(7);
+  const heights = await controls.evaluateAll((buttons) =>
+    buttons.map((button) => button.getBoundingClientRect().height),
+  );
+  expect(heights.every((height) => height >= 44)).toBe(true);
+});
+
+test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "三栏结构只需桌面验证");
+  await page.route("**/api/fireglow/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-08-30";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "icon",
+        generatedAt: "2026-08-30T12:00:00.000Z",
+        source: "E2E fireglow snapshot",
+        stale: false,
+        sites: {},
+      }),
+    });
+  });
+  await page.goto("/fireglow");
+  await page.locator(".fireglow-list button").first().click();
+  const inspector = page.locator(".fireglow-workspace > .fireglow-inspector");
+  await expect(inspector).toBeVisible();
+  await expect(page.locator(".fireglow-panel .fireglow-inspector")).toHaveCount(0);
+  const panelBox = await page.locator(".fireglow-panel").boundingBox();
+  const mapBox = await page.locator(".fireglow-map").boundingBox();
+  const inspectorBox = await inspector.boundingBox();
+  expect(panelBox).not.toBeNull();
+  expect(mapBox).not.toBeNull();
+  expect(inspectorBox).not.toBeNull();
+  expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(mapBox!.x + 1);
+  expect(mapBox!.x + mapBox!.width).toBeLessThanOrEqual(inspectorBox!.x + 1);
+});
+
 test("当前时次评分不可用时明确显示数据不足，不把未知点当低分", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "评分未知态只需桌面主地图回归一次");
   await page.route("**/api/observing/snapshot**", async (route) => {
@@ -89,6 +186,7 @@ test("当前时次评分不可用时明确显示数据不足，不把未知点�
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
   await page.goto("/?overlay=forecast-cloud&view=combined");
+  await page.getByRole("tab", { name: "地点" }).click();
   const panel = page.locator(".observing-map-control:visible");
   await expect(panel).toHaveAttribute("data-score-status", "degraded", { timeout: 15000 });
   await expect(panel).toContainText("灰色点代表未知，不等同于低分");
@@ -107,6 +205,7 @@ test("卫星强制刷新失败时保留上一帧并标记降级", async ({ page 
   });
   await page.goto("/?overlay=satellite-cloud&view=satellite");
   await expect(page.locator(".satellite-frame-badge")).toBeVisible({ timeout: 15000 });
+  await page.getByRole("tab", { name: "云量", exact: true }).click();
   const refresh = page.getByRole("button", { name: "强制刷新天气、卫星目录和数据源状态" });
   await refresh.click();
   await expect(page.locator(".satellite-layer-error")).toContainText("测试中的卫星上游不可用", { timeout: 15000 });

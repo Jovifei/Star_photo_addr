@@ -26,7 +26,7 @@
   --shadow-float: 0 14px 34px rgba(0, 0, 0, 0.42);
   --radius-panel: 14px;
   --radius-control: 8px;
-  --control-height: 36px;
+  --control-height: 44px;
 }
 
 body {
@@ -334,6 +334,18 @@ body {
 
   .source-button-label {
     display: none;
+  }
+}
+
+@media (max-width: 840px) {
+  .app-header-title {
+    font-size: 16px;
+  }
+  .app-header-eyebrow + .app-header-title {
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

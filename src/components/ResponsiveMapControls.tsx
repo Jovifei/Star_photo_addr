@@ -8,17 +8,18 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type RefObject,
 } from "react";
 import { useStore } from "@/lib/store";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
+import DetailRestore from "@/components/DetailRestore";
 import BortleControl from "@/components/BortleControl";
 import CloudControl from "@/components/CloudControl";
 import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import MapBoundaryStatus from "@/components/MapBoundaryStatus";
 import MapLayerBar from "@/components/MapLayerBar";
 import MapLegend from "@/components/MapLegend";
-import MapPanelManager from "@/components/MapPanelManager";
 import MapViewActions from "@/components/MapViewActions";
 import ObservingMapControl from "@/components/ObservingMapControl";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
@@ -39,7 +40,8 @@ const PANEL_ITEMS = [
   },
 ] as const;
 
-type MobilePanelKey = (typeof PANEL_ITEMS)[number]["id"];
+type DockPanelKey = (typeof PANEL_ITEMS)[number]["id"];
+type MobilePanelKey = DockPanelKey | "summary";
 
 function isMobilePanelViewport(): boolean {
   return (
@@ -48,7 +50,7 @@ function isMobilePanelViewport(): boolean {
   );
 }
 
-function useMobilePanelViewport(): boolean {
+export function useMobilePanelViewport(): boolean {
   const [mobile, setMobile] = useState(isMobilePanelViewport);
 
   useEffect(() => {
@@ -74,36 +76,53 @@ export default function ResponsiveMapControls({
   mapRef,
   ready,
   onRecommendationsChange,
+  variant = "canvas",
+  summaryPane = null,
 }: {
   mapRef: RefObject<LeafletMap | null>;
   ready: boolean;
   onRecommendationsChange: (items: ViewportRecommendation[]) => void;
+  variant?: "canvas" | "inspector" | "mobile";
+  summaryPane?: ReactNode;
 }) {
   const mobile = useMobilePanelViewport();
-  const { state } = useStore();
-  const [activePanel, setActivePanel] = useState<MobilePanelKey | null>(null);
+  const { state, setDetailOpen } = useStore();
+  const [requestedPanel, setRequestedPanel] = useState<MobilePanelKey | null>(null);
   const drawerRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastTriggerRef = useRef<HTMLElement | null>(null);
+  const showMobileDock = variant === "mobile" || (variant === "canvas" && mobile);
+  const activePanel = showMobileDock && state.detailOpen
+    ? "summary"
+    : requestedPanel;
 
-  const activeTitle = useMemo(
-    () =>
-      PANEL_ITEMS.find((item) => item.id === activePanel)?.title ??
-      "地图工具",
-    [activePanel],
-  );
+  const activeTitle = useMemo(() => {
+    if (activePanel === "summary") return "今晚判断";
+    return PANEL_ITEMS.find((item) => item.id === activePanel)?.title ?? "地图工具";
+  }, [activePanel]);
 
   const closePanel = useCallback(() => {
-    setActivePanel(null);
+    setRequestedPanel(null);
+    setDetailOpen(false);
     window.requestAnimationFrame(() => lastTriggerRef.current?.focus());
-  }, []);
+  }, [setDetailOpen]);
 
-  const openPanel = useCallback((panel: MobilePanelKey) => {
-    if (document.activeElement instanceof HTMLElement) {
-      lastTriggerRef.current = document.activeElement;
-    }
-    setActivePanel(panel);
-  }, []);
+  const selectPanel = useCallback(
+    (panel: MobilePanelKey) => {
+      if (panel !== "summary") setDetailOpen(false);
+      setRequestedPanel(panel);
+    },
+    [setDetailOpen],
+  );
+  const openPanel = useCallback(
+    (panel: MobilePanelKey) => {
+      if (document.activeElement instanceof HTMLElement) {
+        lastTriggerRef.current = document.activeElement;
+      }
+      selectPanel(panel);
+    },
+    [selectPanel],
+  );
 
   useEffect(() => {
     const drawer = drawerRef.current;
@@ -148,28 +167,21 @@ export default function ResponsiveMapControls({
     // The dynamic control shell can render one frame before matchMedia
     // settles. Do not close a just-opened drawer merely because the hook's
     // initial boolean was false while the viewport already matches mobile.
-    if (!activePanel || mobile || isMobilePanelViewport()) return;
+    if (!requestedPanel || mobile || isMobilePanelViewport()) return;
     // Deferred so the guard runs after paint instead of cascading a render.
-    const frame = window.setTimeout(() => setActivePanel(null), 0);
+    const frame = window.setTimeout(() => setRequestedPanel(null), 0);
     return () => window.clearTimeout(frame);
-  }, [activePanel, mobile]);
+  }, [mobile, requestedPanel]);
 
-  if (!mobile) {
+  if (variant === "inspector") {
+    return null;
+  }
+
+  if (!showMobileDock) {
     return (
       <>
-        <MapViewActions mapRef={mapRef} />
         {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
         <MapLayerBar />
-        <BortleControl />
-        <CloudControl />
-        <ObservingMapControl />
-        <ViewportRecommendationPanel
-          mapRef={mapRef}
-          ready={ready}
-          onRecommendationsChange={onRecommendationsChange}
-        />
-        <MapLegend />
-        <MapPanelManager />
         <MapBoundaryStatus />
       </>
     );
@@ -203,6 +215,19 @@ export default function ResponsiveMapControls({
           );
         })}
       </nav>
+
+      <DetailRestore
+        open={activePanel === "summary"}
+        label={state.selectedLocation?.name ?? "未选"}
+        onToggle={() => {
+          if (activePanel === "summary") {
+            closePanel();
+            return;
+          }
+          setDetailOpen(true);
+          openPanel("summary");
+        }}
+      />
 
       <button
         type="button"
@@ -247,7 +272,7 @@ export default function ResponsiveMapControls({
                 role="tab"
                 aria-selected={active}
                 className={active ? "active" : ""}
-                onClick={() => setActivePanel(item.id)}
+                onClick={() => selectPanel(item.id)}
               >
                 <Icon size={15} aria-hidden="true" />
                 {item.label}
@@ -257,50 +282,44 @@ export default function ResponsiveMapControls({
         </div>
 
         <div className="mobile-map-panel-body">
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="layers"
-            hidden={activePanel !== "layers"}
-          >
-            <MapLayerBar />
-            {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
-            <MapViewActions mapRef={mapRef} />
-            <BortleControl />
-            <MapLegend />
-            <MapBoundaryStatus />
-          </div>
+          {activePanel === "layers" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="layers">
+              <MapLayerBar />
+              {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
+              <MapViewActions mapRef={mapRef} />
+              <BortleControl />
+              <MapLegend />
+              <MapBoundaryStatus />
+            </div>
+          ) : null}
 
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="places"
-            hidden={activePanel !== "places"}
-          >
-            <ObservingMapControl docked />
-          </div>
+          {activePanel === "places" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="places">
+              <ObservingMapControl docked />
+            </div>
+          ) : null}
 
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="cloud"
-            hidden={activePanel !== "cloud"}
-          >
-            <CloudControl />
-          </div>
+          {activePanel === "cloud" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="cloud">
+              <CloudControl />
+            </div>
+          ) : null}
 
-          <div
-            className="mobile-map-panel-pane"
-            role="tabpanel"
-            data-panel="recommendations"
-            hidden={activePanel !== "recommendations"}
-          >
-            <ViewportRecommendationPanel
-              mapRef={mapRef}
-              ready={ready}
-              onRecommendationsChange={onRecommendationsChange}
-            />
-          </div>
+          {activePanel === "recommendations" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="recommendations">
+              <ViewportRecommendationPanel
+                mapRef={mapRef}
+                ready={ready}
+                onRecommendationsChange={onRecommendationsChange}
+              />
+            </div>
+          ) : null}
+
+          {activePanel === "summary" ? (
+            <div className="mobile-map-panel-pane" role="tabpanel" data-panel="summary">
+              {summaryPane}
+            </div>
+          ) : null}
         </div>
       </aside>
     </section>

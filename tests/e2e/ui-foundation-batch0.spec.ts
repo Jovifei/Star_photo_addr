@@ -169,8 +169,10 @@ test("风险原因带语义标题和可执行说明，且不伪造无雷暴", as
   );
   const card = page.getByTestId("observation-reason-card");
   await expect(card).toBeVisible({ timeout: 15000 });
-  await expect(card.locator("strong")).toHaveText(/主要风险|当前结论|等待地点结论/);
-  await expect(card.locator("p")).not.toHaveText(/^降水风险$|^雷暴风险$/);
+  await expect(card.locator("dt").nth(1)).toHaveText(
+    /主要风险|未见已接入门禁|评分未知|选点引导/,
+  );
+  await expect(card.locator("dd").nth(1)).not.toHaveText(/^降水风险$|^雷暴风险$/);
   await expect(card).not.toContainText("无雷暴");
   await expect(card).not.toContainText("安全");
 });

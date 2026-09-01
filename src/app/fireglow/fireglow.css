@@ -48,7 +48,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 32px;
+  min-height: 44px;
   padding: 0 13px;
   border: 0;
   border-radius: 999px;
@@ -74,7 +74,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--fg-line-strong);
   border-radius: 8px;
@@ -114,6 +114,10 @@
   /* The map is the primary workspace; keep only a small safe gutter instead
      of imposing a 1680px centered canvas that leaves large empty side bands. */
   padding: 14px 18px 16px;
+}
+
+.fireglow-workspace[data-inspector-open="true"] {
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) minmax(260px, 320px);
 }
 
 .fireglow-panel {
@@ -351,6 +355,10 @@
     grid-template-columns: 1fr;
   }
 
+  .fireglow-workspace[data-inspector-open="true"] {
+    grid-template-columns: 1fr;
+  }
+
   .fireglow-list {
     max-height: 44vh;
   }
@@ -370,7 +378,7 @@
 .fireglow-score[data-level="p80"] b,
 .fireglow-score[data-level="p80"] small { color: #e08a3f; }
 .fireglow-score[data-level="p100"] b,
-.fireglow-score[data-level="p100"] small { color: #e04f3a; }
+.fireglow-score[data-level="p100"] small { color: #a84814; }
 .fireglow-score b { font-size: 13px; font-variant-numeric: tabular-nums; }
 
 .fireglow-day-chips {
@@ -390,11 +398,8 @@
 }
 .fireglow-day-chips i[data-level="p60"] { color: #d4b23c; border-color: rgba(212, 178, 60, 0.4); }
 .fireglow-day-chips i[data-level="p80"] { color: #e08a3f; border-color: rgba(224, 138, 63, 0.45); }
-.fireglow-day-chips i[data-level="p100"] { color: #e04f3a; border-color: rgba(224, 79, 58, 0.5); }
+.fireglow-day-chips i[data-level="p100"] { color: #a84814; border-color: rgba(168, 72, 20, 0.5); }
 
-.fireglow-popup b[data-level="p100"] { color: #c7402d; }
-.fireglow-popup b[data-level="p80"] { color: #c4702a; }
-.fireglow-popup b[data-level="p60"] { color: #a3832a; }
 .fireglow-popup-twilight {
   display: inline-flex;
   align-items: center;
@@ -409,18 +414,32 @@
   height: 10px;
 }
 
-/* 顶部概率细分三级：红 → 深红 → 绛红，越高越深。 */
+/* 顶部概率细分三级：暖橙逐级加深，和风险红保持不同语义。 */
+.fireglow-inspector {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--fg-line);
+  border-radius: 10px;
+  background: rgba(3, 13, 19, 0.72);
+  color: var(--fg-text, inherit);
+  overflow-y: auto;
+}
+.fireglow-inspector strong { font-size: 15px; }
+.fireglow-inspector span,
+.fireglow-inspector small { color: var(--fg-muted); font-size: 12px; }
+.fireglow-inspector b { font-size: 13px; color: #e08a3f; }
+
 .fireglow-score[data-level="p88"] b,
-.fireglow-score[data-level="p88"] small { color: #e04f3a; }
+.fireglow-score[data-level="p88"] small { color: #e07a2f; }
 .fireglow-score[data-level="p95"] b,
-.fireglow-score[data-level="p95"] small { color: #e0574a; }
+.fireglow-score[data-level="p95"] small { color: #c45c1e; }
 .fireglow-score[data-level="p100"] b,
-.fireglow-score[data-level="p100"] small { color: #ff6a55; text-shadow: 0 0 10px rgba(255, 80, 50, 0.45); }
+.fireglow-score[data-level="p100"] small { color: #a84814; text-shadow: none; }
 
-.fireglow-day-chips i[data-level="p88"] { color: #e04f3a; border-color: rgba(224, 79, 58, 0.45); }
-.fireglow-day-chips i[data-level="p95"] { color: #e0574a; border-color: rgba(186, 44, 32, 0.55); background: rgba(128, 12, 12, 0.25); }
-.fireglow-day-chips i[data-level="p100"] { color: #ff6a55; border-color: rgba(255, 106, 85, 0.6); background: rgba(128, 12, 12, 0.45); }
-
-.fireglow-popup b[data-level="p88"] { color: #c73a28; }
-.fireglow-popup b[data-level="p95"] { color: #a82214; }
-.fireglow-popup b[data-level="p100"] { color: #800c0c; font-weight: 800; }
+.fireglow-day-chips i[data-level="p88"] { color: #e07a2f; border-color: rgba(224, 122, 47, 0.45); }
+.fireglow-day-chips i[data-level="p95"] { color: #c45c1e; border-color: rgba(196, 92, 30, 0.55); background: rgba(196, 92, 30, 0.12); }
+.fireglow-day-chips i[data-level="p100"] { color: #a84814; border-color: rgba(168, 72, 20, 0.6); background: rgba(168, 72, 20, 0.18); }

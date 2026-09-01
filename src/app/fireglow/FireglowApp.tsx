@@ -27,11 +27,11 @@ type RangeMode = 0 | 1 | 2 | 3;
 const LEVEL_COLORS: Record<FireGlowProbabilityLevel, string> = {
   p20: "#5f7078",
   p40: "#5da46b",
-  p60: "#d4b23c",
+  p60: "#d4b273",
   p80: "#e08a3f",
-  p88: "#e04f3a",
-  p95: "#ba2c20",
-  p100: "#800c0c",
+  p88: "#e07a2f",
+  p95: "#c45c1e",
+  p100: "#a84814",
 };
 const LEVEL_LABELS: Array<{ level: FireGlowProbabilityLevel; range: string }> = [
   { level: "p20", range: "0–20%" },
@@ -117,6 +117,11 @@ export default function FireglowApp() {
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const loadTokenRef = useRef(0);
+  /** Dates already given their one automatic forced retry after a degraded read. */
+  const autoForcedRef = useRef<Set<string>>(new Set());
+  const loadRef = useRef<(dates: string[], options?: { force?: boolean }) => () => void>(
+    () => () => undefined,
+  );
 
   const baseDate = todayKey();
   const activeDates = useMemo(
@@ -125,7 +130,7 @@ export default function FireglowApp() {
   );
 
   const load = useCallback(
-    (dates: string[]) => {
+    (dates: string[], { force = false }: { force?: boolean } = {}) => {
       const token = loadTokenRef.current + 1;
       loadTokenRef.current = token;
       const controller = new AbortController();
@@ -133,7 +138,10 @@ export default function FireglowApp() {
         setStatus("loading");
         Promise.all(
           dates.map((date) =>
-            fetch(`/api/fireglow/snapshot?date=${date}`, { signal: controller.signal, cache: "no-store" })
+            fetch(
+              `/api/fireglow/snapshot?date=${date}${force ? "&refresh=1" : ""}`,
+              { signal: controller.signal, cache: "no-store" },
+            )
               .then(async (response) => {
                 const payload = await response.json().catch(() => null);
                 if (!response.ok || !payload?.sites) throw new Error(payload?.error ?? "火烧云快照不可用");
@@ -151,7 +159,29 @@ export default function FireglowApp() {
               return next;
             });
             setStatus("ready");
-            setError(results.some((snapshot) => snapshot.stale) ? "部分数据已降级，结果仅供参考。" : "");
+            const degraded = results.filter((snapshot) => snapshot.stale || snapshot.refreshError);
+            setError(
+              degraded.length
+                ? degraded
+                    .map((snapshot) => snapshot.refreshError ?? "部分数据已降级，结果仅供参考。")
+                    .join(" ")
+                : "",
+            );
+            // One silent forced retry per date when the plain read came back
+            // degraded or without a single usable score.
+            const needForce = results.filter(
+              (snapshot) =>
+                (snapshot.stale || snapshot.refreshError) &&
+                !autoForcedRef.current.has(`${snapshot.date}|${snapshot.model}`),
+            );
+            if (needForce.length && !force) {
+              needForce.forEach((snapshot) =>
+                autoForcedRef.current.add(`${snapshot.date}|${snapshot.model}`),
+              );
+              queueMicrotask(() =>
+                loadRef.current(needForce.map((snapshot) => snapshot.date), { force: true }),
+              );
+            }
           })
           .catch((requestError) => {
             if (requestError?.name === "AbortError" || loadTokenRef.current !== token) return;
@@ -163,6 +193,9 @@ export default function FireglowApp() {
     },
     [],
   );
+  useEffect(() => {
+    loadRef.current = load;
+  }, [load]);
 
   useEffect(() => {
     const missing = activeDates.filter((date) => !snapshots[date]);
@@ -213,6 +246,7 @@ export default function FireglowApp() {
     const level = site.window.probabilityLevel;
     return level === "p80" || level === "p100";
   }).length;
+  const selectedSite = ranked.find((site) => site.id === selectedId) ?? null;
 
   const focusSite = useCallback((site: RankedSite) => {
     setSelectedId(site.id);
@@ -250,14 +284,23 @@ export default function FireglowApp() {
               </button>
             ))}
           </div>
-          <button type="button" className="fireglow-refresh" onClick={() => load(activeDates)} disabled={status === "loading"}>
+          <button
+            type="button"
+            className="fireglow-refresh"
+            onClick={() => load(activeDates, { force: true })}
+            disabled={status === "loading"}
+            aria-label="强制刷新火烧云快照"
+          >
             <RefreshCw size={14} className={status === "loading" ? "is-spinning" : ""} aria-hidden="true" />
             {status === "loading" ? "读取中" : "刷新"}
           </button>
         </div>
       </ProductHeader>
 
-      <main className="fireglow-workspace">
+      <main
+        className="fireglow-workspace"
+        data-inspector-open={selectedSite ? "true" : "false"}
+      >
         <aside className="fireglow-panel" aria-label="火烧云概率排行">
           <div className="fireglow-panel-head">
             <strong>{phase === "evening" ? "晚霞概率排行" : "朝霞概率排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
@@ -354,29 +397,13 @@ export default function FireglowApp() {
                 <Popup>
                   <div className="fireglow-popup">
                     <strong>{site.name}</strong>
-                    <span>{site.province} · {site.altitude == null ? "海拔待核" : `${Math.round(site.altitude)}m`}</span>
-                    <b data-level={site.window.probabilityLevel ?? "none"}>
-                      概率 {site.window.probabilityLabel ?? "—"} · {site.window.bandLabel}
-                    </b>
-                    <small>
-                      高云 {site.window.highCloud ?? "—"}% / 中云 {site.window.midCloud ?? "—"}% / 低云 {site.window.lowCloud ?? "—"}%
-                      {site.window.visibilityKm != null ? ` · 能见度 ${site.window.visibilityKm}km` : ""}
-                    </small>
-                    <small>
-                      {site.window.momentLabel ?? ""}
-                      {site.window.peakTime ? ` · 最佳 ${site.window.peakTime}` : ""}
-                      {site.window.vividness != null ? ` · 鲜艳度 ${site.window.vividness.toFixed(2)}` : ""}
-                    </small>
-                    <small className="fireglow-popup-twilight">
-                      <MoonStar size={11} aria-hidden="true" />
-                      金色 {site.window.goldenTime ?? "—"} · 蓝色 {site.window.blueTime ?? "—"} · 天文{phase === "evening" ? "昏影终" : "晨光始"} {site.window.astroTime ?? "—"}
-                    </small>
                   </div>
                 </Popup>
               </CircleMarker>
             ))}
           </MapContainer>
-          <div className="fireglow-legend" aria-label="概率等级色阶">
+          <div className="fireglow-legend" aria-label="火烧云概率等级色阶">
+            <span>火烧云概率</span>
             {LEVEL_LABELS.map((entry) => (
               <span key={entry.level}>
                 <i style={{ background: LEVEL_COLORS[entry.level] }} />
@@ -385,6 +412,30 @@ export default function FireglowApp() {
             ))}
           </div>
         </div>
+        {selectedSite ? (
+          <aside className="fireglow-inspector" aria-label="选中点详情">
+            <strong>{selectedSite.name}</strong>
+            <span>
+              {selectedSite.province} · {selectedSite.altitude == null ? "海拔待核" : `${Math.round(selectedSite.altitude)}m`}
+            </span>
+            <b data-level={selectedSite.window.probabilityLevel ?? "none"}>
+              概率 {selectedSite.window.probabilityLabel ?? "—"} · {selectedSite.window.bandLabel}
+            </b>
+            <small>
+              高云 {selectedSite.window.highCloud ?? "—"}% / 中云 {selectedSite.window.midCloud ?? "—"}% / 低云 {selectedSite.window.lowCloud ?? "—"}%
+              {selectedSite.window.visibilityKm != null ? ` · 能见度 ${selectedSite.window.visibilityKm}km` : ""}
+            </small>
+            <small>
+              {selectedSite.window.momentLabel ?? ""}
+              {selectedSite.window.peakTime ? ` · 最佳 ${selectedSite.window.peakTime}` : ""}
+              {selectedSite.window.vividness != null ? ` · 鲜艳度 ${selectedSite.window.vividness.toFixed(2)}` : ""}
+            </small>
+            <small className="fireglow-popup-twilight">
+              <MoonStar size={11} aria-hidden="true" />
+              金色 {selectedSite.window.goldenTime ?? "—"} · 蓝色 {selectedSite.window.blueTime ?? "—"} · 天文{phase === "evening" ? "昏影终" : "晨光始"} {selectedSite.window.astroTime ?? "—"}
+            </small>
+          </aside>
+        ) : null}
       </main>
     </div>
   );

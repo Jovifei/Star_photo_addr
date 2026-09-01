@@ -4,6 +4,7 @@ import { StoreProvider } from "@/lib/store";
 import ProductStateBridge from "@/components/ProductStateBridge";
 import "./globals.css";
 import "./theme-unified.css";
+import "@/components/workspace/workspace-shell.css";
 import "./data-pipeline.css";
 import "./viewport-recommendations.css";
 import "./viewport-recommendations-mobile.css";

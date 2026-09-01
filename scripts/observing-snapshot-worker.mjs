@@ -94,9 +94,70 @@ async function refresh() {
   }
 }
 
+// Pre-warm today/+1/+2 fireglow snapshots so evening page loads hit memory
+// instead of a cold 242-point upstream fan-out. Serial and non-fatal: a
+// failed date must never block the observing snapshot or the other dates.
+async function prewarmFireglow() {
+  const date = shanghaiDate();
+  for (let offset = 0; offset < 3; offset += 1) {
+    const value = new Date(`${date}T12:00:00Z`);
+    value.setUTCDate(value.getUTCDate() + offset);
+    const target = value.toISOString().slice(0, 10);
+    const params = new URLSearchParams({
+      date: target,
+      model,
+      refresh: "1",
+    });
+    activeController = new AbortController();
+    const timeout = setTimeout(
+      () => activeController?.abort(),
+      requestTimeoutMs,
+    );
+    try {
+      const response = await fetch(
+        `${baseUrl}/api/fireglow/snapshot?${params.toString()}`,
+        {
+          signal: activeController.signal,
+          cache: "no-store",
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "star-weather-snapshot-worker/0.3.1",
+          },
+        },
+      );
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || `HTTP ${response.status}`);
+      }
+      console.log(
+        `[snapshot-worker] fireglow ${target} ${model} ${payload?.stale ? "stale" : "fresh"}`,
+      );
+    } catch (error) {
+      const timedOut =
+        activeController?.signal.aborted ||
+        (error instanceof Error && /aborted|timeout/i.test(error.message));
+      console.error(
+        `[snapshot-worker] fireglow ${target} failed: ${
+          timedOut
+            ? "request timeout"
+            : error instanceof Error
+              ? error.message
+              : String(error)
+        }`,
+      );
+    } finally {
+      clearTimeout(timeout);
+      activeController = null;
+    }
+  }
+}
+
 async function runLoop() {
   if (stopped) return;
   await refresh();
+  if (!stopped) {
+    await prewarmFireglow();
+  }
   if (!stopped) {
     timer = setTimeout(runLoop, intervalMs);
   }

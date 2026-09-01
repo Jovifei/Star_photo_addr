@@ -70,6 +70,12 @@ interface AppState {
   detailOpen: boolean;
   loading: boolean;
   error: string;
+  /** Explicit upstream-state reporting for the selected location's forecast. */
+  forecastAvailability: {
+    error: string | null;
+    lastSuccessAt: string | null;
+    staleInUse: boolean;
+  };
   cloudGrid: CloudGridData | null;
   cloudGridLoading: boolean;
   satelliteFrames: SatelliteFrame[];
@@ -110,6 +116,7 @@ const initialState: AppState = {
   detailOpen: false,
   loading: false,
   error: "",
+  forecastAvailability: { error: null, lastSuccessAt: null, staleInUse: false },
   cloudGrid: null,
   cloudGridLoading: false,
   satelliteFrames: [],
@@ -143,6 +150,8 @@ type Action =
   | { type: "SET_DETAIL_OPEN"; open: boolean }
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "SET_ERROR"; error: string }
+  | { type: "SET_FORECAST_UNAVAILABLE"; error: string }
+  | { type: "SET_FORECAST_SUCCESS"; fetchedAt: string | null }
   | { type: "SET_CLOUD_GRID"; data: CloudGridData | null }
   | { type: "SET_CLOUD_GRID_LOADING"; loading: boolean }
   | { type: "SET_SATELLITE_FRAMES"; frames: SatelliteFrame[] }
@@ -209,6 +218,25 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, loading: action.loading };
     case "SET_ERROR":
       return { ...state, error: action.error };
+    case "SET_FORECAST_UNAVAILABLE":
+      return {
+        ...state,
+        forecastAvailability: {
+          error: action.error,
+          lastSuccessAt: state.forecastAvailability.lastSuccessAt,
+          // Previous data stays on screen during a failed manual refresh.
+          staleInUse: state.forecast != null,
+        },
+      };
+    case "SET_FORECAST_SUCCESS":
+      return {
+        ...state,
+        forecastAvailability: {
+          error: null,
+          lastSuccessAt: action.fetchedAt,
+          staleInUse: false,
+        },
+      };
     case "SET_CLOUD_GRID":
       return { ...state, cloudGrid: action.data };
     case "SET_CLOUD_GRID_LOADING":
@@ -321,6 +349,13 @@ interface StoreContextValue {
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
+/**
+ * Minimum gap between two forecast requests for the SAME location. Manual
+ * retries and forced refreshes bypass the HTTP cache, so without this guard a
+ * fast-failing upstream (Open-Meteo 429) lets click-spam drain the quota.
+ */
+export const FORECAST_SAMPLE_COOLDOWN_MS = 10_000;
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [candidatesHydrated, setCandidatesHydrated] = useState(false);
@@ -328,6 +363,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const forecastHydrationKeyRef = useRef<string | null>(null);
   const selectedLocationIdRef = useRef<string | null>(null);
   const latestForecastRequestRef = useRef(0);
+  const forecastInFlightRef = useRef(false);
+  const lastForecastAttemptRef = useRef<{ key: string; at: number } | null>(null);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -482,6 +519,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const selectedModel = model ?? state.cloudState.model;
       const requestId = ++latestForecastRequestRef.current;
       selectedLocationIdRef.current = location.id;
+      // This location+model pair now has an explicit request in flight. Mark it
+      // so the background hydration effect does not silently retry it: such a
+      // retry used to land after a 429 and hide the failure from the user.
+      forecastHydrationKeyRef.current = `${location.id}|${selectedModel}`;
       dispatch({ type: "SET_LOCATION", location });
       dispatch({ type: "SET_DETAIL_OPEN", open: true });
       dispatch({ type: "SET_LOADING", loading: true });
@@ -492,15 +533,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const forecast = await fetchForecastFor(location, selectedModel);
         if (requestId !== latestForecastRequestRef.current) return;
         dispatch({ type: "SET_FORECAST", forecast });
+        // Record the success so the availability line can show "数据更新".
+        // Without this a deep-linked location never reported its freshness,
+        // because selectLocation used to skip the availability reducer.
+        dispatch({
+          type: "SET_FORECAST_SUCCESS",
+          fetchedAt: forecast?.fetchedAt ?? new Date().toISOString(),
+        });
         if (forecast) {
           dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
         }
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current) return;
-        dispatch({
-          type: "SET_ERROR",
-          error: error instanceof Error ? error.message : "天气请求失败",
-        });
+        const message = error instanceof Error ? error.message : "天气请求失败";
+        dispatch({ type: "SET_ERROR", error: message });
+        // Surface the upstream failure (429 / timeout) in the availability
+        // line instead of only in the generic error slot, which the hourly
+        // panel never shows.
+        dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: message });
       } finally {
         if (requestId === latestForecastRequestRef.current) {
           dispatch({ type: "SET_LOADING", loading: false });
@@ -519,9 +569,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       model?: CloudState["model"],
     ) => {
       const selectedModel = model ?? state.cloudState.model;
-      const requestId = ++latestForecastRequestRef.current;
+      const locationId = stableSampleLocationId(latitude, longitude);
+      const requestStartedAt = Date.now();
+      const lastAttempt = lastForecastAttemptRef.current;
       const location: Location = {
-        id: stableSampleLocationId(latitude, longitude),
+        id: locationId,
         name: name ?? "取样点",
         latitude,
         longitude,
@@ -531,6 +583,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       selectedLocationIdRef.current = location.id;
       dispatch({ type: "SET_LOCATION", location });
       dispatch({ type: "SET_DETAIL_OPEN", open: true });
+      // Re-requesting the same point inside the cooldown window would only
+      // re-hit a rate-limited upstream, so keep the UI responsive (the panel
+      // reopens, existing data stays) without issuing another request.
+      if (
+        lastAttempt &&
+        lastAttempt.key === locationId &&
+        requestStartedAt - lastAttempt.at < FORECAST_SAMPLE_COOLDOWN_MS
+      ) {
+        return;
+      }
+      lastForecastAttemptRef.current = { key: locationId, at: requestStartedAt };
+      // Same contract as selectLocation: an explicit request owns this
+      // location+model pair, so the hydration effect must not retry it and
+      // mask a 429 the user is supposed to see.
+      forecastHydrationKeyRef.current = `${locationId}|${selectedModel}`;
+      const requestId = ++latestForecastRequestRef.current;
+      forecastInFlightRef.current = true;
       dispatch({ type: "SET_LOADING", loading: true });
       dispatch({ type: "SET_SAMPLE", sample: null });
       dispatch({ type: "SET_FORECAST", forecast: null });
@@ -542,31 +611,61 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (requestId !== latestForecastRequestRef.current) return;
         dispatch({ type: "SET_SAMPLE", sample });
         dispatch({ type: "SET_FORECAST", forecast });
+        // The plan asks for an explicit "last successful update" timestamp.
+        // Use the upstream-provided `fetchedAt` when present; otherwise fall
+        // back to the moment the response arrived at the client. We never
+        // fabricate upstream time, but we also don't leave the success
+        // surface empty when the API omits the field.
+        dispatch({
+          type: "SET_FORECAST_SUCCESS",
+          fetchedAt: forecast?.fetchedAt ?? new Date().toISOString(),
+        });
         if (forecast) {
           dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
         }
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current) return;
-        dispatch({
-          type: "SET_ERROR",
-          error: error instanceof Error ? error.message : "取样或天气请求失败",
-        });
+        const message = error instanceof Error ? error.message : "取样或天气请求失败";
+        dispatch({ type: "SET_ERROR", error: message });
+        dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: message });
       } finally {
         if (requestId === latestForecastRequestRef.current) {
           dispatch({ type: "SET_LOADING", loading: false });
         }
+        forecastInFlightRef.current = false;
       }
     },
     [state.cloudState.model],
   );
 
   const refreshData = useCallback(async () => {
+    const location = state.selectedLocation;
+    const requestStartedAt = Date.now();
+    const lastAttempt = lastForecastAttemptRef.current;
+    // A forced refresh bypasses the HTTP cache and hits the upstream directly,
+    // so stacked clicks inside the cooldown window must not both go out. The
+    // cooldown only gates the location-bound forecast request; the revision
+    // below still fires so satellite/cloud/status layers can refresh.
+    if (
+      location &&
+      lastAttempt &&
+      lastAttempt.key === location.id &&
+      requestStartedAt - lastAttempt.at < FORECAST_SAMPLE_COOLDOWN_MS
+    ) {
+      return;
+    }
+    // Publish the revision even without a selected location: the satellite
+    // catalogue, cloud grid and data-source status are location-independent,
+    // and the refresh button promises all of them ("刷新天气、卫星目录和数据源状态").
+    // Previously the early return above skipped this dispatch, so the manual
+    // refresh was a silent no-op for those layers.
     const revision = Date.now();
     dispatch({ type: "REFRESH_DATA", revision });
     dispatch({ type: "SET_ERROR", error: "" });
-    const location = state.selectedLocation;
     if (!location) return;
+    lastForecastAttemptRef.current = { key: location.id, at: requestStartedAt };
     const requestId = ++latestForecastRequestRef.current;
+    forecastInFlightRef.current = true;
     dispatch({ type: "SET_LOADING", loading: true });
     try {
       const forecast = await fetchForecastFor(
@@ -581,19 +680,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return;
       }
       dispatch({ type: "SET_FORECAST", forecast });
+      dispatch({
+        type: "SET_FORECAST_SUCCESS",
+        fetchedAt: forecast?.fetchedAt ?? new Date().toISOString(),
+      });
       if (forecast) {
         dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
       }
     } catch (error) {
       if (requestId !== latestForecastRequestRef.current) return;
-      dispatch({
-        type: "SET_ERROR",
-        error: error instanceof Error ? error.message : "数据刷新失败",
-      });
+      const message = error instanceof Error ? error.message : "数据刷新失败";
+      dispatch({ type: "SET_ERROR", error: message });
+      dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: message });
     } finally {
       if (requestId === latestForecastRequestRef.current) {
         dispatch({ type: "SET_LOADING", loading: false });
       }
+      forecastInFlightRef.current = false;
     }
   }, [state.cloudState.model, state.selectedLocation]);
 
@@ -676,6 +779,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return;
         }
         dispatch({ type: "SET_FORECAST", forecast });
+        // A hydrated forecast is real data too, so it must publish its
+        // freshness; otherwise the availability line stayed blank for any
+        // location that was restored without an explicit request.
+        dispatch({
+          type: "SET_FORECAST_SUCCESS",
+          fetchedAt: forecast.fetchedAt ?? new Date().toISOString(),
+        });
         dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
       })
       .catch(() => {
@@ -687,6 +797,73 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [state.cloudState.model, state.forecast, state.loading, state.selectedLocation]);
+
+  // Quiet periodic recheck: only while a location is selected, the tab is
+  // visible, and no request is already in flight. The latest-request guard
+  // shared with sampleAt/refreshData drops late responses after switches.
+  const selectedLocationId = state.selectedLocation?.id ?? null;
+  const selectedLatitude = state.selectedLocation?.latitude;
+  const selectedLongitude = state.selectedLocation?.longitude;
+  const selectedElevation = state.selectedLocation?.elevation;
+  const selectedName = state.selectedLocation?.name;
+  useEffect(() => {
+    if (!selectedLocationId) return;
+    const RECHECK_INTERVAL_MS = 5 * 60_000;
+    let cancelled = false;
+    const recheck = () => {
+      if (cancelled || document.hidden) return;
+      if (forecastInFlightRef.current) return;
+      const requestId = ++latestForecastRequestRef.current;
+      forecastInFlightRef.current = true;
+      const location: Location = {
+        id: selectedLocationId,
+        name: selectedName ?? "取样点",
+        latitude: selectedLatitude ?? 0,
+        longitude: selectedLongitude ?? 0,
+        elevation: selectedElevation ?? 0,
+        source: "自定义",
+      };
+      void fetchForecastFor(location, state.cloudState.model)
+        .then((forecast) => {
+          forecastInFlightRef.current = false;
+          if (
+            cancelled ||
+            requestId !== latestForecastRequestRef.current ||
+            selectedLocationIdRef.current !== selectedLocationId
+          ) {
+            return;
+          }
+          if (!forecast) return;
+          dispatch({ type: "SET_FORECAST", forecast });
+          dispatch({
+            type: "SET_FORECAST_SUCCESS",
+            fetchedAt: forecast.fetchedAt ?? null,
+          });
+          dispatch({ type: "CACHE_FORECAST", locationId: selectedLocationId, forecast });
+        })
+        .catch(() => {
+          forecastInFlightRef.current = false;
+          // A failed quiet recheck keeps the last availability state visible.
+        });
+    };
+    const timer = setInterval(recheck, RECHECK_INTERVAL_MS);
+    const onVisible = () => {
+      if (!document.hidden) recheck();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [
+    selectedElevation,
+    selectedLatitude,
+    selectedLocationId,
+    selectedLongitude,
+    selectedName,
+    state.cloudState.model,
+  ]);
 
   const setSatelliteFrames = useCallback((frames: SatelliteFrame[]) => {
     dispatch({ type: "SET_SATELLITE_FRAMES", frames });

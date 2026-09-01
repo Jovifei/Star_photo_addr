@@ -41,6 +41,7 @@ import {
   dedupeLocationIdentities,
   sameLocationIdentity,
 } from "@/lib/locationIdentity";
+import { buildDecisionSummary } from "@/lib/decisionSummary";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "今晚", icon: Binoculars },
@@ -547,6 +548,8 @@ export function App() {
       </ProductHeader>
 
       <main className="main-content" id="main-content" tabIndex="-1">
+        <div className="planner-workspace">
+        <aside className="planner-input" aria-label="计划输入">
         <section className="control-strip" aria-label="预测范围与推荐设置">
           <div className="segmented" aria-label="预测天数">
             {[1, 3, 5, 7].map((value) => (
@@ -569,7 +572,8 @@ export function App() {
             <span className="freshness-dot" />{relativeFreshness(savedAt)}{stale || displayedSnapshotStatus === "degraded" ? " · 已降级" : displayedSnapshotStatus === "loading" ? " · 评分读取中" : ""}
           </div>
         </section>
-
+        </aside>
+        <div className="planner-canvas">
         {error && <StatusBanner message={error} stale={stale} />}
         {view !== "map" && locations.length > 0 && !forecasts.length && loading ? <LoadingState /> : null}
         {view !== "map" && view !== "locations" && (!locations.length || !forecasts.length) && !loading ? <EmptyState hasLocations={locations.length > 0} onRefresh={() => refresh()} /> : null}
@@ -619,6 +623,8 @@ export function App() {
         {view === "locations" && (
           <LocationsView locations={locations} customLocations={customLocations} onAdd={addLocation} onRemove={removeCustomLocation} />
         )}
+        </div>
+        </div>
       </main>
 
       <footer className="site-footer">
@@ -675,6 +681,12 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
   const sharedScore = best?.sharedScore;
   const meta = recommendationMeta(sharedScore, evaluation);
   const displayScore = sharedScore?.score ?? (mode === "cloud" ? evaluation?.cloudSeaPotential : evaluation?.score);
+  const summary = buildDecisionSummary({
+    location: best?.location ?? null,
+    evaluation: evaluation ?? null,
+    loading: Boolean(best?.location) && !evaluation,
+    updatedAt: best?.forecast?.fetchedAt ?? best?.forecast?.metadata?.fetchedAt ?? null,
+  });
   return (
     <>
       <section className="hero-grid">
@@ -710,7 +722,7 @@ function Dashboard({ best, rankings, nightKeys, selectedNight, onSelectNight, mo
         <article className="briefing-card">
           <div className="card-heading"><div><span className="section-kicker">决策摘要</span><h3>今晚判断依据</h3></div><ListBullets /></div>
           <DecisionItem tone={evaluation?.status === "go" ? "good" : "warn"} title={evaluation?.window.length >= 2 ? "连续窗口成立" : "连续窗口不足"} text={evaluation?.windowLabel} />
-          <DecisionItem tone={(sharedScore?.blockers?.length ?? evaluation?.blockers?.length ?? 0) ? "bad" : "good"} title={(sharedScore?.blockers?.length ?? evaluation?.blockers?.length ?? 0) ? "存在天气门禁" : "无主要安全门禁"} text={sharedScore?.blockers?.join("、") || evaluation?.blockers?.join("、") || "未触发雷暴、强降水、低能见度或大阵风门禁"} />
+          <DecisionItem tone={(sharedScore?.blockers?.length ?? evaluation?.blockers?.length ?? 0) ? "bad" : "info"} title={summary.riskTitle} text={summary.riskText} />
           <DecisionItem tone={evaluation?.confidence.kind === "trend" ? "warn" : "info"} title={`置信度：${evaluation?.confidence.level ?? "—"}`} text={evaluation?.confidence.reason ?? "等待数据"} />
           <p className="brief-note"><Info />14 天用于看趋势；最终出发前请在 72 小时内再次刷新，并核对道路和现场云况。</p>
         </article>
