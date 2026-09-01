@@ -88,8 +88,8 @@ test("sites compatibility route preserves context and opens the dark-sky site pa
   await expect(page.locator(".nav-tabs .nav-tab")).toHaveText([
     "今夜观测天气与窗口",
     "暗夜选址长期暗空",
-    "火烧云晨晚霞窗口",
     "观星计划附近排行",
+    "火烧云晨晚霞窗口",
   ]);
   await expect(
     page.getByRole("navigation", { name: "页面导航" }).locator("a.nav-tab", { hasText: "暗夜选址" }),

@@ -38,8 +38,8 @@ test("product navigation and source dialog remain keyboard operable", async ({
   await expect(page.locator(".nav-tabs .nav-tab > span")).toHaveText([
     "今夜观测",
     "暗夜选址",
-    "火烧云",
     "观星计划",
+    "火烧云",
   ]);
 
   // WebKit runs with an iPhone viewport, where low-frequency map controls are

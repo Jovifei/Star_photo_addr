@@ -10,7 +10,7 @@ import { buildProductHref } from "@/lib/productRoutes";
 export function NavTabsFallback() {
   return (
     <nav className="nav-tabs" aria-label="页面导航">
-      {["今夜观测", "暗夜选址", "火烧云", "观星计划"].map((label, index) => (
+      {["今夜观测", "暗夜选址", "观星计划", "火烧云"].map((label, index) => (
         <Link
           key={label}
           href={index === 0 ? "/" : "#"}
@@ -73,18 +73,18 @@ export default function NavTabs() {
       active: recommendationActive,
     },
     {
-      id: "fireglow",
-      href: "/fireglow",
-      label: "火烧云",
-      hint: "晨晚霞窗口",
-      active: pathname === "/fireglow",
-    },
-    {
       id: "planner",
       href: plannerHref,
       label: "观星计划",
       hint: "附近排行",
       active: pathname === "/planner",
+    },
+    {
+      id: "fireglow",
+      href: "/fireglow",
+      label: "火烧云",
+      hint: "晨晚霞窗口",
+      active: pathname === "/fireglow",
     },
   ];
 
