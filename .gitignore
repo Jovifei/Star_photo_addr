@@ -10,8 +10,10 @@ out/
 coverage/
 data/snapshots/
 playwright-report/
+playwright-report-*/
 test-results/
 design-qa-assets/
+tmp/
 
 # Next.js generated artifacts
 next-env.d.ts
