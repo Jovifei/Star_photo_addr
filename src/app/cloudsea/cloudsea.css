@@ -1,0 +1,351 @@
+/* 云海预测工作区：青蓝高山云海视觉语言 */
+
+.cloudsea-root {
+  --cs-bg-deep: #030e17;
+  --cs-surface: rgba(5, 18, 28, 0.9);
+  --cs-line: rgba(72, 181, 181, 0.18);
+  --cs-line-strong: rgba(52, 152, 219, 0.38);
+  --cs-text: #eaf4f7;
+  --cs-muted: #8aa5b2;
+  --cs-primary: #3498db;
+  --cs-cyan: #48b5b5;
+  --cs-above: #2ecc71;
+  --cs-in: #e74c3c;
+  --cs-below: #f39c12;
+  --cs-clear: #7f8c8d;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 58px);
+  height: calc(100dvh - 58px);
+  background:
+    radial-gradient(1.5px 1.5px at 15% 15%, rgba(72, 181, 181, 0.25), transparent 100%),
+    radial-gradient(1.2px 1.2px at 75% 10%, rgba(52, 152, 219, 0.2), transparent 100%),
+    radial-gradient(1.2px 1.2px at 85% 40%, rgba(234, 244, 247, 0.15), transparent 100%),
+    linear-gradient(180deg, #01060b, var(--cs-bg-deep));
+  overflow: hidden;
+}
+
+.cloudsea-loading {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  color: var(--cs-muted);
+  font-size: 13px;
+}
+
+.cloudsea-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cloudsea-controls .segmented {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--cs-line);
+  border-radius: 999px;
+  background: rgba(2, 9, 14, 0.75);
+}
+
+.cloudsea-controls .segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cs-muted);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+
+.cloudsea-controls .segmented button:hover {
+  color: var(--cs-text);
+}
+
+.cloudsea-controls .segmented button.active {
+  color: #020e17;
+  background: #48b5b5;
+  box-shadow: 0 6px 18px rgba(72, 181, 181, 0.3);
+}
+
+.cloudsea-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--cs-line-strong);
+  border-radius: 8px;
+  background: rgba(6, 22, 34, 0.9);
+  color: var(--cs-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.cloudsea-refresh:hover:not(:disabled) {
+  border-color: #48b5b5;
+  color: #c2eef0;
+}
+
+.cloudsea-refresh:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.is-spinning {
+  animation: cloudsea-spin 1s linear infinite;
+}
+
+@keyframes cloudsea-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cloudsea-body {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  min-height: 0;
+}
+
+.cloudsea-map-pane {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  background: #02070b;
+}
+
+.cloudsea-map-pane .leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #02070b;
+}
+
+/* 浮动图例 */
+.cloudsea-legend {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--cs-line);
+  border-radius: 8px;
+  background: var(--cs-surface);
+  backdrop-filter: blur(10px);
+  color: var(--cs-text);
+  font-size: 11px;
+}
+
+.cloudsea-legend-title {
+  color: var(--cs-muted);
+  font-weight: 600;
+}
+
+.cloudsea-legend-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.cloudsea-legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* 侧边点位列表 */
+.cloudsea-sidebar {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--cs-line);
+  background: var(--cs-surface);
+  backdrop-filter: blur(14px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cloudsea-sidebar-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cs-line);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.cloudsea-sidebar-header h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--cs-text);
+  margin: 0;
+}
+
+.cloudsea-sidebar-header span {
+  font-size: 12px;
+  color: var(--cs-muted);
+}
+
+.cloudsea-site-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 点位卡片 */
+.cloudsea-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--cs-line);
+  border-radius: 10px;
+  background: rgba(3, 14, 23, 0.65);
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.cloudsea-card:hover {
+  border-color: var(--cs-line-strong);
+  background: rgba(4, 20, 33, 0.85);
+  transform: translateY(-1px);
+}
+
+.cloudsea-card.selected {
+  border-color: #48b5b5;
+  background: rgba(8, 28, 44, 0.95);
+  box-shadow: 0 0 0 1px #48b5b5, 0 8px 24px rgba(72, 181, 181, 0.15);
+}
+
+.cloudsea-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.cloudsea-card-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cloudsea-card-name {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--cs-text);
+}
+
+.cloudsea-card-sub {
+  font-size: 11px;
+  color: var(--cs-muted);
+}
+
+.cloudsea-card-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.cloudsea-score-badge {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cloudsea-pos-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.cloudsea-pos-badge.good {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.cloudsea-pos-badge.bad {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.cloudsea-pos-badge.warn {
+  background: rgba(243, 156, 18, 0.2);
+  color: #f39c12;
+  border: 1px solid rgba(243, 156, 18, 0.4);
+}
+
+.cloudsea-pos-badge.muted {
+  background: rgba(127, 140, 141, 0.2);
+  color: #95a5a6;
+  border: 1px solid rgba(127, 140, 141, 0.3);
+}
+
+/* 高度剖面与微指标条 */
+.cloudsea-profile-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.cloudsea-profile-strip div {
+  display: flex;
+  flex-direction: column;
+}
+
+.cloudsea-profile-strip label {
+  color: var(--cs-muted);
+  font-size: 10px;
+}
+
+.cloudsea-profile-strip strong {
+  color: var(--cs-text);
+  font-weight: 600;
+}
+
+.cloudsea-card-summary {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #b0c9d4;
+  margin-top: 2px;
+}
+
+/* 响应式移动端处理 */
+@media (max-width: 900px) {
+  .cloudsea-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 300px;
+  }
+
+  .cloudsea-sidebar {
+    border-left: 0;
+    border-top: 1px solid var(--cs-line);
+  }
+}
