@@ -60,6 +60,9 @@ dist_old_*/
 dist_prebak_*/
 dist.bak/
 
-# Local automated deployment logs (never committed to remote)
+# Local automated deployment logs and private server guides (never committed to remote)
 deploy/logs/
 scripts/deploy-remote.ps1
+docs/REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md
+docs/*private*
+docs/*PRIVATE*
