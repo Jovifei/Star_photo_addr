@@ -59,3 +59,7 @@ _broken_git/
 dist_old_*/
 dist_prebak_*/
 dist.bak/
+
+# Local automated deployment logs (never committed to remote)
+deploy/logs/
+scripts/deploy-remote.ps1
