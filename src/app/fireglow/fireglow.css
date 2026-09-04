@@ -108,7 +108,7 @@
 .fireglow-workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(320px, 400px) 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
   gap: 14px;
   min-height: 0;
   /* The map is the primary workspace; keep only a small safe gutter instead
@@ -117,7 +117,7 @@
 }
 
 .fireglow-workspace[data-inspector-open="true"] {
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr) minmax(260px, 320px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) minmax(260px, 320px);
 }
 
 .fireglow-panel {

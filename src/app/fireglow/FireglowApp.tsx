@@ -301,58 +301,6 @@ export default function FireglowApp() {
         className="fireglow-workspace"
         data-inspector-open={selectedSite ? "true" : "false"}
       >
-        <aside className="fireglow-panel" aria-label="火烧云概率排行">
-          <div className="fireglow-panel-head">
-            <strong>{phase === "evening" ? "晚霞概率排行" : "朝霞概率排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
-            <span>60% 以上 {bestCount} 个点位</span>
-          </div>
-          {status === "error" && <p className="fireglow-error" role="status">{error}</p>}
-          {error && status === "ready" && <p className="fireglow-note" role="status">{error}</p>}
-          <ol className="fireglow-list">
-            {ranked.map((site, index) => (
-              <li key={site.id}>
-                <button
-                  type="button"
-                  className={selectedId === site.id ? "active" : ""}
-                  onClick={() => focusSite(site)}
-                >
-                  <span className="fireglow-rank">{index + 1}</span>
-                  <span className="fireglow-site-copy">
-                    <strong>{site.name}</strong>
-                    <small>
-                      {site.province}
-                      {site.window.peakTime ? ` · 最佳 ${site.window.peakTime}` : ""}
-                      {site.window.momentLabel ? ` · ${site.window.momentLabel}` : ""}
-                    </small>
-                    <em>
-                      {site.window.vividness != null ? `鲜艳度 ${site.window.vividness.toFixed(2)}` : "鲜艳度 —"}
-                      {site.window.goldenTime ? ` · 金色 ${site.window.goldenTime}` : ""}
-                      {site.window.blueTime ? ` · 蓝色 ${site.window.blueTime}` : ""}
-                    </em>
-                    {site.days && (
-                      <span className="fireglow-day-chips" aria-label="三日概率">
-                        {site.days.map((day) => (
-                          <i key={day.date} data-level={day.level ?? "none"}>
-                            {day.date.slice(5).replace("-", "/")} {day.score ?? "—"}
-                          </i>
-                        ))}
-                      </span>
-                    )}
-                  </span>
-                  <span className="fireglow-score" data-level={site.window.probabilityLevel ?? "none"}>
-                    <b>{site.window.probabilityLabel ?? "—"}</b>
-                    <small>{site.window.bandLabel}</small>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ol>
-          <p className="fireglow-footnote">
-            概率 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
-            + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项。
-          </p>
-        </aside>
-
         <div className="fireglow-map" aria-label="火烧云概率地图">
           <MapContainer
             ref={setMap}
@@ -412,6 +360,59 @@ export default function FireglowApp() {
             ))}
           </div>
         </div>
+
+        <aside className="fireglow-panel" aria-label="火烧云概率排行">
+          <div className="fireglow-panel-head">
+            <strong>{phase === "evening" ? "晚霞概率排行" : "朝霞概率排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
+            <span>60% 以上 {bestCount} 个点位</span>
+          </div>
+          {status === "error" && <p className="fireglow-error" role="status">{error}</p>}
+          {error && status === "ready" && <p className="fireglow-note" role="status">{error}</p>}
+          <ol className="fireglow-list">
+            {ranked.map((site, index) => (
+              <li key={site.id}>
+                <button
+                  type="button"
+                  className={selectedId === site.id ? "active" : ""}
+                  onClick={() => focusSite(site)}
+                >
+                  <span className="fireglow-rank">{index + 1}</span>
+                  <span className="fireglow-site-copy">
+                    <strong>{site.name}</strong>
+                    <small>
+                      {site.province}
+                      {site.window.peakTime ? ` · 最佳 ${site.window.peakTime}` : ""}
+                      {site.window.momentLabel ? ` · ${site.window.momentLabel}` : ""}
+                    </small>
+                    <em>
+                      {site.window.vividness != null ? `鲜艳度 ${site.window.vividness.toFixed(2)}` : "鲜艳度 —"}
+                      {site.window.goldenTime ? ` · 金色 ${site.window.goldenTime}` : ""}
+                      {site.window.blueTime ? ` · 蓝色 ${site.window.blueTime}` : ""}
+                    </em>
+                    {site.days && (
+                      <span className="fireglow-day-chips" aria-label="三日概率">
+                        {site.days.map((day) => (
+                          <i key={day.date} data-level={day.level ?? "none"}>
+                            {day.date.slice(5).replace("-", "/")} {day.score ?? "—"}
+                          </i>
+                        ))}
+                      </span>
+                    )}
+                  </span>
+                  <span className="fireglow-score" data-level={site.window.probabilityLevel ?? "none"}>
+                    <b>{site.window.probabilityLabel ?? "—"}</b>
+                    <small>{site.window.bandLabel}</small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ol>
+          <p className="fireglow-footnote">
+            概率 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
+            + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项。
+          </p>
+        </aside>
+
         {selectedSite ? (
           <aside className="fireglow-inspector" aria-label="选中点详情">
             <strong>{selectedSite.name}</strong>

@@ -121,8 +121,8 @@ test("火烧云地图在宽屏占满工作区而不是被 1680px 中心限宽", 
   expect(box!.x + box!.width).toBeGreaterThanOrEqual(1919);
   const panel = await page.locator(".fireglow-panel").boundingBox();
   const map = await page.locator(".fireglow-map").boundingBox();
-  expect(panel?.x ?? 999).toBeLessThanOrEqual(20);
-  expect((map?.x ?? 0) + (map?.width ?? 0)).toBeGreaterThanOrEqual(1900);
+  expect(map?.x ?? 999).toBeLessThanOrEqual(20);
+  expect((panel?.x ?? 0) + (panel?.width ?? 0)).toBeGreaterThanOrEqual(1900);
 });
 
 test("火烧云主要控制保持至少 44px 触控高度", async ({ page }, testInfo) => {
@@ -164,8 +164,8 @@ test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo)
   expect(panelBox).not.toBeNull();
   expect(mapBox).not.toBeNull();
   expect(inspectorBox).not.toBeNull();
-  expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(mapBox!.x + 1);
-  expect(mapBox!.x + mapBox!.width).toBeLessThanOrEqual(inspectorBox!.x + 1);
+  expect(mapBox!.x + mapBox!.width).toBeLessThanOrEqual(panelBox!.x + 1);
+  expect(panelBox!.x + panelBox!.width).toBeLessThanOrEqual(inspectorBox!.x + 1);
 });
 
 test("当前时次评分不可用时明确显示数据不足，不把未知点当低分", async ({ page }, testInfo) => {
