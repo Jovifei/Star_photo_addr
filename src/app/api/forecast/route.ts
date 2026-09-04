@@ -9,7 +9,7 @@ import {
 import { TimedCache } from "@/lib/serverCache";
 import { parseCoordinateLists } from "@/lib/server/queryParams";
 import { RefreshCoordinator } from "@/lib/serverRefreshCoordinator";
-import type { ForecastModel, ForecastResponse } from "@/lib/types";
+import type { ForecastMetadata, ForecastModel, ForecastResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +56,65 @@ function readFromDiskCache(key: string): ForecastResponse | null {
     return null;
   }
 }
+
+function findNearestDiskForecast(
+  targetLat: number,
+  targetLon: number,
+  model: ForecastModel,
+): ForecastResponse | null {
+
+
+  if (process.env.NODE_ENV === "test" && process.env.FORECAST_ENABLE_DISK_CACHE !== "1") {
+    return null;
+  }
+  try {
+    ensureDiskCacheDir();
+    if (!fs.existsSync(DISK_CACHE_DIR)) return null;
+    const files = fs.readdirSync(DISK_CACHE_DIR);
+    let bestDist = Number.POSITIVE_INFINITY;
+    let bestData: ForecastResponse | null = null;
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const content = fs.readFileSync(path.join(DISK_CACHE_DIR, file), "utf-8");
+        const data = JSON.parse(content) as ForecastResponse;
+        for (const loc of data.locations) {
+          const d = Math.hypot(loc.modelLatitude - targetLat, loc.modelLongitude - targetLon);
+          // within 1.2 degrees (~120km)
+          if (d < bestDist && d < 1.2) {
+            bestDist = d;
+            const meta: ForecastMetadata = {
+              source: "Open-Meteo",
+              model,
+              fetchedAt: data.metadata?.fetchedAt ?? new Date().toISOString(),
+              stale: true,
+              units: data.metadata?.units ?? {},
+            };
+            bestData = {
+              ...data,
+              metadata: meta,
+              locations: [
+                {
+                  ...loc,
+                  modelLatitude: targetLat,
+                  modelLongitude: targetLon,
+                  metadata: meta,
+                },
+              ],
+            };
+          }
+        }
+
+      } catch {
+        // ignore
+      }
+    }
+    return bestData;
+  } catch {
+    return null;
+  }
+}
+
 
 const MODELS = new Set<ForecastModel>([
   "best_match",
@@ -315,7 +374,12 @@ export async function GET(request: NextRequest) {
         },
       });
     }
-    const diskFallback = readFromDiskCache(key);
+    const diskFallback =
+      readFromDiskCache(key) ??
+      (latitudes.length === 1 && longitudes.length === 1
+        ? findNearestDiskForecast(latitudes[0], longitudes[0], model)
+        : null);
+
     if (diskFallback) {
       return NextResponse.json(markStale(diskFallback), {
         headers: {
@@ -332,6 +396,7 @@ export async function GET(request: NextRequest) {
         },
       });
     }
+
     const timedOut =
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout/i.test(error.message));

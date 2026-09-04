@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import type { GeocodeResult } from "@/lib/types";
 import SearchCombobox from "@/components/SearchCombobox";
+import { resolveElevation } from "@/lib/elevationLookup";
 
 /** Search row + "我的位置" button. */
 export default function MapSearchCard() {
@@ -12,15 +13,22 @@ export default function MapSearchCard() {
 
   const handlePick = useCallback(
     (result: GeocodeResult) => {
+      const elevation = resolveElevation(
+        result.latitude,
+        result.longitude,
+        result.name,
+        result.elevation,
+      );
       void sampleAt(
         result.latitude,
         result.longitude,
-        result.elevation ?? 0,
+        elevation,
         result.name,
       );
     },
     [sampleAt],
   );
+
 
   const onLocated = useCallback(
     (latitude: number, longitude: number) => {

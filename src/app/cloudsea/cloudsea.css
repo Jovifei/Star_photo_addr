@@ -133,25 +133,29 @@
 /* 浮动图例 */
 .cloudsea-legend {
   position: absolute;
-  left: 14px;
-  bottom: 14px;
+  left: 20px;
+  bottom: 20px;
   z-index: 500;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--cs-line);
   border-radius: 8px;
   background: var(--cs-surface);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   color: var(--cs-text);
   font-size: 11px;
+  box-sizing: border-box;
+  max-width: calc(100% - 40px);
 }
 
 .cloudsea-legend-title {
   color: var(--cs-muted);
   font-weight: 600;
+  white-space: nowrap;
 }
+
 
 .cloudsea-legend-bar {
   display: flex;

@@ -5,10 +5,12 @@ import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
 import { formatNightLabel } from "@/lib/nighttime";
+import { FINDER_LOCATIONS } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
 import type {
   ForecastModel,
   Location,
   LocationForecast,
+  ObservationSnapshot,
   SortDirection,
 } from "@/lib/types";
 
@@ -49,6 +51,35 @@ async function fetchAndCacheForecast(
  *   - "添加地点" input accepts "lat,lng" or "lat,lng,name".
  *   - Loading state while forecasts are being fetched.
  */
+function getSnapshotCellScore(
+  snapshot: ObservationSnapshot | null | undefined,
+  loc: { id: string; name: string; lat: number; lng: number },
+  nightIndex: number,
+): { score: number; status: string; loading: boolean } | null {
+  if (!snapshot?.sites || nightIndex < 0) return null;
+  let siteScores = snapshot.sites[loc.id];
+  if (!siteScores) {
+    const matched = FINDER_LOCATIONS.find(
+      (f) =>
+        f.id === loc.id ||
+        (Math.abs(f.latitude - loc.lat) < 0.08 && Math.abs(f.longitude - loc.lng) < 0.08) ||
+        (loc.name && (f.name.includes(loc.name) || loc.name.includes(f.name))),
+    );
+    if (matched) {
+      siteScores = snapshot.sites[matched.id];
+    }
+  }
+  const scoreObj = siteScores?.[nightIndex];
+  if (!scoreObj || scoreObj.score == null) return null;
+  const status =
+    scoreObj.band === "priority" || scoreObj.band === "recommended"
+      ? "go"
+      : scoreObj.band === "watch"
+        ? "watch"
+        : "no";
+  return { score: scoreObj.score, status, loading: false };
+}
+
 export default function StarWindowTable() {
   const {
     state,
@@ -68,6 +99,22 @@ export default function StarWindowTable() {
   const [addInput, setAddInput] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
+
+  // Observation snapshot cache for fallback scores.
+  const [snapshot, setSnapshot] = useState<ObservationSnapshot | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/observing/snapshot?days=7&model=${state.cloudState.model}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: ObservationSnapshot | null) => {
+        if (active && data) setSnapshot(data);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [state.cloudState.model]);
+
 
   // Build the list of table rows (selected location first, then candidates).
   const tableLocations = useMemo(() => {
@@ -135,8 +182,22 @@ export default function StarWindowTable() {
         : null;
 
       for (const night of nightKeys) {
+        const leadIndex = Math.max(0, nightKeys.indexOf(night));
         if (!forecast) {
-          rowMap.set(night, { score: 0, status: "no", loading: true });
+          const snapshotScore = getSnapshotCellScore(
+            snapshot,
+            loc,
+            leadIndex,
+          );
+          if (snapshotScore) {
+            rowMap.set(night, snapshotScore);
+          } else {
+            rowMap.set(night, {
+              score: 0,
+              status: "unknown",
+              loading: Boolean(state.loading),
+            });
+          }
           continue;
         }
         const location: Location = {
@@ -148,7 +209,6 @@ export default function StarWindowTable() {
           source: "参考点位",
           bortle: loc.bortle,
         };
-        const leadIndex = Math.max(0, nightKeys.indexOf(night));
         const evalResult = evaluateNight(forecast, location, night, leadIndex);
         if (evalResult) {
           rowMap.set(night, {
@@ -157,13 +217,24 @@ export default function StarWindowTable() {
             loading: false,
           });
         } else {
-          rowMap.set(night, { score: 0, status: "no", loading: true });
+          const snapshotScore = getSnapshotCellScore(
+            snapshot,
+            loc,
+            leadIndex,
+          );
+          if (snapshotScore) {
+            rowMap.set(night, snapshotScore);
+          } else {
+            rowMap.set(night, { score: 0, status: "unknown", loading: false });
+          }
         }
       }
       matrix.set(loc.id, rowMap);
     }
     return matrix;
-  }, [tableLocations, nightKeys, forecastCache, state.forecast, state.cloudState.model]);
+  }, [tableLocations, nightKeys, forecastCache, state.forecast, state.cloudState.model, snapshot, state.loading]);
+
+
 
   // Sort locations by the selected sort key.
   const sortedLocations = useMemo(() => {
@@ -333,6 +404,14 @@ export default function StarWindowTable() {
                         </td>
                       );
                     }
+                    if (cell.status === "unknown") {
+                      return (
+                        <td key={night} className="star-window-cell muted">
+                          <span className="cell-score">—</span>
+                          <span className="cell-status">暂无</span>
+                        </td>
+                      );
+                    }
                     const meta = statusMeta(cell.status as never);
                     return (
                       <td key={night} className={`star-window-cell ${meta.tone}`}>
@@ -341,6 +420,7 @@ export default function StarWindowTable() {
                       </td>
                     );
                   })}
+
                   <td className="star-window-action-cell">
                     {loc.isCandidate && (
                       <button

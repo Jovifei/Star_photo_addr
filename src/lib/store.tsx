@@ -31,6 +31,7 @@ import {
 } from "@/lib/nighttime";
 import { sampleBortle } from "@/lib/darksky";
 import { hasDarkSkyLayer } from "@/lib/assets";
+import { resolveElevation } from "@/lib/elevationLookup";
 import type {
   BortleLevel,
   CityCandidate,
@@ -581,14 +582,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const locationId = stableSampleLocationId(latitude, longitude);
       const requestStartedAt = Date.now();
       const lastAttempt = lastForecastAttemptRef.current;
+      const resolvedElevation =
+        elevation > 0
+          ? elevation
+          : resolveElevation(latitude, longitude, name, elevation);
       const location: Location = {
         id: locationId,
         name: name ?? "取样点",
         latitude,
         longitude,
-        elevation,
+        elevation: resolvedElevation,
         source: name ? "搜索" : "自定义",
       };
+
       selectedLocationIdRef.current = location.id;
       dispatch({ type: "SET_LOCATION", location });
       dispatch({ type: "SET_DETAIL_OPEN", open: true });

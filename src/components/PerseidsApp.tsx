@@ -132,8 +132,9 @@ export default function PerseidsApp() {
           status={state.candidates.length ? "ok" : "empty"}
           activeId={state.selectedLocation?.id}
           onPick={(candidate) =>
-            void sampleAt(candidate.latitude, candidate.longitude, 0, candidate.name)
+            void sampleAt(candidate.latitude, candidate.longitude, candidate.elevation ?? 0, candidate.name)
           }
+
           onRemove={removeCandidate}
           onTrack={handleTrack}
         />

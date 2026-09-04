@@ -10,15 +10,15 @@ export default function MapBoundaryStatus() {
   );
   const hasLocalBoundaries = hasAsset("boundaries");
   const available = hasTianditu || hasLocalBoundaries;
+  if (!available) return null;
+
   const label = hasTianditu
     ? "天地图境界：国家 / 省市随缩放显示"
-    : hasLocalBoundaries
-      ? "本地授权行政边界：随缩放显示"
-      : "行政边界未启用：需天地图令牌或授权边界包";
+    : "本地授权行政边界：随缩放显示";
 
   return (
     <div
-      className={`map-boundary-status${available ? " available" : " unavailable"}`}
+      className="map-boundary-status available"
       title={label}
       role="status"
     >
@@ -26,4 +26,5 @@ export default function MapBoundaryStatus() {
       <span>{label}</span>
     </div>
   );
+
 }

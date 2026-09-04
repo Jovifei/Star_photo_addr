@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import {
   getShanghaiDate,
@@ -19,13 +21,48 @@ const TIMEOUT_MS = 120_000;
  * worker cannot stampede the upstream quota. */
 const FORCE_REFRESH_COOLDOWN_MS = 60_000;
 
+const SNAPSHOT_DIRECTORY =
+  process.env.OBSERVING_SNAPSHOT_DIR ??
+  path.join(process.cwd(), "data", "snapshots");
+
+function fireglowDiskPath(date: string, model: string): string {
+  return path.join(SNAPSHOT_DIRECTORY, `fireglow-snapshot-${date}-${model}.json`);
+}
+
+function saveFireglowToDisk(date: string, model: string, snapshot: FireGlowSnapshot) {
+  if (process.env.NODE_ENV === "test") return;
+  try {
+    if (!fs.existsSync(SNAPSHOT_DIRECTORY)) {
+      fs.mkdirSync(SNAPSHOT_DIRECTORY, { recursive: true });
+    }
+    const tempPath = `${fireglowDiskPath(date, model)}.tmp.${Date.now()}`;
+    fs.writeFileSync(tempPath, JSON.stringify(snapshot), "utf-8");
+    fs.renameSync(tempPath, fireglowDiskPath(date, model));
+  } catch {
+    // Ignore error
+  }
+}
+
+function readFireglowFromDisk(date: string, model: string): FireGlowSnapshot | null {
+  if (process.env.NODE_ENV === "test") return null;
+  try {
+    const filePath = fireglowDiskPath(date, model);
+    if (!fs.existsSync(filePath)) return null;
+    const content = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(content) as FireGlowSnapshot;
+  } catch {
+    return null;
+  }
+}
+
 const cache = new Map<string, { snapshot: FireGlowSnapshot; at: number }>();
 const inFlight = new Map<string, Promise<FireGlowSnapshot>>();
 const lastForceAt = new Map<string, number>();
 const CACHE_MAX_ENTRIES = 32;
 
-function rememberSnapshot(key: string, snapshot: FireGlowSnapshot) {
+function rememberSnapshot(key: string, date: string, model: string, snapshot: FireGlowSnapshot) {
   cache.set(key, { snapshot, at: Date.now() });
+  saveFireglowToDisk(date, model, snapshot);
   // Insertion-ordered map: drop the oldest entries past the cap.
   while (cache.size > CACHE_MAX_ENTRIES) {
     const oldest = cache.keys().next().value as string | undefined;
@@ -33,6 +70,7 @@ function rememberSnapshot(key: string, snapshot: FireGlowSnapshot) {
     cache.delete(oldest);
   }
 }
+
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -86,6 +124,17 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  const diskCached = readFireglowFromDisk(date, model);
+  if (!cached && diskCached && !forceRefresh) {
+    cache.set(key, { snapshot: diskCached, at: Date.now() });
+    return NextResponse.json(diskCached, {
+      headers: {
+        "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
+        "X-Fireglow-Cache": "disk",
+      },
+    });
+  }
+
   let activeTask = inFlight.get(key) ?? null;
   if (!activeTask) {
     activeTask = (async () => {
@@ -109,7 +158,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const snapshot = await activeTask;
-    rememberSnapshot(key, snapshot);
+    rememberSnapshot(key, date, model, snapshot);
     return NextResponse.json(snapshot, {
       headers: {
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
@@ -117,21 +166,21 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    const fallback = cache.get(key);
+    const fallback = cache.get(key)?.snapshot ?? diskCached;
     if (fallback) {
       const timedOut =
         error instanceof Error &&
         (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
       return NextResponse.json(
         {
-          ...fallback.snapshot,
+          ...fallback,
           stale: true,
           refreshError: timedOut ? "强制刷新超时，展示最近成功快照" : "强制刷新失败，展示最近成功快照",
         },
         {
           headers: {
             "Cache-Control": "no-store",
-            "X-Fireglow-Cache": "stale-memory",
+            "X-Fireglow-Cache": "stale-fallback",
           },
         },
       );
@@ -145,3 +194,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
