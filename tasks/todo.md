@@ -1,3 +1,15 @@
+# Cloudsea workspace deployment (2026-09-04)
+
+- [x] Verify cloudsea feature state on `main`: dedicated `/cloudsea` workspace (map + ranked sidebar), 5-tab nav, theme-switch navigation fix, 44 sites, retry/loading hardening (`5e83b4d`, `f6d7c24`, `c1b6e9f`).
+- [x] Local gates: `npm run check` PASS; full E2E 66 passed / 29 skipped by design / 0 failed (PORT=3101); cloudsea unit 9/9.
+- [x] ECS deploy `c1b6e9f772b8`: pull ff-only, `.env` BUILD_REVISION updated, worker stopped + 2G temp swap for the build, compose rebuild, containers healthy.
+- [x] Verification: public `/healthz` → `c1b6e9f772b8`; `https://photo.joviluma.com/cloudsea` → 200; local standalone cold API 200 (~10s for 44-site fan-out); worker observing snapshot `gfs 7d fresh` + fireglow prewarm loop running.
+- [x] Cleanup: temp swapfile removed; server back to 2G swap.
+
+Version record: deployed build `c1b6e9f772b8` (main) on 2026-09-04, superseding `5e83b4ddebc9` (2026-09-03).
+
+Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); cloudsea API has no `refresh=1` force channel or worker prewarm (44-site cold start ≈ 10s); local→ECS network is intermittently flaky (SSH/HTTPS timeouts that recover on retry).
+
 # UI information architecture batch 0 (2026-08-29)
 
 - [x] Replace the watermarked anonymous CARTO default with one configurable basemap boundary and a zero-config OSM fallback.
