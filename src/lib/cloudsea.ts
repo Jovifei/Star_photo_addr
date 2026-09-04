@@ -164,26 +164,24 @@ export function evaluateCloudSeaWindow(
     return CLOUD_SEA_EMPTY_WINDOW;
   }
 
-  // Find hourly entries matching the window
+  // Find hourly entries matching the window (timezone-safe string match)
   const indices: number[] = [];
   hourly.time.forEach((t, i) => {
-    const d = new Date(t);
-    const h = d.getHours();
+    const match = t.match(/T(\d{2}):/);
+    const h = match ? parseInt(match[1], 10) : new Date(t).getHours();
     if (windowHours.includes(h)) {
       indices.push(i);
     }
   });
 
-  if (indices.length === 0) {
-    return CLOUD_SEA_EMPTY_WINDOW;
-  }
+  const activeIndices = indices.length > 0 ? indices : hourly.time.map((_, i) => i);
 
   // Extract average parameters
   const avg = (arr?: Array<number | null>, def = 0) => {
     if (!arr) return def;
     let sum = 0;
     let count = 0;
-    for (const idx of indices) {
+    for (const idx of activeIndices) {
       const v = arr[idx];
       if (typeof v === "number" && Number.isFinite(v)) {
         sum += v;
@@ -267,7 +265,7 @@ export function evaluateCloudSeaWindow(
   }
 
   const pLevel = probabilityLevelFor(score);
-  const peakIdx = indices[Math.floor(indices.length / 2)] ?? indices[0];
+  const peakIdx = activeIndices[Math.floor(activeIndices.length / 2)] ?? activeIndices[0];
   const peakTimeStr = hourly.time[peakIdx] ? hourly.time[peakIdx].slice(11, 16) : null;
 
   return {

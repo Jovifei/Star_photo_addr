@@ -89,6 +89,7 @@ export default function CloudSeaApp() {
   const [phase, setPhase] = useState<Phase>("morning");
   const [range, setRange] = useState<RangeMode>(0);
   const [snapshots, setSnapshots] = useState<Record<string, CloudSeaSnapshot>>({});
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -106,19 +107,35 @@ export default function CloudSeaApp() {
   const fetchSnapshots = useCallback(
     async (forceRefresh = false) => {
       if (forceRefresh) setRefreshing(true);
+      setLoading(true);
       try {
-        const results: Record<string, CloudSeaSnapshot> = {};
-        for (const d of activeDates) {
-          const url = `/api/cloudsea/snapshot?date=${d}&refresh=${forceRefresh ? "1" : "0"}`;
-          const res = await fetch(url);
-          if (res.ok) {
-            results[d] = await res.json();
-          }
-        }
-        setSnapshots((prev) => ({ ...prev, ...results }));
+        const pairs = await Promise.all(
+          activeDates.map(async (d) => {
+            for (let attempt = 0; attempt < 2; attempt++) {
+              try {
+                const url = `/api/cloudsea/snapshot?date=${d}&refresh=${forceRefresh ? "1" : "0"}`;
+                const res = await fetch(url, { cache: "no-store" });
+                if (res.ok) {
+                  const data = (await res.json()) as CloudSeaSnapshot;
+                  if (data && data.sites) {
+                    return [d, data] as const;
+                  }
+                }
+              } catch (e) {
+                if (attempt === 1) throw e;
+              }
+            }
+            return null;
+          }),
+        );
+        const valid = Object.fromEntries(
+          pairs.filter((p): p is [string, CloudSeaSnapshot] => p !== null),
+        );
+        setSnapshots((prev) => ({ ...prev, ...valid }));
       } catch (err) {
         console.error("Failed to load cloudsea snapshot", err);
       } finally {
+        setLoading(false);
         setRefreshing(false);
       }
     },
@@ -139,6 +156,10 @@ export default function CloudSeaApp() {
 
   // Rank sites
   const rankedSites = useMemo<RankedSite[]>(() => {
+    // Only compute ranking when at least one snapshot date has been received
+    const hasData = activeDates.some((d) => Boolean(snapshots[d]));
+    if (!hasData) return [];
+
     const list: RankedSite[] = [];
     for (const site of CLOUD_SEA_SITES) {
       let bestWin: CloudSeaWindowScore = CLOUD_SEA_EMPTY_WINDOW;
@@ -357,62 +378,84 @@ export default function CloudSeaApp() {
           </div>
 
           <div className="cloudsea-site-list">
-            {rankedSites.map(({ site, window: win }) => {
-              const isSelected = site.id === selectedSiteId;
-              const pLevel = win.probabilityLevel ?? "p20";
-              const scoreColor = LEVEL_COLORS[pLevel];
-              const badgeTone = positionBadgeTone(win.cloudPosition);
-
-              return (
-                <div
-                  key={site.id}
-                  className={`cloudsea-card${isSelected ? " selected" : ""}`}
-                  onClick={() => handleSelectSite(site.id)}
+            {loading && rankedSites.length === 0 ? (
+              <div style={{ padding: "48px 16px", textAlign: "center", color: "var(--cs-muted)" }}>
+                <RefreshCw size={24} className="is-spinning" style={{ margin: "0 auto 12px", display: "block" }} />
+                <p style={{ margin: "0 0 6px", fontSize: "14px", color: "var(--cs-text)", fontWeight: 600 }}>
+                  正在分析高山云层与逆温层数据...
+                </p>
+                <span style={{ fontSize: "12px", opacity: 0.8 }}>综合气压层高度、湿度与风力推算中</span>
+              </div>
+            ) : !loading && rankedSites.length === 0 ? (
+              <div style={{ padding: "48px 16px", textAlign: "center", color: "var(--cs-muted)" }}>
+                <p style={{ margin: "0 0 12px", fontSize: "13px" }}>云海气象数据同步中，请点击重试</p>
+                <button
+                  type="button"
+                  className="cloudsea-refresh"
+                  onClick={() => void fetchSnapshots(true)}
+                  style={{ margin: "0 auto" }}
                 >
-                  <div className="cloudsea-card-header">
-                    <div className="cloudsea-card-title">
-                      <span className="cloudsea-card-name">{site.name}</span>
-                      <span className="cloudsea-card-sub">
-                        {site.province} · 海拔 {site.altitude}m · {site.viewpoint}
-                      </span>
-                    </div>
-                    <div className="cloudsea-card-score">
-                      <span
-                        className="cloudsea-score-badge"
-                        style={{ color: scoreColor }}
-                      >
-                        {win.probabilityLabel ?? "—"}
-                      </span>
-                      <span className={`cloudsea-pos-badge ${badgeTone}`}>
-                        {win.positionLabel}
-                      </span>
-                    </div>
-                  </div>
+                  <RefreshCw size={14} /> 重新获取数据
+                </button>
+              </div>
+            ) : (
+              rankedSites.map(({ site, window: win }) => {
+                const isSelected = site.id === selectedSiteId;
+                const pLevel = win.probabilityLevel ?? "p20";
+                const scoreColor = LEVEL_COLORS[pLevel];
+                const badgeTone = positionBadgeTone(win.cloudPosition);
 
-                  {/* 剖面高度条 */}
-                  <div className="cloudsea-profile-strip">
-                    <div>
-                      <label>预估云顶</label>
-                      <strong>{win.cloudTopM ? `${win.cloudTopM}m` : "—"}</strong>
+                return (
+                  <div
+                    key={site.id}
+                    className={`cloudsea-card${isSelected ? " selected" : ""}`}
+                    onClick={() => handleSelectSite(site.id)}
+                  >
+                    <div className="cloudsea-card-header">
+                      <div className="cloudsea-card-title">
+                        <span className="cloudsea-card-name">{site.name}</span>
+                        <span className="cloudsea-card-sub">
+                          {site.province} · 海拔 {site.altitude}m · {site.viewpoint}
+                        </span>
+                      </div>
+                      <div className="cloudsea-card-score">
+                        <span
+                          className="cloudsea-score-badge"
+                          style={{ color: scoreColor }}
+                        >
+                          {win.probabilityLabel ?? "—"}
+                        </span>
+                        <span className={`cloudsea-pos-badge ${badgeTone}`}>
+                          {win.positionLabel}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <label>相对高差</label>
-                      <strong>
-                        {win.altitudeDiffM != null
-                          ? `${win.altitudeDiffM > 0 ? "+" : ""}${win.altitudeDiffM}m`
-                          : "—"}
-                      </strong>
-                    </div>
-                    <div>
-                      <label>近地风速</label>
-                      <strong>{win.windSpeed != null ? `${win.windSpeed}m/s` : "—"}</strong>
-                    </div>
-                  </div>
 
-                  <p className="cloudsea-card-summary">{win.summary}</p>
-                </div>
-              );
-            })}
+                    {/* 剖面高度条 */}
+                    <div className="cloudsea-profile-strip">
+                      <div>
+                        <label>预估云顶</label>
+                        <strong>{win.cloudTopM ? `${win.cloudTopM}m` : "—"}</strong>
+                      </div>
+                      <div>
+                        <label>相对高差</label>
+                        <strong>
+                          {win.altitudeDiffM != null
+                            ? `${win.altitudeDiffM > 0 ? "+" : ""}${win.altitudeDiffM}m`
+                            : "—"}
+                        </strong>
+                      </div>
+                      <div>
+                        <label>近地风速</label>
+                        <strong>{win.windSpeed != null ? `${win.windSpeed}m/s` : "—"}</strong>
+                      </div>
+                    </div>
+
+                    <p className="cloudsea-card-summary">{win.summary}</p>
+                  </div>
+                );
+              })
+            )}
           </div>
         </aside>
       </div>
