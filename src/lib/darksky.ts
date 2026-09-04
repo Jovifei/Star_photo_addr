@@ -49,6 +49,63 @@ export function classifyBortle(mpsas: number | null): BortleClass | null {
   return BORTLE_CLASSES[BORTLE_CLASSES.length - 1];
 }
 
+/**
+ * Approximate MPSAS representation for a given Bortle level (1..9).
+ */
+export function mpsasForBortle(bortle: number): number {
+  const level = Math.max(1, Math.min(9, Math.round(bortle)));
+  const klass = BORTLE_CLASSES.find((c) => c.level === level);
+  if (klass) return klass.lowerBoundMpsas;
+  return 20.0;
+}
+
+/**
+ * Heuristic estimation of Bortle class and MPSAS when no local raster is installed.
+ * Uses location-level metadata if known, or geographic coordinates and elevation.
+ */
+export function estimateDarkSky(
+  latitude: number,
+  longitude: number,
+  elevation: number | null = null,
+  knownBortle: number | null = null,
+): { bortle: number; bortleName: string; mpsas: number; sourceLabel: string } {
+  if (knownBortle != null && knownBortle >= 1 && knownBortle <= 9) {
+    const klass = BORTLE_CLASSES.find((c) => c.level === Math.round(knownBortle));
+    const mpsas = klass?.lowerBoundMpsas ?? 21.0;
+    return {
+      bortle: Math.round(knownBortle),
+      bortleName: klass?.name ?? "典型暗空",
+      mpsas,
+      sourceLabel: "点位预估",
+    };
+  }
+
+  // Geographic and topographic heuristic for China
+  let estimatedBortle = 4;
+  const elev = elevation ?? 0;
+
+  if (elev >= 3500 || (longitude < 95 && latitude > 28)) {
+    estimatedBortle = 1;
+  } else if (elev >= 2200 || (longitude < 103 && latitude > 26)) {
+    estimatedBortle = 2;
+  } else if (elev >= 1200 || longitude < 108) {
+    estimatedBortle = 3;
+  } else if (elev >= 500) {
+    estimatedBortle = 4;
+  } else {
+    estimatedBortle = 5;
+  }
+
+  const klass = BORTLE_CLASSES.find((c) => c.level === estimatedBortle);
+  const mpsas = klass?.lowerBoundMpsas ?? 20.0;
+  return {
+    bortle: estimatedBortle,
+    bortleName: klass?.name ?? "卫星估算",
+    mpsas,
+    sourceLabel: "卫星估算",
+  };
+}
+
 /** Build an explicit "no trustworthy value" sample. */
 function emptySample(
   latitude: number,

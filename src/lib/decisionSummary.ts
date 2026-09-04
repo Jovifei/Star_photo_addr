@@ -43,7 +43,7 @@ export function buildDecisionSummary(input: {
       gradeTone: "muted",
       windowLabel: "—",
       riskTitle: "评分未知",
-      riskText: "当前没有可用的夜间评分，显示为数据不足，不要用模糊等级代替。",
+      riskText: "正在同步该地点的逐小时气象预报，数据加载完成后将自动计算评分；若上游限流将自动回退最近快照。",
       updatedLabel,
     };
   }

@@ -19,41 +19,38 @@ function HeadlineBody({ darkSkyWorkspace }: { darkSkyWorkspace: boolean }) {
 
   return (
     <div className="map-headline" data-workspace={darkSkyWorkspace ? "sites" : "tonight"}>
-      <span>
-        {darkSkyWorkspace
-          ? "暗夜选址 · 长期暗空基础"
-          : `今夜观测 · ${formatNightLabel(state.selectedNight, true)}`}
-      </span>
-      <h1>
-        {darkSkyWorkspace ? "寻找更暗的长期机位" : "今晚云量变化"}
-      </h1>
-      <p>
-        {darkSkyWorkspace
-          ? "VIIRS 夜光 · Bortle / 海拔 · 当前视野推荐"
-          : "当前状态 → 次日 05:00 · 逐小时预报"}
-      </p>
-      <small>
-        <i />
-        {darkSkyWorkspace
-          ? "先比较暗夜本底，再叠加今晚天气与出行条件"
-          : "当地天气 · 卫星观测 · 任意地点取样"}
-      </small>
+      <div className="headline-capsule">
+        <span className="live-status-dot" aria-hidden="true" />
+        <span className="headline-mode">
+          {darkSkyWorkspace ? "暗夜选址" : "今晚云量"}
+        </span>
+        <span className="headline-sep">·</span>
+        <span className="headline-meta">
+          {darkSkyWorkspace ? "长期暗空本底" : formatNightLabel(state.selectedNight, true)}
+        </span>
+      </div>
+
       {!darkSkyWorkspace && primaryEvent && (
-        <div className="astronomy-events" aria-label="最新天文事件">
-          <div className="astronomy-event-primary">
-            <span>最新天文事件</span>
-            <strong>{primaryEvent.title}</strong>
-            <em>{primaryEvent.dateLabel}</em>
-          </div>
-          <div className="astronomy-event-list">
+        <details className="headline-event-dropdown">
+          <summary className="headline-event-trigger">
+            <span className="event-star">✦</span>
+            <span className="event-trigger-text">{primaryEvent.title}</span>
+            <span className="event-trigger-date">{primaryEvent.dateLabel}</span>
+          </summary>
+          <div className="headline-event-popover">
+            <div className="popover-title">近期天文事件</div>
+            <div className="popover-primary">
+              <strong>{primaryEvent.title}</strong>
+              <span>{primaryEvent.dateLabel}</span>
+            </div>
             {events.slice(1).map((event) => (
-              <div key={event.id} className="astronomy-event-row">
-                <b>{event.title}</b>
-                <span>{event.dateLabel}</span>
+              <div key={event.id} className="popover-row">
+                <span>{event.title}</span>
+                <small>{event.dateLabel}</small>
               </div>
             ))}
           </div>
-        </div>
+        </details>
       )}
     </div>
   );

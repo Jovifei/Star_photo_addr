@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import { NextRequest, NextResponse } from "next/server";
 import {
   clampForecastDays,
@@ -9,6 +12,49 @@ import { RefreshCoordinator } from "@/lib/serverRefreshCoordinator";
 import type { ForecastModel, ForecastResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const DISK_CACHE_DIR = path.join(os.tmpdir(), "star-forecast-cache");
+
+function ensureDiskCacheDir() {
+  try {
+    if (!fs.existsSync(DISK_CACHE_DIR)) {
+      fs.mkdirSync(DISK_CACHE_DIR, { recursive: true });
+    }
+  } catch {
+    // Ignore error
+  }
+}
+
+function diskCachePath(key: string): string {
+  const safeKey = Buffer.from(key).toString("base64url");
+  return path.join(DISK_CACHE_DIR, `${safeKey}.json`);
+}
+
+function saveToDiskCache(key: string, data: ForecastResponse) {
+  if (process.env.NODE_ENV === "test" && process.env.FORECAST_ENABLE_DISK_CACHE !== "1") {
+    return;
+  }
+  try {
+    ensureDiskCacheDir();
+    fs.writeFileSync(diskCachePath(key), JSON.stringify(data), "utf-8");
+  } catch {
+    // Ignore error
+  }
+}
+
+function readFromDiskCache(key: string): ForecastResponse | null {
+  if (process.env.NODE_ENV === "test" && process.env.FORECAST_ENABLE_DISK_CACHE !== "1") {
+    return null;
+  }
+  try {
+    const filePath = diskCachePath(key);
+    if (!fs.existsSync(filePath)) return null;
+    const content = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(content) as ForecastResponse;
+  } catch {
+    return null;
+  }
+}
 
 const MODELS = new Set<ForecastModel>([
   "best_match",
@@ -230,6 +276,7 @@ export async function GET(request: NextRequest) {
         model,
       );
       forecastCache.write(key, data);
+      saveToDiskCache(key, data);
       return data;
     } finally {
       clearTimeout(timeout);
@@ -264,6 +311,23 @@ export async function GET(request: NextRequest) {
             decision.retryAfterSeconds,
           ),
           Warning: '110 - "Response is stale"',
+        },
+      });
+    }
+    const diskFallback = readFromDiskCache(key);
+    if (diskFallback) {
+      return NextResponse.json(markStale(diskFallback), {
+        headers: {
+          ...responseHeaders(
+            true,
+            model,
+            days,
+            "stale-disk",
+            true,
+            decision.suppressed,
+            decision.retryAfterSeconds,
+          ),
+          Warning: '110 - "Response is stale from disk"',
         },
       });
     }

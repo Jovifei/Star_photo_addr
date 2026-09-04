@@ -259,6 +259,12 @@
 }
 
 /* Semantically aligned status colors ------------------------------------------- */
+.planner-root .status-pill {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  min-width: max-content;
+}
+
 .planner-root .status-pill.good,
 .planner-root .good {
   color: #9ce1ee;

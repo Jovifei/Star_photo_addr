@@ -1,21 +1,10 @@
 "use client";
 
-import { hasDarkSkyLayer } from "@/lib/assets";
-import { describeDarkSkyStatus } from "@/lib/darksky";
+import { estimateDarkSky } from "@/lib/darksky";
 import { formatElevationMeters } from "@/lib/locationPresentation";
 import { statusMeta } from "@/lib/scoring";
 import type { DarkSkySample, Location, NightEvaluation } from "@/lib/types";
 import ScoreRing from "@/components/ScoreRing";
-
-function unavailableDarkSkyLabel(
-  sample: DarkSkySample | null,
-  installed: boolean,
-): string {
-  if (!installed || sample?.status === "layer-unavailable") return "未安装";
-  if (sample?.status === "unsupported-region") return "无覆盖";
-  if (sample?.status === "nodata") return "无有效像元";
-  return "无数据";
-}
 
 /** Observation detail: dark-sky, weather window, moon, galaxy, confidence. */
 export default function ObservationDetails({
@@ -32,30 +21,42 @@ export default function ObservationDetails({
   onAddCandidate?: () => void;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
-  const darkSkyInstalled = hasDarkSkyLayer();
   const hasReading = sample != null && sample.status === "ok";
-  const unavailableLabel = unavailableDarkSkyLabel(sample, darkSkyInstalled);
+
+  const estimate = location
+    ? estimateDarkSky(
+        location.latitude,
+        location.longitude,
+        location.elevation,
+        location.bortle,
+      )
+    : null;
+
   const mpsasText =
     hasReading && sample.mpsas != null
       ? sample.mpsas.toFixed(2)
-      : unavailableLabel;
-  const snapshotBortle =
-    location?.bortle != null && Number.isFinite(location.bortle)
-      ? location.bortle
-      : null;
+      : estimate
+        ? `~${estimate.mpsas.toFixed(2)}`
+        : "—";
+
+  const mpsasUnit = hasReading
+    ? "mpsas"
+    : estimate
+      ? "mpsas (估算)"
+      : "待选择地点";
+
   const bortleText =
     hasReading && sample.bortle != null
       ? `B${sample.bortle}`
-      : snapshotBortle != null
-        ? `B${snapshotBortle}`
-        : unavailableLabel;
+      : estimate
+        ? `B${estimate.bortle}`
+        : "—";
+
   const bortleName = hasReading
     ? (sample.bortleName ?? "")
-    : snapshotBortle != null
-      ? "地点快照"
-      : darkSkyInstalled
-        ? "本地栅格"
-        : "需安装栅格";
+    : estimate
+      ? `${estimate.bortleName} · ${estimate.sourceLabel}`
+      : "待选择地点";
 
   return (
     <div className="panel-section">
@@ -99,24 +100,14 @@ export default function ObservationDetails({
       <div className="metric-grid">
         <div className="metric">
           <div className="label">天顶亮度</div>
-          <div
-            className="value"
-            style={hasReading ? undefined : { fontSize: 15, color: "var(--muted)" }}
-          >
+          <div className="value">
             {mpsasText}
-            {hasReading ? <small>mpsas</small> : <small>本地栅格</small>}
+            <small>{mpsasUnit}</small>
           </div>
         </div>
         <div className="metric">
           <div className="label">波特尔</div>
-          <div
-            className="value"
-            style={
-              hasReading || snapshotBortle != null
-                ? undefined
-                : { fontSize: 15, color: "var(--muted)" }
-            }
-          >
+          <div className="value">
             {bortleText}
             {bortleName && <small>{bortleName}</small>}
           </div>
@@ -150,29 +141,17 @@ export default function ObservationDetails({
         </div>
       </div>
 
-      {location && !darkSkyInstalled && (
+      {location && !hasReading && (
         <p
           className="dark-sky-unavailable-note"
           style={{
             marginTop: 10,
             fontSize: 11,
-            color: "var(--amber)",
+            color: "var(--muted)",
             lineHeight: 1.55,
           }}
         >
-          “未安装”表示当前构建没有本地 Bortle/SQM 数值栅格；VIIRS
-          视觉夜光仍可用于空间参考，但不能冒充现场实测。
-        </p>
-      )}
-      {darkSkyInstalled && sample != null && sample.status !== "ok" && (
-        <p
-          style={{
-            marginTop: 10,
-            fontSize: 11,
-            color: "var(--amber)",
-          }}
-        >
-          暗夜等级无数据：{describeDarkSkyStatus(sample.status)}
+          暗夜等级与天顶亮度为卫星夜光及地理模型估算值，供选点参考。
         </p>
       )}
 

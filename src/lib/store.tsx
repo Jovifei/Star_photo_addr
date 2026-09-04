@@ -523,12 +523,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // so the background hydration effect does not silently retry it: such a
       // retry used to land after a 429 and hide the failure from the user.
       forecastHydrationKeyRef.current = `${location.id}|${selectedModel}`;
+      const cached = state.forecastCache.get(location.id);
       dispatch({ type: "SET_LOCATION", location });
       dispatch({ type: "SET_DETAIL_OPEN", open: true });
       dispatch({ type: "SET_LOADING", loading: true });
       dispatch({ type: "SET_ERROR", error: "" });
       dispatch({ type: "SET_SAMPLE", sample: null });
-      dispatch({ type: "SET_FORECAST", forecast: null });
+      if (cached) {
+        dispatch({ type: "SET_FORECAST", forecast: cached });
+      } else {
+        dispatch({ type: "SET_FORECAST", forecast: null });
+      }
       try {
         const forecast = await fetchForecastFor(location, selectedModel);
         if (requestId !== latestForecastRequestRef.current) return;
@@ -546,6 +551,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current) return;
         const message = error instanceof Error ? error.message : "天气请求失败";
+        const fallback = state.forecastCache.get(location.id);
+        if (fallback) {
+          dispatch({ type: "SET_FORECAST", forecast: fallback });
+        }
         dispatch({ type: "SET_ERROR", error: message });
         // Surface the upstream failure (429 / timeout) in the availability
         // line instead of only in the generic error slot, which the hourly
@@ -557,7 +566,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [state.cloudState.model],
+    [state.cloudState.model, state.forecastCache],
   );
 
   const sampleAt = useCallback(
@@ -598,11 +607,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // location+model pair, so the hydration effect must not retry it and
       // mask a 429 the user is supposed to see.
       forecastHydrationKeyRef.current = `${locationId}|${selectedModel}`;
+      const cached = state.forecastCache.get(locationId);
       const requestId = ++latestForecastRequestRef.current;
       forecastInFlightRef.current = true;
       dispatch({ type: "SET_LOADING", loading: true });
       dispatch({ type: "SET_SAMPLE", sample: null });
-      dispatch({ type: "SET_FORECAST", forecast: null });
+      if (cached) {
+        dispatch({ type: "SET_FORECAST", forecast: cached });
+      } else {
+        dispatch({ type: "SET_FORECAST", forecast: null });
+      }
       try {
         const [sample, forecast] = await Promise.all([
           sampleBortle(latitude, longitude),
@@ -626,6 +640,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current) return;
         const message = error instanceof Error ? error.message : "取样或天气请求失败";
+        const fallback = state.forecastCache.get(locationId);
+        if (fallback) {
+          dispatch({ type: "SET_FORECAST", forecast: fallback });
+        }
         dispatch({ type: "SET_ERROR", error: message });
         dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: message });
       } finally {
@@ -635,7 +653,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         forecastInFlightRef.current = false;
       }
     },
-    [state.cloudState.model],
+    [state.cloudState.model, state.forecastCache],
   );
 
   const refreshData = useCallback(async () => {

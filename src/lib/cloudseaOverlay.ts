@@ -20,8 +20,8 @@ const DEFAULT_BOUNDS: [[number, number], [number, number]] = [
   [54.5, 136],
 ];
 const DEFAULT_GRID_WIDTH = 176;
-const INFLUENCE_KM = 380;
-const IDW_POWER = 3;
+export const INFLUENCE_KM = 60;
+const IDW_POWER = 2.5;
 
 export const CLOUD_SEA_LEVEL_THRESHOLDS = [20, 40, 60, 80, 90] as const;
 
@@ -59,10 +59,16 @@ function distanceKmFlat(
   return Math.sqrt(dLat * dLat + dLng * dLng);
 }
 
+export interface GridResult {
+  scores: Float32Array;
+  minDistances: Float32Array;
+}
+
 /**
- * Pure IDW grid calculation. Kept free of DOM so it can be tested in Vitest/Node.
+ * Detailed IDW calculation returning both interpolated scores and nearest-point distances
+ * for radial terrain halo attenuation.
  */
-export function interpolateScoreGrid(
+export function interpolateScoreGridDetailed(
   points: OverlayPoint[],
   width = DEFAULT_GRID_WIDTH,
   height = Math.round(
@@ -70,15 +76,17 @@ export function interpolateScoreGrid(
       (DEFAULT_BOUNDS[1][1] - DEFAULT_BOUNDS[0][1]),
   ),
   bounds: [[number, number], [number, number]] = DEFAULT_BOUNDS,
-): Float32Array {
-  const grid = new Float32Array(width * height).fill(NaN);
+  influenceKm = INFLUENCE_KM,
+): GridResult {
+  const scores = new Float32Array(width * height).fill(NaN);
+  const minDistances = new Float32Array(width * height).fill(Infinity);
   const valid = points.filter(
     (point) =>
       point.score != null &&
       Number.isFinite(point.latitude) &&
       Number.isFinite(point.longitude),
   );
-  if (!valid.length) return grid;
+  if (!valid.length) return { scores, minDistances };
 
   const [south, west] = bounds[0];
   const [north, east] = bounds[1];
@@ -92,6 +100,7 @@ export function interpolateScoreGrid(
       const lng = west + column * lngStep;
       let weightSum = 0;
       let scoreSum = 0;
+      let closestDist = Infinity;
 
       for (const point of valid) {
         const distance = distanceKmFlat(
@@ -101,28 +110,49 @@ export function interpolateScoreGrid(
           point.longitude,
           cosLat,
         );
+        if (distance < closestDist) closestDist = distance;
         if (distance < 0.5) {
           weightSum = 1;
           scoreSum = point.score as number;
+          closestDist = 0;
           break;
         }
-        if (distance > INFLUENCE_KM) continue;
+        if (distance > influenceKm) continue;
         const weight = 1 / Math.pow(distance, IDW_POWER);
         weightSum += weight;
         scoreSum += weight * (point.score as number);
       }
 
+      const idx = row * width + column;
+      minDistances[idx] = closestDist;
       if (weightSum > 0) {
-        grid[row * width + column] = scoreSum / weightSum;
+        scores[idx] = scoreSum / weightSum;
       }
     }
   }
 
-  return grid;
+  return { scores, minDistances };
+}
+
+/**
+ * Pure IDW grid calculation. Kept free of DOM so it can be tested in Vitest/Node.
+ */
+export function interpolateScoreGrid(
+  points: OverlayPoint[],
+  width = DEFAULT_GRID_WIDTH,
+  height = Math.round(
+    (DEFAULT_GRID_WIDTH * (DEFAULT_BOUNDS[1][0] - DEFAULT_BOUNDS[0][0])) /
+      (DEFAULT_BOUNDS[1][1] - DEFAULT_BOUNDS[0][1]),
+  ),
+  bounds: [[number, number], [number, number]] = DEFAULT_BOUNDS,
+): Float32Array {
+  return interpolateScoreGridDetailed(points, width, height, bounds, INFLUENCE_KM).scores;
 }
 
 /**
  * Render probability grid to a PNG data URL for Leaflet ImageOverlay.
+ * Employs localized mountain halos: probabilities are concentrated around peaks and
+ * smoothly fade into transparent valleys/plains.
  */
 export function buildProbabilityOverlay(
   points: OverlayPoint[],
@@ -136,7 +166,13 @@ export function buildProbabilityOverlay(
       (bounds[1][1] - bounds[0][1]),
   );
 
-  const grid = interpolateScoreGrid(points, width, height, bounds);
+  const { scores, minDistances } = interpolateScoreGridDetailed(
+    points,
+    width,
+    height,
+    bounds,
+    INFLUENCE_KM,
+  );
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -151,17 +187,30 @@ export function buildProbabilityOverlay(
     // Leaflet image overlay maps y=0 to north (top of the canvas)
     const targetRow = height - 1 - row;
     for (let column = 0; column < width; column += 1) {
-      const value = grid[row * width + column];
+      const idx = row * width + column;
+      const value = scores[idx];
+      const dist = minDistances[idx];
       const targetIndex = (targetRow * width + column) * 4;
 
-      if (Number.isNaN(value) || value < 10) {
+      // Filter out low scores (< 20%) and points outside mountain influence radius
+      if (Number.isNaN(value) || value < 20 || dist > INFLUENCE_KM) {
         data[targetIndex + 3] = 0;
         continue;
       }
 
       const level = levelIndexFor(value);
       const [r, g, b] = CLOUD_SEA_LEVEL_RGB[level];
-      const alpha = LEVEL_ALPHA[level];
+      const baseAlpha = LEVEL_ALPHA[level];
+
+      // Localized terrain halo smooth decay (cosine falloff)
+      const normDist = Math.min(1, dist / INFLUENCE_KM);
+      const haloFade = Math.cos((normDist * Math.PI) / 2);
+      const alpha = Math.round(baseAlpha * haloFade * haloFade);
+
+      if (alpha < 4) {
+        data[targetIndex + 3] = 0;
+        continue;
+      }
 
       data[targetIndex] = r;
       data[targetIndex + 1] = g;
