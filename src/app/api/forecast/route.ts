@@ -13,7 +13,8 @@ import type { ForecastModel, ForecastResponse } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const DISK_CACHE_DIR = path.join(os.tmpdir(), "star-forecast-cache");
+const SNAPSHOT_DIR = process.env.OBSERVING_SNAPSHOT_DIR || os.tmpdir();
+const DISK_CACHE_DIR = path.join(SNAPSHOT_DIR, "forecast-cache");
 
 function ensureDiskCacheDir() {
   try {

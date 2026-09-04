@@ -10,7 +10,7 @@ function boundedNumber(value, fallback, minimum, maximum) {
 
 const intervalMs = boundedNumber(
   process.env.SNAPSHOT_INTERVAL_MS,
-  30 * 60 * 1000,
+  3 * 60 * 60 * 1000, // 3 hours (weather models only update every 6 hours)
   60_000,
   24 * 60 * 60 * 1000,
 );
@@ -29,6 +29,7 @@ const model = supportedModels.has(requestedModel) ? requestedModel : "icon";
 let stopped = false;
 let timer = null;
 let activeController = null;
+let lastErrorWasRateLimit = false;
 
 function shanghaiDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -72,20 +73,18 @@ async function refresh() {
     if (!response.ok) {
       throw new Error(payload?.error || `HTTP ${response.status}`);
     }
-    console.log(
-      `[snapshot-worker] ${date} ${model} ${days}d ${payload?.stale ? "stale" : "fresh"}`,
-    );
+    lastErrorWasRateLimit = false;
   } catch (error) {
+    const errText = error instanceof Error ? error.message : String(error);
+    lastErrorWasRateLimit = /429|limit exceeded/i.test(errText);
     const timedOut =
-      activeController.signal.aborted ||
+      activeController?.signal.aborted ||
       (error instanceof Error && /aborted|timeout/i.test(error.message));
     console.error(
       `[snapshot-worker] refresh failed: ${
         timedOut
           ? "request timeout"
-          : error instanceof Error
-            ? error.message
-            : String(error)
+          : errText
       }`,
     );
   } finally {
@@ -155,11 +154,14 @@ async function prewarmFireglow() {
 async function runLoop() {
   if (stopped) return;
   await refresh();
-  if (!stopped) {
+  if (!stopped && !lastErrorWasRateLimit) {
     await prewarmFireglow();
   }
   if (!stopped) {
-    timer = setTimeout(runLoop, intervalMs);
+    const nextWait = lastErrorWasRateLimit
+      ? Math.max(intervalMs, 2 * 60 * 60 * 1000)
+      : intervalMs;
+    timer = setTimeout(runLoop, nextWait);
   }
 }
 
