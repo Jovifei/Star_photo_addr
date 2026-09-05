@@ -3,7 +3,7 @@ ARG BUILD_REVISION=local
 FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm config set registry https://registry.npmmirror.com && npm ci
 
 FROM node:24-alpine AS build
 ARG BUILD_REVISION
