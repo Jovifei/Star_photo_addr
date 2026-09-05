@@ -1,6 +1,6 @@
 {
   "name": "star-weather-planner",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "description": "逐星｜今夜观测、暗夜选址与观星计划平台",
