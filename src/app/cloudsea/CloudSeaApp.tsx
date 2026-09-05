@@ -23,6 +23,7 @@ import {
   type CloudSeaWindowScore,
 } from "@/lib/cloudsea";
 import { buildProbabilityOverlay } from "@/lib/cloudseaOverlay";
+import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
 
 type Phase = "morning" | "evening";
@@ -197,6 +198,11 @@ export default function CloudSeaApp() {
     return buildProbabilityOverlay(overlayPoints);
   }, [overlayPoints]);
 
+  const selectedRanked = useMemo(() => {
+    if (!selectedSiteId) return null;
+    return rankedSites.find((r) => r.site.id === selectedSiteId) ?? null;
+  }, [rankedSites, selectedSiteId]);
+
   const handleSelectSite = (siteId: string) => {
     setSelectedSiteId(siteId);
     const target = CLOUD_SEA_SITES.find((s) => s.id === siteId);
@@ -267,7 +273,10 @@ export default function CloudSeaApp() {
         </div>
       </ProductHeader>
 
-      <div className="cloudsea-body">
+      <div
+        className="cloudsea-body"
+        data-inspector-open={selectedRanked ? "true" : "false"}
+      >
         {/* 左侧 Leaflet 全屏地图 */}
         <div className="cloudsea-map-pane">
           <MapContainer
@@ -458,6 +467,16 @@ export default function CloudSeaApp() {
             )}
           </div>
         </aside>
+
+        {selectedRanked ? (
+          <CloudSeaSiteDetail
+            site={selectedRanked.site}
+            window={selectedRanked.window}
+            phase={phase}
+            dateKey={selectedRanked.dateKey}
+            onClose={() => setSelectedSiteId(null)}
+          />
+        ) : null}
       </div>
     </div>
   );

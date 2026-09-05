@@ -119,6 +119,10 @@
   padding: 14px 18px 16px;
 }
 
+.cloudsea-body[data-inspector-open="true"] {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) minmax(320px, 360px);
+}
+
 .cloudsea-map-pane {
   position: relative;
   height: 100%;
@@ -349,6 +353,385 @@
   margin-top: 2px;
 }
 
+/* ========================================================
+   高山云海专属摄影地点详情舱 (CloudSeaSiteDetail)
+   ======================================================== */
+.cloudsea-detail-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  border: 1px solid var(--cs-line);
+  border-radius: 14px;
+  background: var(--cs-surface);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  animation: csDetailFadeIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes csDetailFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.cs-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--cs-line);
+  background: rgba(3, 14, 22, 0.65);
+}
+
+.cs-detail-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cs-detail-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--cs-text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cs-detail-subtitle {
+  font-size: 11px;
+  color: var(--cs-muted);
+}
+
+.cs-detail-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.cs-probability-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+}
+
+.cs-probability-pill[data-level="p20"] {
+  color: #7b8f97;
+  border-color: rgba(123, 143, 151, 0.3);
+  background: rgba(123, 143, 151, 0.1);
+}
+.cs-probability-pill[data-level="p40"] {
+  color: #48b5b5;
+  border-color: rgba(72, 181, 181, 0.35);
+  background: rgba(72, 181, 181, 0.12);
+}
+.cs-probability-pill[data-level="p60"] {
+  color: #3498db;
+  border-color: rgba(52, 152, 219, 0.35);
+  background: rgba(52, 152, 219, 0.12);
+}
+.cs-probability-pill[data-level="p80"] {
+  color: #1f78d1;
+  border-color: rgba(31, 120, 209, 0.4);
+  background: rgba(31, 120, 209, 0.15);
+}
+.cs-probability-pill[data-level="p90"] {
+  color: #5c9bf5;
+  border-color: rgba(92, 155, 245, 0.45);
+  background: rgba(92, 155, 245, 0.18);
+}
+.cs-probability-pill[data-level="p100"] {
+  color: #9b72f5;
+  border-color: rgba(155, 114, 245, 0.5);
+  background: rgba(155, 114, 245, 0.2);
+}
+
+.cs-position-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.cs-position-pill.badge-success {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.cs-position-pill.badge-danger {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+}
+
+.cs-position-pill.badge-warning {
+  background: rgba(243, 156, 18, 0.15);
+  color: #f39c12;
+  border: 1px solid rgba(243, 156, 18, 0.4);
+}
+
+.cs-position-pill.badge-neutral {
+  background: rgba(127, 140, 141, 0.15);
+  color: #95a5a6;
+  border: 1px solid rgba(127, 140, 141, 0.3);
+}
+
+.cs-detail-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--cs-line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cs-muted);
+  cursor: pointer;
+  transition: all 140ms ease;
+  flex-shrink: 0;
+}
+
+.cs-detail-close:hover {
+  color: var(--cs-text);
+  border-color: #48b5b5;
+  background: rgba(72, 181, 181, 0.15);
+}
+
+.cs-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 细深空滚动条 */
+.cs-detail-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.cs-detail-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cs-detail-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+.cs-detail-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.cs-detail-card {
+  padding: 11px 12px;
+  background: rgba(4, 16, 23, 0.6);
+  border: 1px solid var(--cs-line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cs-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #48b5b5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.cs-highlight-banner {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(72, 181, 181, 0.35);
+  background: rgba(72, 181, 181, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.cs-highlight-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6fe3e3;
+}
+
+.cs-highlight-summary {
+  font-size: 11px;
+  color: var(--cs-text);
+  line-height: 1.45;
+}
+
+.cs-highlight-meta {
+  font-size: 10px;
+  color: var(--cs-muted);
+}
+
+/* 标高与相对高差矩阵 */
+.cs-profile-matrix {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.cs-matrix-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cs-matrix-cell.primary {
+  background: rgba(72, 181, 181, 0.08);
+  border-color: rgba(72, 181, 181, 0.25);
+}
+
+.cs-matrix-cell label {
+  font-size: 10px;
+  color: var(--cs-muted);
+}
+
+.cs-matrix-cell strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--cs-text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.cs-matrix-cell.primary strong {
+  color: #6fe3e3;
+}
+
+/* 日出与方位角 */
+.cs-sun-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 9px;
+  background: rgba(243, 156, 18, 0.08);
+  border: 1px solid rgba(243, 156, 18, 0.2);
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.cs-sun-strip-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #f39c12;
+}
+
+.cs-sun-strip-val {
+  font-weight: 700;
+  color: var(--cs-text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+/* 成海气象因子微网格 */
+.cs-weather-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.cs-weather-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cs-weather-label {
+  font-size: 10px;
+  color: var(--cs-muted);
+}
+
+.cs-weather-val {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--cs-text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+/* 经典机位推荐卡片 */
+.cs-viewpoint-box {
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  color: var(--cs-text);
+  line-height: 1.45;
+}
+
+.cs-viewpoint-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  color: #48b5b5;
+  margin-bottom: 4px;
+}
+
+/* 摄影实战机位指南卡片 */
+.cs-advice-box {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(72, 181, 181, 0.06);
+  border: 1px dashed rgba(72, 181, 181, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cs-advice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--cs-text);
+}
+
+.cs-advice-item svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #48b5b5;
+}
+
 /* 响应式移动端处理 */
 @media (max-width: 960px) {
   .cloudsea-root {
@@ -357,7 +740,8 @@
     overflow: visible;
   }
 
-  .cloudsea-body {
+  .cloudsea-body,
+  .cloudsea-body[data-inspector-open="true"] {
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 10px 12px 14px;
@@ -369,5 +753,9 @@
 
   .cloudsea-sidebar {
     max-height: 48vh;
+  }
+
+  .cloudsea-detail-panel {
+    max-height: 55vh;
   }
 }

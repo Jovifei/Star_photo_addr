@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Sunrise, Sunset, Flame, RefreshCw, MoonStar } from "lucide-react";
+import { Sunrise, Sunset, Flame, RefreshCw } from "lucide-react";
 import { CircleMarker, ImageOverlay, MapContainer, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Map as LeafletMap } from "leaflet";
@@ -18,6 +18,7 @@ import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
 import { fireGlowBandLabel } from "@/lib/fireglow";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
+import FireglowSiteDetail from "./FireglowSiteDetail";
 
 type Phase = "evening" | "morning";
 /** today-0 / +1 / +2 / 三日总览 */
@@ -397,28 +398,12 @@ export default function FireglowApp() {
         </aside>
 
         {selectedSite ? (
-          <aside className="fireglow-inspector" aria-label="选中点详情">
-            <strong>{selectedSite.name}</strong>
-            <span>
-              {selectedSite.province} · {selectedSite.altitude == null ? "海拔待核" : `${Math.round(selectedSite.altitude)}m`}
-            </span>
-            <b data-level={selectedSite.window.probabilityLevel ?? "none"}>
-              概率 {selectedSite.window.probabilityLabel ?? "—"} · {selectedSite.window.bandLabel}
-            </b>
-            <small>
-              高云 {selectedSite.window.highCloud ?? "—"}% / 中云 {selectedSite.window.midCloud ?? "—"}% / 低云 {selectedSite.window.lowCloud ?? "—"}%
-              {selectedSite.window.visibilityKm != null ? ` · 能见度 ${selectedSite.window.visibilityKm}km` : ""}
-            </small>
-            <small>
-              {selectedSite.window.momentLabel ?? ""}
-              {selectedSite.window.peakTime ? ` · 最佳 ${selectedSite.window.peakTime}` : ""}
-              {selectedSite.window.vividness != null ? ` · 鲜艳度 ${selectedSite.window.vividness.toFixed(2)}` : ""}
-            </small>
-            <small className="fireglow-popup-twilight">
-              <MoonStar size={11} aria-hidden="true" />
-              金色 {selectedSite.window.goldenTime ?? "—"} · 蓝色 {selectedSite.window.blueTime ?? "—"} · 天文{phase === "evening" ? "昏影终" : "晨光始"} {selectedSite.window.astroTime ?? "—"}
-            </small>
-          </aside>
+          <FireglowSiteDetail
+            site={selectedSite}
+            phase={phase}
+            dateKey={activeDates[0] || new Date().toISOString().slice(0, 10)}
+            onClose={() => setSelectedId(null)}
+          />
         ) : null}
       </main>
     </div>

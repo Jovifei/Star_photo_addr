@@ -117,7 +117,7 @@
 }
 
 .fireglow-workspace[data-inspector-open="true"] {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px) minmax(260px, 320px);
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) minmax(320px, 360px);
 }
 
 .fireglow-panel {
@@ -443,3 +443,427 @@
 .fireglow-day-chips i[data-level="p88"] { color: #e07a2f; border-color: rgba(224, 122, 47, 0.45); }
 .fireglow-day-chips i[data-level="p95"] { color: #c45c1e; border-color: rgba(196, 92, 30, 0.55); background: rgba(196, 92, 30, 0.12); }
 .fireglow-day-chips i[data-level="p100"] { color: #a84814; border-color: rgba(168, 72, 20, 0.6); background: rgba(168, 72, 20, 0.18); }
+
+/* ========================================================
+   火烧云专属摄影地点详情舱 (FireglowSiteDetail)
+   ======================================================== */
+.fireglow-detail-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  border: 1px solid var(--fg-line);
+  border-radius: 14px;
+  background: var(--fg-surface);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  animation: fgDetailFadeIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fgDetailFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fg-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--fg-line);
+  background: rgba(3, 13, 19, 0.65);
+}
+
+.fg-detail-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fg-detail-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fg-text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fg-detail-subtitle {
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.fg-detail-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.fg-probability-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+}
+
+.fg-probability-pill[data-level="p20"] {
+  color: #7b8f97;
+  border-color: rgba(123, 143, 151, 0.3);
+  background: rgba(123, 143, 151, 0.1);
+}
+.fg-probability-pill[data-level="p40"] {
+  color: #5da46b;
+  border-color: rgba(93, 164, 107, 0.3);
+  background: rgba(93, 164, 107, 0.1);
+}
+.fg-probability-pill[data-level="p60"] {
+  color: #d4b273;
+  border-color: rgba(212, 178, 115, 0.3);
+  background: rgba(212, 178, 115, 0.1);
+}
+.fg-probability-pill[data-level="p80"] {
+  color: #e08a3f;
+  border-color: rgba(224, 138, 63, 0.35);
+  background: rgba(224, 138, 63, 0.12);
+}
+.fg-probability-pill[data-level="p88"] {
+  color: #e07a2f;
+  border-color: rgba(224, 122, 47, 0.4);
+  background: rgba(224, 122, 47, 0.15);
+}
+.fg-probability-pill[data-level="p95"] {
+  color: #c45c1e;
+  border-color: rgba(196, 92, 30, 0.45);
+  background: rgba(196, 92, 30, 0.18);
+}
+.fg-probability-pill[data-level="p100"] {
+  color: #ff5e1e;
+  border-color: rgba(255, 94, 30, 0.5);
+  background: rgba(255, 94, 30, 0.2);
+}
+
+.fg-band-pill {
+  font-size: 11px;
+  color: var(--fg-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--fg-line);
+}
+
+.fg-vivid-pill {
+  font-size: 10px;
+  color: #e8a87c;
+  background: rgba(232, 168, 124, 0.1);
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 168, 124, 0.3);
+}
+
+.fg-detail-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--fg-line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 140ms ease;
+  flex-shrink: 0;
+}
+
+.fg-detail-close:hover {
+  color: var(--fg-text);
+  border-color: #e8967c;
+  background: rgba(232, 150, 124, 0.15);
+}
+
+.fg-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 细深空滚动条 */
+.fg-detail-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.fg-detail-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.fg-detail-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+.fg-detail-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.fg-detail-card {
+  padding: 11px 12px;
+  background: rgba(4, 16, 23, 0.6);
+  border: 1px solid var(--fg-line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fg-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #e8a87c;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.fg-highlight-banner {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(232, 150, 124, 0.35);
+  background: rgba(232, 150, 124, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fg-highlight-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ff9d79;
+}
+
+.fg-highlight-summary {
+  font-size: 11px;
+  color: var(--fg-text);
+  line-height: 1.45;
+}
+
+.fg-highlight-meta {
+  font-size: 10px;
+  color: var(--fg-muted);
+}
+
+/* 太阳方位与暮光时间轴网格 */
+.fg-sun-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 9px;
+  background: rgba(232, 168, 124, 0.08);
+  border: 1px solid rgba(232, 168, 124, 0.2);
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.fg-sun-strip-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #e8a87c;
+}
+
+.fg-sun-strip-val {
+  font-weight: 700;
+  color: var(--fg-text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.fg-twilight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.fg-twilight-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: center;
+}
+
+.fg-twilight-label {
+  font-size: 10px;
+  color: var(--fg-muted);
+}
+
+.fg-twilight-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg-text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+/* 云层结构微图表 */
+.fg-cloud-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fg-cloud-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fg-cloud-bar-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.fg-cloud-bar-head span b {
+  color: var(--fg-text);
+  font-weight: 650;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.fg-cloud-bar-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fg-cloud-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 300ms ease;
+}
+
+.fg-cloud-bar-fill.high {
+  background: linear-gradient(90deg, #5da46b, #e08a3f);
+}
+
+.fg-cloud-bar-fill.mid {
+  background: linear-gradient(90deg, #48b5b5, #d4b273);
+}
+
+.fg-cloud-bar-fill.low {
+  background: linear-gradient(90deg, #5f7078, #cb7768);
+}
+
+/* 地平通道研判 */
+.fg-horizon-box {
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.fg-horizon-box.pass {
+  background: rgba(93, 164, 107, 0.1);
+  border: 1px solid rgba(93, 164, 107, 0.3);
+  color: #8edba0;
+}
+
+.fg-horizon-box.warn {
+  background: rgba(212, 178, 115, 0.1);
+  border: 1px solid rgba(212, 178, 115, 0.3);
+  color: #f0c987;
+}
+
+.fg-horizon-box.block {
+  background: rgba(203, 119, 104, 0.12);
+  border: 1px solid rgba(203, 119, 104, 0.35);
+  color: #f7a294;
+}
+
+.fg-horizon-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+/* 气象环境指标微网格 */
+.fg-weather-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.fg-weather-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fg-weather-label {
+  font-size: 10px;
+  color: var(--fg-muted);
+}
+
+.fg-weather-val {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--fg-text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+/* 摄影实战机位指南卡片 */
+.fg-advice-box {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(232, 168, 124, 0.06);
+  border: 1px dashed rgba(232, 168, 124, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fg-advice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--fg-text);
+}
+
+.fg-advice-item svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #e8a87c;
+}
