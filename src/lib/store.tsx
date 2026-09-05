@@ -410,13 +410,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const mode = localStorage.getItem(OBSERVING_MAP_VIEW_STORAGE_KEY);
-      if (mode === "satellite" || mode === "light-pollution" || mode === "combined") {
+      if (mode === "satellite" || mode === "combined") {
         dispatch({ type: "SET_MAP_VIEW_MODE", mode });
       }
-      const theme = localStorage.getItem(FORECAST_THEME_STORAGE_KEY);
-      if (theme === "star" || theme === "cloud") {
-        dispatch({ type: "SET_FORECAST_THEME", theme });
-      }
+      // Stargazing workspace always defaults to 'star' theme. Cloud sea has its own dedicated workspace.
+      dispatch({ type: "SET_FORECAST_THEME", theme: "star" });
       const threshold = Number(localStorage.getItem(OBSERVING_THRESHOLD_STORAGE_KEY));
       if (Number.isFinite(threshold)) {
         dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });

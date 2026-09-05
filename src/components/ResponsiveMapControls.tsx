@@ -16,7 +16,6 @@ import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import DetailRestore from "@/components/DetailRestore";
 import BortleControl from "@/components/BortleControl";
 import CloudControl from "@/components/CloudControl";
-import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import MapBoundaryStatus from "@/components/MapBoundaryStatus";
 import MapLayerBar from "@/components/MapLayerBar";
 import MapLegend from "@/components/MapLegend";
@@ -180,7 +179,6 @@ export default function ResponsiveMapControls({
   if (!showMobileDock) {
     return (
       <>
-        {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
         <MapLayerBar />
         <MapBoundaryStatus />
       </>
@@ -285,7 +283,6 @@ export default function ResponsiveMapControls({
           {activePanel === "layers" ? (
             <div className="mobile-map-panel-pane" role="tabpanel" data-panel="layers">
               <MapLayerBar />
-              {state.mapWorkspace !== "sites" && <ForecastThemeSwitch />}
               <MapViewActions mapRef={mapRef} />
               <BortleControl />
               <MapLegend />

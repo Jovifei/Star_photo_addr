@@ -24,6 +24,7 @@ export default function ProductStateBridge() {
     setCloud,
     setMapViewMode,
     setMapWorkspace,
+    setForecastTheme,
     setDetailOpen,
   } = useStore();
   const applied = useRef<{
@@ -36,10 +37,22 @@ export default function ProductStateBridge() {
     const signature = searchParams.toString();
     const applicationKey = `${pathname}?${signature}`;
     if (
-      !signature ||
       applied.current?.raw === applicationKey ||
       applied.current?.canonical === applicationKey
     ) {
+      return;
+    }
+
+    if (!signature) {
+      applied.current = { raw: applicationKey, canonical: applicationKey };
+      setForecastTheme("star");
+      if (pathname === "/") {
+        setMapWorkspace("tonight");
+        if (state.cloudState.overlayMode === "night-lights") {
+          setCloud({ overlayMode: "forecast-cloud" });
+          setMapViewMode("combined");
+        }
+      }
       return;
     }
 
@@ -149,6 +162,7 @@ export default function ProductStateBridge() {
     // long-term baseline lens (weather timeline/score window hidden); any
     // other navigation returns it to the tonight workspace.
     setMapWorkspace(panel === "sites" ? "sites" : "tonight");
+    setForecastTheme("star");
     if (panel === "sites") {
       setDetailOpen(true);
     }
@@ -190,10 +204,12 @@ export default function ProductStateBridge() {
     selectNight,
     setCloud,
     setDetailOpen,
+    setForecastTheme,
     setMapViewMode,
     setMapWorkspace,
     state.cloudState.activeForecastTime,
     state.cloudState.activeObservationTime,
+    state.cloudState.overlayMode,
     state.nightKeys,
   ]);
 

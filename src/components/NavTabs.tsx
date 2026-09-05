@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { useStore } from "@/lib/store";
-import { buildProductHref } from "@/lib/productRoutes";
+import { buildProductHref, type ProductLinkContext } from "@/lib/productRoutes";
 
 /** Prerender skeleton: same four entries so header width never jumps. */
 export function NavTabsFallback() {
@@ -36,7 +36,7 @@ export default function NavTabs() {
   );
 
   const navigationState = hydrated ? state : null;
-  const navigationContext = navigationState
+  const navigationContext: ProductLinkContext = navigationState
     ? {
         location: navigationState.selectedLocation,
         night: navigationState.selectedNight,
@@ -48,7 +48,16 @@ export default function NavTabs() {
     : {};
 
   const sitesHref = buildProductHref("/sites", navigationContext);
-  const homeHref = buildProductHref("/", navigationContext, {
+  const homeContext: ProductLinkContext = navigationState
+    ? {
+        ...navigationContext,
+        overlay:
+          navigationState.cloudState.overlayMode === "night-lights"
+            ? "forecast-cloud"
+            : navigationState.cloudState.overlayMode,
+      }
+    : {};
+  const homeHref = buildProductHref("/", homeContext, {
     includeNight: false,
   });
 
