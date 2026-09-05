@@ -3,10 +3,8 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 export const INSPECTOR_TABS = [
-  { id: "summary", label: "摘要" },
-  { id: "places", label: "地点" },
-  { id: "cloud", label: "云量" },
-  { id: "settings", label: "设置" },
+  { id: "summary", label: "地点详情" },
+  { id: "settings", label: "图层与偏好" },
 ] as const;
 
 export type InspectorTabId = (typeof INSPECTOR_TABS)[number]["id"];

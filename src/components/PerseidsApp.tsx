@@ -16,12 +16,11 @@ import BortleFilterBar from "@/components/BortleFilterBar";
 import MapLegend from "@/components/MapLegend";
 import MapViewActions from "@/components/MapViewActions";
 import MapPanelManager from "@/components/MapPanelManager";
-import MapLayerBar from "@/components/MapLayerBar";
 import MapBoundaryStatus from "@/components/MapBoundaryStatus";
-import ForecastThemeSwitch from "@/components/ForecastThemeSwitch";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 import DecisionSummary from "@/components/workspace/DecisionSummary";
 import ForecastAvailability from "@/components/workspace/ForecastAvailability";
+import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
 import MapHeadline from "@/components/MapHeadline";
 import WorkspaceShell from "@/components/workspace/WorkspaceShell";
 import { useStore } from "@/lib/store";
@@ -37,7 +36,7 @@ function TonightEvidence({
 }: {
   onJumpToEvidence?: (tab: InspectorTabId) => void;
 }) {
-  const { state, addCandidate } = useStore();
+  const { state, addCandidate, removeCandidate, setCloud } = useStore();
   const leadIndex = Math.max(0, state.nightKeys.indexOf(state.selectedNight));
   const evaluation = useMemo(() => {
     if (!state.forecast || !state.selectedLocation) return null;
@@ -49,6 +48,12 @@ function TonightEvidence({
     );
   }, [state.forecast, state.selectedLocation, state.selectedNight, leadIndex]);
 
+  const isCandidate = state.selectedLocation
+    ? state.candidates.some((candidate) =>
+        sameLocationIdentity(candidate, state.selectedLocation),
+      )
+    : false;
+
   return (
     <>
       <DecisionSummary onJumpToEvidence={onJumpToEvidence} />
@@ -58,11 +63,28 @@ function TonightEvidence({
           sample={state.sample}
           evaluation={evaluation}
           location={state.selectedLocation}
-          isCandidate={state.candidates.some((candidate) =>
-            sameLocationIdentity(candidate, state.selectedLocation),
-          )}
+          isCandidate={isCandidate}
           onAddCandidate={() => addCandidate(state.selectedLocation!)}
+          onRemoveCandidate={() => {
+            const match = state.candidates.find((c) =>
+              sameLocationIdentity(c, state.selectedLocation),
+            );
+            if (match) removeCandidate(match.id);
+          }}
         />
+      ) : null}
+      {evaluation?.hours && evaluation.hours.length > 0 ? (
+        <div className="panel-section" style={{ marginTop: 12 }}>
+          <HourlyForecastMatrix
+            nightKey={state.selectedNight}
+            hours={evaluation.hours}
+            selectedTime={state.cloudState.activeForecastTime}
+            onSelectTime={(time) =>
+              setCloud({ activeForecastTime: time })
+            }
+            title="逐小时气象与云量详情"
+          />
+        </div>
       ) : null}
       <StarWindowTable />
     </>
@@ -157,17 +179,11 @@ export default function PerseidsApp() {
       }
       inspectorPanes={{
         summary: evidence,
-        places: (
+        settings: (
           <>
             <ObservingMapControl docked />
             <BortleControl />
-          </>
-        ),
-        cloud: <CloudControl />,
-        settings: (
-          <>
-            <MapLayerBar />
-            <ForecastThemeSwitch />
+            <CloudControl />
             <MapLegend />
             <MapViewActions mapRef={mapRef} />
             <MapPanelManager />

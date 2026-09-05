@@ -4294,3 +4294,439 @@
   background: #5ac7c7;
   box-shadow: 0 4px 12px rgba(72, 181, 181, 0.35);
 }
+
+/* ==========================================================================
+   Candidate 7-Day Ranking Leaderboard & Location Inspector Styles
+   ========================================================================== */
+
+.candidate-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.candidate-leaderboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.candidate-leaderboard-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.candidate-leaderboard-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #38bdf8;
+  text-transform: uppercase;
+}
+
+.candidate-leaderboard-kicker .sparkle-icon {
+  color: #38bdf8;
+}
+
+.candidate-leaderboard-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.candidate-count-badge {
+  font-size: 11px;
+  color: #7d96a1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.candidate-date-tabs {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.candidate-date-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.candidate-date-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.candidate-date-tab {
+  flex: 1;
+  min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 5px 4px;
+  border-radius: 9px;
+  background: rgba(10, 24, 33, 0.65);
+  border: 1px solid rgba(165, 205, 216, 0.14);
+  color: #8da4ad;
+  cursor: pointer;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.candidate-date-tab:hover {
+  background: rgba(15, 34, 46, 0.85);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #e2e8f0;
+}
+
+.candidate-date-tab--active {
+  background: rgba(14, 165, 233, 0.18) !important;
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.22);
+}
+
+.candidate-date-tab-title {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.candidate-date-tab-sub {
+  font-size: 9px;
+  font-family: var(--font-data);
+  opacity: 0.75;
+}
+
+.candidate-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.candidate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 13px;
+  background: rgba(10, 22, 30, 0.72);
+  border: 1px solid rgba(165, 205, 216, 0.15);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  user-select: none;
+}
+
+.candidate-card:hover {
+  background: rgba(14, 30, 42, 0.88);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.candidate-card--active {
+  background: rgba(15, 36, 50, 0.94) !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25) !important;
+}
+
+.candidate-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidate-card-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.candidate-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.rank-badge--gold {
+  background: linear-gradient(135deg, #ffd700, #f59e0b);
+  color: #1c1500;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+}
+
+.rank-badge--silver {
+  background: linear-gradient(135deg, #f1f5f9, #94a3b8);
+  color: #0f172a;
+}
+
+.rank-badge--bronze {
+  background: linear-gradient(135deg, #fb923c, #b45309);
+  color: #ffffff;
+}
+
+.rank-badge--default {
+  background: rgba(255, 255, 255, 0.08);
+  color: #8fa5af;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.candidate-name-box {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.candidate-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.candidate-meta {
+  font-size: 10px;
+  color: #79919b;
+  margin-top: 1px;
+}
+
+.candidate-card-score-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.candidate-score-number {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-family: var(--font-data);
+  color: #38bdf8;
+}
+
+.candidate-score-number strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.candidate-score-number small {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.candidate-status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+.candidate-status-pill.tone-good {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.candidate-status-pill.tone-warn {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.candidate-status-pill.tone-bad {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.candidate-status-pill.tone-muted {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.candidate-card-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #647b86;
+  cursor: pointer;
+  transition: all 140ms ease;
+  margin-left: 2px;
+}
+
+.candidate-card-delete:hover {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+.candidate-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  background: rgba(5, 15, 22, 0.55);
+  border: 1px solid rgba(165, 205, 216, 0.08);
+  border-radius: 8px;
+  padding: 5px 7px;
+}
+
+.candidate-metric-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: #8da3ad;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.candidate-metric-item .metric-icon {
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.candidate-7day-capsules {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.mini-capsule {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 3px 2px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: rgba(8, 20, 28, 0.65);
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.mini-capsule:hover {
+  transform: translateY(-1px);
+}
+
+.mini-capsule--active {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.18) !important;
+}
+
+.mini-capsule.capsule--great {
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.mini-capsule.capsule--good {
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+.mini-capsule.capsule--fair {
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.mini-capsule.capsule--poor {
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #64748b;
+}
+
+.mini-capsule-day {
+  font-size: 8px;
+  opacity: 0.8;
+  line-height: 1;
+}
+
+.mini-capsule-score {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-data);
+  line-height: 1;
+}
+
+.candidate-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 16px;
+  background: rgba(10, 22, 30, 0.5);
+  border: 1px dashed rgba(165, 205, 216, 0.2);
+  border-radius: 12px;
+  gap: 12px;
+}
+
+.candidate-empty-text {
+  font-size: 12px;
+  color: #8da2ac;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.candidate-reset-seeds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.candidate-reset-seeds-btn:hover {
+  background: rgba(56, 189, 248, 0.22);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.candidate-footer-hint {
+  font-size: 11px;
+  color: #69828c;
+  line-height: 1.4;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.candidate-add-button--active {
+  background: rgba(56, 189, 248, 0.16) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+}

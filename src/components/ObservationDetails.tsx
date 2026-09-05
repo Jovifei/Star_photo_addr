@@ -13,12 +13,14 @@ export default function ObservationDetails({
   location,
   isCandidate = false,
   onAddCandidate,
+  onRemoveCandidate,
 }: {
   sample: DarkSkySample | null;
   evaluation: NightEvaluation | null;
   location: Location | null;
   isCandidate?: boolean;
   onAddCandidate?: () => void;
+  onRemoveCandidate?: () => void;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
   const hasReading = sample != null && sample.status === "ok";
@@ -155,14 +157,19 @@ export default function ObservationDetails({
         </p>
       )}
 
-      {location && onAddCandidate && (
+      {location && (onAddCandidate || onRemoveCandidate) && (
         <button
           type="button"
-          className="candidate-add-button"
-          onClick={onAddCandidate}
-          disabled={isCandidate}
+          className={`candidate-add-button ${isCandidate ? "candidate-add-button--active" : ""}`}
+          onClick={() => {
+            if (isCandidate) {
+              onRemoveCandidate?.();
+            } else {
+              onAddCandidate?.();
+            }
+          }}
         >
-          {isCandidate ? "已加入观星计划" : "加入观星计划候选"}
+          {isCandidate ? "✓ 已在候选对比 (点击移出)" : "+ 加入候选对比 (参与7天排行)"}
         </button>
       )}
     </div>

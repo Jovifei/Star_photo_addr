@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import { X, History, Sparkles, ShieldCheck, Mountain, Layers, CloudSun } from "lucide-react";
@@ -10,10 +10,38 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
+    version: "v1.0.1",
+    date: "2026-09-05",
+    tag: "候选7天排行与详情舱",
+    current: true,
+    highlights: [
+      {
+        icon: Sparkles,
+        title: "候选地点 · 7天分数动态排行榜",
+        desc: "左侧边栏升级为 7 天卡片式动态排行榜，支持顶部横向切换各夜次并自动降序重排，展示金银铜名次徽章、天气指标与 7 天微缩胶囊条。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "右侧设置面板去重与纯化",
+        desc: "彻底移除右侧设置面板中重复的云图/光污染与星空/云海悬浮开关，纯化为「地点详情舱」与「图层与偏好」两大专业面板。",
+      },
+      {
+        icon: Mountain,
+        title: "地点详情舱与逐小时气象矩阵",
+        desc: "点击地图或搜索任一地点，右侧集中呈现最佳连续可用窗口、月相照度、暗夜时长、银河最高高度角与逐小时气象详情。",
+      },
+      {
+        icon: Layers,
+        title: "一键加入候选与双向联动闭环",
+        desc: "右侧提供显眼的「+ 加入候选对比」主按钮，一键收纳地点至左侧 7 天排行榜参与综合排序，支持本地持久化保存。",
+      },
+    ],
+  },
+  {
     version: "v1.0.0",
     date: "2026-09-05",
     tag: "里程碑正式版",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: Sparkles,

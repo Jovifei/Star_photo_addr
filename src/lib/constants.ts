@@ -4,7 +4,63 @@
 // All network endpoints live server-side in `forecast.ts` / `geocode.ts` and are
 // only ever reached from the `/api/*` route handlers.
 
-import type { CloudState } from "./types";
+import type { CityCandidate, CloudState } from "./types";
+
+/** Default benchmark candidates for initial visit / reset. */
+export const DEFAULT_CANDIDATE_SEEDS: CityCandidate[] = [
+  {
+    id: "taizijian",
+    adcode: 330185,
+    province: "浙江",
+    city: "杭州",
+    name: "太子尖",
+    latitude: 30.1734,
+    longitude: 118.9057,
+    elevation: 1557,
+    bortle: 2,
+    kind: "mountain",
+    note: "华东经典观星圣地·海拔1557m",
+  },
+  {
+    id: "qianniugang",
+    adcode: 330185,
+    province: "浙江",
+    city: "杭州",
+    name: "牵牛岗",
+    latitude: 30.026,
+    longitude: 119.007,
+    elevation: 1490,
+    bortle: 2,
+    kind: "mountain",
+    note: "大明山顶极佳视线·海拔1490m",
+  },
+  {
+    id: "tianhuangping",
+    adcode: 330523,
+    province: "浙江",
+    city: "湖州",
+    name: "天荒坪",
+    latitude: 30.4694,
+    longitude: 119.5978,
+    elevation: 958,
+    bortle: 3,
+    kind: "mountain",
+    note: "江南天池·天文台站点",
+  },
+  {
+    id: "niubeishan",
+    adcode: 511824,
+    province: "四川",
+    city: "雅安",
+    name: "牛背山",
+    latitude: 29.761,
+    longitude: 102.617,
+    elevation: 3660,
+    bortle: 1,
+    kind: "mountain",
+    note: "360度全景星空与云海胜地",
+  },
+];
 
 /** Peak of the 2026 Perseids, used by the headline countdown. */
 export const METEOR_PEAK_ISO = "2026-08-13T12:00:00Z";

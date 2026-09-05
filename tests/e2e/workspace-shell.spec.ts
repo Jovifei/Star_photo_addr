@@ -40,12 +40,12 @@ test("desktop inspector lazily mounts inactive evidence panes", async ({
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "证据页懒挂载只测桌面");
   await page.goto("/?overlay=forecast-cloud&view=combined");
-  await expect(page.getByRole("tabpanel", { name: "摘要" })).toBeVisible();
+  await expect(page.getByRole("tabpanel", { name: "地点详情" })).toBeVisible();
   await expect(
-    page.getByRole("tabpanel", { name: "设置", includeHidden: true }),
+    page.getByRole("tabpanel", { name: "图层与偏好", includeHidden: true }),
   ).toHaveCount(0);
-  await page.getByRole("tab", { name: "设置" }).click();
-  await expect(page.getByRole("tabpanel", { name: "设置" })).toBeVisible();
+  await page.getByRole("tab", { name: "图层与偏好" }).click();
+  await expect(page.getByRole("tabpanel", { name: "图层与偏好" })).toBeVisible();
 });
 
 test("desktop inspector arrow keys move selection and keyboard focus", async ({
@@ -53,15 +53,15 @@ test("desktop inspector arrow keys move selection and keyboard focus", async ({
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "证据页键盘行为只测桌面");
   await page.goto("/?overlay=forecast-cloud&view=combined");
-  const summaryTab = page.getByRole("tab", { name: "摘要" });
-  const placesTab = page.getByRole("tab", { name: "地点" });
-  await summaryTab.focus();
-  await summaryTab.press("ArrowRight");
-  await expect(placesTab).toHaveAttribute("aria-selected", "true");
-  await expect(placesTab).toBeFocused();
-  await placesTab.press("ArrowLeft");
-  await expect(summaryTab).toHaveAttribute("aria-selected", "true");
-  await expect(summaryTab).toBeFocused();
+  const detailsTab = page.getByRole("tab", { name: "地点详情" });
+  const layersTab = page.getByRole("tab", { name: "图层与偏好" });
+  await detailsTab.focus();
+  await detailsTab.press("ArrowRight");
+  await expect(layersTab).toHaveAttribute("aria-selected", "true");
+  await expect(layersTab).toBeFocused();
+  await layersTab.press("ArrowLeft");
+  await expect(detailsTab).toHaveAttribute("aria-selected", "true");
+  await expect(detailsTab).toBeFocused();
 });
 
 test("sampling a point updates summary without a covering overlay", async ({

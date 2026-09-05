@@ -13,6 +13,7 @@ import {
 } from "react";
 import {
   DEFAULT_CLOUD_STATE,
+  DEFAULT_CANDIDATE_SEEDS,
   CUSTOM_CANDIDATES_STORAGE_KEY,
   FORECAST_THEME_STORAGE_KEY,
   OBSERVING_BANDS_STORAGE_KEY,
@@ -113,7 +114,7 @@ const initialState: AppState = {
     activeForecastTime: homeForecastTime,
     timeIndex: nightHourIndex(homeForecastTime),
   },
-  candidates: [],
+  candidates: [...DEFAULT_CANDIDATE_SEEDS],
   detailOpen: false,
   loading: false,
   error: "",
@@ -141,6 +142,7 @@ const initialState: AppState = {
 type Action =
   | { type: "SET_SAMPLE"; sample: DarkSkySample | null }
   | { type: "SET_LOCATION"; location: Location | null }
+  | { type: "HYDRATE_LOCATION"; location: Location }
   | { type: "SET_FORECAST"; forecast: LocationForecast | null }
   | { type: "SELECT_NIGHT"; nightKey: string }
   | { type: "SET_BORTLE"; enabled: boolean }
@@ -166,8 +168,7 @@ type Action =
   | { type: "SET_OBSERVING_BORTLE_LIMIT"; limit: 3 | 4 }
   | { type: "SET_RECOMMENDED_ONLY"; enabled: boolean }
   | { type: "SET_RECOMMENDATION_BANDS"; bands: RecommendationBand[] }
-  | { type: "REFRESH_DATA"; revision: number }
-  | { type: "HYDRATE_LOCATION"; location: Location };
+  | { type: "REFRESH_DATA"; revision: number };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -188,10 +189,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_CANDIDATES":
       return {
         ...state,
-        candidates: dedupeLocationIdentities([
-          ...action.candidates,
-          ...state.candidates,
-        ]).slice(0, MAX_SHORTLIST_SIZE),
+        candidates: dedupeLocationIdentities(action.candidates).slice(0, MAX_SHORTLIST_SIZE),
       };
     case "ADD_CANDIDATE":
       if (
@@ -465,9 +463,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CUSTOM_CANDIDATES_STORAGE_KEY);
-      const parsed = raw ? (JSON.parse(raw) as CityCandidate[]) : [];
-      if (Array.isArray(parsed) && parsed.length) {
-        dispatch({ type: "SET_CANDIDATES", candidates: parsed.map(normalizeLocationTexts) });
+      if (raw) {
+        const parsed = JSON.parse(raw) as CityCandidate[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          dispatch({ type: "SET_CANDIDATES", candidates: parsed.map(normalizeLocationTexts) });
+        }
+      } else {
+        dispatch({ type: "SET_CANDIDATES", candidates: DEFAULT_CANDIDATE_SEEDS.map(normalizeLocationTexts) });
       }
     } catch {
       // Ignore stale/corrupt local data.

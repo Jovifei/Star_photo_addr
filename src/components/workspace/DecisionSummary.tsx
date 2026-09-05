@@ -4,11 +4,12 @@ import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
 import { buildDecisionSummary } from "@/lib/decisionSummary";
+import type { InspectorTabId } from "@/components/workspace/ContextInspector";
 
 export default function DecisionSummary({
   onJumpToEvidence,
 }: {
-  onJumpToEvidence?: (tab: "cloud" | "places") => void;
+  onJumpToEvidence?: (tab: InspectorTabId) => void;
 }) {
   const { state } = useStore();
   const leadIndex = Math.max(0, state.nightKeys.indexOf(state.selectedNight));
@@ -60,9 +61,9 @@ export default function DecisionSummary({
         <button
           type="button"
           className="text-button"
-          onClick={() => onJumpToEvidence("cloud")}
+          onClick={() => onJumpToEvidence("settings")}
         >
-          查看云量与数据源
+          查看图层与数据源
         </button>
       ) : null}
     </section>
