@@ -10,10 +10,38 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
+    version: "v1.0.2",
+    date: "2026-09-05",
+    tag: "观星计划全景整合与导航精简",
+    current: true,
+    highlights: [
+      {
+        icon: Sparkles,
+        title: "精简顶栏导航为 4 大核心支柱",
+        desc: "彻底剔除功能重合的「观星计划」独立栏目，精简导航为「今夜观测 | 暗夜选址 | 火烧云 | 云海」，访问 /planner 自动平滑重定向至主工作台。",
+      },
+      {
+        icon: CloudSun,
+        title: "逐小时天气与云量走势图",
+        desc: "地点详情舱集成高分辨率走势图，直观展现总云量、低云、降水概率与阵风走势，并提供快捷时次切换芯片。",
+      },
+      {
+        icon: Layers,
+        title: "日月与银河核心高度轨迹图",
+        desc: "可视化呈现整夜太阳、月亮与银河中心的高度角轨迹曲线，精确掌握暗夜窗口与天体升落时刻。",
+      },
+      {
+        icon: Mountain,
+        title: "高山低云垂直剖面与海拔层位分析",
+        desc: "联动高空气压层推导各高度云层厚度，自动研判站点与云层的“云上/云中/云下”层位关系，精准辅助高山云海与星空选址。",
+      },
+    ],
+  },
+  {
     version: "v1.0.1",
     date: "2026-09-05",
     tag: "候选7天排行与详情舱",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: Sparkles,

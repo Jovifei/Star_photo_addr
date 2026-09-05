@@ -1,31 +1,29 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-const PlannerApp = dynamic(
-  () => import("@/features/planner/PlannerApp").then((module) => module.App),
-  {
-    ssr: false,
-    loading: () => (
-      <main className="planner-loading" role="status" aria-live="polite">
-        正在载入观星计划…
-      </main>
-    ),
-  },
-);
-
-function PlannerRuntime() {
+function PlannerRedirect() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionKey = searchParams.toString();
-  return <PlannerApp key={sessionKey} />;
+
+  useEffect(() => {
+    const params = searchParams.toString();
+    const target = params ? `/?${params}` : "/";
+    router.replace(target);
+  }, [router, searchParams]);
+
+  return (
+    <main className="planner-loading" role="status" aria-live="polite">
+      正在转入今夜观测决策台…
+    </main>
+  );
 }
 
 export default function PlannerClient() {
   return (
-    <Suspense fallback={<main className="planner-loading">正在载入观星计划…</main>}>
-      <PlannerRuntime />
+    <Suspense fallback={<main className="planner-loading">正在转入今夜观测决策台…</main>}>
+      <PlannerRedirect />
     </Suspense>
   );
 }

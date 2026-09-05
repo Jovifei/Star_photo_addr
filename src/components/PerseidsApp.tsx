@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { Map as LeafletMap } from "leaflet";
 import TopBar from "@/components/TopBar";
 import MapStage from "@/components/MapStage";
@@ -26,7 +25,7 @@ import WorkspaceShell from "@/components/workspace/WorkspaceShell";
 import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
 import { sameLocationIdentity } from "@/lib/locationIdentity";
-import { buildPlannerHref } from "@/lib/utils";
+import LocationDetailCharts from "@/components/LocationDetailCharts";
 import type { CityCandidate } from "@/lib/types";
 import type { InspectorTabId } from "@/components/workspace/ContextInspector";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
@@ -73,6 +72,16 @@ function TonightEvidence({
           }}
         />
       ) : null}
+      {evaluation && evaluation.hours && evaluation.hours.length > 0 && state.selectedLocation ? (
+        <LocationDetailCharts
+          evaluation={evaluation}
+          location={state.selectedLocation}
+          nightKey={state.selectedNight}
+          activeHour={state.cloudState.activeForecastTime}
+          onSelectHour={(time) => setCloud({ activeForecastTime: time })}
+          model={state.cloudState.model}
+        />
+      ) : null}
       {evaluation?.hours && evaluation.hours.length > 0 ? (
         <div className="panel-section" style={{ marginTop: 12 }}>
           <HourlyForecastMatrix
@@ -93,7 +102,6 @@ function TonightEvidence({
 
 export default function PerseidsApp() {
   const { state, sampleAt, removeCandidate } = useStore();
-  const router = useRouter();
   const mapRef = useRef<LeafletMap | null>(null);
   const [ready, setReady] = useState(false);
   const selectedLocationId = state.selectedLocation?.id ?? null;
@@ -116,28 +124,14 @@ export default function PerseidsApp() {
 
   const handleTrack = useCallback(
     (candidate: CityCandidate) => {
-      router.push(
-        buildPlannerHref({
-          latitude: candidate.latitude,
-          longitude: candidate.longitude,
-          name: candidate.name,
-          elevation: 0,
-          night: state.selectedNight,
-          model: state.cloudState.model,
-          forecastTime: state.cloudState.activeForecastTime,
-          observationTime: state.cloudState.activeObservationTime,
-          overlayMode: state.cloudState.overlayMode,
-        }),
+      void sampleAt(
+        candidate.latitude,
+        candidate.longitude,
+        candidate.elevation ?? 0,
+        candidate.name,
       );
     },
-    [
-      router,
-      state.cloudState.activeForecastTime,
-      state.cloudState.activeObservationTime,
-      state.cloudState.model,
-      state.cloudState.overlayMode,
-      state.selectedNight,
-    ],
+    [sampleAt],
   );
 
   const evidence = <TonightEvidence onJumpToEvidence={setTab} />;

@@ -4730,3 +4730,161 @@
   border-color: #38bdf8 !important;
   color: #38bdf8 !important;
 }
+
+/* ---------- Location Detail Charts (Integrated from Planner) ---------- */
+.location-detail-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.detail-chart-card {
+  background: rgba(13, 27, 34, 0.72);
+  border: 1px solid rgba(165, 205, 216, 0.12);
+  border-radius: 12px;
+  padding: 12px;
+  backdrop-filter: blur(12px);
+}
+
+.detail-chart-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.detail-chart-title-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-chart-title-box .chart-icon {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.detail-chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.detail-chart-subtitle {
+  font-size: 11px;
+  color: #78909c;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chart-loading-box,
+.chart-error-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 90px;
+  font-size: 12px;
+  color: #8da4ad;
+}
+
+.chart-error-box {
+  color: #fbbf24;
+}
+
+.detail-hour-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 6px 2px 2px;
+  scrollbar-width: none;
+}
+
+.detail-hour-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.detail-hour-chip {
+  flex: 0 0 auto;
+  min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(165, 205, 216, 0.15);
+  color: #8da4ad;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.detail-hour-chip:hover {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #f1f5f9;
+}
+
+.detail-hour-chip--active {
+  background: rgba(56, 189, 248, 0.2) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+}
+
+.detail-hour-chip-time {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.detail-hour-chip-score {
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.cloud-layers-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cloud-layer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(165, 205, 216, 0.12);
+}
+
+.cloud-layer-badge .layer-range {
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.cloud-layer-badge .layer-status {
+  font-weight: 600;
+}
+
+.tone-good {
+  color: #4ade80 !important;
+}
+
+.tone-bad {
+  color: #f87171 !important;
+}
+
+.tone-warn {
+  color: #fbbf24 !important;
+}

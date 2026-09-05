@@ -39,10 +39,10 @@ export default function ProductHeader({
               type="button"
               className="app-header-version-badge"
               onClick={() => setChangelogOpen(true)}
-              title="查看版本更新记录 (v1.0.1)"
-              aria-label="查看版本更新记录 v1.0.1"
+              title="查看版本更新记录 (v1.0.2)"
+              aria-label="查看版本更新记录 v1.0.2"
             >
-              v1.0.1
+              v1.0.2
             </button>
           </div>
           <h1 className="app-header-title">{title}</h1>
