@@ -29,9 +29,29 @@ function fireglowDiskPath(date: string, model: string): string {
   return path.join(SNAPSHOT_DIRECTORY, `fireglow-snapshot-${date}-${model}.json`);
 }
 
+function countValidScores(snapshot: FireGlowSnapshot | null | undefined): number {
+  if (!snapshot?.sites) return 0;
+  let count = 0;
+  for (const s of Object.values(snapshot.sites)) {
+    if (s?.evening?.score != null || s?.morning?.score != null) {
+      count++;
+    }
+  }
+  return count;
+}
+
 function saveFireglowToDisk(date: string, model: string, snapshot: FireGlowSnapshot) {
   if (process.env.NODE_ENV === "test") return;
   try {
+    const newCount = countValidScores(snapshot);
+    const existing = readFireglowFromDisk(date, model);
+    const existingCount = countValidScores(existing);
+
+    // Snapshot armor: never overwrite valid disk snapshot with degraded/empty 429 results
+    if (existingCount > 0 && newCount < existingCount * 0.7) {
+      return;
+    }
+
     if (!fs.existsSync(SNAPSHOT_DIRECTORY)) {
       fs.mkdirSync(SNAPSHOT_DIRECTORY, { recursive: true });
     }
@@ -61,6 +81,15 @@ const lastForceAt = new Map<string, number>();
 const CACHE_MAX_ENTRIES = 32;
 
 function rememberSnapshot(key: string, date: string, model: string, snapshot: FireGlowSnapshot) {
+  const newCount = countValidScores(snapshot);
+  const existingMemory = cache.get(key)?.snapshot;
+  const existingCount = countValidScores(existingMemory);
+
+  // Keep existing memory snapshot if new one is mostly empty
+  if (existingCount > 0 && newCount < existingCount * 0.7) {
+    return;
+  }
+
   cache.set(key, { snapshot, at: Date.now() });
   saveFireglowToDisk(date, model, snapshot);
   // Insertion-ordered map: drop the oldest entries past the cap.
@@ -158,6 +187,26 @@ export async function GET(request: NextRequest) {
 
   try {
     const snapshot = await activeTask;
+    const newCount = countValidScores(snapshot);
+    const diskFallback = diskCached ?? readFireglowFromDisk(date, model);
+    const diskCount = countValidScores(diskFallback);
+
+    if (diskCount > 0 && newCount < diskCount * 0.7) {
+      return NextResponse.json(
+        {
+          ...diskFallback!,
+          stale: true,
+          refreshError: "上游限流或响应不足，已保留有效离线快照",
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store",
+            "X-Fireglow-Cache": "disk-protected-fallback",
+          },
+        },
+      );
+    }
+
     rememberSnapshot(key, date, model, snapshot);
     return NextResponse.json(snapshot, {
       headers: {

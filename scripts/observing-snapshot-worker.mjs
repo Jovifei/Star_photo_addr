@@ -105,7 +105,6 @@ async function prewarmFireglow() {
     const params = new URLSearchParams({
       date: target,
       model,
-      refresh: "1",
     });
     activeController = new AbortController();
     const timeout = setTimeout(

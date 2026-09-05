@@ -117,8 +117,6 @@ export default function FireglowApp() {
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const loadTokenRef = useRef(0);
-  /** Dates already given their one automatic forced retry after a degraded read. */
-  const autoForcedRef = useRef<Set<string>>(new Set());
   const loadRef = useRef<(dates: string[], options?: { force?: boolean }) => () => void>(
     () => () => undefined,
   );
@@ -167,21 +165,6 @@ export default function FireglowApp() {
                     .join(" ")
                 : "",
             );
-            // One silent forced retry per date when the plain read came back
-            // degraded or without a single usable score.
-            const needForce = results.filter(
-              (snapshot) =>
-                (snapshot.stale || snapshot.refreshError) &&
-                !autoForcedRef.current.has(`${snapshot.date}|${snapshot.model}`),
-            );
-            if (needForce.length && !force) {
-              needForce.forEach((snapshot) =>
-                autoForcedRef.current.add(`${snapshot.date}|${snapshot.model}`),
-              );
-              queueMicrotask(() =>
-                loadRef.current(needForce.map((snapshot) => snapshot.date), { force: true }),
-              );
-            }
           })
           .catch((requestError) => {
             if (requestError?.name === "AbortError" || loadTokenRef.current !== token) return;
