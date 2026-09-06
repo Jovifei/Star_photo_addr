@@ -24,7 +24,7 @@ type Phase = "evening" | "morning";
 /** today-0 / +1 / +2 / 三日总览 */
 type RangeMode = 0 | 1 | 2 | 3;
 
-// 概率分级色阶：低→高 灰/绿/黄/橙 + 红三级递深（80–88 正红、88–95 深红、95–100 绛红）。
+// 条件指数分级色阶：低→高 灰/绿/黄/橙 + 红三级递深（80–88 正红、88–95 深红、95–100 绛红）。
 const LEVEL_COLORS: Record<FireGlowProbabilityLevel, string> = {
   p20: "#5f7078",
   p40: "#5da46b",
@@ -35,13 +35,13 @@ const LEVEL_COLORS: Record<FireGlowProbabilityLevel, string> = {
   p100: "#a84814",
 };
 const LEVEL_LABELS: Array<{ level: FireGlowProbabilityLevel; range: string }> = [
-  { level: "p20", range: "0–20%" },
-  { level: "p40", range: "20–40%" },
-  { level: "p60", range: "40–60%" },
-  { level: "p80", range: "60–80%" },
-  { level: "p88", range: "80–88%" },
-  { level: "p95", range: "88–95%" },
-  { level: "p100", range: "95–100%" },
+  { level: "p20", range: "0–20" },
+  { level: "p40", range: "20–40" },
+  { level: "p60", range: "40–60" },
+  { level: "p80", range: "60–80" },
+  { level: "p88", range: "80–88" },
+  { level: "p95", range: "88–95" },
+  { level: "p100", range: "95–100" },
 ];
 
 const UNKNOWN_WINDOW: FireGlowWindowScore = {
@@ -105,7 +105,7 @@ interface RankedSite {
   longitude: number;
   altitude: number | null;
   window: FireGlowWindowScore;
-  /** 三日总览：每天的概率级（p20…p100）与分数。 */
+  /** 三日总览：每天的条件指数级（p20…p100）与分数。 */
   days?: Array<{ date: string; score: number | null; level: FireGlowProbabilityLevel | null }>;
 }
 
@@ -218,7 +218,7 @@ export default function FireglowApp() {
     }).sort((left, right) => (right.window.score ?? -1) - (left.window.score ?? -1));
   }, [activeDates, phase, rangeMode, snapshots]);
 
-  /** 面状概率色块：IDW 插值出的连续色场，随窗口/日期重算。 */
+  /** 面状条件指数色块：IDW 插值出的连续色场，随窗口/日期重算。 */
   const overlay = useMemo(() => {
     if (!ranked.length) return null;
     return buildProbabilityOverlay(
@@ -351,8 +351,8 @@ export default function FireglowApp() {
 
         <aside className="fireglow-panel" aria-label="火烧云条件指数排行">
           <div className="fireglow-panel-head">
-            <strong>{phase === "evening" ? "晚霞概率排行" : "朝霞概率排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
-            <span>60% 以上 {bestCount} 个点位</span>
+            <strong>{phase === "evening" ? "晚霞条件排行" : "朝霞条件排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
+            <span>中烧及以上 {bestCount} 个点位</span>
           </div>
           {status === "error" && <p className="fireglow-error" role="status">{error}</p>}
           {error && status === "ready" && <p className="fireglow-note" role="status">{error}</p>}
@@ -378,7 +378,7 @@ export default function FireglowApp() {
                       {site.window.blueTime ? ` · 蓝色 ${site.window.blueTime}` : ""}
                     </em>
                     {site.days && (
-                      <span className="fireglow-day-chips" aria-label="三日概率">
+                      <span className="fireglow-day-chips" aria-label="三日条件指数">
                         {site.days.map((day) => (
                           <i key={day.date} data-level={day.level ?? "none"}>
                             {day.date.slice(5).replace("-", "/")} {day.score ?? "—"}
@@ -396,8 +396,8 @@ export default function FireglowApp() {
             ))}
           </ol>
           <p className="fireglow-footnote">
-            概率 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
-            + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项。
+            条件指数 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
+            + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项；该指数不是实拍校准概率。
           </p>
         </aside>
 
