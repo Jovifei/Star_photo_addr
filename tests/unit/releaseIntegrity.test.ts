@@ -15,4 +15,16 @@ describe("release integrity invariants", () => {
     expect(summary).not.toContain("state.cloudState.activeForecastTime ??");
     expect(summary).toContain("state.forecastAvailability.lastSuccessAt");
   });
+
+  it("keeps uncalibrated fireglow output as a condition index rather than probability copy", () => {
+    const app = fs.readFileSync("src/app/fireglow/FireglowApp.tsx", "utf8");
+    const model = fs.readFileSync("src/lib/fireglow.ts", "utf8");
+    expect(app).toContain("火烧云条件指数");
+    expect(app).toContain("条件指数 =");
+    expect(app).not.toContain("概率排行");
+    expect(app).not.toContain("三日概率");
+    expect(app).not.toContain("概率 =");
+    expect(model).toContain("not calibrated event probabilities");
+    expect(model).not.toMatch(/label: "\d+–\d+%"/);
+  });
 });
