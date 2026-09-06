@@ -101,6 +101,19 @@ describe("scoreFireGlowSite", () => {
     expect(score.evening.score).toBeNull();
   });
 
+  it("does not coerce missing twilight cloud data into clear zeroes", () => {
+    const record = recordWithHours([
+      { time: "2026-08-22T19:00", mid: 40, high: 30, low: 5, precip: 0 },
+    ]);
+    record.hourly!.cloud_cover_high[0] = null;
+
+    const score = scoreFireGlowSite(SITE, record, "2026-08-22");
+    expect(score.evening.band).toBe("unknown");
+    expect(score.evening.score).toBeNull();
+    expect(score.evening.probabilityLabel).toBeNull();
+    expect(score.evening.reason).toContain("数据不完整");
+  });
+
   it("builds a snapshot keyed by curated site ids", () => {
     const snapshot = buildFireGlowSnapshot("2026-08-22", "icon", {
       "2026-08-22": {},
