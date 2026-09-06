@@ -23,6 +23,7 @@ export default function SourcePopover({
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const { state } = useStore();
   const sitesHref = buildProductHref("/sites", {
     location: state.selectedLocation,
@@ -45,7 +46,24 @@ export default function SourcePopover({
           'button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
         ) ?? [],
       );
-    focusable()[0]?.focus({ preventScroll: true });
+
+    // Pointer/click focus ordering differs on mobile WebKit: React may commit
+    // the open dialog (and run this layout effect) before the originating click
+    // finishes its default focus action, which can steal focus back to the
+    // trigger. Focus immediately for normal browsers, then retry after the
+    // opening event has completed. Retries are guarded so they never override
+    // a user who has already moved focus inside the dialog.
+    const focusInitial = () => {
+      const currentDialog = dialogRef.current;
+      const target = closeButtonRef.current ?? focusable()[0];
+      if (!currentDialog || !target) return;
+      const active = document.activeElement;
+      if (active instanceof Node && currentDialog.contains(active)) return;
+      target.focus({ preventScroll: true });
+    };
+    focusInitial();
+    const frame = window.requestAnimationFrame(focusInitial);
+    const timer = window.setTimeout(focusInitial, 80);
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -61,9 +79,10 @@ export default function SourcePopover({
       // Handle the boundary on the dialog during capture. WebKit can update
       // document.activeElement before a document-level bubbling listener sees
       // Shift+Tab, while the event target still identifies the boundary item.
-      const origin = event.target instanceof HTMLElement
-        ? event.target
-        : document.activeElement;
+      const origin =
+        event.target instanceof HTMLElement
+          ? event.target
+          : document.activeElement;
       if (event.shiftKey && origin === first) {
         event.preventDefault();
         last.focus();
@@ -74,6 +93,8 @@ export default function SourcePopover({
     };
     dialog?.addEventListener("keydown", onKeyDown, true);
     return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
       dialog?.removeEventListener("keydown", onKeyDown, true);
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
@@ -93,7 +114,14 @@ export default function SourcePopover({
         aria-labelledby="source-popover-title"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button className="close" type="button" onClick={onClose} aria-label="关闭">
+        <button
+          ref={closeButtonRef}
+          className="close"
+          type="button"
+          tabIndex={0}
+          onClick={onClose}
+          aria-label="关闭"
+        >
           <X size={20} aria-hidden="true" />
         </button>
         <h2 id="source-popover-title">数据依据与局限</h2>
