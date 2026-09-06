@@ -27,4 +27,13 @@ describe("release integrity invariants", () => {
     expect(model).toContain("not calibrated event probabilities");
     expect(model).not.toMatch(/label: "\d+–\d+%"/);
   });
+
+  it("never converts missing twilight cloud inputs into clear-sky zeroes", () => {
+    const model = fs.readFileSync("src/lib/fireglow.ts", "utf8");
+    expect(model).not.toContain("cloudLow: hourly.cloud_cover_low?.[index] ?? 0");
+    expect(model).not.toContain("cloudMid: hourly.cloud_cover_mid?.[index] ?? 0");
+    expect(model).not.toContain("cloudHigh: hourly.cloud_cover_high?.[index] ?? 0");
+    expect(model).not.toContain("precip: hourly.precipitation?.[index] ?? 0");
+    expect(model).toContain("晨昏窗口关键云量或降水数据不完整");
+  });
 });
