@@ -24,7 +24,6 @@ type Phase = "evening" | "morning";
 /** today-0 / +1 / +2 / 三日总览 */
 type RangeMode = 0 | 1 | 2 | 3;
 
-// 条件指数分级色阶：低→高 灰/绿/黄/橙 + 红三级递深（80–88 正红、88–95 深红、95–100 绛红）。
 const LEVEL_COLORS: Record<FireGlowProbabilityLevel, string> = {
   p20: "#5f7078",
   p40: "#5da46b",
@@ -105,7 +104,6 @@ interface RankedSite {
   longitude: number;
   altitude: number | null;
   window: FireGlowWindowScore;
-  /** 三日总览：每天的条件指数级（p20…p100）与分数。 */
   days?: Array<{ date: string; score: number | null; level: FireGlowProbabilityLevel | null }>;
 }
 
@@ -140,12 +138,13 @@ export default function FireglowApp() {
             fetch(
               `/api/fireglow/snapshot?date=${date}${force ? "&refresh=1" : ""}`,
               { signal: controller.signal, cache: "no-store" },
-            )
-              .then(async (response) => {
-                const payload = await response.json().catch(() => null);
-                if (!response.ok || !payload?.sites) throw new Error(payload?.error ?? "火烧云快照不可用");
-                return payload as FireGlowSnapshot;
-              }),
+            ).then(async (response) => {
+              const payload = await response.json().catch(() => null);
+              if (!response.ok || !payload?.sites) {
+                throw new Error(payload?.error ?? "火烧云快照不可用");
+              }
+              return payload as FireGlowSnapshot;
+            }),
           ),
         )
           .then((results) => {
@@ -177,6 +176,7 @@ export default function FireglowApp() {
     },
     [],
   );
+
   useEffect(() => {
     loadRef.current = load;
   }, [load]);
@@ -194,7 +194,9 @@ export default function FireglowApp() {
     const primary = snapshots[activeDates[0]];
     if (!primary) return [];
     return OBSERVING_SITES.map((site) => {
-      const windows = activeDates.map((date) => snapshots[date]?.sites[site.id]?.[phase] ?? UNKNOWN_WINDOW);
+      const windows = activeDates.map(
+        (date) => snapshots[date]?.sites[site.id]?.[phase] ?? UNKNOWN_WINDOW,
+      );
       const scored = windows.filter((window) => window.score != null);
       const best = scored.length
         ? scored.reduce((top, window) => ((window.score ?? 0) > (top.score ?? 0) ? window : top))
@@ -218,7 +220,6 @@ export default function FireglowApp() {
     }).sort((left, right) => (right.window.score ?? -1) - (left.window.score ?? -1));
   }, [activeDates, phase, rangeMode, snapshots]);
 
-  /** 面状条件指数色块：IDW 插值出的连续色场，随窗口/日期重算。 */
   const overlay = useMemo(() => {
     if (!ranked.length) return null;
     return buildProbabilityOverlay(
@@ -226,11 +227,14 @@ export default function FireglowApp() {
     );
   }, [ranked]);
 
-  const bestCount = ranked.filter((site) => {
-    const level = site.window.probabilityLevel;
-    return isHighFireGlowLevel(level);
-  }).length;
+  const bestCount = ranked.filter((site) => isHighFireGlowLevel(site.window.probabilityLevel)).length;
   const selectedSite = ranked.find((site) => site.id === selectedId) ?? null;
+  const selectedDateKey = useMemo(() => {
+    if (!selectedSite) return activeDates[0] ?? baseDate;
+    return activeDates.find(
+      (date) => snapshots[date]?.sites[selectedSite.id]?.[phase] === selectedSite.window,
+    ) ?? activeDates[0] ?? baseDate;
+  }, [activeDates, baseDate, phase, selectedSite, snapshots]);
 
   const focusSite = useCallback((site: RankedSite) => {
     setSelectedId(site.id);
@@ -405,7 +409,7 @@ export default function FireglowApp() {
           <FireglowSiteDetail
             site={selectedSite}
             phase={phase}
-            dateKey={activeDates[0] || new Date().toISOString().slice(0, 10)}
+            dateKey={selectedDateKey}
             onClose={() => setSelectedId(null)}
           />
         ) : null}

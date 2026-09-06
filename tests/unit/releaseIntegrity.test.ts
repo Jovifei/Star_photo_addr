@@ -38,6 +38,18 @@ describe("release integrity invariants", () => {
     expect(model).toContain("晨昏窗口关键云量或降水数据不完整");
   });
 
+  it("keeps fireglow morning/evening direction copy phase-aware and opens three-day detail on the winning date", () => {
+    const app = fs.readFileSync("src/app/fireglow/FireglowApp.tsx", "utf8");
+    const detail = fs.readFileSync("src/app/fireglow/FireglowSiteDetail.tsx", "utf8");
+    expect(app).toContain("selectedDateKey");
+    expect(app).toContain("dateKey={selectedDateKey}");
+    expect(detail).toContain('phase === "evening" ? 270 : 90');
+    expect(detail).toContain('phase === "evening" ? "正西" : "正东"');
+    expect(detail).toContain("镜头构图{solarEventLabel}朝向");
+    expect(detail).not.toContain("镜头构图日落朝向");
+    expect(detail).not.toContain('const high = win.highCloud ?? 0');
+  });
+
   it("does not claim pressure-profile or inversion analysis in the surface-only cloudsea workspace", () => {
     const app = fs.readFileSync("src/app/cloudsea/CloudSeaApp.tsx", "utf8");
     const model = fs.readFileSync("src/lib/cloudsea.ts", "utf8");
@@ -51,6 +63,7 @@ describe("release integrity invariants", () => {
     const layout = fs.readFileSync("src/app/layout.tsx", "utf8");
     expect(layout).toContain("https://photo.joviluma.com");
     expect(layout).not.toContain("https://perseids.giraffetree.cn");
+    expect(layout).not.toContain("canonical: \"/\"");
   });
 
   it("does not expose the internal integration audit page in production", () => {
