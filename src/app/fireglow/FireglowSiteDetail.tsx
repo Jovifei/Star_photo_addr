@@ -1,7 +1,17 @@
 "use client";
 
 import { useMemo } from "react";
-import { X, Flame, Sun, Compass, Sparkles, Cloud, Eye, Camera, Clock } from "lucide-react";
+import {
+  X,
+  Flame,
+  Sun,
+  Sparkles,
+  Camera,
+  Layers,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import type { FireGlowWindowScore } from "@/lib/fireglow";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
 
@@ -18,6 +28,32 @@ interface FireglowSiteDetailProps {
   phase: "morning" | "evening";
   dateKey: string;
   onClose: () => void;
+}
+
+/** 迷你罗盘微组件：绘制 360° 罗盘盘面及指针 */
+function CompassDial({ degree = 270, label = "正西" }: { degree: number; label: string }) {
+  const rotation = degree % 360;
+  return (
+    <div className="fg-compass-widget" title={`日落方位: ${degree}° (${label})`}>
+      <svg viewBox="0 0 48 48" className="fg-compass-svg" aria-hidden="true">
+        <circle cx="24" cy="24" r="21" className="fg-compass-outer-ring" />
+        <circle cx="24" cy="24" r="17" className="fg-compass-inner-ring" />
+        <text x="24" y="9" className="fg-compass-cardinal fg-north">N</text>
+        <text x="39" y="27" className="fg-compass-cardinal">E</text>
+        <text x="24" y="43" className="fg-compass-cardinal">S</text>
+        <text x="9" y="27" className="fg-compass-cardinal">W</text>
+        <g transform={`rotate(${rotation} 24 24)`}>
+          <polygon points="24,10 21,24 27,24" className="fg-compass-arrow-sun" />
+          <polygon points="24,38 21,24 27,24" className="fg-compass-arrow-tail" />
+          <circle cx="24" cy="24" r="2.5" className="fg-compass-pivot" />
+        </g>
+      </svg>
+      <div className="fg-compass-readout">
+        <span className="fg-compass-deg">{degree}°</span>
+        <span className="fg-compass-dir">{label}</span>
+      </div>
+    </div>
+  );
 }
 
 export default function FireglowSiteDetail({
@@ -49,224 +85,270 @@ export default function FireglowSiteDetail({
   // Vividness percentage
   const vividPct = Math.round((win.vividness ?? 0) * 100);
 
-  // Photography advice generation
-  const advice = useMemo(() => {
-    const lines: string[] = [];
-    if (low <= 15) {
-      lines.push("地平线低云少，夕阳透光通道畅通，适宜捕捉金光洒向高云/中云的完整反光过程。");
-    } else if (low <= 35) {
-      lines.push("地平线存在少量低云，可能提前数分钟遮挡直射阳光，建议提前架机拍摄。");
-    } else {
-      lines.push("地平线低云偏多，可能阻断夕阳光芒，出片需抓住云缝漏光瞬间。");
-    }
-
-    if (mid >= 40 && mid <= 80) {
-      lines.push("中云云层分布理想，极易形成火红/深橙色大面积泼血燃烧效果。");
-    } else if (high >= 40) {
-      lines.push("高云丰富，日落后 15-25 分钟将呈现粉紫漫射冷暖渐变，不可过早收机。");
-    }
-
-    if (targetSun?.compass) {
-      lines.push(`建议机位朝向 ${targetSun.compass} (${targetSun.azimuthDeg}°) 开阔视野，推荐广角镜头搭配 GND 中灰渐变镜平衡光比。`);
-    }
-
-    return lines.join(" ");
-  }, [low, mid, high, targetSun]);
+  // 地平通道状态
+  const isChannelClear = low <= 20;
+  const isChannelHazy = low > 20 && low <= 45;
 
   return (
     <aside className="fireglow-site-detail" aria-label={`${site.name}火烧云摄影详情`}>
       {/* 1. Header */}
-      <div className="detail-header">
-        <div className="detail-title-group">
-          <span className="detail-kicker">
-            {site.province} · {site.altitude == null ? "海拔估算" : `${Math.round(site.altitude)}m`}
-          </span>
-          <h2 className="detail-name">{site.name}</h2>
-          <span className="detail-coords">
-            {site.latitude.toFixed(3)}°N, {site.longitude.toFixed(3)}°E
-          </span>
+      <div className="fg-detail-header">
+        <div className="fg-detail-title-group">
+          <div className="fg-detail-kicker-row">
+            <span className="fg-province-chip">{site.province}</span>
+            <span className="fg-alt-chip">
+              {site.altitude == null ? "海拔估算" : `${Math.round(site.altitude)}m`}
+            </span>
+          </div>
+          <h2 className="fg-detail-name">{site.name}</h2>
+          <div className="fg-detail-coords">
+            <span>{site.latitude.toFixed(2)}°N, {site.longitude.toFixed(2)}°E</span>
+          </div>
         </div>
         <button
           type="button"
-          className="detail-close-btn"
+          className="fg-detail-close-btn"
           onClick={onClose}
-          aria-label="关闭详情舱"
-          title="关闭详情舱"
+          aria-label="关闭火烧云详情舱"
+          title="关闭火烧云详情舱"
         >
           <X size={18} />
         </button>
       </div>
 
-      <div className="detail-scroll-content">
-        {/* 2. Main Probability & Vividness Card */}
-        <section className="detail-card primary-score-card">
-          <div className="score-top-row">
-            <div className="score-badge-box">
-              <span className="score-kicker">霞光爆发概率</span>
-              <div className="score-main-val" data-level={pLevel}>
-                <Flame size={20} className="flame-icon" />
-                <span>{win.probabilityLabel ?? "—"}</span>
+      <div className="fg-detail-scroll-content">
+        {/* 2. 霞光爆发概率与鲜艳度 Hero 卡片 */}
+        <section className="fg-detail-card fg-hero-card">
+          <div className="fg-hero-top">
+            <div className="fg-hero-score-block">
+              <span className="fg-hero-kicker">
+                <Flame size={13} className="fg-flame-icon" /> 霞光爆发概率
+              </span>
+              <div className="fg-hero-score-number" data-level={pLevel}>
+                {win.probabilityLabel ?? "—"}
               </div>
             </div>
-            <span className="band-tag" data-level={pLevel}>
-              {win.bandLabel}
-            </span>
+            <div className="fg-hero-badge-block">
+              <span className="fg-band-pill" data-level={pLevel}>
+                {win.bandLabel}
+              </span>
+              {win.momentLabel && (
+                <span className="fg-moment-pill">
+                  <Sparkles size={11} /> {win.momentLabel}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Vividness Progress Bar */}
-          <div className="vividness-box">
-            <div className="vividness-labels">
-              <span>霞光鲜艳度</span>
-              <strong>{win.vividness != null ? win.vividness.toFixed(2) : "—"}</strong>
+          {/* 鲜艳度多段彩虹条 */}
+          <div className="fg-vivid-strip">
+            <div className="fg-vivid-head">
+              <span className="fg-vivid-label">
+                <Sparkles size={11} /> 霞光纯正鲜艳度
+              </span>
+              <span className="fg-vivid-val">
+                <b>{win.vividness != null ? win.vividness.toFixed(2) : "—"}</b> / 1.00
+              </span>
             </div>
-            <div className="vividness-bar-bg">
+            <div className="fg-vivid-track">
               <div
-                className="vividness-bar-fill"
-                style={{ width: `${Math.min(100, Math.max(0, vividPct))}%` }}
+                className="fg-vivid-fill"
+                style={{ width: `${Math.min(100, Math.max(8, vividPct))}%` }}
               />
             </div>
-          </div>
-
-          {win.momentLabel && (
-            <div className="moment-tag-pill">
-              <Sparkles size={12} />
-              <span>{win.momentLabel} · 最佳 {win.peakTime ?? "—"}</span>
-            </div>
-          )}
-        </section>
-
-        {/* 3. Solar & Twilight Timeline (摄影天象时刻表) */}
-        <section className="detail-card">
-          <div className="detail-card-title">
-            <Sun size={15} className="section-icon" />
-            <span>太阳与摄影暮光时段</span>
-          </div>
-
-          <div className="twilight-grid">
-            {/* Azimuth / Direction */}
-            <div className="twilight-item highlight-item">
-              <span className="twilight-label">
-                <Compass size={12} />
-                <span>{phase === "evening" ? "日落机位朝向" : "日出机位朝向"}</span>
-              </span>
-              <strong className="twilight-val">
-                {targetSun?.azimuthLabel ?? "—"}
-              </strong>
-            </div>
-
-            <div className="twilight-item">
-              <span className="twilight-label">
-                <Clock size={12} />
-                <span>{phase === "evening" ? "日落时刻" : "日出时刻"}</span>
-              </span>
-              <strong className="twilight-val">
-                {targetSun?.timeStr ?? "—"}
-              </strong>
-            </div>
-
-            <div className="twilight-item">
-              <span className="twilight-label">
-                <span className="dot dot-golden" />
-                <span>金色时刻 (Golden)</span>
-              </span>
-              <strong className="twilight-val">
-                {win.goldenTime ?? (phase === "evening" ? sunEvents.goldenHourEvening : sunEvents.goldenHourMorning) ?? "—"}
-              </strong>
-            </div>
-
-            <div className="twilight-item">
-              <span className="twilight-label">
-                <span className="dot dot-blue" />
-                <span>蓝色时刻 (Blue)</span>
-              </span>
-              <strong className="twilight-val">
-                {win.blueTime ?? (phase === "evening" ? sunEvents.blueHourEvening : sunEvents.blueHourMorning) ?? "—"}
-              </strong>
-            </div>
-
-            <div className="twilight-item">
-              <span className="twilight-label">
-                <span className="dot dot-astro" />
-                <span>天文{phase === "evening" ? "昏影终" : "晨光始"}</span>
-              </span>
-              <strong className="twilight-val">
-                {win.astroTime ?? "—"}
-              </strong>
-            </div>
-
-            <div className="twilight-item">
-              <span className="twilight-label">
-                <Eye size={12} />
-                <span>水平能见度</span>
-              </span>
-              <strong className="twilight-val">
-                {win.visibilityKm != null ? `${win.visibilityKm} km` : "—"}
-              </strong>
+            <div className="fg-vivid-scale">
+              <span>清淡</span>
+              <span>饱和通透</span>
+              <span>极度绚烂</span>
             </div>
           </div>
         </section>
 
-        {/* 4. Cloud Canvas Breakdown (云层画布结构) */}
-        <section className="detail-card">
-          <div className="detail-card-title">
-            <Cloud size={15} className="section-icon" />
-            <span>云层画布分层 (反射与遮蔽)</span>
+        {/* 3. 摄影暮光天空光谱时间轴 (Twilight Spectrum Timeline) */}
+        <section className="fg-detail-card fg-timeline-card">
+          <div className="fg-card-header">
+            <div className="fg-card-title">
+              <Clock size={14} className="fg-card-icon" />
+              <span>摄影暮光全光谱时序</span>
+            </div>
+            {win.peakTime && (
+              <span className="fg-peak-tag">最佳爆发: {win.peakTime}</span>
+            )}
           </div>
 
-          <div className="cloud-bars-container">
-            {/* High Cloud */}
-            <div className="cloud-bar-row">
-              <div className="cloud-bar-head">
-                <span className="cloud-type-name">高云 (6000m+)</span>
-                <span className="cloud-type-pct">{high}%</span>
+          {/* 暮光渐变光谱轴 */}
+          <div className="fg-spectrum-timeline">
+            <div className="fg-spectrum-bar" />
+            <div className="fg-timeline-steps">
+              {/* 日落时刻 */}
+              <div className="fg-timeline-step">
+                <div className="fg-step-node node-sunset" />
+                <span className="fg-step-label">{phase === "evening" ? "日落时刻" : "日出时刻"}</span>
+                <strong className="fg-step-time">{targetSun?.timeStr ?? "—"}</strong>
+                <small className="fg-step-desc">地平直射金光</small>
               </div>
-              <div className="cloud-bar-track">
-                <div className="cloud-bar-fill fill-high" style={{ width: `${Math.min(100, high)}%` }} />
-              </div>
-              <span className="cloud-bar-desc">反射粉紫色漫射霞光，权重 ×0.75</span>
-            </div>
 
-            {/* Mid Cloud */}
-            <div className="cloud-bar-row">
-              <div className="cloud-bar-head">
-                <span className="cloud-type-name">中云 (2000-6000m)</span>
-                <span className="cloud-type-pct">{mid}%</span>
+              {/* 金色时刻 */}
+              <div className="fg-timeline-step">
+                <div className="fg-step-node node-golden" />
+                <span className="fg-step-label">金色时刻</span>
+                <strong className="fg-step-time">{win.goldenTime ?? "—"}</strong>
+                <small className="fg-step-desc">暖金泼洒云底</small>
               </div>
-              <div className="cloud-bar-track">
-                <div className="cloud-bar-fill fill-mid" style={{ width: `${Math.min(100, mid)}%` }} />
-              </div>
-              <span className="cloud-bar-desc">呈现深红/橙红燃烧效果，权重 ×0.45</span>
-            </div>
 
-            {/* Low Cloud */}
-            <div className="cloud-bar-row">
-              <div className="cloud-bar-head">
-                <span className="cloud-type-name">低云 (&lt;2000m)</span>
-                <span className="cloud-type-pct">{low}%</span>
+              {/* 蓝色时刻 */}
+              <div className="fg-timeline-step">
+                <div className="fg-step-node node-blue" />
+                <span className="fg-step-label">蓝色时刻</span>
+                <strong className="fg-step-time">{win.blueTime ?? "—"}</strong>
+                <small className="fg-step-desc">冷暖强烈对冲</small>
               </div>
-              <div className="cloud-bar-track">
-                <div className="cloud-bar-fill fill-low" style={{ width: `${Math.min(100, low)}%` }} />
+
+              {/* 天文昏影终 */}
+              <div className="fg-timeline-step">
+                <div className="fg-step-node node-astro" />
+                <span className="fg-step-label">{phase === "evening" ? "昏影终" : "晨光始"}</span>
+                <strong className="fg-step-time">{win.astroTime ?? "—"}</strong>
+                <small className="fg-step-desc">深空暗夜开启</small>
               </div>
-              <span className="cloud-bar-desc">易遮挡地平线天光通道，过厚则封死霞光</span>
             </div>
           </div>
 
-          {/* Horizon Blocking Status Badge */}
-          <div className="horizon-status-box">
-            <span className="horizon-status-label">地平通道判定:</span>
-            <span className={`horizon-status-badge ${low <= 20 ? "status-pass" : low <= 40 ? "status-warn" : "status-block"}`}>
-              {low <= 20 ? "✓ 通道开阔通透" : low <= 40 ? "⚠ 局部遮挡" : "✕ 低云严重遮蔽"}
-            </span>
+          {/* 机位日落朝向与微罗盘卡片 */}
+          <div className="fg-sun-azimuth-card">
+            <div className="fg-azimuth-info">
+              <span className="fg-azimuth-label">
+                <Sun size={12} className="fg-sun-icon" /> 镜头构图日落朝向
+              </span>
+              <strong className="fg-azimuth-heading">
+                {targetSun?.compass ?? "正西"} · {targetSun?.azimuthDeg ?? 270}°
+              </strong>
+              <small className="fg-azimuth-tip">地平线太阳浸落基准方向</small>
+            </div>
+            <CompassDial
+              degree={targetSun?.azimuthDeg ?? 270}
+              label={targetSun?.compass ?? "正西"}
+            />
           </div>
         </section>
 
-        {/* 5. Photography Advice Card */}
-        <section className="detail-card advice-card">
-          <div className="detail-card-title">
-            <Camera size={15} className="section-icon" />
-            <span>摄影实拍机位研判</span>
+        {/* 4. 大气云层画布与透光通道立体剖析 */}
+        <section className="fg-detail-card fg-canvas-card">
+          <div className="fg-card-header">
+            <div className="fg-card-title">
+              <Layers size={14} className="fg-card-icon" />
+              <span>大气三层云量画布与透光通道</span>
+            </div>
           </div>
-          <p className="advice-text">{advice}</p>
+
+          <div className="fg-cloud-bars-list">
+            {/* 高云 */}
+            <div className="fg-cloud-row">
+              <div className="fg-cloud-meta">
+                <div className="fg-cloud-type">
+                  <span className="fg-cloud-dot dot-high" />
+                  <span className="fg-cloud-name">高云 (6000m+)</span>
+                  <span className="fg-cloud-role">反射漫射画布 (x0.75)</span>
+                </div>
+                <strong className="fg-cloud-percent">{high}%</strong>
+              </div>
+              <div className="fg-cloud-track">
+                <div className="fg-cloud-bar bar-high" style={{ width: `${high}%` }} />
+              </div>
+            </div>
+
+            {/* 中云 */}
+            <div className="fg-cloud-row">
+              <div className="fg-cloud-meta">
+                <div className="fg-cloud-type">
+                  <span className="fg-cloud-dot dot-mid" />
+                  <span className="fg-cloud-name">中云 (2000-6000m)</span>
+                  <span className="fg-cloud-role">烈焰层次过渡 (x0.45)</span>
+                </div>
+                <strong className="fg-cloud-percent">{mid}%</strong>
+              </div>
+              <div className="fg-cloud-track">
+                <div className="fg-cloud-bar bar-mid" style={{ width: `${mid}%` }} />
+              </div>
+            </div>
+
+            {/* 低云 */}
+            <div className="fg-cloud-row">
+              <div className="fg-cloud-meta">
+                <div className="fg-cloud-type">
+                  <span className="fg-cloud-dot dot-low" />
+                  <span className="fg-cloud-name">低云 (&lt;2000m)</span>
+                  <span className="fg-cloud-role">地平遮挡阻力层</span>
+                </div>
+                <strong className="fg-cloud-percent">{low}%</strong>
+              </div>
+              <div className="fg-cloud-track">
+                <div className="fg-cloud-bar bar-low" style={{ width: `${low}%` }} />
+              </div>
+            </div>
+          </div>
+
+          {/* 地平通道判定胶囊条 */}
+          <div className={`fg-horizon-channel ${isChannelClear ? "channel-clear" : isChannelHazy ? "channel-hazy" : "channel-blocked"}`}>
+            {isChannelClear ? (
+              <>
+                <CheckCircle2 size={14} className="fg-channel-icon text-good" />
+                <div className="fg-channel-copy">
+                  <strong>地平天光通道畅通通透</strong>
+                  <span>夕阳光线可直射照射至头顶高云/中云底，反射极其鲜亮</span>
+                </div>
+              </>
+            ) : isChannelHazy ? (
+              <>
+                <AlertCircle size={14} className="fg-channel-icon text-warn" />
+                <div className="fg-channel-copy">
+                  <strong>地平线存在薄低云层 (遮挡 {low}%)</strong>
+                  <span>部分光线发生弥散漫射，建议提前架机抢拍金光瞬间</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <AlertCircle size={14} className="fg-channel-icon text-danger" />
+                <div className="fg-channel-copy">
+                  <strong>地平线低云封死通道 (遮挡 {low}%)</strong>
+                  <span>夕阳在落山前容易被低云提前吞噬，需留意云隙漏光</span>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* 5. 摄影实战方案 Blueprint */}
+        <section className="fg-detail-card fg-blueprint-card">
+          <div className="fg-card-header">
+            <div className="fg-card-title">
+              <Camera size={14} className="fg-card-icon" />
+              <span>摄影实战机位指南 (Field Blueprint)</span>
+            </div>
+          </div>
+
+          <div className="fg-gear-grid">
+            <div className="fg-gear-item">
+              <span className="fg-gear-label">镜头焦段配置</span>
+              <strong className="fg-gear-value">广角 16-35mm / 24-70mm</strong>
+              <small className="fg-gear-tip">收纳漫天烧红高云天际大场景</small>
+            </div>
+            <div className="fg-gear-item">
+              <span className="fg-gear-label">推荐滤镜搭配</span>
+              <strong className="fg-gear-value">GND 0.9 软渐变中灰滤镜</strong>
+              <small className="fg-gear-tip">压暗亮部天光，提亮地面暗部地景</small>
+            </div>
+            <div className="fg-gear-item">
+              <span className="fg-gear-label">镜头取景朝向</span>
+              <strong className="fg-gear-value">{targetSun?.compass ?? "正西"} ({targetSun?.azimuthDeg ?? 270}°)</strong>
+              <small className="fg-gear-tip">对准夕阳余晖主反射中心轴</small>
+            </div>
+            <div className="fg-gear-item">
+              <span className="fg-gear-label">撤机时机提醒</span>
+              <strong className="fg-gear-value">日落后 20-30 分钟</strong>
+              <small className="fg-gear-tip">高云粉紫漫射最绚烂期，切莫过早收机</small>
+            </div>
+          </div>
         </section>
       </div>
     </aside>

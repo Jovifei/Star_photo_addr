@@ -1,7 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
-import { X, Mountain, Waves, Wind, Droplets, Sun, Compass, Camera, ArrowUpRight, ArrowDownRight, CheckCircle2, AlertTriangle, CloudFog } from "lucide-react";
+import {
+  X,
+  Mountain,
+  Waves,
+  Wind,
+  Droplets,
+  Sun,
+  Camera,
+  Layers,
+  Aperture,
+  CheckCircle2,
+  AlertTriangle,
+  CloudFog,
+  Sparkles,
+} from "lucide-react";
 import type { CloudSeaSite } from "@/lib/cloudseaSites";
 import type { CloudSeaWindowScore } from "@/lib/cloudsea";
 import { positionBadgeTone } from "@/lib/cloudsea";
@@ -13,6 +27,36 @@ interface CloudSeaSiteDetailProps {
   phase: "morning" | "evening";
   dateKey: string;
   onClose: () => void;
+}
+
+/** 迷你罗盘罗经微组件：绘制 360° 罗盘盘面及指针 */
+function CompassDial({ degree = 0, label = "" }: { degree: number; label: string }) {
+  // 指针旋转角度
+  const rotation = degree % 360;
+  return (
+    <div className="cs-compass-widget" title={`日出方位: ${degree}° (${label})`}>
+      <svg viewBox="0 0 48 48" className="cs-compass-svg" aria-hidden="true">
+        {/* 外刻度圈 */}
+        <circle cx="24" cy="24" r="21" className="cs-compass-outer-ring" />
+        <circle cx="24" cy="24" r="17" className="cs-compass-inner-ring" />
+        {/* 方位主标点 */}
+        <text x="24" y="9" className="cs-compass-cardinal cs-north">N</text>
+        <text x="39" y="27" className="cs-compass-cardinal">E</text>
+        <text x="24" y="43" className="cs-compass-cardinal">S</text>
+        <text x="9" y="27" className="cs-compass-cardinal">W</text>
+        {/* 旋转指针 */}
+        <g transform={`rotate(${rotation} 24 24)`}>
+          <polygon points="24,10 21,24 27,24" className="cs-compass-arrow-north" />
+          <polygon points="24,38 21,24 27,24" className="cs-compass-arrow-south" />
+          <circle cx="24" cy="24" r="2.5" className="cs-compass-pivot" />
+        </g>
+      </svg>
+      <div className="cs-compass-readout">
+        <span className="cs-compass-deg">{degree}°</span>
+        <span className="cs-compass-dir">{label}</span>
+      </div>
+    </div>
+  );
 }
 
 export default function CloudSeaSiteDetail({
@@ -43,53 +87,34 @@ export default function CloudSeaSiteDetail({
   const isIn = win.cloudPosition === "in";
   const isBelow = win.cloudPosition === "below";
 
-  // Photography advice generation
-  const advice = useMemo(() => {
-    const lines: string[] = [];
-
-    if (isAbove) {
-      if (diff != null && diff >= 200) {
-        lines.push(`山顶高出预估云顶 ${diff}m，视野俯瞰高度极佳，不仅能拍到浩瀚如海的平静云涛，山峰若隐若现亦极具层次感。`);
-      } else {
-        lines.push("山顶略高于云顶，云雾将掠过脚下山脊，适合近景慢门拉丝拍摄瀑布云流。");
-      }
-    } else if (isIn) {
-      lines.push("山顶目前处于云层内部，能见度受大雾影响较低，建议等待风力驱散或云层下沉窗口再架机。");
-    } else if (isBelow) {
-      lines.push("山顶标高低于云底，处于阴天多云状态，无法俯瞰云顶，建议前往更高海拔观景台。");
-    } else {
-      lines.push("当前气温与湿度下整层晴朗少云，适宜拍摄名山巍峨全景。");
+  // 云层厚度计算
+  const cloudThickness = useMemo(() => {
+    if (win.cloudTopM != null && win.cloudBaseM != null && win.cloudTopM >= win.cloudBaseM) {
+      return win.cloudTopM - win.cloudBaseM;
     }
+    return null;
+  }, [win.cloudTopM, win.cloudBaseM]);
 
-    if (win.windSpeed != null) {
-      if (win.windSpeed <= 3.5) {
-        lines.push("近地风力轻柔(微风)，云层聚拢平缓稳定，极易维持如镜面般的壮观平流云海。");
-      } else if (win.windSpeed <= 7) {
-        lines.push("近地风力中等，云雾移动迅速，适合通过延时摄影拍摄云浪翻腾与瀑布云。");
-      } else {
-        lines.push("近地风速较大(>7m/s)，云层可能较快被撕裂吹散，需抓拍瞬息万变的瞬间。");
-      }
-    }
-
-    if (targetSun) {
-      lines.push(`晨昏${phase === "morning" ? "日出" : "日落"}方位角为 ${targetSun.azimuthLabel}，建议提前 40 分钟占据 ${site.viewpoint} 朝向，使用超广角接片或长焦压缩远方云海群山。`);
-    }
-
-    return lines.join(" ");
-  }, [isAbove, isIn, isBelow, diff, win.windSpeed, targetSun, phase, site.viewpoint]);
+  // 三维气象因子进度评分（0 - 100）
+  const moistureScore = Math.min(100, Math.max(10, Math.round(((win.humidity ?? 60) / 95) * 100)));
+  const windScore = Math.max(10, Math.min(100, Math.round((1 - Math.min(win.windSpeed ?? 5, 12) / 14) * 100)));
+  const positionScore = isAbove ? 95 : isIn ? 35 : 20;
 
   return (
     <aside className="cloudsea-site-detail" aria-label={`${site.name}云海摄影详情`}>
-      {/* 1. Header */}
+      {/* 1. 顶部 Header */}
       <div className="cs-detail-header">
         <div className="cs-detail-title-group">
-          <span className="cs-detail-kicker">
-            {site.province} · {site.area}
-          </span>
+          <div className="cs-detail-kicker-row">
+            <span className="cs-location-chip">{site.province}</span>
+            <span className="cs-area-chip">{site.area}</span>
+          </div>
           <h2 className="cs-detail-name">{site.name}</h2>
-          <span className="cs-detail-coords">
-            海拔 {site.altitude}m · {site.latitude.toFixed(3)}°N, {site.longitude.toFixed(3)}°E
-          </span>
+          <div className="cs-detail-coords">
+            <span>海拔 {site.altitude}m</span>
+            <span className="cs-coord-sep">·</span>
+            <span>{site.latitude.toFixed(2)}°N, {site.longitude.toFixed(2)}°E</span>
+          </div>
         </div>
         <button
           type="button"
@@ -103,133 +128,264 @@ export default function CloudSeaSiteDetail({
       </div>
 
       <div className="cs-detail-scroll-content">
-        {/* 2. Main Probability & Position Badge */}
-        <section className="cs-detail-card cs-primary-card">
-          <div className="cs-score-top-row">
-            <div className="cs-score-box">
-              <span className="cs-score-kicker">云海综合概率</span>
-              <div className="cs-score-main-val" data-level={pLevel}>
-                <Waves size={20} className="waves-icon" />
-                <span>{win.probabilityLabel ?? "—"}</span>
+        {/* 2. 云海综合概率与成海指数 Bento 磁贴 */}
+        <section className="cs-detail-card cs-hero-card">
+          <div className="cs-hero-top">
+            <div className="cs-hero-score-block">
+              <span className="cs-hero-kicker">
+                <Waves size={13} className="cs-wave-icon" /> 云海综合概率
+              </span>
+              <div className="cs-hero-score-number" data-level={pLevel}>
+                {win.probabilityLabel ?? "—"}
               </div>
             </div>
-            <span className={`cs-pos-pill ${badgeTone}`}>
-              {win.cloudPosition === "above" && <CheckCircle2 size={13} />}
-              {win.cloudPosition === "in" && <CloudFog size={13} />}
-              {win.cloudPosition === "below" && <AlertTriangle size={13} />}
-              <span>{win.positionLabel}</span>
-            </span>
+            <div className="cs-hero-badge-block">
+              <span className={`cs-pos-pill ${badgeTone}`}>
+                {isAbove && <CheckCircle2 size={13} />}
+                {isIn && <CloudFog size={13} />}
+                {isBelow && <AlertTriangle size={13} />}
+                <span>{win.positionLabel}</span>
+              </span>
+              <span className="cs-summary-hint">
+                {isAbove ? "峰顶刺破云海 · 适宜俯瞰" : isIn ? "处于大雾中 · 视线受阻" : "处于云层下 · 阴天无海"}
+              </span>
+            </div>
           </div>
 
-          <p className="cs-card-summary">{win.summary}</p>
+          {/* 三维气象指标微指示条 */}
+          <div className="cs-hero-metrics-strip">
+            <div className="cs-mini-metric">
+              <div className="cs-mini-metric-head">
+                <span className="cs-mini-label"><Droplets size={11} /> 水汽充沛度</span>
+                <span className="cs-mini-val">{win.humidity != null ? `${win.humidity}%` : "—"}</span>
+              </div>
+              <div className="cs-mini-progress">
+                <div
+                  className="cs-mini-bar cs-bar-moisture"
+                  style={{ width: `${moistureScore}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="cs-mini-metric">
+              <div className="cs-mini-metric-head">
+                <span className="cs-mini-label"><Mountain size={11} /> 层位落差度</span>
+                <span className="cs-mini-val">{diff != null ? `${diff > 0 ? "+" : ""}${diff}m` : "—"}</span>
+              </div>
+              <div className="cs-mini-progress">
+                <div
+                  className="cs-mini-bar cs-bar-position"
+                  style={{ width: `${positionScore}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="cs-mini-metric">
+              <div className="cs-mini-metric-head">
+                <span className="cs-mini-label"><Wind size={11} /> 风定聚海度</span>
+                <span className="cs-mini-val">{win.windSpeed != null ? `${win.windSpeed}m/s` : "—"}</span>
+              </div>
+              <div className="cs-mini-progress">
+                <div
+                  className="cs-mini-bar cs-bar-wind"
+                  style={{ width: `${windScore}%` }}
+                />
+              </div>
+            </div>
+          </div>
         </section>
 
-        {/* 3. Mountain Summit vs Cloud Layer Profile (垂直高差矩阵) */}
+        {/* 3. 山峰 vs 云层垂直剖面可视化标尺 (Elevation Profile Visualizer) */}
+        <section className="cs-detail-card cs-elevation-card">
+          <div className="cs-card-header">
+            <div className="cs-card-title">
+              <Layers size={14} className="cs-card-icon" />
+              <span>山峰与云海垂直剖面剖析</span>
+            </div>
+            {diff != null && (
+              <span className={`cs-diff-tag ${isAbove ? "is-above" : "is-below"}`}>
+                落差 {diff > 0 ? `+${diff}` : diff}m
+              </span>
+            )}
+          </div>
+
+          <div className="cs-profile-diagram">
+            {/* 顶层：山峰标高节点 */}
+            <div className="cs-diag-node cs-diag-summit">
+              <div className="cs-diag-mark cs-mark-summit">
+                <Mountain size={14} />
+              </div>
+              <div className="cs-diag-info">
+                <div className="cs-diag-title-row">
+                  <span className="cs-diag-name">{site.name} 主峰标高</span>
+                  <span className="cs-diag-tag">观景点</span>
+                </div>
+                <strong className="cs-diag-alt">{site.altitude} m</strong>
+              </div>
+            </div>
+
+            {/* 中间落差指示带 */}
+            <div className="cs-diag-gap-zone">
+              <div className="cs-diag-gap-line" />
+              <div className="cs-diag-gap-badge">
+                {isAbove ? (
+                  <>
+                    <span className="cs-gap-indicator cs-gap-green">▲ 俯瞰通道开阔</span>
+                    <span className="cs-gap-meta">山顶高出云顶 {diff}m，视野辽阔无遮挡</span>
+                  </>
+                ) : isIn ? (
+                  <>
+                    <span className="cs-gap-indicator cs-gap-orange">● 陷入云雾核心</span>
+                    <span className="cs-gap-meta">山顶淹没在云海中，能见度较低</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="cs-gap-indicator cs-gap-gray">▼ 处于云层底部</span>
+                    <span className="cs-gap-meta">山顶低于云底，无法俯瞰成片云海</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* 云海波浪立体层 */}
+            <div className="cs-diag-cloud-layer">
+              <div className="cs-cloud-top-edge">
+                <div className="cs-cloud-wave-label">
+                  <Waves size={12} />
+                  <span>预估云顶波面 (海平面)</span>
+                </div>
+                <strong className="cs-cloud-alt">{win.cloudTopM != null ? `${win.cloudTopM} m` : "—"}</strong>
+              </div>
+
+              <div className="cs-cloud-body-fill">
+                <div className="cs-cloud-mist-bg" />
+                <div className="cs-cloud-stats-inline">
+                  <span>云层垂直估厚: <b>{cloudThickness != null ? `${cloudThickness}m` : "厚度待定"}</b></span>
+                  <span>成海形态: <b>{isAbove ? "平流漫覆型" : "低空平伏型"}</b></span>
+                </div>
+              </div>
+
+              <div className="cs-cloud-base-edge">
+                <div className="cs-cloud-base-label">
+                  <span className="cs-base-dot" />
+                  <span>预估云底标高</span>
+                </div>
+                <span className="cs-cloud-base-alt">{win.cloudBaseM != null ? `${win.cloudBaseM} m` : "—"}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. 高山成海气象因子 2x2 Bento 磁贴 */}
         <section className="cs-detail-card">
-          <div className="cs-detail-card-title">
-            <Mountain size={15} className="cs-section-icon" />
-            <span>山峰海拔与云层垂直高差</span>
-          </div>
-
-          <div className="cs-profile-matrix">
-            <div className="cs-matrix-item highlight-matrix">
-              <span className="cs-matrix-label">
-                {isAbove ? <ArrowUpRight size={13} className="text-good" /> : <ArrowDownRight size={13} className="text-bad" />}
-                <span>相对云顶落差</span>
-              </span>
-              <strong className={`cs-matrix-val ${isAbove ? "val-good" : "val-warn"}`}>
-                {diff != null ? `${diff > 0 ? "+" : ""}${diff} m` : "—"}
-              </strong>
-              <small className="cs-matrix-hint">
-                {isAbove ? "山顶刺破云顶 · 俯瞰通透" : isIn ? "山顶处于云中 · 大雾受阻" : "山顶处于云下 · 阴沉无海"}
-              </small>
-            </div>
-
-            <div className="cs-matrix-item">
-              <span className="cs-matrix-label">山峰顶海拔</span>
-              <strong className="cs-matrix-val">{site.altitude} m</strong>
-              <small className="cs-matrix-hint">主峰/观景台标高</small>
-            </div>
-
-            <div className="cs-matrix-item">
-              <span className="cs-matrix-label">预估云顶标高</span>
-              <strong className="cs-matrix-val">{win.cloudTopM != null ? `${win.cloudTopM} m` : "—"}</strong>
-              <small className="cs-matrix-hint">云海波涛最高海平面</small>
-            </div>
-
-            <div className="cs-matrix-item">
-              <span className="cs-matrix-label">预估云底标高</span>
-              <strong className="cs-matrix-val">{win.cloudBaseM != null ? `${win.cloudBaseM} m` : "—"}</strong>
-              <small className="cs-matrix-hint">高山低云层底位置</small>
+          <div className="cs-card-header">
+            <div className="cs-card-title">
+              <Wind size={14} className="cs-card-icon" />
+              <span>高山成海气象条件</span>
             </div>
           </div>
-        </section>
 
-        {/* 4. Meteorological Formation Conditions (成海气象条件) */}
-        <section className="cs-detail-card">
-          <div className="cs-detail-card-title">
-            <Wind size={15} className="cs-section-icon" />
-            <span>高山成海气象因子</span>
-          </div>
-
-          <div className="cs-weather-grid">
-            <div className="cs-weather-item">
-              <span className="cs-weather-label">
-                <Droplets size={13} />
-                <span>近地面湿度</span>
-              </span>
-              <strong className="cs-weather-val">{win.humidity != null ? `${win.humidity}%` : "—"}</strong>
-              <span className="cs-weather-status">
-                {(win.humidity ?? 0) >= 85 ? "水汽充沛 · 极佳" : (win.humidity ?? 0) >= 70 ? "水汽良好" : "偏干"}
-              </span>
+          <div className="cs-bento-grid">
+            {/* 湿度 */}
+            <div className="cs-bento-tile">
+              <div className="cs-tile-head">
+                <span className="cs-tile-icon cs-icon-moist"><Droplets size={14} /></span>
+                <span className="cs-tile-title">近地面湿度</span>
+              </div>
+              <div className="cs-tile-main">
+                <strong className="cs-tile-number">{win.humidity != null ? `${win.humidity}%` : "—"}</strong>
+                <span className={`cs-tile-pill ${((win.humidity ?? 0) >= 80) ? "pill-good" : ((win.humidity ?? 0) >= 65) ? "pill-normal" : "pill-warn"}`}>
+                  {(win.humidity ?? 0) >= 80 ? "水汽充足" : (win.humidity ?? 0) >= 65 ? "湿度适中" : "偏干燥"}
+                </span>
+              </div>
+              <span className="cs-tile-sub">下垫面水汽蒸腾供给</span>
             </div>
 
-            <div className="cs-weather-item">
-              <span className="cs-weather-label">
-                <Wind size={13} />
-                <span>近地风速</span>
-              </span>
-              <strong className="cs-weather-val">{win.windSpeed != null ? `${win.windSpeed} m/s` : "—"}</strong>
-              <span className="cs-weather-status">
-                {(win.windSpeed ?? 0) <= 3.5 ? "微风 · 易聚不易散" : (win.windSpeed ?? 0) <= 7 ? "阵风 · 翻腾瀑布云" : "强风"}
-              </span>
+            {/* 风速 */}
+            <div className="cs-bento-tile">
+              <div className="cs-tile-head">
+                <span className="cs-tile-icon cs-icon-wind"><Wind size={14} /></span>
+                <span className="cs-tile-title">近地风速</span>
+              </div>
+              <div className="cs-tile-main">
+                <strong className="cs-tile-number">{win.windSpeed != null ? `${win.windSpeed}m/s` : "—"}</strong>
+                <span className={`cs-tile-pill ${(win.windSpeed ?? 0) <= 4 ? "pill-good" : (win.windSpeed ?? 0) <= 7 ? "pill-normal" : "pill-danger"}`}>
+                  {(win.windSpeed ?? 0) <= 3.5 ? "微风平聚" : (win.windSpeed ?? 0) <= 7 ? "阵风翻浪" : "强风易散"}
+                </span>
+              </div>
+              <span className="cs-tile-sub">微风更易维持平静云海</span>
             </div>
 
-            <div className="cs-weather-item">
-              <span className="cs-weather-label">
-                <Sun size={13} />
-                <span>{phase === "morning" ? "日出时刻" : "日落时刻"}</span>
-              </span>
-              <strong className="cs-weather-val">{targetSun?.timeStr ?? "—"}</strong>
-              <span className="cs-weather-status">最佳金光穿云时段</span>
+            {/* 日出时刻 */}
+            <div className="cs-bento-tile">
+              <div className="cs-tile-head">
+                <span className="cs-tile-icon cs-icon-sun"><Sun size={14} /></span>
+                <span className="cs-tile-title">{phase === "morning" ? "日出时刻" : "日落时刻"}</span>
+              </div>
+              <div className="cs-tile-main">
+                <strong className="cs-tile-number cs-time-text">{targetSun?.timeStr ?? "—"}</strong>
+                <span className="cs-tile-pill pill-gold">
+                  <Sparkles size={11} /> 黄金光效
+                </span>
+              </div>
+              <span className="cs-tile-sub">晨曦金光浸染云涛时刻</span>
             </div>
 
-            <div className="cs-weather-item">
-              <span className="cs-weather-label">
-                <Compass size={13} />
-                <span>机位日出朝向</span>
-              </span>
-              <strong className="cs-weather-val">{targetSun?.azimuthLabel ?? "—"}</strong>
-              <span className="cs-weather-status">太阳升落方位</span>
+            {/* 日出方位角与微罗盘 */}
+            <div className="cs-bento-tile cs-compass-tile">
+              <div className="cs-tile-head">
+                <span className="cs-tile-icon cs-icon-compass"><Aperture size={14} /></span>
+                <span className="cs-tile-title">机位方位角</span>
+              </div>
+              <CompassDial
+                degree={targetSun?.azimuthDeg ?? 90}
+                label={targetSun?.compass ?? "正东"}
+              />
             </div>
           </div>
         </section>
 
-        {/* 5. Classic Viewpoint & Photography Advice */}
-        <section className="cs-detail-card cs-advice-card">
-          <div className="cs-detail-card-title">
-            <Camera size={15} className="cs-section-icon" />
-            <span>经典机位与拍摄指南</span>
+        {/* 5. 摄影实战指南：装备、机位与拍摄参数 Blueprint */}
+        <section className="cs-detail-card cs-blueprint-card">
+          <div className="cs-card-header">
+            <div className="cs-card-title">
+              <Camera size={14} className="cs-card-icon" />
+              <span>摄影实操方案 (Field Blueprint)</span>
+            </div>
           </div>
 
-          <div className="cs-viewpoint-box">
-            <span className="cs-viewpoint-label">推荐观景机位:</span>
-            <strong className="cs-viewpoint-name">{site.viewpoint}</strong>
+          {/* 推荐观景点卡片 */}
+          <div className="cs-viewpoint-spot">
+            <div className="cs-spot-lead">
+              <span className="cs-spot-badge">推荐机位</span>
+              <strong className="cs-spot-name">{site.viewpoint}</strong>
+            </div>
+            <p className="cs-spot-desc">{site.description}</p>
           </div>
 
-          <p className="cs-description-text">{site.description}</p>
-          <div className="cs-advice-divider" />
-          <p className="cs-advice-text">{advice}</p>
+          {/* 摄影装备与参数速查芯片 */}
+          <div className="cs-gear-grid">
+            <div className="cs-gear-item">
+              <span className="cs-gear-label">镜头配置</span>
+              <strong className="cs-gear-value">超广角 14-24mm / 16-35mm</strong>
+              <small className="cs-gear-tip">收纳漫无边际的云涛大场景接片</small>
+            </div>
+            <div className="cs-gear-item">
+              <span className="cs-gear-label">慢门滤镜</span>
+              <strong className="cs-gear-value">ND64 ~ ND1000 减光镜</strong>
+              <small className="cs-gear-tip">曝光 10~30秒，雾化如绸缎般云流</small>
+            </div>
+            <div className="cs-gear-item">
+              <span className="cs-gear-label">黄金时段</span>
+              <strong className="cs-gear-value">日出前 40m 至日出后 25m</strong>
+              <small className="cs-gear-tip">捕捉低角度暖金逆光穿透云絮</small>
+            </div>
+            <div className="cs-gear-item">
+              <span className="cs-gear-label">拍摄机位朝向</span>
+              <strong className="cs-gear-value">{targetSun?.compass ?? "东向"} ({targetSun?.azimuthDeg ?? 90}°)</strong>
+              <small className="cs-gear-tip">对准日出方向支架提前占位构图</small>
+            </div>
+          </div>
         </section>
       </div>
     </aside>

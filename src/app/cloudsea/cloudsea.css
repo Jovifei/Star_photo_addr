@@ -354,26 +354,26 @@
 }
 
 /* ========================================================
-   高山云海专属摄影地点详情舱 (CloudSeaSiteDetail)
+   高山云海专属摄影地点详情舱 (CloudSeaSiteDetail) 深度视觉重构
    ======================================================== */
-.cloudsea-detail-panel {
+.cloudsea-site-detail {
   display: flex;
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  border: 1px solid var(--cs-line);
+  border: 1px solid rgba(72, 181, 181, 0.28);
   border-radius: 14px;
-  background: var(--cs-surface);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
+  background: rgba(4, 15, 22, 0.88);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(72, 181, 181, 0.15);
+  backdrop-filter: blur(16px);
   overflow: hidden;
-  animation: csDetailFadeIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: csDetailSlideIn 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes csDetailFadeIn {
+@keyframes csDetailSlideIn {
   from {
     opacity: 0;
-    transform: translateX(12px);
+    transform: translateX(16px);
   }
   to {
     opacity: 1;
@@ -381,174 +381,132 @@
   }
 }
 
+/* 1. Header 顶部导航头 */
 .cs-detail-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--cs-line);
-  background: rgba(3, 14, 22, 0.65);
+  padding: 15px 18px 13px;
+  border-bottom: 1px solid rgba(72, 181, 181, 0.18);
+  background: linear-gradient(180deg, rgba(8, 25, 36, 0.85) 0%, rgba(4, 15, 22, 0.4) 100%);
 }
 
 .cs-detail-title-group {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
-.cs-detail-title {
-  margin: 0;
-  font-size: 16px;
+.cs-detail-kicker-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cs-location-chip {
+  font-size: 11px;
   font-weight: 700;
-  color: var(--cs-text);
-  letter-spacing: -0.01em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(72, 181, 181, 0.15);
+  border: 1px solid rgba(72, 181, 181, 0.3);
+  color: #7ce3e3;
+  letter-spacing: 0.02em;
+}
+
+.cs-area-chip {
+  font-size: 11px;
+  color: #8da4b0;
+}
+
+.cs-detail-name {
+  margin: 2px 0 0;
+  font-size: 19px;
+  font-weight: 750;
+  color: #f0f7f9;
+  letter-spacing: -0.015em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.cs-detail-subtitle {
-  font-size: 11px;
-  color: var(--cs-muted);
-}
-
-.cs-detail-badge-group {
-  display: flex;
+.cs-detail-coords {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 5px;
-}
-
-.cs-probability-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid;
+  color: #7b9aa8;
+  font-family: var(--font-mono, ui-monospace, monospace);
 }
 
-.cs-probability-pill[data-level="p20"] {
-  color: #7b8f97;
-  border-color: rgba(123, 143, 151, 0.3);
-  background: rgba(123, 143, 151, 0.1);
-}
-.cs-probability-pill[data-level="p40"] {
-  color: #48b5b5;
-  border-color: rgba(72, 181, 181, 0.35);
-  background: rgba(72, 181, 181, 0.12);
-}
-.cs-probability-pill[data-level="p60"] {
-  color: #3498db;
-  border-color: rgba(52, 152, 219, 0.35);
-  background: rgba(52, 152, 219, 0.12);
-}
-.cs-probability-pill[data-level="p80"] {
-  color: #1f78d1;
-  border-color: rgba(31, 120, 209, 0.4);
-  background: rgba(31, 120, 209, 0.15);
-}
-.cs-probability-pill[data-level="p90"] {
-  color: #5c9bf5;
-  border-color: rgba(92, 155, 245, 0.45);
-  background: rgba(92, 155, 245, 0.18);
-}
-.cs-probability-pill[data-level="p100"] {
-  color: #9b72f5;
-  border-color: rgba(155, 114, 245, 0.5);
-  background: rgba(155, 114, 245, 0.2);
+.cs-coord-sep {
+  opacity: 0.5;
 }
 
-.cs-position-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-
-.cs-position-pill.badge-success {
-  background: rgba(46, 204, 113, 0.15);
-  color: #2ecc71;
-  border: 1px solid rgba(46, 204, 113, 0.4);
-}
-
-.cs-position-pill.badge-danger {
-  background: rgba(231, 76, 60, 0.15);
-  color: #e74c3c;
-  border: 1px solid rgba(231, 76, 60, 0.4);
-}
-
-.cs-position-pill.badge-warning {
-  background: rgba(243, 156, 18, 0.15);
-  color: #f39c12;
-  border: 1px solid rgba(243, 156, 18, 0.4);
-}
-
-.cs-position-pill.badge-neutral {
-  background: rgba(127, 140, 141, 0.15);
-  color: #95a5a6;
-  border: 1px solid rgba(127, 140, 141, 0.3);
-}
-
-.cs-detail-close {
+.cs-detail-close-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid var(--cs-line);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
-  color: var(--cs-muted);
+  color: #8faab7;
   cursor: pointer;
-  transition: all 140ms ease;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
 }
 
-.cs-detail-close:hover {
-  color: var(--cs-text);
+.cs-detail-close-btn:hover {
+  color: #ffffff;
   border-color: #48b5b5;
-  background: rgba(72, 181, 181, 0.15);
+  background: rgba(72, 181, 181, 0.2);
+  transform: scale(1.06);
 }
 
-.cs-detail-scroll {
+/* 滚动主容器 */
+.cs-detail-scroll-content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 14px 16px;
+  padding: 14px 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-/* 细深空滚动条 */
-.cs-detail-scroll::-webkit-scrollbar {
+.cs-detail-scroll-content::-webkit-scrollbar {
   width: 5px;
 }
-.cs-detail-scroll::-webkit-scrollbar-track {
+.cs-detail-scroll-content::-webkit-scrollbar-track {
   background: transparent;
 }
-.cs-detail-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
+.cs-detail-scroll-content::-webkit-scrollbar-thumb {
+  background: rgba(72, 181, 181, 0.22);
+  border-radius: 999px;
 }
-.cs-detail-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.24);
+.cs-detail-scroll-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(72, 181, 181, 0.45);
 }
 
+/* 通用卡片容器 */
 .cs-detail-card {
-  padding: 11px 12px;
-  background: rgba(4, 16, 23, 0.6);
-  border: 1px solid var(--cs-line);
-  border-radius: 10px;
+  padding: 13px 15px;
+  background: rgba(6, 20, 29, 0.68);
+  border: 1px solid rgba(72, 181, 181, 0.16);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+}
+
+.cs-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
@@ -556,183 +514,629 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  color: #48b5b5;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin: 0;
+  color: #6fe3e3;
+  letter-spacing: 0.03em;
 }
 
-.cs-highlight-banner {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(72, 181, 181, 0.35);
-  background: rgba(72, 181, 181, 0.1);
+.cs-card-icon {
+  color: #48b5b5;
+}
+
+/* 2. Hero 概率卡片与三维指标条 */
+.cs-hero-card {
+  background: radial-gradient(circle at top right, rgba(72, 181, 181, 0.15) 0%, rgba(6, 20, 29, 0.75) 70%);
+  border-color: rgba(72, 181, 181, 0.32);
+}
+
+.cs-hero-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(72, 181, 181, 0.14);
+}
+
+.cs-hero-score-block {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
-.cs-highlight-badge {
+.cs-hero-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  color: #8daab6;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cs-wave-icon {
+  color: #48b5b5;
+}
+
+.cs-hero-score-number {
+  font-size: 38px;
+  font-weight: 850;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.cs-hero-score-number[data-level="p20"] { color: #8a9ea8; }
+.cs-hero-score-number[data-level="p40"] { color: #48b5b5; text-shadow: 0 0 20px rgba(72, 181, 181, 0.3); }
+.cs-hero-score-number[data-level="p60"] { color: #3498db; text-shadow: 0 0 20px rgba(52, 152, 219, 0.35); }
+.cs-hero-score-number[data-level="p80"] { color: #2ecc71; text-shadow: 0 0 24px rgba(46, 204, 113, 0.4); }
+.cs-hero-score-number[data-level="p90"] { color: #2ecc71; text-shadow: 0 0 28px rgba(46, 204, 113, 0.5); }
+.cs-hero-score-number[data-level="p100"] { color: #5ef1a8; text-shadow: 0 0 32px rgba(94, 241, 168, 0.6); }
+
+.cs-hero-badge-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cs-pos-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.cs-pos-pill.badge-success {
+  background: rgba(46, 204, 113, 0.18);
+  color: #38e381;
+  border: 1px solid rgba(46, 204, 113, 0.45);
+  box-shadow: 0 0 12px rgba(46, 204, 113, 0.2);
+}
+
+.cs-pos-pill.badge-danger {
+  background: rgba(231, 76, 60, 0.18);
+  color: #ff6b5b;
+  border: 1px solid rgba(231, 76, 60, 0.45);
+}
+
+.cs-pos-pill.badge-warning {
+  background: rgba(243, 156, 18, 0.18);
+  color: #f5b041;
+  border: 1px solid rgba(243, 156, 18, 0.45);
+}
+
+.cs-pos-pill.badge-neutral {
+  background: rgba(149, 165, 166, 0.18);
+  color: #bdc3c7;
+  border: 1px solid rgba(149, 165, 166, 0.4);
+}
+
+.cs-summary-hint {
+  font-size: 11px;
+  color: #7fa0af;
+}
+
+/* 三维气象指标微指示条 */
+.cs-hero-metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.cs-mini-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cs-mini-metric-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: #8aa4b2;
+}
+
+.cs-mini-label {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.cs-mini-val {
+  font-weight: 700;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: #e2f1f5;
+}
+
+.cs-mini-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.cs-mini-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cs-bar-moisture { background: linear-gradient(90deg, #3498db, #48b5b5); }
+.cs-bar-position { background: linear-gradient(90deg, #2ecc71, #6fe3e3); }
+.cs-bar-wind { background: linear-gradient(90deg, #e67e22, #2ecc71); }
+
+/* 3. 山峰与云海垂直剖面可视化标尺 (Elevation Profile Visualizer) */
+.cs-elevation-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.cs-diff-tag {
   font-size: 11px;
   font-weight: 700;
-  color: #6fe3e3;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
-.cs-highlight-summary {
-  font-size: 11px;
-  color: var(--cs-text);
-  line-height: 1.45;
+.cs-diff-tag.is-above {
+  background: rgba(46, 204, 113, 0.15);
+  color: #38e381;
+  border: 1px solid rgba(46, 204, 113, 0.35);
 }
 
-.cs-highlight-meta {
-  font-size: 10px;
-  color: var(--cs-muted);
+.cs-diff-tag.is-below {
+  background: rgba(231, 76, 60, 0.15);
+  color: #ff7667;
+  border: 1px solid rgba(231, 76, 60, 0.35);
 }
 
-/* 标高与相对高差矩阵 */
-.cs-profile-matrix {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-}
-
-.cs-matrix-cell {
+.cs-profile-diagram {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 6px 8px;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* 峰顶标高节点 */
+.cs-diag-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(72, 181, 181, 0.09);
+  border: 1px solid rgba(72, 181, 181, 0.25);
+}
+
+.cs-diag-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.cs-matrix-cell.primary {
-  background: rgba(72, 181, 181, 0.08);
-  border-color: rgba(72, 181, 181, 0.25);
-}
-
-.cs-matrix-cell label {
-  font-size: 10px;
-  color: var(--cs-muted);
-}
-
-.cs-matrix-cell strong {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--cs-text);
-  font-family: var(--font-mono, ui-monospace, monospace);
-}
-
-.cs-matrix-cell.primary strong {
+  background: rgba(72, 181, 181, 0.2);
   color: #6fe3e3;
 }
 
-/* 日出与方位角 */
-.cs-sun-strip {
+.cs-diag-info {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 9px;
-  background: rgba(243, 156, 18, 0.08);
-  border: 1px solid rgba(243, 156, 18, 0.2);
-  border-radius: 7px;
-  font-size: 11px;
 }
 
-.cs-sun-strip-label {
+.cs-diag-title-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  color: #f39c12;
-}
-
-.cs-sun-strip-val {
-  font-weight: 700;
-  color: var(--cs-text);
-  font-family: var(--font-mono, ui-monospace, monospace);
-}
-
-/* 成海气象因子微网格 */
-.cs-weather-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: 6px;
 }
 
-.cs-weather-item {
+.cs-diag-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2f1f5;
+}
+
+.cs-diag-tag {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #9ab4c2;
+}
+
+.cs-diag-alt {
+  font-size: 15px;
+  font-weight: 750;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: #6fe3e3;
+}
+
+/* 中间落差指示带 */
+.cs-diag-gap-zone {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  margin-left: 14px;
+  position: relative;
+}
+
+.cs-diag-gap-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: dashed rgba(72, 181, 181, 0.35);
+}
+
+.cs-diag-gap-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cs-gap-indicator {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cs-gap-green { color: #38e381; }
+.cs-gap-orange { color: #f39c12; }
+.cs-gap-gray { color: #95a5a6; }
+
+.cs-gap-meta {
+  font-size: 10px;
+  color: #7b9aa8;
+}
+
+/* 云海波浪立体层 */
+.cs-diag-cloud-layer {
+  display: flex;
+  flex-direction: column;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(72, 181, 181, 0.3);
+  background: linear-gradient(180deg, rgba(31, 120, 209, 0.18) 0%, rgba(10, 44, 68, 0.28) 100%);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.cs-cloud-top-edge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  background: rgba(72, 181, 181, 0.14);
+  border-bottom: 1px dashed rgba(72, 181, 181, 0.28);
+}
+
+.cs-cloud-wave-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7ce3e3;
+}
+
+.cs-cloud-alt {
+  font-size: 14px;
+  font-weight: 750;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: #ffffff;
+}
+
+.cs-cloud-body-fill {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: radial-gradient(ellipse at center, rgba(72, 181, 181, 0.1) 0%, transparent 80%);
+}
+
+.cs-cloud-stats-inline {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #8faec0;
+}
+
+.cs-cloud-stats-inline b {
+  color: #d8edf3;
+  font-weight: 650;
+}
+
+.cs-cloud-base-edge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cs-cloud-base-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #728c9a;
+}
+
+.cs-base-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #537180;
+}
+
+.cs-cloud-base-alt {
+  font-size: 11px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: #8daab8;
+}
+
+/* 4. 高山成海气象因子 2x2 Bento 网格 */
+.cs-bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.cs-bento-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 160ms ease;
+}
+
+.cs-bento-tile:hover {
+  border-color: rgba(72, 181, 181, 0.25);
+}
+
+.cs-tile-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cs-tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.cs-icon-moist { background: rgba(52, 152, 219, 0.15); color: #5dade2; }
+.cs-icon-wind { background: rgba(46, 204, 113, 0.15); color: #58d68d; }
+.cs-icon-sun { background: rgba(243, 156, 18, 0.15); color: #f5b041; }
+.cs-icon-compass { background: rgba(155, 89, 182, 0.15); color: #bb8fce; }
+
+.cs-tile-title {
+  font-size: 11px;
+  font-weight: 650;
+  color: #8faec0;
+}
+
+.cs-tile-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 1px 0;
+}
+
+.cs-tile-number {
+  font-size: 17px;
+  font-weight: 750;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: #f0f7f9;
+}
+
+.cs-time-text {
+  color: #f5b041;
+}
+
+.cs-tile-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.pill-good { background: rgba(46, 204, 113, 0.15); color: #38e381; }
+.pill-normal { background: rgba(52, 152, 219, 0.15); color: #5dade2; }
+.pill-warn { background: rgba(243, 156, 18, 0.15); color: #f5b041; }
+.pill-danger { background: rgba(231, 76, 60, 0.15); color: #ff6b5b; }
+.pill-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(243, 156, 18, 0.15);
+  color: #f5b041;
+  border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.cs-tile-sub {
+  font-size: 10px;
+  color: #6f8a98;
+}
+
+/* 罗盘微组件 */
+.cs-compass-tile {
+  justify-content: space-between;
+}
+
+.cs-compass-widget {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.cs-compass-svg {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.cs-compass-outer-ring {
+  fill: rgba(3, 15, 23, 0.6);
+  stroke: rgba(72, 181, 181, 0.35);
+  stroke-width: 1.5;
+}
+
+.cs-compass-inner-ring {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.cs-compass-cardinal {
+  font-size: 6px;
+  font-weight: 700;
+  fill: #6c8a98;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.cs-compass-cardinal.cs-north {
+  fill: #ff6b5b;
+}
+
+.cs-compass-arrow-north {
+  fill: #48b5b5;
+  filter: drop-shadow(0 0 4px rgba(72, 181, 181, 0.8));
+}
+
+.cs-compass-arrow-south {
+  fill: rgba(255, 255, 255, 0.2);
+}
+
+.cs-compass-pivot {
+  fill: #f0f7f9;
+}
+
+.cs-compass-readout {
+  display: flex;
+  flex-direction: column;
+}
+
+.cs-compass-deg {
+  font-size: 15px;
+  font-weight: 750;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: #7ce3e3;
+  line-height: 1.1;
+}
+
+.cs-compass-dir {
+  font-size: 10px;
+  color: #8daab6;
+}
+
+/* 5. 摄影实战方案 Blueprint */
+.cs-blueprint-card {
+  border-color: rgba(72, 181, 181, 0.22);
+}
+
+.cs-viewpoint-spot {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(72, 181, 181, 0.08);
+  border: 1px dashed rgba(72, 181, 181, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cs-spot-lead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cs-spot-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #48b5b5;
+  color: #03141f;
+}
+
+.cs-spot-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2f1f5;
+}
+
+.cs-spot-desc {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #9ab7c6;
+}
+
+.cs-gear-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+  margin-top: 2px;
+}
+
+.cs-gear-item {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.cs-weather-label {
+.cs-gear-label {
   font-size: 10px;
-  color: var(--cs-muted);
+  color: #728f9e;
 }
 
-.cs-weather-val {
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--cs-text);
-  font-family: var(--font-mono, ui-monospace, monospace);
-}
-
-/* 经典机位推荐卡片 */
-.cs-viewpoint-box {
-  padding: 8px 10px;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+.cs-gear-value {
   font-size: 11px;
-  color: var(--cs-text);
-  line-height: 1.45;
-}
-
-.cs-viewpoint-head {
-  display: flex;
-  align-items: center;
-  gap: 5px;
   font-weight: 700;
-  color: #48b5b5;
-  margin-bottom: 4px;
+  color: #d6eef5;
+  line-height: 1.35;
 }
 
-/* 摄影实战机位指南卡片 */
-.cs-advice-box {
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(72, 181, 181, 0.06);
-  border: 1px dashed rgba(72, 181, 181, 0.28);
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+.cs-gear-tip {
+  font-size: 9.5px;
+  color: #637f8e;
+  line-height: 1.35;
 }
 
-.cs-advice-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  font-size: 11px;
-  line-height: 1.45;
-  color: var(--cs-text);
-}
-
-.cs-advice-item svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: #48b5b5;
-}
-
-/* 响应式移动端处理 */
+/* 移动端响应式 */
 @media (max-width: 960px) {
   .cloudsea-root {
     height: auto;
@@ -755,7 +1159,8 @@
     max-height: 48vh;
   }
 
-  .cloudsea-detail-panel {
-    max-height: 55vh;
+  .cloudsea-site-detail {
+    max-height: 65vh;
   }
 }
+
