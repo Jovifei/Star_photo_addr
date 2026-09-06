@@ -3,11 +3,12 @@
 - [x] Bump package and lock metadata from 1.0.3 to 1.0.4.
 - [x] Add the v1.0.4 Keep a Changelog entry and in-app version record.
 - [x] Verify release gates after the version update.
-- [ ] Fast-forward merge the codex branch into `main`, push `main`, and redeploy the exact main SHA.
+- [x] Fast-forward merge the codex branch into `main`, push `main`, and redeploy the exact main SHA.
 
 ## Review
 
-- [ ] Record main merge SHA, deployment SHA, public health revision, and final domain checks.
+- [x] `main@20393b15bcd5` merged and pushed; ECS `main` and public `/healthz` report `20393b15bcd5` / `1.0.4`.
+- [x] Public `/`, `/cloudsea`, `/fireglow` return HTTP 200; data-source probe is healthy; worker snapshot logs are fresh.
 
 # E2E contract and health version metadata (2026-09-06)
 
