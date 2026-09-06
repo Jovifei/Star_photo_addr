@@ -128,12 +128,13 @@ export default function CloudSeaSiteDetail({
       </div>
 
       <div className="cs-detail-scroll-content">
-        {/* 2. 云海综合概率与成海指数 Bento 磁贴 */}
+        <p className="cs-beta-note">Beta · 湿度来自 Open-Meteo；云底/云顶和条件指数为启发式估算，尚未完成现场云底仪或长期实拍概率校准。</p>
+        {/* 2. 云海条件指数与条件指数 Bento 磁贴 */}
         <section className="cs-detail-card cs-hero-card">
           <div className="cs-hero-top">
             <div className="cs-hero-score-block">
               <span className="cs-hero-kicker">
-                <Waves size={13} className="cs-wave-icon" /> 云海综合概率
+                <Waves size={13} className="cs-wave-icon" /> 云海条件指数
               </span>
               <div className="cs-hero-score-number" data-level={pLevel}>
                 {win.probabilityLabel ?? "—"}

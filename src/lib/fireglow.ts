@@ -29,6 +29,12 @@ export type FireGlowProbabilityLevel =
   | "p95"
   | "p100";
 
+export function isHighFireGlowLevel(
+  level: FireGlowProbabilityLevel | null | undefined,
+): boolean {
+  return level === "p80" || level === "p88" || level === "p95" || level === "p100";
+}
+
 export interface FireGlowWindowScore {
   score: number | null;
   band: FireGlowBand;

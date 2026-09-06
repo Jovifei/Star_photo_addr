@@ -3,9 +3,9 @@ import CloudSeaClient from "./CloudSeaClient";
 import "./cloudsea.css";
 
 export const metadata: Metadata = {
-  title: "云海预测地图｜高山云顶 · 晨昏云海与日出预测",
+  title: "云海条件地图 Beta｜高山云层 · 晨昏云海条件指数",
   description:
-    "全国名山高山云海概率分布、相对云层高度（云上/云中/云下）、逆温层推导、晨昏日出窗口与三日总览。",
+    "全国名山云海条件指数、真实相对湿度与低云数据，并结合地形启发式估算云底/云顶层位；结果为 Beta 条件判断，不是现场校准概率。",
 };
 
 export default function CloudSeaPage() {

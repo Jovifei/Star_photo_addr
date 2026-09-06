@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
 import { buildCloudSeaSnapshot, type CloudSeaSnapshot, type RawSiteHourly } from "@/lib/cloudsea";
-import { applyOpenMeteoApiKey, OPEN_METEO_FORECAST_URL } from "@/lib/forecast";
+import {
+  applyOpenMeteoApiKey,
+  openMeteoModelParameter,
+  OPEN_METEO_FORECAST_URL,
+} from "@/lib/forecast";
 import type { ForecastModel } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -26,30 +30,30 @@ function rememberSnapshot(key: string, snapshot: CloudSeaSnapshot) {
   }
 }
 
-function generateFallbackWeather(date: string): Record<string, RawSiteHourly> {
-  const times: string[] = [];
-  for (let h = 0; h < 24; h++) {
-    const hh = String(h).padStart(2, "0");
-    times.push(`${date}T${hh}:00`);
-  }
+function validAlignedSeries(value: unknown, expectedLength: number): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === expectedLength &&
+    value.every((item) => item === null || (typeof item === "number" && Number.isFinite(item))) &&
+    value.some((item) => typeof item === "number" && Number.isFinite(item))
+  );
+}
 
-  const result: Record<string, RawSiteHourly> = {};
-  for (const site of CLOUD_SEA_SITES) {
-    const isHigh = site.altitude >= 1800;
-    const baseLowCloud = isHigh ? 65 : 40;
-    result[site.id] = {
-      time: times,
-      cloud_cover: times.map(() => baseLowCloud + 10),
-      cloud_cover_low: times.map((_, i) => (i >= 5 && i <= 8 ? baseLowCloud + 10 : baseLowCloud)),
-      cloud_cover_mid: times.map(() => 15),
-      cloud_cover_high: times.map(() => 10),
-      temperature_2m: times.map((_, i) => Math.round(18 - (site.altitude / 1000) * 6 + Math.sin(i / 4) * 5)),
-      precipitation: times.map(() => 0),
-      visibility: times.map(() => 25000),
-      wind_speed_10m: times.map(() => 2.2),
-    };
+function validCloudSeaHourly(hourly: Record<string, unknown>): boolean {
+  const times = hourly.time;
+  if (!Array.isArray(times) || times.length === 0 || !times.every((time) => typeof time === "string")) {
+    return false;
   }
-  return result;
+  const required = [
+    "cloud_cover_low",
+    "cloud_cover_mid",
+    "cloud_cover_high",
+    "temperature_2m",
+    "relative_humidity_2m",
+    "precipitation",
+    "wind_speed_10m",
+  ];
+  return required.every((field) => validAlignedSeries(hourly[field], times.length));
 }
 
 async function fetchCloudSeaWeather(
@@ -66,6 +70,7 @@ async function fetchCloudSeaWeather(
     longitude: lngs,
     hourly: [
       "temperature_2m",
+      "relative_humidity_2m",
       "cloud_cover",
       "cloud_cover_low",
       "cloud_cover_mid",
@@ -79,11 +84,8 @@ async function fetchCloudSeaWeather(
     end_date: date,
   });
 
-  if (model === "icon") {
-    params.set("models", "icon_seamless");
-  } else if (model === "gfs") {
-    params.set("models", "gfs_seamless");
-  }
+  const providerModel = openMeteoModelParameter(model);
+  if (providerModel) params.set("models", providerModel);
 
   applyOpenMeteoApiKey(params);
 
@@ -109,7 +111,7 @@ async function fetchCloudSeaWeather(
 
       CLOUD_SEA_SITES.forEach((site, index) => {
         const entry = list[index];
-        if (entry && entry.hourly) {
+        if (entry?.hourly && validCloudSeaHourly(entry.hourly as Record<string, unknown>)) {
           result[site.id] = {
             time: entry.hourly.time ?? [],
             cloud_cover: entry.hourly.cloud_cover ?? [],
@@ -117,6 +119,7 @@ async function fetchCloudSeaWeather(
             cloud_cover_mid: entry.hourly.cloud_cover_mid ?? [],
             cloud_cover_high: entry.hourly.cloud_cover_high ?? [],
             temperature_2m: entry.hourly.temperature_2m ?? [],
+            relative_humidity_2m: entry.hourly.relative_humidity_2m ?? [],
             precipitation: entry.hourly.precipitation ?? [],
             visibility: entry.hourly.visibility ?? [],
             wind_speed_10m: entry.hourly.wind_speed_10m ?? [],
@@ -130,11 +133,15 @@ async function fetchCloudSeaWeather(
     } catch (err) {
       lastErr = err;
       if (signal.aborted) throw err;
+      if (attempt === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
     }
   }
 
-  console.warn("Open-Meteo fetch failed after retries, using resilient fallback for", date, lastErr);
-  return generateFallbackWeather(date);
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(`Open-Meteo 云海气象数据不可用：${date}`);
 }
 
 export async function GET(request: NextRequest) {
@@ -174,6 +181,17 @@ export async function GET(request: NextRequest) {
           },
         );
       }
+      return NextResponse.json(
+        { error: "云海强制刷新处于冷却保护，请稍后重试" },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "X-Cloudsea-Cache": "refresh-cooldown",
+            "Retry-After": String(Math.ceil((FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000)),
+          },
+        },
+      );
     } else {
       lastForceAt.set(key, Date.now());
     }

@@ -20,6 +20,7 @@ const TIMEOUT_MS = 120_000;
 /** Forced refreshes per date|model are throttled so page retries and the
  * worker cannot stampede the upstream quota. */
 const FORCE_REFRESH_COOLDOWN_MS = 60_000;
+const DISK_STALE_TTL_MS = 24 * 60 * 60_000;
 
 const SNAPSHOT_DIRECTORY =
   process.env.OBSERVING_SNAPSHOT_DIR ??
@@ -75,6 +76,17 @@ function readFireglowFromDisk(date: string, model: string): FireGlowSnapshot | n
   }
 }
 
+export function fireglowSnapshotAgeMs(snapshot: FireGlowSnapshot): number {
+  const generatedAt = Date.parse(snapshot.generatedAt);
+  if (!Number.isFinite(generatedAt)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, Date.now() - generatedAt);
+}
+
+function readUsableFireglowDiskSnapshot(date: string, model: string): FireGlowSnapshot | null {
+  const snapshot = readFireglowFromDisk(date, model);
+  return snapshot && fireglowSnapshotAgeMs(snapshot) <= DISK_STALE_TTL_MS ? snapshot : null;
+}
+
 const cache = new Map<string, { snapshot: FireGlowSnapshot; at: number }>();
 const inFlight = new Map<string, Promise<FireGlowSnapshot>>();
 const lastForceAt = new Map<string, number>();
@@ -121,14 +133,16 @@ export async function GET(request: NextRequest) {
   }
 
   const key = `${date}|${model}`;
+  const diskCached = readUsableFireglowDiskSnapshot(date, model);
   if (forceRefresh) {
     const last = lastForceAt.get(key) ?? 0;
     const elapsed = Date.now() - last;
     if (elapsed < FORCE_REFRESH_COOLDOWN_MS) {
       const cached = cache.get(key);
-      if (cached) {
+      const cooldownFallback = cached?.snapshot ?? diskCached;
+      if (cooldownFallback) {
         return NextResponse.json(
-          { ...cached.snapshot, stale: true, refreshError: "强制刷新冷却中" },
+          { ...cooldownFallback, stale: true, refreshError: "强制刷新冷却中" },
           {
             headers: {
               "Cache-Control": "no-store",
@@ -138,6 +152,17 @@ export async function GET(request: NextRequest) {
           },
         );
       }
+      return NextResponse.json(
+        { error: "火烧云强制刷新处于冷却保护，请稍后重试" },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "X-Fireglow-Cache": "refresh-cooldown",
+            "Retry-After": String(Math.ceil((FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000)),
+          },
+        },
+      );
     } else {
       lastForceAt.set(key, Date.now());
     }
@@ -153,9 +178,9 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const diskCached = readFireglowFromDisk(date, model);
-  if (!cached && diskCached && !forceRefresh) {
-    cache.set(key, { snapshot: diskCached, at: Date.now() });
+  if (!cached && diskCached && !forceRefresh && fireglowSnapshotAgeMs(diskCached) <= TTL_MS) {
+    const ageMs = fireglowSnapshotAgeMs(diskCached);
+    cache.set(key, { snapshot: diskCached, at: Date.now() - ageMs });
     return NextResponse.json(diskCached, {
       headers: {
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
@@ -188,7 +213,8 @@ export async function GET(request: NextRequest) {
   try {
     const snapshot = await activeTask;
     const newCount = countValidScores(snapshot);
-    const diskFallback = diskCached ?? readFireglowFromDisk(date, model);
+    const latestDisk = readUsableFireglowDiskSnapshot(date, model);
+    const diskFallback = diskCached ?? latestDisk;
     const diskCount = countValidScores(diskFallback);
 
     if (diskCount > 0 && newCount < diskCount * 0.7) {

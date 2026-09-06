@@ -117,12 +117,12 @@ export default function FireglowSiteDetail({
       </div>
 
       <div className="fg-detail-scroll-content">
-        {/* 2. 霞光爆发概率与鲜艳度 Hero 卡片 */}
+        {/* 2. 霞光条件指数与鲜艳度 Hero 卡片 */}
         <section className="fg-detail-card fg-hero-card">
           <div className="fg-hero-top">
             <div className="fg-hero-score-block">
               <span className="fg-hero-kicker">
-                <Flame size={13} className="fg-flame-icon" /> 霞光爆发概率
+                <Flame size={13} className="fg-flame-icon" /> 霞光条件指数
               </span>
               <div className="fg-hero-score-number" data-level={pLevel}>
                 {win.probabilityLabel ?? "—"}

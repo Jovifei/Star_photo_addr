@@ -16,7 +16,7 @@ import {
 } from "@/lib/constants";
 import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
-import { fireGlowBandLabel } from "@/lib/fireglow";
+import { fireGlowBandLabel, isHighFireGlowLevel } from "@/lib/fireglow";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 import FireglowSiteDetail from "./FireglowSiteDetail";
 
@@ -228,7 +228,7 @@ export default function FireglowApp() {
 
   const bestCount = ranked.filter((site) => {
     const level = site.window.probabilityLevel;
-    return level === "p80" || level === "p100";
+    return isHighFireGlowLevel(level);
   }).length;
   const selectedSite = ranked.find((site) => site.id === selectedId) ?? null;
 
@@ -243,7 +243,7 @@ export default function FireglowApp() {
         mark={<Flame size={18} aria-hidden="true" />}
         markClassName="fireglow-mark"
         eyebrow="逐霞"
-        title="火烧云概率地图"
+        title="火烧云条件地图"
       >
         <div className="fireglow-controls">
           <div className="segmented" role="group" aria-label="晨昏窗口">
@@ -281,11 +281,15 @@ export default function FireglowApp() {
         </div>
       </ProductHeader>
 
+      <div className="fireglow-model-note" role="note">
+        条件指数由云层结构、能见度与太阳高度启发式映射，尚未完成长期实拍事件概率校准。
+      </div>
+
       <main
         className="fireglow-workspace"
         data-inspector-open={selectedSite ? "true" : "false"}
       >
-        <div className="fireglow-map" aria-label="火烧云概率地图">
+        <div className="fireglow-map" aria-label="火烧云条件指数地图">
           <MapContainer
             ref={setMap}
             center={[35.5, 104.5]}
@@ -308,7 +312,7 @@ export default function FireglowApp() {
                 bounds={overlay.bounds}
                 interactive={false}
                 zIndex={260}
-                alt="火烧云概率分布色块"
+                alt="火烧云条件指数分布色块"
               />
             )}
             <ChineseLabelLayer />
@@ -334,8 +338,8 @@ export default function FireglowApp() {
               </CircleMarker>
             ))}
           </MapContainer>
-          <div className="fireglow-legend" aria-label="火烧云概率等级色阶">
-            <span>火烧云概率</span>
+          <div className="fireglow-legend" aria-label="火烧云条件指数等级色阶">
+            <span>火烧云条件指数</span>
             {LEVEL_LABELS.map((entry) => (
               <span key={entry.level}>
                 <i style={{ background: LEVEL_COLORS[entry.level] }} />
@@ -345,7 +349,7 @@ export default function FireglowApp() {
           </div>
         </div>
 
-        <aside className="fireglow-panel" aria-label="火烧云概率排行">
+        <aside className="fireglow-panel" aria-label="火烧云条件指数排行">
           <div className="fireglow-panel-head">
             <strong>{phase === "evening" ? "晚霞概率排行" : "朝霞概率排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
             <span>60% 以上 {bestCount} 个点位</span>

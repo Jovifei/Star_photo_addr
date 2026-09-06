@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFireGlowSnapshot, probabilityRangeFor, scoreFireGlowSite } from "@/lib/fireglow";
+import { buildFireGlowSnapshot, isHighFireGlowLevel, probabilityRangeFor, scoreFireGlowSite } from "@/lib/fireglow";
 import type { FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
 
 function recordWithHours(
@@ -155,5 +155,17 @@ describe("probabilityRangeFor", () => {
     expect(probabilityRangeFor(20)?.label).toBe("20–40%");
     expect(probabilityRangeFor(5)?.level).toBe("p20");
     expect(probabilityRangeFor(null)).toBeNull();
+  });
+});
+
+
+describe("isHighFireGlowLevel", () => {
+  it("counts every high presentation tier including subdivided top tiers", () => {
+    expect(isHighFireGlowLevel("p80")).toBe(true);
+    expect(isHighFireGlowLevel("p88")).toBe(true);
+    expect(isHighFireGlowLevel("p95")).toBe(true);
+    expect(isHighFireGlowLevel("p100")).toBe(true);
+    expect(isHighFireGlowLevel("p60")).toBe(false);
+    expect(isHighFireGlowLevel(null)).toBe(false);
   });
 });

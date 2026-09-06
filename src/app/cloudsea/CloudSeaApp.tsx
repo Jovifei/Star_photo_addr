@@ -40,12 +40,12 @@ const LEVEL_COLORS: Record<CloudSeaProbabilityLevel, string> = {
 };
 
 const LEVEL_LABELS: Array<{ level: CloudSeaProbabilityLevel; range: string }> = [
-  { level: "p20", range: "0–20%" },
-  { level: "p40", range: "20–40%" },
-  { level: "p60", range: "40–60%" },
-  { level: "p80", range: "60–80%" },
-  { level: "p90", range: "80–90%" },
-  { level: "p100", range: "90–100%" },
+  { level: "p20", range: "0–20" },
+  { level: "p40", range: "20–40" },
+  { level: "p60", range: "40–60" },
+  { level: "p80", range: "60–80" },
+  { level: "p90", range: "80–90" },
+  { level: "p100", range: "90–100" },
 ];
 
 function todayKey(): string {
@@ -219,7 +219,7 @@ export default function CloudSeaApp() {
         mark={<Mountains size={18} aria-hidden="true" />}
         markClassName="cloudsea-mark"
         eyebrow="云顶"
-        title="云海预测地图"
+        title="云海条件地图"
       >
         <div className="cloudsea-controls">
           {/* 晨间 / 傍晚 窗口切换 */}
@@ -272,6 +272,10 @@ export default function CloudSeaApp() {
           </button>
         </div>
       </ProductHeader>
+
+      <div className="cloudsea-beta-banner" role="note">
+        Beta · 条件指数基于 Open-Meteo 云量、真实相对湿度、风与地形的启发式计算；云底/云顶为估算层位，尚未完成现场概率校准。
+      </div>
 
       <div
         className="cloudsea-body"
@@ -342,7 +346,7 @@ export default function CloudSeaApp() {
                           marginBottom: "4px",
                         }}
                       >
-                        <span>云海概率: {win.probabilityLabel ?? "—"}</span>
+                        <span>云海条件指数: {win.probabilityLabel ?? "—"}</span>
                         <span style={{ color: win.cloudPosition === "above" ? "#27ae60" : "#d35400" }}>
                           {win.positionLabel}
                         </span>
@@ -360,7 +364,7 @@ export default function CloudSeaApp() {
 
           {/* 地图左下角图例 */}
           <div className="cloudsea-legend">
-            <span className="cloudsea-legend-title">云海出现概率色阶</span>
+            <span className="cloudsea-legend-title">云海条件指数色阶</span>
             <div className="cloudsea-legend-bar">
               {LEVEL_LABELS.map((item) => (
                 <span

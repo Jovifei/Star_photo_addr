@@ -1,4 +1,4 @@
-// Cloud-sea (云海预测) scoring for mountain observing sites.
+// Cloud-sea (云海条件指数) scoring for mountain observing sites.
 //
 // Evaluates cloud top/base heights, temperature inversion, relative humidity,
 // ground wind speed and upper-level clearing against mountain summit elevations.
@@ -118,6 +118,7 @@ export interface RawSiteHourly {
   cloud_cover_mid?: Array<number | null>;
   cloud_cover_high?: Array<number | null>;
   temperature_2m?: Array<number | null>;
+  relative_humidity_2m?: Array<number | null>;
   precipitation?: Array<number | null>;
   visibility?: Array<number | null>;
   wind_speed_10m?: Array<number | null>;
@@ -132,14 +133,18 @@ export function estimateCloudLayers(
   lowCloudPct: number,
   tempC: number,
   windSpeedMs = 2.0,
+  humidityPct = 75,
 ): { baseM: number; topM: number } {
   // Approximate valley floor elevation ASL
   const valleyFloorM = Math.max(50, Math.round(siteAltitude * 0.35));
   
-  // Condensation level (LCL) estimated above valley floor
-  // Higher temp and wind push base higher; moist calm air keeps it lower
+  // Heuristic LCL proxy. Estimate dew-point depression from the real
+  // provider relative humidity, then use ~125 m/°C as an approximate LCL
+  // height. This remains an estimate, not a pressure-level cloud-base product.
+  const humidity = clamp(humidityPct, 5, 100);
+  const dewPointC = tempC - (100 - humidity) / 5;
   const lclAboveValley = Math.round(
-    Math.max(250, 400 + Math.max(0, tempC) * 20 + windSpeedMs * 15),
+    clamp(125 * Math.max(0, tempC - dewPointC) + windSpeedMs * 10, 120, 1800),
   );
   const baseM = valleyFloorM + lclAboveValley;
 
@@ -174,35 +179,61 @@ export function evaluateCloudSeaWindow(
     }
   });
 
-  const activeIndices = indices.length > 0 ? indices : hourly.time.map((_, i) => i);
+  if (indices.length === 0) {
+    return {
+      ...CLOUD_SEA_EMPTY_WINDOW,
+      summary: "目标晨昏窗口没有对应的逐小时气象数据。",
+    };
+  }
+  const activeIndices = indices;
 
-  // Extract average parameters
-  const avg = (arr?: Array<number | null>, def = 0) => {
-    if (!arr) return def;
+  // Critical inputs must be present for the requested window. Missing
+  // provider data is not replaced with synthetic defaults.
+  const avg = (arr?: Array<number | null>): number | null => {
+    if (!arr) return null;
     let sum = 0;
     let count = 0;
     for (const idx of activeIndices) {
-      const v = arr[idx];
-      if (typeof v === "number" && Number.isFinite(v)) {
-        sum += v;
+      const value = arr[idx];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        sum += value;
         count += 1;
       }
     }
-    return count > 0 ? sum / count : def;
+    return count > 0 ? sum / count : null;
   };
 
-  const lowCloud = avg(hourly.cloud_cover_low, 20);
-  const midCloud = avg(hourly.cloud_cover_mid, 10);
-  const highCloud = avg(hourly.cloud_cover_high, 10);
-  const tempC = avg(hourly.temperature_2m, 12);
-  const windSpeed = avg(hourly.wind_speed_10m, 2.5);
-  const precip = avg(hourly.precipitation, 0);
+  const lowCloud = avg(hourly.cloud_cover_low);
+  const midCloud = avg(hourly.cloud_cover_mid);
+  const highCloud = avg(hourly.cloud_cover_high);
+  const tempC = avg(hourly.temperature_2m);
+  const humidity = avg(hourly.relative_humidity_2m);
+  const windSpeed = avg(hourly.wind_speed_10m);
+  const precip = avg(hourly.precipitation);
 
-  // Derive estimated relative humidity proxy (higher low cloud & precip -> high humidity)
-  const humidityProxy = Math.round(clamp(45 + lowCloud * 0.45 + (precip > 0 ? 20 : 0)));
+  if (
+    lowCloud === null ||
+    midCloud === null ||
+    highCloud === null ||
+    tempC === null ||
+    humidity === null ||
+    windSpeed === null ||
+    precip === null
+  ) {
+    return {
+      ...CLOUD_SEA_EMPTY_WINDOW,
+      summary: "关键云量、湿度、风或降水数据不完整，无法计算云海条件指数。",
+    };
+  }
 
   // Estimate cloud layers
-  const { baseM, topM } = estimateCloudLayers(site.altitude, lowCloud, tempC, windSpeed);
+  const { baseM, topM } = estimateCloudLayers(
+    site.altitude,
+    lowCloud,
+    tempC,
+    windSpeed,
+    humidity,
+  );
   const altDiff = site.altitude - topM;
 
   // Determine observer position
@@ -271,7 +302,7 @@ export function evaluateCloudSeaWindow(
   return {
     score,
     probabilityLevel: pLevel,
-    probabilityLabel: `${score}%`,
+    probabilityLabel: `${score}/100`,
     cloudPosition: pos,
     positionLabel: positionLabel(pos),
     cloudBaseM: baseM,
@@ -280,7 +311,7 @@ export function evaluateCloudSeaWindow(
     lowCloud: Math.round(lowCloud),
     midCloud: Math.round(midCloud),
     highCloud: Math.round(highCloud),
-    humidity: humidityProxy,
+    humidity: Math.round(humidity),
     windSpeed: Math.round(windSpeed * 10) / 10,
     peakTime: peakTimeStr,
     summary,
@@ -323,7 +354,7 @@ export function buildCloudSeaSnapshot(
     date,
     model,
     generatedAt: new Date().toISOString(),
-    source: "Open-Meteo Pressure & Cloud Layer Engine",
+    source: "Open-Meteo surface cloud + RH heuristic (Beta)",
     stale: false,
     sites: sitesRecord,
   };
