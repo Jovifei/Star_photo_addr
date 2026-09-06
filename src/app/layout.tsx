@@ -31,9 +31,6 @@ export const metadata: Metadata = {
     "星空摄影",
   ],
   authors: [{ name: "逐星 PERSEIDS OBSERVATORY" }],
-  alternates: {
-    canonical: "/",
-  },
   openGraph: {
     title: "逐星｜星空摄影观测平台",
     description:
