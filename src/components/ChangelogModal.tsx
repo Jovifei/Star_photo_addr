@@ -10,10 +10,33 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
+    version: "v1.0.4",
+    date: "2026-09-06",
+    tag: "统一工作台契约与版本追踪修复",
+    current: true,
+    highlights: [
+      {
+        icon: Layers,
+        title: "统一工作台回归契约",
+        desc: "E2E 覆盖已迁移到当前「地点详情 / 图层与偏好」检查器、移动端地图工具抽屉、Planner 兼容跳转与暗夜选址 B1–B4 筛选条。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "版本与部署状态可追溯",
+        desc: "健康接口在生产环境直接读取应用包版本，顶栏版本徽标、锁文件和部署构建版本保持一致。",
+      },
+      {
+        icon: CloudSun,
+        title: "降级与重试回归稳定",
+        desc: "天气 HTTP 429 的故障注入按目标地点隔离，并验证人工重试后恢复真实逐小时数据。",
+      },
+    ],
+  },
+  {
     version: "v1.0.3",
     date: "2026-09-06",
     tag: "火烧云与云海专属摄影地点详情舱",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: Sparkles,

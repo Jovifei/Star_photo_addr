@@ -1,3 +1,14 @@
+# v1.0.4 release and main integration (2026-09-06)
+
+- [x] Bump package and lock metadata from 1.0.3 to 1.0.4.
+- [x] Add the v1.0.4 Keep a Changelog entry and in-app version record.
+- [x] Verify release gates after the version update.
+- [ ] Fast-forward merge the codex branch into `main`, push `main`, and redeploy the exact main SHA.
+
+## Review
+
+- [ ] Record main merge SHA, deployment SHA, public health revision, and final domain checks.
+
 # E2E contract and health version metadata (2026-09-06)
 
 - [x] Add a regression test proving `/healthz` falls back to the package version outside an npm lifecycle.
