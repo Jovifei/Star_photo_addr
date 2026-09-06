@@ -5,6 +5,7 @@ import {
   installGeocodingMock,
   installNextApiMock,
   installOpenMeteoMock,
+  buildNormalizedForecasts,
 } from "./mock-open-meteo.js";
 
 const fixture = JSON.parse(
@@ -65,10 +66,14 @@ test("unavailable hourly forecast shows reason with retry and recovers real valu
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "选点状态反馈先测桌面");
-  let forecastCalls = 0;
+  let allowSelectedLocationRecovery = false;
+  await page.unroute("**/api/forecast?**");
   await page.route("**/api/forecast?**", async (route) => {
-    forecastCalls += 1;
-    if (forecastCalls === 1) {
+    const url = new URL(route.request().url());
+    const isSelectedLocation =
+      url.searchParams.get("latitude") === "30.4694" &&
+      url.searchParams.get("longitude") === "119.5978";
+    if (isSelectedLocation && !allowSelectedLocationRecovery) {
       await route.fulfill({
         status: 429,
         contentType: "application/json",
@@ -76,7 +81,15 @@ test("unavailable hourly forecast shows reason with retry and recovers real valu
       });
       return;
     }
-    await route.fallback();
+    const lats = (url.searchParams.get("latitude") || "").split(",").filter(Boolean);
+    const lons = (url.searchParams.get("longitude") || "").split(",").filter(Boolean);
+    const days = Math.min(16, Math.max(1, Number(url.searchParams.get("days")) || 14));
+    const model = url.searchParams.get("model") || "icon";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ locations: buildNormalizedForecasts(fixture, lats, lons, days, model) }),
+    });
   });
 
   await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA");
@@ -87,10 +100,11 @@ test("unavailable hourly forecast shows reason with retry and recovers real valu
   const retry = availability.getByRole("button", { name: /重试/ });
   await expect(retry).toBeVisible();
 
+  allowSelectedLocationRecovery = true;
   await retry.click();
   await expect(availability).toContainText(/数据更新|最近成功/, { timeout: 20000 });
-  // The retry has already consumed forecastCalls #2, so switching the time
-  // domain here cannot steal the 429 that this test is built around.
+  // The target point is now allowed to recover, so switching the time domain
+  // cannot replace the intended 429 → retry transition.
   await openHourlyMatrix(page);
   const firstCell = page
     .locator("#hourly-forecast-panel tbody td")
@@ -117,7 +131,7 @@ test("manual refresh failure keeps last good values and says so", async ({
       body: JSON.stringify({ error: "天气上游返回 HTTP 429" }),
     });
   });
-  await page.getByRole("tab", { name: "云量" }).click();
+  await page.getByRole("tab", { name: "图层与偏好" }).click();
   await page.getByRole("button", { name: /强制刷新天气/ }).click();
 
   await expect(availability).toContainText(/使用最近成功数据/, { timeout: 20000 });

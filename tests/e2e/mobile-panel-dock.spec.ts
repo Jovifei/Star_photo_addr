@@ -105,10 +105,8 @@ test("桌面端在证据页签中打开云量和地点，而不是地图浮层",
   await page.goto("/?overlay=forecast-cloud&view=combined");
 
   await expect(page.getByTestId("mobile-map-panel-dock")).toHaveCount(0);
-  await page.getByRole("tab", { name: "云量" }).click();
+  await page.getByRole("tab", { name: "图层与偏好" }).click();
   await expect(page.locator(".cloud-control")).toBeVisible();
-  await page.getByRole("tab", { name: "地点" }).click();
+  await page.getByRole("tab", { name: "图层与偏好" }).click();
   await expect(page.locator(".observing-map-control")).toBeVisible();
-  await page.getByRole("tab", { name: "设置" }).click();
-  await expect(page.locator(".map-panel-manager")).toBeVisible();
 });

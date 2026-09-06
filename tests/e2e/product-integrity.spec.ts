@@ -27,7 +27,7 @@ test("暗夜选址的 B1-B4 卡片可组合筛选并同步点位数量", async (
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
     panel = drawer.locator(".observing-map-control");
   } else {
-    await page.getByRole("tab", { name: "地点" }).click();
+    await page.getByRole("tab", { name: "图层与偏好" }).click();
     panel = page.locator(".observing-map-control:visible");
   }
   await expect(panel).toBeVisible();
@@ -95,18 +95,14 @@ test("sites workspace shows a B1–B4 filter bar above the map with visible colo
   await expect(container).toHaveAttribute("data-observing-site-count", "205");
 });
 
-test("稀疏坐标启用附近推荐时自动补最近观测点，关闭后恢复基础池", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "桌面仪表盘负责验证附近推荐列表的数量变化");
+test("稀疏坐标的观星计划兼容链接保留选点上下文", async ({ page }) => {
   await page.goto("/planner?lat=42.97&lng=97.43&name=%E5%8F%96%E6%A0%B7%E7%82%B9");
-  const nearby = page.locator('[aria-label="附近观星点推荐范围"]');
-  await expect(nearby).toBeVisible();
-  await nearby.getByRole("button", { name: "200 km" }).click();
-  await expect(page.locator(".nearby-hint")).toContainText("另补最近", { timeout: 20000 });
-  await expect(page.locator(".rank-card")).toHaveCount(9, { timeout: 20000 });
-
-  await nearby.getByRole("button", { name: "关闭" }).click();
-  await expect(page.locator(".nearby-hint")).toHaveCount(0);
-  await expect(page.locator(".rank-card")).toHaveCount(1);
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/");
+  const target = new URL(page.url());
+  expect(target.searchParams.get("lat")).toBe("42.97");
+  expect(target.searchParams.get("lng")).toBe("97.43");
+  expect(target.searchParams.get("name")).toBe("取样点");
+  await expect(page.locator(".map-stage")).toBeVisible();
 });
 
 test("火烧云地图在宽屏占满工作区而不是被 1680px 中心限宽", async ({ page }, testInfo) => {
@@ -155,9 +151,9 @@ test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo)
   });
   await page.goto("/fireglow");
   await page.locator(".fireglow-list button").first().click();
-  const inspector = page.locator(".fireglow-workspace > .fireglow-inspector");
+  const inspector = page.locator(".fireglow-workspace > .fireglow-site-detail");
   await expect(inspector).toBeVisible();
-  await expect(page.locator(".fireglow-panel .fireglow-inspector")).toHaveCount(0);
+  await expect(page.locator(".fireglow-panel .fireglow-site-detail")).toHaveCount(0);
   const panelBox = await page.locator(".fireglow-panel").boundingBox();
   const mapBox = await page.locator(".fireglow-map").boundingBox();
   const inspectorBox = await inspector.boundingBox();
@@ -186,7 +182,7 @@ test("当前时次评分不可用时明确显示数据不足，不把未知点�
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
   await page.goto("/?overlay=forecast-cloud&view=combined");
-  await page.getByRole("tab", { name: "地点" }).click();
+  await page.getByRole("tab", { name: "图层与偏好" }).click();
   const panel = page.locator(".observing-map-control:visible");
   await expect(panel).toHaveAttribute("data-score-status", "degraded", { timeout: 15000 });
   await expect(panel).toContainText("灰色点代表未知，不等同于低分");
@@ -205,7 +201,7 @@ test("卫星强制刷新失败时保留上一帧并标记降级", async ({ page 
   });
   await page.goto("/?overlay=satellite-cloud&view=satellite");
   await expect(page.locator(".satellite-frame-badge")).toBeVisible({ timeout: 15000 });
-  await page.getByRole("tab", { name: "云量", exact: true }).click();
+  await page.getByRole("tab", { name: "图层与偏好", exact: true }).click();
   const refresh = page.getByRole("button", { name: "强制刷新天气、卫星目录和数据源状态" });
   await refresh.click();
   await expect(page.locator(".satellite-layer-error")).toContainText("测试中的卫星上游不可用", { timeout: 15000 });

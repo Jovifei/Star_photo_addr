@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 
 export async function openMobileMapPanel(page, panel) {
-  const labels = {
+  const mobileLabels = {
     layers: "图层",
     places: "地点",
     cloud: "云量",
@@ -13,7 +13,7 @@ export async function openMobileMapPanel(page, panel) {
     ).matches,
   );
   if (!mobile) {
-    const tab = page.getByRole("tab", { name: labels[panel], exact: true });
+    const tab = page.getByRole("tab", { name: "图层与偏好", exact: true });
     if ((await tab.count()) === 0) return false;
     await tab.click();
     return false;
@@ -21,7 +21,7 @@ export async function openMobileMapPanel(page, panel) {
   await page.getByTestId("mobile-map-panel-dock").waitFor({ state: "visible", timeout: 15000 });
   const drawer = page.getByTestId("mobile-map-panel-drawer");
   if ((await drawer.count()) > 0 && (await drawer.getAttribute("aria-hidden")) === "false") {
-    await drawer.getByRole("tab", { name: labels[panel] }).click({ force: true });
+    await drawer.getByRole("tab", { name: mobileLabels[panel] }).click({ force: true });
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
     return true;
   }

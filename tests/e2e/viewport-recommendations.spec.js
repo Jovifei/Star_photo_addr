@@ -47,9 +47,8 @@ test("放大地图后生成编号推荐并可打开现有地点详情", async ({
 
   const docked = await openMobileMapPanel(page, "recommendations");
   if (!docked) {
-    // Desktop: the recommendation panel now lives inside the merged 设置 tab
-    // (图层+推荐 → 设置, plan item 3). It starts collapsed, so expand it.
-    await page.getByRole("tab", { name: "设置", exact: true }).click();
+    // Desktop: the helper opens the merged 图层与偏好 tab, whose
+    // recommendation panel starts collapsed.
     const expand = page.getByRole("button", { name: "展开当前视野推荐" });
     if (
       (await expand.count()) > 0 &&

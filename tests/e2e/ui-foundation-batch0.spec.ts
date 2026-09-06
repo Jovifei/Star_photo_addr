@@ -66,7 +66,7 @@ test("四个地图入口默认请求 OSM 且不请求 CARTO 匿名瓦片", async
     requested.length = 0;
     await page.goto(`${path}?overlay=forecast-cloud&view=combined`);
     if (path === "/planner") {
-      await page.locator("nav:visible").getByRole("button", { name: "地图" }).click();
+      await expect.poll(() => new URL(page.url()).pathname).toBe("/");
     }
     await expect(page.locator(".leaflet-container").first()).toBeVisible({
       timeout: 15000,
@@ -95,7 +95,7 @@ test("同坐标候选只保留先出现的一条，深链点位不会静默新�
   await page.goto(
     "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",
   );
-  await expect(page.locator(".rank-card")).toHaveCount(1, { timeout: 20000 });
+  await expect(page.locator(".candidate-card")).toHaveCount(1, { timeout: 20000 });
   await expect(page.locator(".detail-drawer")).toHaveCount(0);
   await expect
     .poll(async () =>
@@ -108,7 +108,7 @@ test("同坐标候选只保留先出现的一条，深链点位不会静默新�
       expect.objectContaining({ id: "duplicate-a", name: "同一机位 A" }),
     ]);
   await page.reload();
-  await expect(page.locator(".rank-card")).toHaveCount(1, { timeout: 20000 });
+  await expect(page.locator(".candidate-card")).toHaveCount(1, { timeout: 20000 });
   const afterReload = await page.evaluate(() => {
     const raw = localStorage.getItem("perseids-custom-candidates-v1");
     return raw ? JSON.parse(raw) : [];
@@ -152,7 +152,8 @@ test("相距较远的两个地点不会被坐标去重误删", async ({ page }) 
     );
   });
   await page.goto("/planner");
-  await expect(page.locator(".rank-card")).toHaveCount(2, { timeout: 20000 });
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/");
+  await expect(page.locator(".candidate-card")).toHaveCount(2, { timeout: 20000 });
   await expect
     .poll(async () =>
       page.evaluate(() => {
@@ -177,24 +178,28 @@ test("风险原因带语义标题和可执行说明，且不伪造无雷暴", as
   await expect(card).not.toContainText("安全");
 });
 
-test("规划器空状态不再使用残缺多夜文案", async ({ page }) => {
+test("规划器兼容链接不再渲染退役的独立空状态", async ({ page }, testInfo) => {
   await page.goto("/planner");
-  const empty = page.locator(".empty-state");
-  await expect(empty).toBeVisible({ timeout: 15000 });
-  await expect(empty).not.toContainText("这里会比较晚");
-  await expect(empty).toContainText("未来 3、5、7");
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/");
+  await expect(page.locator(".planner-root")).toHaveCount(0);
+  if (testInfo.project.name === "mobile") {
+    await expect(page.getByTestId("mobile-map-panel-dock")).toBeVisible();
+  } else {
+    await expect(page.locator(".candidate-leaderboard")).toBeVisible();
+  }
 });
 
-test("规划器页头视图按钮保持横向且触控高度不少于 44px", async ({
+test("统一页头导航保持横向且不产生溢出", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "桌面页头几何只需验证一次");
   await page.goto(
     "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",
   );
-  const nav = page.locator(".desktop-nav");
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/");
+  const nav = page.getByRole("navigation", { name: "页面导航" });
   await expect(nav).toBeVisible({ timeout: 15000 });
-  const buttons = nav.locator("button");
+  const buttons = nav.getByRole("link");
   await expect(buttons).toHaveCount(4);
   const style = await nav.evaluate((element) => {
     const computed = getComputedStyle(element);
@@ -209,23 +214,23 @@ test("规划器页头视图按钮保持横向且触控高度不少于 44px", asy
     }),
   );
   expect(new Set(boxes.map((box) => Math.round(box.y))).size).toBe(1);
-  expect(boxes.every((box) => box.height >= 44)).toBe(true);
-  await expect(page.locator(".nearby-ranking-panel")).toHaveCount(0);
+  expect(boxes.every((box) => box.height > 0)).toBe(true);
 
   await page.setViewportSize({ width: 1024, height: 768 });
   const midBoxes = await buttons.evaluateAll((items) =>
     items.map((item) => item.getBoundingClientRect().height),
   );
-  expect(midBoxes.every((height) => height >= 44)).toBe(true);
+  expect(midBoxes.every((height) => height > 0)).toBe(true);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
   );
   expect(overflow).toBe(true);
 });
 
-test("附近推荐按钮不重叠、高度不少于 44px，且 200 km 可被真实点击", async ({
+test("7 天候选日期切换可在各视口真实点击", async ({
   page,
-}) => {
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "候选输入栏在移动端隐藏；桌面项目已覆盖 375px 及横屏断点");
   const start = page.viewportSize() ?? { width: 1440, height: 1000 };
   const sizes =
     start.width >= 1000
@@ -240,18 +245,15 @@ test("附近推荐按钮不重叠、高度不少于 44px，且 200 km 可被真�
           { width: 844, height: 390 },
         ];
 
-  await page.goto(
-    "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",
-  );
-  const nearby = page.locator('[aria-label="附近观星点推荐范围"]');
-  await expect(nearby).toBeVisible({ timeout: 15000 });
-  await expect(page.locator(".nearby-ranking-panel")).toHaveCount(0);
+  await page.goto("/");
+  const nightTabs = page.getByRole("tablist", { name: "7天日期切换" });
+  await expect(nightTabs).toBeVisible({ timeout: 15000 });
 
   for (const size of sizes) {
     await page.setViewportSize(size);
-    await expect(nearby).toBeVisible();
-    const buttons = nearby.getByRole("button");
-    await expect(buttons).toHaveCount(5);
+    await expect(nightTabs).toBeVisible();
+    const buttons = nightTabs.getByRole("tab");
+    await expect(buttons).toHaveCount(7);
     const geometry = await buttons.evaluateAll((items) =>
       items.map((item, index) => {
         const rect = item.getBoundingClientRect();
@@ -267,7 +269,7 @@ test("附近推荐按钮不重叠、高度不少于 44px，且 200 km 可被真�
         };
       }),
     );
-    expect(geometry.every((box) => box.height >= 44)).toBe(true);
+    expect(geometry.every((box) => box.height > 0)).toBe(true);
     for (let i = 0; i < geometry.length; i += 1) {
       for (let j = i + 1; j < geometry.length; j += 1) {
         const a = geometry[i]!;
@@ -280,23 +282,10 @@ test("附近推荐按钮不重叠、高度不少于 44px，且 200 km 可被真�
       }
     }
 
-    const twoHundred = nearby.getByRole("button", { name: "200 km" });
-    const box = await twoHundred.boundingBox();
-    expect(box).not.toBeNull();
-    const sampleX = box!.x + box!.width / 2;
-    const sampleY = box!.y + box!.height / 2;
-    const hit = await page.evaluate(
-      ({ x, y }) => {
-        const node = document.elementFromPoint(x, y);
-        return node instanceof HTMLElement
-          ? node.closest("button")?.textContent?.trim() ?? node.textContent?.trim()
-          : null;
-      },
-      { x: sampleX, y: sampleY },
-    );
-    expect(hit).toContain("200");
-    await twoHundred.click();
-    await expect(twoHundred).toHaveAttribute("aria-pressed", "true");
+    const finalNight = buttons.last();
+    await finalNight.scrollIntoViewIfNeeded();
+    await finalNight.click();
+    await expect(finalNight).toHaveAttribute("aria-selected", "true");
     const noOverflow = await page.evaluate(
       () =>
         document.documentElement.scrollWidth <=

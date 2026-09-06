@@ -1,3 +1,19 @@
+# E2E contract and health version metadata (2026-09-06)
+
+- [x] Add a regression test proving `/healthz` falls back to the package version outside an npm lifecycle.
+- [x] Migrate desktop E2E helpers and assertions to the two-tab unified inspector while preserving the mobile tool drawer contract.
+- [x] Replace retired Planner-page coverage with compatibility-redirect and unified-workspace assertions.
+- [x] Replace retired score-panel coverage with the sites-workspace B1-B4 filter contract.
+- [x] Make the health route read the package version as its fallback.
+- [x] Run targeted RED/GREEN tests, `npm run check`, and the full E2E suite on an isolated port.
+
+## Review
+
+- [x] `healthzRoute.test.ts` RED (`1.0.0` received) then GREEN (`1.0.3` received).
+- [x] `npm run check`: lint, TypeScript, 43 Vitest files / 244 tests, and Next.js production build pass.
+- [x] `PORT=3187 npm run test:e2e`: 99 passed / 31 project-specific skips / 0 failed.
+- [x] Review the final diff and commit only this work package.
+
 # Cloudsea workspace deployment (2026-09-04)
 
 - [x] Verify cloudsea feature state on `main`: dedicated `/cloudsea` workspace (map + ranked sidebar), 5-tab nav, theme-switch navigation fix, 44 sites, retry/loading hardening (`5e83b4d`, `f6d7c24`, `c1b6e9f`).

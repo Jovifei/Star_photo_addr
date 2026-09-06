@@ -63,7 +63,7 @@ function buildSurfaceRaw(fixture, lats, lons, days) {
   });
 }
 
-function buildNormalizedForecasts(fixture, lats, lons, days, model = "icon") {
+export function buildNormalizedForecasts(fixture, lats, lons, days, model = "icon") {
   // Keep the deterministic fixture anchored to the repository's acceptance
   // date so the 20:00–05:00 matrix and the current→72h rail share one time
   // domain. A stale 8/7 start makes a click on tonight's columns immediately

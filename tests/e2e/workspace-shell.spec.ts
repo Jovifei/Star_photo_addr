@@ -260,15 +260,22 @@ test("static night-light reference does not masquerade as an expanded hourly for
   await expect(page.getByRole("button", { name: /逐小时预报/ })).toHaveCount(0);
 });
 
-test("planner map clips Leaflet tiles when entered directly", async ({
+test("planner compatibility link keeps the unified map clipped", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "规划地图几何只测桌面");
   await page.goto("/planner");
-  await page.getByRole("button", { name: "地图", exact: true }).click();
-  const map = page.locator(".observation-map");
+  await expect.poll(() => new URL(page.url()).pathname).toBe("/");
+  const map = page.locator(".map-viewport");
+  const leaflet = map.locator(".leaflet-container");
   await expect(map).toBeVisible();
-  await expect(map).toHaveCSS("overflow", "hidden");
+  await expect(leaflet).toBeVisible();
+  const mapBox = await map.boundingBox();
+  const leafletBox = await leaflet.boundingBox();
+  expect(mapBox).not.toBeNull();
+  expect(leafletBox).not.toBeNull();
+  expect(leafletBox!.x).toBeGreaterThanOrEqual(mapBox!.x - 1);
+  expect(leafletBox!.x + leafletBox!.width).toBeLessThanOrEqual(mapBox!.x + mapBox!.width + 1);
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
