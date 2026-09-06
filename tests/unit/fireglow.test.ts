@@ -124,13 +124,13 @@ describe("scoreFireGlowSite", () => {
     expect(highDeck.evening.score!).toBeGreaterThan(lowDeck.evening.score!);
   });
 
-  it("exposes probability bands, vividness, moments and twilight times", () => {
+  it("exposes condition-index bands, vividness, moments and twilight times", () => {
     const score = scoreFireGlowSite(
       SITE,
       recordWithHours([{ time: "2026-08-22T19:00", mid: 40, high: 35, low: 5 }]),
       "2026-08-22",
     );
-    expect(score.evening.probabilityLabel).toMatch(/^\d+–\d+%$/);
+    expect(score.evening.probabilityLabel).toMatch(/^\d+–\d+$/);
     expect(score.evening.probabilityLevel).toMatch(/^p(20|40|60|80|88|95|100)$/);
     expect(score.evening.vividness).not.toBeNull();
     expect(score.evening.vividness!).toBeLessThan(1);
@@ -142,22 +142,21 @@ describe("scoreFireGlowSite", () => {
   });
 });
 
-describe("probabilityRangeFor", () => {
-  it("maps scores to probability bands with a subdivided top tier", () => {
-    expect(probabilityRangeFor(95)?.label).toBe("95–100%");
+describe("condition index presentation bands", () => {
+  it("maps scores to condition-index ranges while retaining legacy level ids", () => {
+    expect(probabilityRangeFor(95)?.label).toBe("95–100");
     expect(probabilityRangeFor(88)?.level).toBe("p100");
-    expect(probabilityRangeFor(84)?.label).toBe("88–95%");
+    expect(probabilityRangeFor(84)?.label).toBe("88–95");
     expect(probabilityRangeFor(80)?.level).toBe("p95");
-    expect(probabilityRangeFor(74)?.label).toBe("80–88%");
+    expect(probabilityRangeFor(74)?.label).toBe("80–88");
     expect(probabilityRangeFor(72)?.level).toBe("p88");
-    expect(probabilityRangeFor(60)?.label).toBe("60–80%");
+    expect(probabilityRangeFor(60)?.label).toBe("60–80");
     expect(probabilityRangeFor(40)?.level).toBe("p60");
-    expect(probabilityRangeFor(20)?.label).toBe("20–40%");
+    expect(probabilityRangeFor(20)?.label).toBe("20–40");
     expect(probabilityRangeFor(5)?.level).toBe("p20");
     expect(probabilityRangeFor(null)).toBeNull();
   });
 });
-
 
 describe("isHighFireGlowLevel", () => {
   it("counts every high presentation tier including subdivided top tiers", () => {
