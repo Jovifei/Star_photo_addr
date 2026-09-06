@@ -115,11 +115,15 @@ const NONE_WINDOW: FireGlowWindowScore = {
   goldenTime: null,
   blueTime: null,
   astroTime: null,
-  reason: "晨昏窗口内没有可点燃的云：全晴或完全遮蔽。",
+  reason: "晨昏窗口内没有满足计算条件的时次。",
 };
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function finiteNumber(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function sunAltitudeDegrees(date: Date, latitude: number, longitude: number): number {
@@ -203,15 +207,21 @@ interface GlowHour {
   sunAltitude: number;
 }
 
+interface GlowHourCollection {
+  hours: GlowHour[];
+  incomplete: boolean;
+}
+
 function collectGlowHours(
   record: FinderWeatherRecord | undefined,
   site: { latitude: number; longitude: number },
   phase: "evening" | "morning",
-): GlowHour[] {
+): GlowHourCollection {
   const hourly = record?.hourly;
-  if (!hourly?.time?.length) return [];
+  if (!hourly?.time?.length) return { hours: [], incomplete: false };
   const hourRange = phase === "evening" ? [15, 20] : [4, 9];
   const hours: GlowHour[] = [];
+  let incomplete = false;
   for (let index = 0; index < hourly.time.length; index += 1) {
     const time = hourly.time[index];
     if (!time) continue;
@@ -220,19 +230,36 @@ function collectGlowHours(
     const date = parseShanghaiTime(time);
     const sunAltitude = sunAltitudeDegrees(date, site.latitude, site.longitude);
     if (sunAltitude < -6 || sunAltitude > 4) continue;
+
+    const cloudLow = hourly.cloud_cover_low?.[index];
+    const cloudMid = hourly.cloud_cover_mid?.[index];
+    const cloudHigh = hourly.cloud_cover_high?.[index];
+    const precip = hourly.precipitation?.[index];
+    if (
+      !finiteNumber(cloudLow) ||
+      !finiteNumber(cloudMid) ||
+      !finiteNumber(cloudHigh) ||
+      !finiteNumber(precip)
+    ) {
+      incomplete = true;
+      continue;
+    }
+
+    const gust = hourly.wind_gusts_10m?.[index];
+    const visibility = hourly.visibility?.[index];
     hours.push({
       time,
       hour: localHour,
-      cloudLow: hourly.cloud_cover_low?.[index] ?? 0,
-      cloudMid: hourly.cloud_cover_mid?.[index] ?? 0,
-      cloudHigh: hourly.cloud_cover_high?.[index] ?? 0,
-      precip: hourly.precipitation?.[index] ?? 0,
-      gust: hourly.wind_gusts_10m?.[index] ?? null,
-      visibility: hourly.visibility?.[index] ?? null,
+      cloudLow,
+      cloudMid,
+      cloudHigh,
+      precip,
+      gust: finiteNumber(gust) ? gust : null,
+      visibility: finiteNumber(visibility) ? visibility : null,
       sunAltitude,
     });
   }
-  return hours;
+  return { hours, incomplete };
 }
 
 // 云种权重：高云（卷云/高积云）是火烧云最佳载体，低云主要遮挡光路。
@@ -314,14 +341,21 @@ export function fireGlowBandLabel(band: FireGlowBand): string {
 }
 
 function scoreWindow(
-  hours: GlowHour[],
+  collection: GlowHourCollection,
   sunSeries: SunAltitudePoint[],
   phase: "evening" | "morning",
 ): FireGlowWindowScore {
-  const candidates = hours.filter((hour) => hour.precip == null || hour.precip <= 0.3);
+  const { hours, incomplete } = collection;
   if (!hours.length) {
-    return { ...NONE_WINDOW, reason: "晨昏窗口内无可用时次（全晴或数据缺失）。" };
+    if (incomplete) {
+      return {
+        ...EMPTY_WINDOW,
+        reason: "晨昏窗口关键云量或降水数据不完整，无法计算火烧云条件指数。",
+      };
+    }
+    return { ...NONE_WINDOW, reason: "晨昏窗口内没有满足太阳高度筛选的可用时次。" };
   }
+  const candidates = hours.filter((hour) => hour.precip <= 0.3);
   if (!candidates.length) {
     return { ...NONE_WINDOW, reason: "窗口内降水明显，云层无法被落日点燃。" };
   }
