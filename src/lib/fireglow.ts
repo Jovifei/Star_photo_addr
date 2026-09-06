@@ -4,8 +4,9 @@
 // phase-aware optimal moments (-6~-4° high-cloud eruption, -2~+2° mid-cloud,
 // +2~+5° low cloud) are adopted from the open-source
 // LibraHo/weather-sunset-predictor, which documents them against the
-// sunsetbot.top tutorial. Probability bands follow the 莉景天气 presentation
-// convention (20% steps, green→yellow→orange→red). CAMS aerosol depth is a
+// sunsetbot.top tutorial. The legacy p20…p100 tier identifiers are retained
+// for snapshot compatibility, but user-facing values are condition-index
+// ranges (0–100), not calibrated event probabilities. CAMS aerosol depth is a
 // planned refinement; visibility stands in as the haze proxy for now.
 
 import * as Astronomy from "astronomy-engine";
@@ -16,9 +17,8 @@ import type { FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
 export type FireGlowBand = "strong" | "medium" | "light" | "faint" | "none" | "unknown";
 
 /**
- * 概率分级（莉景天气式呈现），供地图色阶与列表徽章共用。
- * 顶部 80%+ 细分三级（80–88 / 88–95 / 95–100），概率越高颜色越深——
- * 用户最关心的是接近满概率的爆发区。
+ * 条件指数分级，供地图色阶与列表徽章共用。
+ * `p20`…`p100` 是为兼容既有快照保留的内部等级名，不代表事件概率。
  */
 export type FireGlowProbabilityLevel =
   | "p20"
@@ -39,7 +39,7 @@ export interface FireGlowWindowScore {
   score: number | null;
   band: FireGlowBand;
   bandLabel: string;
-  /** 概率区间文案，如 “60–80%”。 */
+  /** 条件指数分段文案，如 “60–80”；字段名为兼容旧快照保留。 */
   probabilityLabel: string | null;
   probabilityLevel: FireGlowProbabilityLevel | null;
   /** 鲜艳度 0–1（sunsetbot 口径），如 0.42。 */
@@ -101,7 +101,7 @@ const NONE_WINDOW: FireGlowWindowScore = {
   score: null,
   band: "none",
   bandLabel: "窗口缺失",
-  probabilityLabel: "0–20%",
+  probabilityLabel: "0–20",
   probabilityLevel: "p20",
   vividness: null,
   momentLabel: null,
@@ -288,16 +288,16 @@ function bandFor(score: number): FireGlowBand {
   return "faint";
 }
 
-/** 莉景式概率区间：顶部细分，80% 以上按 88 / 95 再分档。 */
+/** 条件指数分段；内部 level 名沿用旧 pXX 兼容既有快照。 */
 export function probabilityRangeFor(score: number | null): { label: string; level: FireGlowProbabilityLevel } | null {
   if (score == null) return null;
-  if (score >= 88) return { label: "95–100%", level: "p100" };
-  if (score >= 80) return { label: "88–95%", level: "p95" };
-  if (score >= 72) return { label: "80–88%", level: "p88" };
-  if (score >= 52) return { label: "60–80%", level: "p80" };
-  if (score >= 34) return { label: "40–60%", level: "p60" };
-  if (score >= 15) return { label: "20–40%", level: "p40" };
-  return { label: "0–20%", level: "p20" };
+  if (score >= 88) return { label: "95–100", level: "p100" };
+  if (score >= 80) return { label: "88–95", level: "p95" };
+  if (score >= 72) return { label: "80–88", level: "p88" };
+  if (score >= 52) return { label: "60–80", level: "p80" };
+  if (score >= 34) return { label: "40–60", level: "p60" };
+  if (score >= 15) return { label: "20–40", level: "p40" };
+  return { label: "0–20", level: "p20" };
 }
 
 const BAND_LABELS: Record<FireGlowBand, string> = {
@@ -338,7 +338,7 @@ function scoreWindow(
   const deck = Math.round(clamp(best.cloudMid + best.cloudHigh, 0, 100));
   const low = Math.round(clamp(best.cloudLow, 0, 100));
   const band = bandFor(score);
-  const probability = probabilityRangeFor(score);
+  const indexBand = probabilityRangeFor(score);
   const canvas = weightedCanvas(best);
   const momentLabel = momentLabelFor(best.sunAltitude);
   const direction = phase === "evening" ? "setting" : "rising";
@@ -346,8 +346,8 @@ function scoreWindow(
     score,
     band,
     bandLabel: BAND_LABELS[band],
-    probabilityLabel: probability?.label ?? null,
-    probabilityLevel: probability?.level ?? null,
+    probabilityLabel: indexBand?.label ?? null,
+    probabilityLevel: indexBand?.level ?? null,
     vividness: Math.min(0.99, Math.round((score / 100) * (canvas / 70) * 100) / 100),
     momentLabel,
     peakTime: best.time.slice(11, 16),
