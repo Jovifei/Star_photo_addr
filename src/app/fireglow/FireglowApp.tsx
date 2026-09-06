@@ -282,7 +282,7 @@ export default function FireglowApp() {
       </ProductHeader>
 
       <div className="fireglow-model-note" role="note">
-        条件指数由云层结构、能见度与太阳高度启发式映射，尚未完成长期实拍事件概率校准。
+        条件指数由云层结构、能见度与太阳高度启发式映射，尚未完成长期实拍事件概率校准；地图色面为点位条件指数的 IDW 插值，不是卫星或雷达像素场。
       </div>
 
       <main

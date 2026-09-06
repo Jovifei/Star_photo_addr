@@ -1,8 +1,9 @@
 // Cloud-sea (云海条件指数) scoring for mountain observing sites.
 //
-// Evaluates cloud top/base heights, temperature inversion, relative humidity,
-// ground wind speed and upper-level clearing against mountain summit elevations.
-// Aligned with the product architecture and presentation standards of Fireglow.
+// Uses surface low/mid/high cloud cover, 2 m temperature/relative humidity,
+// precipitation and 10 m wind against mountain summit elevations. Cloud
+// base/top values remain explicit heuristics; this module does not claim a
+// pressure-profile or inversion diagnosis.
 
 import { CLOUD_SEA_SITES, type CloudSeaSite } from "@/lib/cloudseaSites";
 import type { ForecastModel } from "@/lib/types";
@@ -125,8 +126,9 @@ export interface RawSiteHourly {
 }
 
 /**
- * Estimate condensation level (cloud base) and inversion/cloud top height
- * based on surface meteorology, mountain altitude, and low cloud cover.
+ * Estimate a heuristic condensation/cloud-layer height from surface humidity,
+ * temperature, wind and low-cloud coverage. This is not a provider pressure-
+ * level cloud-base/cloud-top product and must remain labelled as an estimate.
  */
 export function estimateCloudLayers(
   siteAltitude: number,
@@ -135,12 +137,11 @@ export function estimateCloudLayers(
   windSpeedMs = 2.0,
   humidityPct = 75,
 ): { baseM: number; topM: number } {
-  // Approximate valley floor elevation ASL
+  // Approximate valley floor elevation ASL.
   const valleyFloorM = Math.max(50, Math.round(siteAltitude * 0.35));
-  
-  // Heuristic LCL proxy. Estimate dew-point depression from the real
-  // provider relative humidity, then use ~125 m/°C as an approximate LCL
-  // height. This remains an estimate, not a pressure-level cloud-base product.
+
+  // Heuristic LCL proxy. Estimate dew-point depression from the real provider
+  // relative humidity, then use ~125 m/°C as an approximate LCL height.
   const humidity = clamp(humidityPct, 5, 100);
   const dewPointC = tempC - (100 - humidity) / 5;
   const lclAboveValley = Math.round(
@@ -148,85 +149,46 @@ export function estimateCloudLayers(
   );
   const baseM = valleyFloorM + lclAboveValley;
 
-  // Cloud thickness expands with low cloud coverage
-  // Typically 300m - 1200m thickness for stratocumulus / valley fog
+  // Cloud thickness expands with low-cloud coverage. This is an engineering
+  // heuristic for the Beta index, not a measured cloud-layer thickness.
   const thicknessM = Math.round(250 + (clamp(lowCloudPct) / 100) * 850);
   const topM = baseM + thicknessM;
 
   return { baseM, topM };
 }
 
-/**
- * Evaluate a specific time window (e.g. morning 05:00-09:00 or evening 17:00-19:30)
- * for a mountain site.
- */
-export function evaluateCloudSeaWindow(
+interface CloudSeaConditions {
+  lowCloud: number;
+  midCloud: number;
+  highCloud: number;
+  tempC: number;
+  humidity: number;
+  windSpeed: number;
+  precip: number;
+}
+
+interface CloudSeaConditionEvaluation {
+  score: number;
+  position: CloudPosition;
+  baseM: number;
+  topM: number;
+  altitudeDiffM: number;
+  summary: string;
+}
+
+function evaluateConditions(
   site: CloudSeaSite,
-  hourly: RawSiteHourly,
-  windowHours: number[], // e.g. [5, 6, 7, 8]
-): CloudSeaWindowScore {
-  if (!hourly.time || hourly.time.length === 0) {
-    return CLOUD_SEA_EMPTY_WINDOW;
-  }
-
-  // Find hourly entries matching the window (timezone-safe string match)
-  const indices: number[] = [];
-  hourly.time.forEach((t, i) => {
-    const match = t.match(/T(\d{2}):/);
-    const h = match ? parseInt(match[1], 10) : new Date(t).getHours();
-    if (windowHours.includes(h)) {
-      indices.push(i);
-    }
-  });
-
-  if (indices.length === 0) {
-    return {
-      ...CLOUD_SEA_EMPTY_WINDOW,
-      summary: "目标晨昏窗口没有对应的逐小时气象数据。",
-    };
-  }
-  const activeIndices = indices;
-
-  // Critical inputs must be present for the requested window. Missing
-  // provider data is not replaced with synthetic defaults.
-  const avg = (arr?: Array<number | null>): number | null => {
-    if (!arr) return null;
-    let sum = 0;
-    let count = 0;
-    for (const idx of activeIndices) {
-      const value = arr[idx];
-      if (typeof value === "number" && Number.isFinite(value)) {
-        sum += value;
-        count += 1;
-      }
-    }
-    return count > 0 ? sum / count : null;
-  };
-
-  const lowCloud = avg(hourly.cloud_cover_low);
-  const midCloud = avg(hourly.cloud_cover_mid);
-  const highCloud = avg(hourly.cloud_cover_high);
-  const tempC = avg(hourly.temperature_2m);
-  const humidity = avg(hourly.relative_humidity_2m);
-  const windSpeed = avg(hourly.wind_speed_10m);
-  const precip = avg(hourly.precipitation);
-
-  if (
-    lowCloud === null ||
-    midCloud === null ||
-    highCloud === null ||
-    tempC === null ||
-    humidity === null ||
-    windSpeed === null ||
-    precip === null
-  ) {
-    return {
-      ...CLOUD_SEA_EMPTY_WINDOW,
-      summary: "关键云量、湿度、风或降水数据不完整，无法计算云海条件指数。",
-    };
-  }
-
-  // Estimate cloud layers
+  conditions: CloudSeaConditions,
+): CloudSeaConditionEvaluation {
+  const {
+    lowCloud,
+    midCloud,
+    highCloud,
+    tempC,
+    humidity,
+    windSpeed,
+    precip,
+  } = conditions;
   const { baseM, topM } = estimateCloudLayers(
     site.altitude,
     lowCloud,
@@ -234,105 +196,186 @@ export function evaluateCloudSeaWindow(
     windSpeed,
     humidity,
   );
-  const altDiff = site.altitude - topM;
+  const altitudeDiffM = site.altitude - topM;
 
-  // Determine observer position
-  let pos: CloudPosition = "clear";
+  let position: CloudPosition = "clear";
   if (lowCloud < 25) {
-    pos = "clear";
+    position = "clear";
   } else if (site.altitude >= topM + 30) {
-    pos = "above"; // At least 30m above cloud top
+    position = "above";
   } else if (site.altitude >= baseM - 50) {
-    pos = "in"; // Inside cloud deck / thick fog
+    position = "in";
   } else {
-    pos = "below"; // Below cloud deck
+    position = "below";
   }
 
-  // Calculate score
   let score = 0;
   let summary = "";
 
-  if (pos === "above") {
-    // Observer is ABOVE the clouds! Cloud sea potential is active.
+  if (position === "above") {
     let baseScore = 65;
-
-    // Rich low cloud cover provides dense valley sea
     if (lowCloud >= 75) baseScore += 18;
     else if (lowCloud >= 50) baseScore += 12;
     else baseScore += 5;
 
-    // Calm winds keep the sea stable
     if (windSpeed < 2.0) baseScore += 10;
     else if (windSpeed < 3.5) baseScore += 5;
     else if (windSpeed > 6.0) baseScore -= 12;
 
-    // Clear sky above (mid/high clouds don't block sunlight/blue sky)
     const upperClouds = Math.max(midCloud, highCloud);
     if (upperClouds < 20) baseScore += 8;
     else if (upperClouds > 60) baseScore -= 10;
 
-    // Sufficient clearance above cloud top (100m ~ 1200m is ideal)
-    if (altDiff >= 100 && altDiff <= 1500) {
+    if (altitudeDiffM >= 100 && altitudeDiffM <= 1500) {
       baseScore += 5;
     }
-
-    // Heavy rain penalty
     if (precip > 1.5) baseScore -= 15;
 
     score = clamp(Math.round(baseScore), 25, 98);
-    summary = `观景点高出云顶 ${Math.max(0, altDiff)}m，处于绝佳【云上海拔】。低云蓄积充足，${windSpeed < 3.5 ? "微风利于停驻" : "风力偏大需注意消散"}，上层通透度较好。`;
-  } else if (pos === "in") {
-    // Wrapped in thick fog
+    summary = `按启发式层位估算，观景点高出估算云顶 ${Math.max(0, altitudeDiffM)}m；低云较充足，${windSpeed < 3.5 ? "微风利于维持" : "风力偏大需防消散"}，仍需现场复核。`;
+  } else if (position === "in") {
     score = clamp(Math.round(25 + (lowCloud > 60 ? 5 : 0) - windSpeed * 2), 10, 35);
-    summary = `观景点海拔（${site.altitude}m）位于云顶（${topM}m）与云底（${baseM}m）之间，现场处于【云中大雾】，能见度受限，暂难俯瞰云海。`;
-  } else if (pos === "below") {
-    // Under overcast
+    summary = `按启发式层位估算，观景点海拔（${site.altitude}m）落在估算云底（${baseM}m）与云顶（${topM}m）之间，存在云雾遮挡风险。`;
+  } else if (position === "below") {
     score = clamp(Math.round(15 + lowCloud * 0.1), 5, 25);
-    summary = `观景点海拔（${site.altitude}m）低于云底（${baseM}m），处于【云下阴天】，仰头见阴云笼罩，不见漫顶云海。`;
+    summary = `按启发式层位估算，观景点海拔（${site.altitude}m）低于估算云底（${baseM}m），当前条件不利于从高处俯瞰云海。`;
   } else {
-    // Clear sky, minimal clouds
     score = clamp(Math.round(10 + lowCloud * 0.2), 5, 20);
-    summary = `低层水汽较少，低云量仅 ${Math.round(lowCloud)}%，气空高旷晴朗，暂未形成谷地云海条件。`;
+    summary = `低云量仅 ${Math.round(lowCloud)}%，当前低层云体不足，暂未形成明显云海条件。`;
   }
-
-  const pLevel = probabilityLevelFor(score);
-  const peakIdx = activeIndices[Math.floor(activeIndices.length / 2)] ?? activeIndices[0];
-  const peakTimeStr = hourly.time[peakIdx] ? hourly.time[peakIdx].slice(11, 16) : null;
 
   return {
     score,
-    probabilityLevel: pLevel,
-    probabilityLabel: `${score}/100`,
-    cloudPosition: pos,
-    positionLabel: positionLabel(pos),
-    cloudBaseM: baseM,
-    cloudTopM: topM,
-    altitudeDiffM: altDiff,
-    lowCloud: Math.round(lowCloud),
-    midCloud: Math.round(midCloud),
-    highCloud: Math.round(highCloud),
-    humidity: Math.round(humidity),
-    windSpeed: Math.round(windSpeed * 10) / 10,
-    peakTime: peakTimeStr,
+    position,
+    baseM,
+    topM,
+    altitudeDiffM,
     summary,
   };
 }
 
+function finiteAt(
+  values: Array<number | null> | undefined,
+  index: number,
+): number | null {
+  const value = values?.[index];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
 /**
- * Build snapshot for all cloud sea sites on a given date.
+ * Evaluate a specific time window (e.g. morning 05:00-08:00 or evening
+ * 17:00-19:00) for a mountain site. All averaged inputs use the same set of
+ * valid hours so missing values from different timestamps can never be mixed
+ * into one synthetic condition vector.
  */
+export function evaluateCloudSeaWindow(
+  site: CloudSeaSite,
+  hourly: RawSiteHourly,
+  windowHours: number[],
+): CloudSeaWindowScore {
+  if (!hourly.time || hourly.time.length === 0) {
+    return CLOUD_SEA_EMPTY_WINDOW;
+  }
+
+  const activeIndices: number[] = [];
+  hourly.time.forEach((time, index) => {
+    const match = time.match(/T(\d{2}):/);
+    const hour = match ? parseInt(match[1], 10) : new Date(time).getHours();
+    if (windowHours.includes(hour)) {
+      activeIndices.push(index);
+    }
+  });
+
+  if (activeIndices.length === 0) {
+    return {
+      ...CLOUD_SEA_EMPTY_WINDOW,
+      summary: "目标晨昏窗口没有对应的逐小时气象数据。",
+    };
+  }
+
+  const validIndices = activeIndices.filter((index) =>
+    finiteAt(hourly.cloud_cover_low, index) !== null &&
+    finiteAt(hourly.cloud_cover_mid, index) !== null &&
+    finiteAt(hourly.cloud_cover_high, index) !== null &&
+    finiteAt(hourly.temperature_2m, index) !== null &&
+    finiteAt(hourly.relative_humidity_2m, index) !== null &&
+    finiteAt(hourly.wind_speed_10m, index) !== null &&
+    finiteAt(hourly.precipitation, index) !== null,
+  );
+
+  if (validIndices.length === 0) {
+    return {
+      ...CLOUD_SEA_EMPTY_WINDOW,
+      summary: "关键云量、湿度、风或降水数据不完整，无法计算云海条件指数。",
+    };
+  }
+
+  const average = (values: Array<number | null> | undefined): number =>
+    validIndices.reduce((sum, index) => sum + (finiteAt(values, index) ?? 0), 0) /
+    validIndices.length;
+
+  const conditions: CloudSeaConditions = {
+    lowCloud: average(hourly.cloud_cover_low),
+    midCloud: average(hourly.cloud_cover_mid),
+    highCloud: average(hourly.cloud_cover_high),
+    tempC: average(hourly.temperature_2m),
+    humidity: average(hourly.relative_humidity_2m),
+    windSpeed: average(hourly.wind_speed_10m),
+    precip: average(hourly.precipitation),
+  };
+  const evaluation = evaluateConditions(site, conditions);
+
+  let peakTime: string | null = null;
+  let peakScore = Number.NEGATIVE_INFINITY;
+  for (const index of validIndices) {
+    const hourlyConditions: CloudSeaConditions = {
+      lowCloud: finiteAt(hourly.cloud_cover_low, index)!,
+      midCloud: finiteAt(hourly.cloud_cover_mid, index)!,
+      highCloud: finiteAt(hourly.cloud_cover_high, index)!,
+      tempC: finiteAt(hourly.temperature_2m, index)!,
+      humidity: finiteAt(hourly.relative_humidity_2m, index)!,
+      windSpeed: finiteAt(hourly.wind_speed_10m, index)!,
+      precip: finiteAt(hourly.precipitation, index)!,
+    };
+    const hourlyEvaluation = evaluateConditions(site, hourlyConditions);
+    if (hourlyEvaluation.score > peakScore) {
+      peakScore = hourlyEvaluation.score;
+      peakTime = hourly.time[index]?.slice(11, 16) ?? null;
+    }
+  }
+
+  const hasMeaningfulLayer = evaluation.position !== "clear";
+  const probabilityLevel = probabilityLevelFor(evaluation.score);
+  return {
+    score: evaluation.score,
+    probabilityLevel,
+    probabilityLabel: `${evaluation.score}/100`,
+    cloudPosition: evaluation.position,
+    positionLabel: positionLabel(evaluation.position),
+    cloudBaseM: hasMeaningfulLayer ? evaluation.baseM : null,
+    cloudTopM: hasMeaningfulLayer ? evaluation.topM : null,
+    altitudeDiffM: hasMeaningfulLayer ? evaluation.altitudeDiffM : null,
+    lowCloud: Math.round(conditions.lowCloud),
+    midCloud: Math.round(conditions.midCloud),
+    highCloud: Math.round(conditions.highCloud),
+    humidity: Math.round(conditions.humidity),
+    windSpeed: Math.round(conditions.windSpeed * 10) / 10,
+    peakTime,
+    summary: evaluation.summary,
+  };
+}
+
+/** Build a snapshot for all cloud-sea sites on a given date. */
 export function buildCloudSeaSnapshot(
   date: string,
   model: ForecastModel,
   weatherByDate: Record<string, Record<string, RawSiteHourly>>,
 ): CloudSeaSnapshot {
   const sitesRecord: Record<string, CloudSeaSiteScore> = {};
-
   const morningHours = [5, 6, 7, 8];
   const eveningHours = [17, 18, 19];
 
   for (const site of CLOUD_SEA_SITES) {
-    // Check if weather data exists for this site
     const dateWeather = weatherByDate[date];
     const siteHourly = dateWeather ? (dateWeather[site.id] ?? dateWeather[site.name]) : null;
 
@@ -344,10 +387,10 @@ export function buildCloudSeaSnapshot(
       continue;
     }
 
-    const morning = evaluateCloudSeaWindow(site, siteHourly, morningHours);
-    const evening = evaluateCloudSeaWindow(site, siteHourly, eveningHours);
-
-    sitesRecord[site.id] = { morning, evening };
+    sitesRecord[site.id] = {
+      morning: evaluateCloudSeaWindow(site, siteHourly, morningHours),
+      evening: evaluateCloudSeaWindow(site, siteHourly, eveningHours),
+    };
   }
 
   return {

@@ -21,6 +21,7 @@ describe("release integrity invariants", () => {
     const model = fs.readFileSync("src/lib/fireglow.ts", "utf8");
     expect(app).toContain("火烧云条件指数");
     expect(app).toContain("条件指数 =");
+    expect(app).toContain("IDW 插值，不是卫星或雷达像素场");
     expect(app).not.toContain("概率排行");
     expect(app).not.toContain("三日概率");
     expect(app).not.toContain("概率 =");
@@ -35,5 +36,37 @@ describe("release integrity invariants", () => {
     expect(model).not.toContain("cloudHigh: hourly.cloud_cover_high?.[index] ?? 0");
     expect(model).not.toContain("precip: hourly.precipitation?.[index] ?? 0");
     expect(model).toContain("晨昏窗口关键云量或降水数据不完整");
+  });
+
+  it("does not claim pressure-profile or inversion analysis in the surface-only cloudsea workspace", () => {
+    const app = fs.readFileSync("src/app/cloudsea/CloudSeaApp.tsx", "utf8");
+    const model = fs.readFileSync("src/lib/cloudsea.ts", "utf8");
+    expect(app).not.toContain("逆温层数据");
+    expect(app).not.toContain("综合气压层高度");
+    expect(model).toContain("does not claim a");
+    expect(model).toContain("pressure-profile or inversion diagnosis");
+  });
+
+  it("keeps production metadata on the project domain instead of the reference site", () => {
+    const layout = fs.readFileSync("src/app/layout.tsx", "utf8");
+    expect(layout).toContain("https://photo.joviluma.com");
+    expect(layout).not.toContain("https://perseids.giraffetree.cn");
+  });
+
+  it("does not expose the internal integration audit page in production", () => {
+    const integrationPage = fs.readFileSync("src/app/integration-plan/page.tsx", "utf8");
+    expect(integrationPage).toContain('process.env.NODE_ENV === "production"');
+    expect(integrationPage).toContain("notFound()");
+    expect(integrationPage).toContain("index: false");
+  });
+
+  it("identifies the package as the current four-workspace project rather than the clone template", () => {
+    const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8")) as {
+      author?: string;
+      description?: string;
+    };
+    expect(packageJson.author).toBe("Jovifei");
+    expect(packageJson.description).toContain("火烧云");
+    expect(packageJson.description).toContain("高山云海");
   });
 });

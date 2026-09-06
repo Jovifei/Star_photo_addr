@@ -3,14 +3,11 @@ import {
   estimateCloudLayers,
   evaluateCloudSeaWindow,
   probabilityLevelFor,
-  positionLabel,
   positionBadgeTone,
-  buildCloudSeaSnapshot,
 } from "@/lib/cloudsea";
 import {
   interpolateScoreGrid,
   levelIndexFor,
-  CLOUD_SEA_LEVEL_THRESHOLDS,
 } from "@/lib/cloudseaOverlay";
 import type { CloudSeaSite } from "@/lib/cloudseaSites";
 
@@ -109,7 +106,6 @@ describe("evaluateCloudSeaWindow", () => {
       cloud_cover_mid: [10],
       cloud_cover_high: [10],
       temperature_2m: [10],
-      // relative_humidity_2m intentionally missing
       wind_speed_10m: [2],
       precipitation: [0],
     };
@@ -119,7 +115,44 @@ describe("evaluateCloudSeaWindow", () => {
     expect(result.summary).toContain("关键云量、湿度、风或降水数据不完整");
   });
 
-  it("identifies clear skies when low cloud is minimal", () => {
+  it("uses only hours where all critical inputs are simultaneously valid", () => {
+    const hourly = {
+      time: ["2026-09-04T05:00:00", "2026-09-04T06:00:00"],
+      cloud_cover_low: [90, null],
+      cloud_cover_mid: [5, 80],
+      cloud_cover_high: [5, 80],
+      temperature_2m: [8, 20],
+      relative_humidity_2m: [90, 40],
+      wind_speed_10m: [1, 10],
+      precipitation: [0, 0],
+    };
+    const result = evaluateCloudSeaWindow(MOCK_HIGH_SITE, hourly, [5, 6]);
+    expect(result.lowCloud).toBe(90);
+    expect(result.humidity).toBe(90);
+    expect(result.windSpeed).toBe(1);
+    expect(result.peakTime).toBe("05:00");
+  });
+
+  it("chooses the highest-scoring valid hour as peakTime instead of the window midpoint", () => {
+    const hourly = {
+      time: [
+        "2026-09-04T05:00:00",
+        "2026-09-04T06:00:00",
+        "2026-09-04T07:00:00",
+      ],
+      cloud_cover_low: [80, 82, 80],
+      cloud_cover_mid: [80, 5, 70],
+      cloud_cover_high: [80, 5, 70],
+      temperature_2m: [8, 8, 8],
+      relative_humidity_2m: [90, 90, 90],
+      wind_speed_10m: [8, 1, 7],
+      precipitation: [0, 0, 0],
+    };
+    const result = evaluateCloudSeaWindow(MOCK_HIGH_SITE, hourly, [5, 6, 7]);
+    expect(result.peakTime).toBe("06:00");
+  });
+
+  it("does not expose heuristic cloud-base/top values when low cloud is minimal", () => {
     const hourly = {
       time: ["2026-09-04T06:00:00"],
       cloud_cover_low: [5],
@@ -135,6 +168,9 @@ describe("evaluateCloudSeaWindow", () => {
     expect(result.cloudPosition).toBe("clear");
     expect(result.positionLabel).toBe("晴朗少云");
     expect(result.score).toBeLessThanOrEqual(25);
+    expect(result.cloudBaseM).toBeNull();
+    expect(result.cloudTopM).toBeNull();
+    expect(result.altitudeDiffM).toBeNull();
   });
 });
 
@@ -166,9 +202,7 @@ describe("cloudseaOverlay IDW grid", () => {
     const grid = interpolateScoreGrid(points, 50, 40);
     expect(grid).toBeInstanceOf(Float32Array);
     expect(grid.length).toBe(50 * 40);
-
-    // Points near known locations should have values
-    const nonNanCount = Array.from(grid).filter((v) => !Number.isNaN(v)).length;
+    const nonNanCount = Array.from(grid).filter((value) => !Number.isNaN(value)).length;
     expect(nonNanCount).toBeGreaterThan(0);
   });
 
