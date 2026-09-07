@@ -22,6 +22,10 @@ const TIMEOUT_MS = 120_000;
 const FORCE_REFRESH_COOLDOWN_MS = 60_000;
 const DISK_STALE_TTL_MS = 24 * 60 * 60_000;
 
+// This path is intentionally runtime-configurable because production mounts a
+// persistent volume at OBSERVING_SNAPSHOT_DIR. The turbopackIgnore annotations
+// below prevent build-time tracing from treating that runtime path as a reason
+// to include the whole repository in the server output.
 const SNAPSHOT_DIRECTORY =
   process.env.OBSERVING_SNAPSHOT_DIR ??
   path.join(process.cwd(), "data", "snapshots");
@@ -53,12 +57,16 @@ function saveFireglowToDisk(date: string, model: string, snapshot: FireGlowSnaps
       return;
     }
 
-    if (!fs.existsSync(SNAPSHOT_DIRECTORY)) {
-      fs.mkdirSync(SNAPSHOT_DIRECTORY, { recursive: true });
+    if (!fs.existsSync(/*turbopackIgnore: true*/ SNAPSHOT_DIRECTORY)) {
+      fs.mkdirSync(/*turbopackIgnore: true*/ SNAPSHOT_DIRECTORY, { recursive: true });
     }
-    const tempPath = `${fireglowDiskPath(date, model)}.tmp.${Date.now()}`;
-    fs.writeFileSync(tempPath, JSON.stringify(snapshot), "utf-8");
-    fs.renameSync(tempPath, fireglowDiskPath(date, model));
+    const finalPath = fireglowDiskPath(date, model);
+    const tempPath = `${finalPath}.tmp.${Date.now()}`;
+    fs.writeFileSync(/*turbopackIgnore: true*/ tempPath, JSON.stringify(snapshot), "utf-8");
+    fs.renameSync(
+      /*turbopackIgnore: true*/ tempPath,
+      /*turbopackIgnore: true*/ finalPath,
+    );
   } catch {
     // Ignore error
   }
@@ -68,8 +76,8 @@ function readFireglowFromDisk(date: string, model: string): FireGlowSnapshot | n
   if (process.env.NODE_ENV === "test") return null;
   try {
     const filePath = fireglowDiskPath(date, model);
-    if (!fs.existsSync(filePath)) return null;
-    const content = fs.readFileSync(filePath, "utf-8");
+    if (!fs.existsSync(/*turbopackIgnore: true*/ filePath)) return null;
+    const content = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
     return JSON.parse(content) as FireGlowSnapshot;
   } catch {
     return null;
@@ -111,7 +119,6 @@ function rememberSnapshot(key: string, date: string, model: string, snapshot: Fi
     cache.delete(oldest);
   }
 }
-
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -269,4 +276,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

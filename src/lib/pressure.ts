@@ -1,18 +1,8 @@
 import { buildForecastUrl, clampForecastDays } from "./forecast";
+import { PRESSURE_LEVELS } from "./pressureLevels";
 import type { ForecastModel } from "./types";
 
-export const PRESSURE_LEVELS = [
-  1000,
-  975,
-  950,
-  925,
-  900,
-  850,
-  800,
-  700,
-  600,
-  500,
-] as const;
+export { PRESSURE_LEVELS } from "./pressureLevels";
 
 export interface PressureForecastResponse {
   locationId: string;

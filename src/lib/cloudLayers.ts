@@ -1,10 +1,9 @@
-// Pressure-level cloud-layer derivation (ported from star-weather's clouds.js).
-// Used by the observation detail to summarise where cloud decks sit relative to
-// the observer (experimental, model-derived, not a summit measurement).
+// Pressure-level cloud-layer derivation used by observation detail charts.
+// The result is model-derived and experimental; it is not a summit measurement.
 
 import type { CloudLayer, PressureLevel } from "./types";
 
-export const PRESSURE_LEVELS = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500];
+export { PRESSURE_LEVELS } from "./pressureLevels";
 
 export function deriveCloudLayers(
   profile: PressureLevel[],

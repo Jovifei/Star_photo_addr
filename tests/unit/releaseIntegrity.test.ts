@@ -82,4 +82,29 @@ describe("release integrity invariants", () => {
     expect(packageJson.description).toContain("火烧云");
     expect(packageJson.description).toContain("高山云海");
   });
+
+  it("does not reintroduce the retired standalone planner implementation", () => {
+    expect(fs.existsSync("src/features/planner")).toBe(false);
+    expect(fs.existsSync("tests/planner")).toBe(false);
+    const detailCharts = fs.readFileSync("src/components/LocationDetailCharts.tsx", "utf8");
+    const e2eMock = fs.readFileSync("tests/e2e/mock-open-meteo.js", "utf8");
+    expect(detailCharts).toContain('from "@/lib/cloudLayers"');
+    expect(detailCharts).not.toContain("@/features/planner");
+    expect(e2eMock).not.toContain("src/features/planner");
+  });
+
+  it("keeps the retired planner route as a noindex compatibility surface", () => {
+    const plannerPage = fs.readFileSync("src/app/planner/page.tsx", "utf8");
+    expect(plannerPage).toContain("观星计划兼容入口");
+    expect(plannerPage).toContain("index: false");
+    expect(plannerPage).toContain("follow: false");
+    expect(plannerPage).not.toContain("多地点星空与云海天气决策");
+  });
+
+  it("marks the runtime-mounted fireglow snapshot volume as excluded from Turbopack tracing", () => {
+    const fireglowRoute = fs.readFileSync("src/app/api/fireglow/snapshot/route.ts", "utf8");
+    expect(fireglowRoute).toContain("OBSERVING_SNAPSHOT_DIR");
+    expect(fireglowRoute).toContain("turbopackIgnore: true");
+    expect(fireglowRoute).toContain("runtime-configurable");
+  });
 });

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Cloud, Moon, Mountain, AlertTriangle, Loader2 } from "lucide-react";
 import type { HourEvaluation, Location } from "@/lib/types";
-import { deriveCloudLayers } from "@/features/planner/lib/clouds";
+import { deriveCloudLayers } from "@/lib/cloudLayers";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
 
