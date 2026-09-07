@@ -140,7 +140,7 @@ test("暗夜选址 B1 颜色筛选只改变点位，不生成密集永久文字�
   const bar = page.getByTestId("bortle-filter-bar");
   const map = page.locator(".leaflet-container");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
-  const b1 = bar.getByRole("button", { name: /筛选 B1 点位/ });
+  const b1 = bar.getByRole("button", { name: /参考 B1 点位/ });
 
   await expect(bar).toBeVisible();
   await expect(page.locator(".observing-site-label")).toHaveCount(0);
@@ -159,8 +159,8 @@ test("暗夜选址 B1-B4 筛选可组合并同步点位数量", async ({ page },
   await page.goto("/sites");
   const bar = page.getByTestId("bortle-filter-bar");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
-  const b2 = bar.getByRole("button", { name: /筛选 B2 点位/ });
-  const b4 = bar.getByRole("button", { name: /筛选 B4 点位/ });
+  const b2 = bar.getByRole("button", { name: /参考 B2 点位/ });
+  const b4 = bar.getByRole("button", { name: /参考 B4 点位/ });
   await expect(markers).toHaveCount(222);
   const initial = await markers.count();
   const b2Count = Number((await b2.getAttribute("aria-label"))?.match(/(\d+) 个$/)?.[1]);
