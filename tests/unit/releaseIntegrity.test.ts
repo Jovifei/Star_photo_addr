@@ -50,13 +50,25 @@ describe("release integrity invariants", () => {
     expect(detail).not.toContain('const high = win.highCloud ?? 0');
   });
 
-  it("does not claim pressure-profile or inversion analysis in the surface-only cloudsea workspace", () => {
-    const app = fs.readFileSync("src/app/cloudsea/CloudSeaApp.tsx", "utf8");
+  it("requires pressure-derived cloudsea vertical evidence and forbids heuristic cloud-base fallback", () => {
+    const route = fs.readFileSync("src/app/api/cloudsea/snapshot/route.ts", "utf8");
     const model = fs.readFileSync("src/lib/cloudsea.ts", "utf8");
-    expect(app).not.toContain("逆温层数据");
-    expect(app).not.toContain("综合气压层高度");
-    expect(model).toContain("does not claim a");
-    expect(model).toContain("pressure-profile or inversion diagnosis");
+    const pressure = fs.readFileSync("src/lib/pressure.ts", "utf8");
+    const cloudLayers = fs.readFileSync("src/lib/cloudLayers.ts", "utf8");
+
+    expect(route).toContain("fetchPressureForecastBatch");
+    expect(route).toContain("PRESSURE_BATCH_SIZE");
+    expect(model).toContain("deriveCloudLayers");
+    expect(model).toContain("detectTemperatureInversion");
+    expect(model).toContain("不使用启发式云底");
+    expect(model).toContain("pressure-level model profile");
+    expect(pressure).toContain("geopotential_height_");
+    expect(pressure).toContain("至少需要一个地点");
+    expect(cloudLayers).toContain("detectTemperatureInversion");
+
+    expect(model).not.toContain("estimateCloudLayers");
+    expect(model).not.toContain("valleyFloorM");
+    expect(model).not.toContain("lclAboveValley");
   });
 
   it("keeps production metadata on the project domain instead of the reference site", () => {
