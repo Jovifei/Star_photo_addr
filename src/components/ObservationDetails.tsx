@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { describeDarkSkyStatus, sampleBortle } from "@/lib/darksky";
 import { formatElevationMeters } from "@/lib/locationPresentation";
 import { statusMeta } from "@/lib/scoring";
@@ -16,6 +16,11 @@ function sampleMatchesLocation(
       Math.abs(sample.latitude - location.latitude) < 1e-6 &&
       Math.abs(sample.longitude - location.longitude) < 1e-6,
   );
+}
+
+interface FetchedDarkSkySample {
+  locationKey: string;
+  sample: DarkSkySample;
 }
 
 /** Observation detail: dark-sky, weather window, moon, galaxy, confidence. */
@@ -35,31 +40,44 @@ export default function ObservationDetails({
   onRemoveCandidate?: () => void;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
-  const [resolvedSample, setResolvedSample] = useState<DarkSkySample | null>(null);
+  const [fetchedSample, setFetchedSample] =
+    useState<FetchedDarkSkySample | null>(null);
+  const locationKey = location
+    ? `${location.latitude.toFixed(6)},${location.longitude.toFixed(6)}`
+    : "";
+  const storeSampleMatches = Boolean(
+    location && sampleMatchesLocation(sample, location),
+  );
 
   // A curated site selected through selectLocation() does not necessarily pass
   // through store.sampleAt(). Sample the exact coordinate here so installed
   // licensed rasters remain usable without falling back to catalog Bortle.
-  // sampleBortle() itself returns explicit no-data states and never fabricates.
+  // The async result is tagged with locationKey; old-location results therefore
+  // become inert immediately when the selected coordinate changes. The effect
+  // only updates state from the external async callback, never synchronously.
   useEffect(() => {
-    if (!location) {
-      setResolvedSample(null);
-      return;
-    }
-    if (sampleMatchesLocation(sample, location)) {
-      setResolvedSample(sample);
-      return;
-    }
-
+    if (!location || storeSampleMatches) return;
     let cancelled = false;
-    setResolvedSample(null);
+    const key = locationKey;
     void sampleBortle(location.latitude, location.longitude).then((next) => {
-      if (!cancelled) setResolvedSample(next);
+      if (!cancelled) {
+        setFetchedSample({ locationKey: key, sample: next });
+      }
     });
     return () => {
       cancelled = true;
     };
-  }, [location, sample]);
+  }, [
+    location,
+    locationKey,
+    storeSampleMatches,
+  ]);
+
+  const resolvedSample = useMemo(() => {
+    if (!location) return null;
+    if (storeSampleMatches) return sample;
+    return fetchedSample?.locationKey === locationKey ? fetchedSample.sample : null;
+  }, [fetchedSample, location, locationKey, sample, storeSampleMatches]);
 
   const hasReading =
     resolvedSample?.status === "ok" &&
