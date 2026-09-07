@@ -1,6 +1,6 @@
 "use client";
 
-import { estimateDarkSky } from "@/lib/darksky";
+import { describeDarkSkyStatus } from "@/lib/darksky";
 import { formatElevationMeters } from "@/lib/locationPresentation";
 import { statusMeta } from "@/lib/scoring";
 import type { DarkSkySample, Location, NightEvaluation } from "@/lib/types";
@@ -23,42 +23,31 @@ export default function ObservationDetails({
   onRemoveCandidate?: () => void;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
-  const hasReading = sample != null && sample.status === "ok";
+  const hasReading =
+    sample?.status === "ok" &&
+    sample.mpsas != null &&
+    sample.bortle != null;
 
-  const estimate = location
-    ? estimateDarkSky(
-        location.latitude,
-        location.longitude,
-        location.elevation,
-        location.bortle,
-      )
-    : null;
-
-  const mpsasText =
-    hasReading && sample.mpsas != null
-      ? sample.mpsas.toFixed(2)
-      : estimate
-        ? `~${estimate.mpsas.toFixed(2)}`
-        : "—";
-
+  const mpsasText = hasReading ? sample.mpsas!.toFixed(2) : "—";
   const mpsasUnit = hasReading
     ? "mpsas"
-    : estimate
-      ? "mpsas (估算)"
+    : location
+      ? "无可信数值"
       : "待选择地点";
 
-  const bortleText =
-    hasReading && sample.bortle != null
-      ? `B${sample.bortle}`
-      : estimate
-        ? `B${estimate.bortle}`
-        : "—";
-
+  const bortleText = hasReading ? `B${sample.bortle}` : "—";
   const bortleName = hasReading
     ? (sample.bortleName ?? "")
-    : estimate
-      ? `${estimate.bortleName} · ${estimate.sourceLabel}`
+    : location
+      ? "无可信栅格读数"
       : "待选择地点";
+
+  const darkSkyStatusNote =
+    location && !hasReading
+      ? sample
+        ? `${describeDarkSkyStatus(sample.status)} 不会根据坐标、海拔或点位目录推算 Bortle/SQM。`
+        : "暗夜数值尚未取得可信栅格读数；不会根据坐标、海拔或点位目录推算 Bortle/SQM。"
+      : null;
 
   return (
     <div className="panel-section">
@@ -143,7 +132,7 @@ export default function ObservationDetails({
         </div>
       </div>
 
-      {location && !hasReading && (
+      {darkSkyStatusNote && (
         <p
           className="dark-sky-unavailable-note"
           style={{
@@ -153,7 +142,7 @@ export default function ObservationDetails({
             lineHeight: 1.55,
           }}
         >
-          暗夜等级与天顶亮度为卫星夜光及地理模型估算值，供选点参考。
+          {darkSkyStatusNote}
         </p>
       )}
 
