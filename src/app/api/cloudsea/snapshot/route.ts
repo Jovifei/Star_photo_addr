@@ -138,15 +138,22 @@ async function fetchCloudSeaWeather(
           | { hourly?: Record<string, unknown> }
           | undefined;
         if (entry?.hourly && validCloudSeaHourly(entry.hourly)) {
-          const hourly = entry.hourly as Record<string, Array<number | null> | string[]>;
+          const hourly = entry.hourly as Record<
+            string,
+            Array<number | null> | string[]
+          >;
           result[site.id] = {
             time: hourly.time as string[],
-            cloud_cover: hourly.cloud_cover as Array<number | null> | undefined,
+            cloud_cover: hourly.cloud_cover as
+              | Array<number | null>
+              | undefined,
             cloud_cover_low: hourly.cloud_cover_low as Array<number | null>,
             cloud_cover_mid: hourly.cloud_cover_mid as Array<number | null>,
             cloud_cover_high: hourly.cloud_cover_high as Array<number | null>,
             temperature_2m: hourly.temperature_2m as Array<number | null>,
-            relative_humidity_2m: hourly.relative_humidity_2m as Array<number | null>,
+            relative_humidity_2m: hourly.relative_humidity_2m as Array<
+              number | null
+            >,
             precipitation: hourly.precipitation as Array<number | null>,
             visibility: hourly.visibility as Array<number | null> | undefined,
             wind_speed_10m: hourly.wind_speed_10m as Array<number | null>,
@@ -175,11 +182,13 @@ async function fetchCloudSeaPressure(
   model: ForecastModel,
   signal: AbortSignal,
 ): Promise<PressureForecastBatchResult> {
-  const locations: PressureForecastLocation[] = CLOUD_SEA_SITES.map((site) => ({
-    id: site.id,
-    latitude: site.latitude,
-    longitude: site.longitude,
-  }));
+  const locations: PressureForecastLocation[] = CLOUD_SEA_SITES.map(
+    (site) => ({
+      id: site.id,
+      latitude: site.latitude,
+      longitude: site.longitude,
+    }),
+  );
   const batches: PressureForecastLocation[][] = [];
   for (let index = 0; index < locations.length; index += PRESSURE_BATCH_SIZE) {
     batches.push(locations.slice(index, index + PRESSURE_BATCH_SIZE));
@@ -204,7 +213,9 @@ async function fetchCloudSeaPressure(
         Object.assign(data, result.data);
         Object.assign(errors, result.errors);
       } catch (error) {
-        if (signal.aborted) throw error;
+        // Surface is already valid before pressure fetching begins. Pressure
+        // timeout/abort must degrade only the vertical evidence, not convert a
+        // real surface snapshot into a route-level 502.
         const message =
           error instanceof Error ? error.message : "压力层剖面请求失败";
         batch.forEach((location) => {

@@ -3,9 +3,9 @@ import CloudSeaClient from "./CloudSeaClient";
 import "./cloudsea.css";
 
 export const metadata: Metadata = {
-  title: "云海条件地图 Beta｜高山云层 · 晨昏云海条件指数",
+  title: "高山云海条件地图｜压力层云层与逆温证据",
   description:
-    "全国名山云海条件指数、真实相对湿度与低云数据，并结合地形启发式估算云底/云顶层位；结果为 Beta 条件判断，不是现场校准概率。",
+    "基于 Open-Meteo surface weather 与压力层数值模式剖面，展示全国名山晨昏云海条件指数、模式云底/云顶、山顶相对云层位置与逆温证据；结果不是探空实测或实拍样本校准的事件概率。",
 };
 
 export default function CloudSeaPage() {

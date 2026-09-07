@@ -55,9 +55,14 @@ describe("release integrity invariants", () => {
     const model = fs.readFileSync("src/lib/cloudsea.ts", "utf8");
     const pressure = fs.readFileSync("src/lib/pressure.ts", "utf8");
     const cloudLayers = fs.readFileSync("src/lib/cloudLayers.ts", "utf8");
+    const app = fs.readFileSync("src/app/cloudsea/CloudSeaApp.tsx", "utf8");
+    const detail = fs.readFileSync("src/app/cloudsea/CloudSeaSiteDetail.tsx", "utf8");
+    const page = fs.readFileSync("src/app/cloudsea/page.tsx", "utf8");
+    const readme = fs.readFileSync("README.md", "utf8");
 
     expect(route).toContain("fetchPressureForecastBatch");
     expect(route).toContain("PRESSURE_BATCH_SIZE");
+    expect(route).toContain("degrade only the vertical evidence");
     expect(model).toContain("deriveCloudLayers");
     expect(model).toContain("detectTemperatureInversion");
     expect(model).toContain("不使用启发式云底");
@@ -65,6 +70,23 @@ describe("release integrity invariants", () => {
     expect(pressure).toContain("geopotential_height_");
     expect(pressure).toContain("至少需要一个地点");
     expect(cloudLayers).toContain("detectTemperatureInversion");
+
+    expect(app).toContain("pressure-level 模式数据");
+    expect(app).toContain("缺失地点不推断云层层位");
+    expect(app).toContain("windowScore.conditionLabel");
+    expect(app).not.toContain("windowScore.probabilityLabel");
+    expect(app).not.toContain("云底/云顶为估算层位");
+
+    expect(detail).toContain("数值模式垂直云层证据");
+    expect(detail).toContain("逆温证据");
+    expect(detail).toContain("pressure profile 不足时不使用启发式云底补算");
+    expect(detail).not.toContain("估算云顶层位");
+    expect(detail).not.toContain("山峰与估算云层垂直关系");
+
+    expect(page).toContain("压力层云层与逆温证据");
+    expect(page).not.toContain("启发式估算云底/云顶");
+    expect(readme).toContain("周边 8–15 km 谷地采样仍未实施");
+    expect(readme).toContain("不使用启发式云底/云顶补值");
 
     expect(model).not.toContain("estimateCloudLayers");
     expect(model).not.toContain("valleyFloorM");
