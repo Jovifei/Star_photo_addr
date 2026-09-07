@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
 import { formatNightLabel } from "@/lib/nighttime";
-import { FINDER_LOCATIONS } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
+import { FINDER_LOCATIONS } from "@/data/observingSites/catalog";
 import type {
   ForecastModel,
   Location,
