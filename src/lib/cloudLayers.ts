@@ -1,7 +1,6 @@
 // Pressure-level cloud-layer derivation used by observation detail charts.
 // The result is model-derived and experimental; it is not a summit measurement.
 
-import { PRESSURE_LEVELS } from "./pressureLevels";
 import type { CloudLayer, PressureLevel } from "./types";
 
 export { PRESSURE_LEVELS } from "./pressureLevels";
