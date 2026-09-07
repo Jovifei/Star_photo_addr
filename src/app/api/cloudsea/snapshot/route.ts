@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getShanghaiDate } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
+import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
 import { buildCloudSeaSnapshot, type CloudSeaSnapshot, type RawSiteHourly } from "@/lib/cloudsea";
 import {

@@ -1,4 +1,4 @@
-import { FINDER_LOCATIONS } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
+import { FINDER_LOCATIONS } from "@/data/observingSites/catalog";
 import type {
   FinderLocation,
   FinderMode,

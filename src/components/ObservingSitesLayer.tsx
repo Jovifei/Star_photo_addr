@@ -154,7 +154,7 @@ export default function ObservingSitesLayer() {
         const score = snapshotScoreAtTime(activeSnapshot, site.id);
         const band = score?.band ?? "unknown";
         const selected = state.selectedLocation?.id === site.id;
-        // 选址工作区按长期光污染本底着色；今夜观测按当前时次评分着色。
+        // 选址工作区按目录参考 B1–B4 着色；今夜观测按当前时次评分着色。
         const color =
           state.mapWorkspace === "sites"
             ? siteBortleColor(site.bortle)
