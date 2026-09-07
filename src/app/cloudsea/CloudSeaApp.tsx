@@ -1,8 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Sunrise, Sunset, Mountain as Mountains, RefreshCw } from "lucide-react";
-import { CircleMarker, ImageOverlay, MapContainer, Popup, TileLayer } from "react-leaflet";
+import {
+  Sunrise,
+  Sunset,
+  Mountain as Mountains,
+  RefreshCw,
+} from "lucide-react";
+import {
+  CircleMarker,
+  ImageOverlay,
+  MapContainer,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Map as LeafletMap } from "leaflet";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
@@ -18,7 +29,7 @@ import { CLOUD_SEA_SITES, type CloudSeaSite } from "@/lib/cloudseaSites";
 import {
   CLOUD_SEA_EMPTY_WINDOW,
   positionBadgeTone,
-  type CloudSeaProbabilityLevel,
+  type CloudSeaConditionLevel,
   type CloudSeaSnapshot,
   type CloudSeaWindowScore,
 } from "@/lib/cloudsea";
@@ -27,10 +38,9 @@ import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
 
 type Phase = "morning" | "evening";
-/** today-0 / +1 / +2 / 三日总览-3 */
 type RangeMode = 0 | 1 | 2 | 3;
 
-const LEVEL_COLORS: Record<CloudSeaProbabilityLevel, string> = {
+const LEVEL_COLORS: Record<CloudSeaConditionLevel, string> = {
   p20: "#5f7078",
   p40: "#48b5b5",
   p60: "#3498db",
@@ -39,7 +49,7 @@ const LEVEL_COLORS: Record<CloudSeaProbabilityLevel, string> = {
   p100: "#4b2ca5",
 };
 
-const LEVEL_LABELS: Array<{ level: CloudSeaProbabilityLevel; range: string }> = [
+const LEVEL_LABELS: Array<{ level: CloudSeaConditionLevel; range: string }> = [
   { level: "p20", range: "0–20" },
   { level: "p40", range: "20–40" },
   { level: "p60", range: "40–60" },
@@ -55,7 +65,9 @@ function todayKey(): string {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
   return `${values.year}-${values.month}-${values.day}`;
 }
 
@@ -77,7 +89,11 @@ const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = 
   { value: 0, label: "今日", hint: "今晨 / 今晚云海" },
   { value: 1, label: "明日", hint: "明天云海窗口" },
   { value: 2, label: "后日", hint: "后天云海窗口" },
-  { value: 3, label: "三日总览", hint: "今日 + 明日 + 后日 的对比，取三日最佳" },
+  {
+    value: 3,
+    label: "三日总览",
+    hint: "今日 + 明日 + 后日 的对比，取三日最佳",
+  },
 ];
 
 interface RankedSite {
@@ -95,7 +111,9 @@ interface SnapshotLoadResult {
 export default function CloudSeaApp() {
   const [phase, setPhase] = useState<Phase>("morning");
   const [range, setRange] = useState<RangeMode>(0);
-  const [snapshots, setSnapshots] = useState<Record<string, CloudSeaSnapshot>>({});
+  const [snapshots, setSnapshots] = useState<Record<string, CloudSeaSnapshot>>(
+    {},
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dataNotice, setDataNotice] = useState("");
@@ -130,9 +148,12 @@ export default function CloudSeaApp() {
                 if (response.ok && payload?.sites) {
                   return { date, snapshot: payload };
                 }
-                lastError = payload?.error ?? `云海快照请求失败（HTTP ${response.status}）`;
+                lastError =
+                  payload?.error ??
+                  `云海快照请求失败（HTTP ${response.status}）`;
               } catch (error) {
-                lastError = error instanceof Error ? error.message : "云海快照请求失败";
+                lastError =
+                  error instanceof Error ? error.message : "云海快照请求失败";
               }
             }
             return { date, snapshot: null, error: lastError };
@@ -140,7 +161,9 @@ export default function CloudSeaApp() {
         );
 
         const validEntries = results.filter(
-          (result): result is SnapshotLoadResult & { snapshot: CloudSeaSnapshot } =>
+          (
+            result,
+          ): result is SnapshotLoadResult & { snapshot: CloudSeaSnapshot } =>
             result.snapshot !== null,
         );
         const valid = Object.fromEntries(
@@ -151,7 +174,9 @@ export default function CloudSeaApp() {
         const notices: string[] = [];
         for (const result of results) {
           if (!result.snapshot) {
-            notices.push(`${dateLabel(result.date)}：${result.error ?? "真实气象数据不可用"}`);
+            notices.push(
+              `${dateLabel(result.date)}：${result.error ?? "真实气象数据不可用"}`,
+            );
             continue;
           }
           if (result.snapshot.stale || result.snapshot.refreshError) {
@@ -159,10 +184,17 @@ export default function CloudSeaApp() {
               `${dateLabel(result.date)}：${result.snapshot.refreshError ?? "正在使用较早的成功快照"}`,
             );
           }
+          const pressure = result.snapshot.pressure;
+          if (pressure && pressure.status !== "available") {
+            notices.push(
+              `${dateLabel(result.date)}：压力层 ${pressure.availableSites}/${pressure.totalSites} 地点可用；缺失地点不推断云层层位`,
+            );
+          }
         }
         setDataNotice([...new Set(notices)].join(" "));
       } catch (error) {
-        const message = error instanceof Error ? error.message : "云海快照不可用";
+        const message =
+          error instanceof Error ? error.message : "云海快照不可用";
         setDataNotice(message);
         console.error("Failed to load cloudsea snapshot", error);
       } finally {
@@ -176,9 +208,7 @@ export default function CloudSeaApp() {
   useEffect(() => {
     let cancelled = false;
     queueMicrotask(() => {
-      if (!cancelled) {
-        void fetchSnapshots();
-      }
+      if (!cancelled) void fetchSnapshots();
     });
     return () => {
       cancelled = true;
@@ -197,7 +227,9 @@ export default function CloudSeaApp() {
       for (const date of activeDates) {
         const snapshot = snapshots[date];
         const siteData = snapshot?.sites?.[site.id];
-        const window = siteData ? siteData[phase] : CLOUD_SEA_EMPTY_WINDOW;
+        const window = siteData
+          ? siteData[phase]
+          : CLOUD_SEA_EMPTY_WINDOW;
         if ((window.score ?? -1) > (bestWindow.score ?? -1)) {
           bestWindow = window;
           bestDate = date;
@@ -207,17 +239,22 @@ export default function CloudSeaApp() {
       list.push({ site, window: bestWindow, dateKey: bestDate });
     }
 
-    list.sort((left, right) => (right.window.score ?? -1) - (left.window.score ?? -1));
+    list.sort(
+      (left, right) =>
+        (right.window.score ?? -1) - (left.window.score ?? -1),
+    );
     return list;
   }, [activeDates, snapshots, phase, primaryDate]);
 
-  const overlayPoints = useMemo(() => {
-    return rankedSites.map((ranked) => ({
-      latitude: ranked.site.latitude,
-      longitude: ranked.site.longitude,
-      score: ranked.window.score,
-    }));
-  }, [rankedSites]);
+  const overlayPoints = useMemo(
+    () =>
+      rankedSites.map((ranked) => ({
+        latitude: ranked.site.latitude,
+        longitude: ranked.site.longitude,
+        score: ranked.window.score,
+      })),
+    [rankedSites],
+  );
 
   const conditionOverlay = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -226,7 +263,9 @@ export default function CloudSeaApp() {
 
   const selectedRanked = useMemo(() => {
     if (!selectedSiteId) return null;
-    return rankedSites.find((ranked) => ranked.site.id === selectedSiteId) ?? null;
+    return (
+      rankedSites.find((ranked) => ranked.site.id === selectedSiteId) ?? null
+    );
   }, [rankedSites, selectedSiteId]);
 
   const handleSelectSite = (siteId: string) => {
@@ -253,7 +292,7 @@ export default function CloudSeaApp() {
               type="button"
               className={phase === "morning" ? "active" : ""}
               onClick={() => setPhase("morning")}
-              title="日出与清晨时段（05:00-09:00）"
+              title="日出与清晨时段（05:00-08:00）"
             >
               <Sunrise size={15} />
               <span>晨间云海</span>
@@ -262,7 +301,7 @@ export default function CloudSeaApp() {
               type="button"
               className={phase === "evening" ? "active" : ""}
               onClick={() => setPhase("evening")}
-              title="日落与黄昏时段（17:00-19:30）"
+              title="日落与黄昏时段（17:00-19:00）"
             >
               <Sunset size={15} />
               <span>傍晚云海</span>
@@ -290,14 +329,17 @@ export default function CloudSeaApp() {
             disabled={refreshing}
             title="强制更新最新云海条件数据"
           >
-            <RefreshCw size={14} className={refreshing ? "is-spinning" : ""} />
+            <RefreshCw
+              size={14}
+              className={refreshing ? "is-spinning" : ""}
+            />
             <span>{refreshing ? "正在计算..." : "更新数据"}</span>
           </button>
         </div>
       </ProductHeader>
 
       <div className="cloudsea-beta-banner" role="note">
-        Beta · 条件指数基于 Open-Meteo 云量、真实相对湿度、风与地形的启发式计算；云底/云顶为估算层位，尚未完成现场概率校准。
+        Beta · 条件指数综合 Open-Meteo surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
       </div>
       {dataNotice ? (
         <div className="cloudsea-beta-banner" role="status">
@@ -337,7 +379,7 @@ export default function CloudSeaApp() {
             )}
 
             {rankedSites.map(({ site, window: windowScore }) => {
-              const level = windowScore.probabilityLevel ?? "p20";
+              const level = windowScore.conditionLevel ?? "p20";
               const color = LEVEL_COLORS[level];
               const isSelected = site.id === selectedSiteId;
 
@@ -358,10 +400,18 @@ export default function CloudSeaApp() {
                 >
                   <Popup className="cloudsea-popup">
                     <div style={{ color: "#041018", minWidth: "180px" }}>
-                      <h3 style={{ margin: "0 0 4px", fontSize: "14px" }}>
+                      <h3
+                        style={{ margin: "0 0 4px", fontSize: "14px" }}
+                      >
                         {site.name}（{site.altitude}m）
                       </h3>
-                      <p style={{ margin: "0 0 6px", fontSize: "12px", color: "#555" }}>
+                      <p
+                        style={{
+                          margin: "0 0 6px",
+                          fontSize: "12px",
+                          color: "#555",
+                        }}
+                      >
                         {site.province} · {site.viewpoint}
                       </p>
                       <div
@@ -372,14 +422,25 @@ export default function CloudSeaApp() {
                           marginBottom: "4px",
                         }}
                       >
-                        <span>云海条件指数: {windowScore.probabilityLabel ?? "—"}</span>
-                        <span style={{ color: windowScore.cloudPosition === "above" ? "#27ae60" : "#d35400" }}>
+                        <span>
+                          云海条件指数: {windowScore.conditionLabel ?? "—"}
+                        </span>
+                        <span
+                          style={{
+                            color:
+                              windowScore.cloudPosition === "above"
+                                ? "#27ae60"
+                                : "#d35400",
+                          }}
+                        >
                           {windowScore.positionLabel}
                         </span>
                       </div>
                       <div style={{ fontSize: "11px", color: "#666" }}>
-                        估算云顶: {windowScore.cloudTopM != null ? `${windowScore.cloudTopM}m` : "—"} · 估算云底:{" "}
-                        {windowScore.cloudBaseM != null ? `${windowScore.cloudBaseM}m` : "—"}
+                        模式云顶: {windowScore.cloudTopM != null ? `${windowScore.cloudTopM}m` : "—"} · 模式云底:{" "}
+                        {windowScore.cloudBaseM != null
+                          ? `${windowScore.cloudBaseM}m`
+                          : "—"}
                       </div>
                     </div>
                   </Popup>
@@ -389,7 +450,9 @@ export default function CloudSeaApp() {
           </MapContainer>
 
           <div className="cloudsea-legend">
-            <span className="cloudsea-legend-title">云海条件指数色阶 · 点位插值</span>
+            <span className="cloudsea-legend-title">
+              云海条件指数色阶 · 点位插值
+            </span>
             <div className="cloudsea-legend-bar">
               {LEVEL_LABELS.map((item) => (
                 <span
@@ -407,25 +470,55 @@ export default function CloudSeaApp() {
         <aside className="cloudsea-sidebar">
           <div className="cloudsea-sidebar-header">
             <h2>
-              {phase === "morning" ? "晨间云海推荐榜" : "傍晚云海推荐榜"}
+              {phase === "morning"
+                ? "晨间云海推荐榜"
+                : "傍晚云海推荐榜"}
             </h2>
             <span>
-              {range === 3 ? "三日最优" : dateLabel(primaryDate)} · {rankedSites.length} 处名山
+              {range === 3 ? "三日最优" : dateLabel(primaryDate)} ·{" "}
+              {rankedSites.length} 处名山
             </span>
           </div>
 
           <div className="cloudsea-site-list">
             {loading && rankedSites.length === 0 ? (
-              <div style={{ padding: "48px 16px", textAlign: "center", color: "var(--cs-muted)" }}>
-                <RefreshCw size={24} className="is-spinning" style={{ margin: "0 auto 12px", display: "block" }} />
-                <p style={{ margin: "0 0 6px", fontSize: "14px", color: "var(--cs-text)", fontWeight: 600 }}>
-                  正在分析高山低云、湿度与风力数据...
+              <div
+                style={{
+                  padding: "48px 16px",
+                  textAlign: "center",
+                  color: "var(--cs-muted)",
+                }}
+              >
+                <RefreshCw
+                  size={24}
+                  className="is-spinning"
+                  style={{ margin: "0 auto 12px", display: "block" }}
+                />
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: "14px",
+                    color: "var(--cs-text)",
+                    fontWeight: 600,
+                  }}
+                >
+                  正在分析 surface 水汽、低云与压力层垂直剖面...
                 </p>
-                <span style={{ fontSize: "12px", opacity: 0.8 }}>基于真实 Open-Meteo 地面与分层云量数据计算条件指数</span>
+                <span style={{ fontSize: "12px", opacity: 0.8 }}>
+                  基于真实 Open-Meteo surface weather 与 pressure-level 模式数据计算条件指数
+                </span>
               </div>
             ) : !loading && rankedSites.length === 0 ? (
-              <div style={{ padding: "48px 16px", textAlign: "center", color: "var(--cs-muted)" }}>
-                <p style={{ margin: "0 0 12px", fontSize: "13px" }}>真实云海气象数据暂不可用，请点击重试</p>
+              <div
+                style={{
+                  padding: "48px 16px",
+                  textAlign: "center",
+                  color: "var(--cs-muted)",
+                }}
+              >
+                <p style={{ margin: "0 0 12px", fontSize: "13px" }}>
+                  真实云海气象数据暂不可用，请点击重试
+                </p>
                 <button
                   type="button"
                   className="cloudsea-refresh"
@@ -438,9 +531,11 @@ export default function CloudSeaApp() {
             ) : (
               rankedSites.map(({ site, window: windowScore }) => {
                 const isSelected = site.id === selectedSiteId;
-                const level = windowScore.probabilityLevel ?? "p20";
+                const level = windowScore.conditionLevel ?? "p20";
                 const scoreColor = LEVEL_COLORS[level];
-                const badgeTone = positionBadgeTone(windowScore.cloudPosition);
+                const badgeTone = positionBadgeTone(
+                  windowScore.cloudPosition,
+                );
 
                 return (
                   <div
@@ -452,7 +547,8 @@ export default function CloudSeaApp() {
                       <div className="cloudsea-card-title">
                         <span className="cloudsea-card-name">{site.name}</span>
                         <span className="cloudsea-card-sub">
-                          {site.province} · 海拔 {site.altitude}m · {site.viewpoint}
+                          {site.province} · 海拔 {site.altitude}m ·{" "}
+                          {site.viewpoint}
                         </span>
                       </div>
                       <div className="cloudsea-card-score">
@@ -460,9 +556,11 @@ export default function CloudSeaApp() {
                           className="cloudsea-score-badge"
                           style={{ color: scoreColor }}
                         >
-                          {windowScore.probabilityLabel ?? "—"}
+                          {windowScore.conditionLabel ?? "—"}
                         </span>
-                        <span className={`cloudsea-pos-badge ${badgeTone}`}>
+                        <span
+                          className={`cloudsea-pos-badge ${badgeTone}`}
+                        >
                           {windowScore.positionLabel}
                         </span>
                       </div>
@@ -470,11 +568,15 @@ export default function CloudSeaApp() {
 
                     <div className="cloudsea-profile-strip">
                       <div>
-                        <label>预估云顶</label>
-                        <strong>{windowScore.cloudTopM != null ? `${windowScore.cloudTopM}m` : "—"}</strong>
+                        <label>模式云顶</label>
+                        <strong>
+                          {windowScore.cloudTopM != null
+                            ? `${windowScore.cloudTopM}m`
+                            : "—"}
+                        </strong>
                       </div>
                       <div>
-                        <label>相对高差</label>
+                        <label>峰顶-云顶高差</label>
                         <strong>
                           {windowScore.altitudeDiffM != null
                             ? `${windowScore.altitudeDiffM > 0 ? "+" : ""}${windowScore.altitudeDiffM}m`
@@ -483,11 +585,17 @@ export default function CloudSeaApp() {
                       </div>
                       <div>
                         <label>近地风速</label>
-                        <strong>{windowScore.windSpeed != null ? `${windowScore.windSpeed}m/s` : "—"}</strong>
+                        <strong>
+                          {windowScore.windSpeed != null
+                            ? `${windowScore.windSpeed}m/s`
+                            : "—"}
+                        </strong>
                       </div>
                     </div>
 
-                    <p className="cloudsea-card-summary">{windowScore.summary}</p>
+                    <p className="cloudsea-card-summary">
+                      {windowScore.summary}
+                    </p>
                   </div>
                 );
               })
