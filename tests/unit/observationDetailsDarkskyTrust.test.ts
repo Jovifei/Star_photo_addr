@@ -11,4 +11,11 @@ describe("observation detail dark-sky no-data contract", () => {
     expect(source).toContain("无可信栅格读数");
     expect(source).toContain("不会根据坐标、海拔或点位目录推算 Bortle/SQM");
   });
+
+  it("samples the exact selected coordinate instead of substituting catalog metadata", () => {
+    const source = fs.readFileSync("src/components/ObservationDetails.tsx", "utf8");
+    expect(source).toContain("sampleBortle(location.latitude, location.longitude)");
+    expect(source).toContain("sampleMatchesLocation(sample, location)");
+    expect(source).toContain('resolvedSample?.status === "ok"');
+  });
 });

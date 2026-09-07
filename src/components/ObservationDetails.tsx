@@ -1,10 +1,22 @@
 "use client";
 
-import { describeDarkSkyStatus } from "@/lib/darksky";
+import { useEffect, useState } from "react";
+import { describeDarkSkyStatus, sampleBortle } from "@/lib/darksky";
 import { formatElevationMeters } from "@/lib/locationPresentation";
 import { statusMeta } from "@/lib/scoring";
 import type { DarkSkySample, Location, NightEvaluation } from "@/lib/types";
 import ScoreRing from "@/components/ScoreRing";
+
+function sampleMatchesLocation(
+  sample: DarkSkySample | null,
+  location: Location,
+): boolean {
+  return Boolean(
+    sample &&
+      Math.abs(sample.latitude - location.latitude) < 1e-6 &&
+      Math.abs(sample.longitude - location.longitude) < 1e-6,
+  );
+}
 
 /** Observation detail: dark-sky, weather window, moon, galaxy, confidence. */
 export default function ObservationDetails({
@@ -23,30 +35,56 @@ export default function ObservationDetails({
   onRemoveCandidate?: () => void;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
-  const hasReading =
-    sample?.status === "ok" &&
-    sample.mpsas != null &&
-    sample.bortle != null;
+  const [resolvedSample, setResolvedSample] = useState<DarkSkySample | null>(null);
 
-  const mpsasText = hasReading ? sample.mpsas!.toFixed(2) : "—";
+  // A curated site selected through selectLocation() does not necessarily pass
+  // through store.sampleAt(). Sample the exact coordinate here so installed
+  // licensed rasters remain usable without falling back to catalog Bortle.
+  // sampleBortle() itself returns explicit no-data states and never fabricates.
+  useEffect(() => {
+    if (!location) {
+      setResolvedSample(null);
+      return;
+    }
+    if (sampleMatchesLocation(sample, location)) {
+      setResolvedSample(sample);
+      return;
+    }
+
+    let cancelled = false;
+    setResolvedSample(null);
+    void sampleBortle(location.latitude, location.longitude).then((next) => {
+      if (!cancelled) setResolvedSample(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [location, sample]);
+
+  const hasReading =
+    resolvedSample?.status === "ok" &&
+    resolvedSample.mpsas != null &&
+    resolvedSample.bortle != null;
+
+  const mpsasText = hasReading ? resolvedSample.mpsas!.toFixed(2) : "—";
   const mpsasUnit = hasReading
     ? "mpsas"
     : location
       ? "无可信数值"
       : "待选择地点";
 
-  const bortleText = hasReading ? `B${sample.bortle}` : "—";
+  const bortleText = hasReading ? `B${resolvedSample.bortle}` : "—";
   const bortleName = hasReading
-    ? (sample.bortleName ?? "")
+    ? (resolvedSample.bortleName ?? "")
     : location
       ? "无可信栅格读数"
       : "待选择地点";
 
   const darkSkyStatusNote =
     location && !hasReading
-      ? sample
-        ? `${describeDarkSkyStatus(sample.status)} 不会根据坐标、海拔或点位目录推算 Bortle/SQM。`
-        : "暗夜数值尚未取得可信栅格读数；不会根据坐标、海拔或点位目录推算 Bortle/SQM。"
+      ? resolvedSample
+        ? `${describeDarkSkyStatus(resolvedSample.status)} 不会根据坐标、海拔或点位目录推算 Bortle/SQM。`
+        : "正在读取当前坐标的暗夜数值；没有可信栅格时不会根据坐标、海拔或点位目录推算 Bortle/SQM。"
       : null;
 
   return (
