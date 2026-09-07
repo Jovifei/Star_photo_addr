@@ -11,34 +11,40 @@ import "./viewport-recommendations-mobile.css";
 import "./ux-map-v2.css";
 import "./mobile-map-controls.css";
 
+const PUBLIC_SITE_URL = "https://photo.joviluma.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(PUBLIC_SITE_URL),
   title: "逐星｜今夜观测",
   description:
-    "搜索任意地点，在今夜观测中查看逐小时云量、卫星云观测、夜光影像与天文条件。",
+    "搜索任意地点，在今夜观测中查看逐小时云量、卫星云观测、暗夜参考、天文条件，并进入火烧云与高山云海摄影工作区。",
   keywords: [
     "逐星",
     "今夜观测",
     "暗夜选址",
-    "观星计划",
+    "火烧云",
+    "高山云海",
     "今晚云量",
     "卫星云图",
     "天文观测",
     "观星天气",
+    "星空摄影",
   ],
   authors: [{ name: "逐星 PERSEIDS OBSERVATORY" }],
   openGraph: {
-    title: "逐星｜今夜观测",
+    title: "逐星｜星空摄影观测平台",
     description:
-      "以今晚为起点，查看未来小时云量变化、卫星观测与可用数据源状态。",
-    url: "https://perseids.giraffetree.cn",
+      "把今晚能不能拍、去哪里拍、几点拍，以及火烧云与高山云海条件放在同一套地图决策工作流中。",
+    url: PUBLIC_SITE_URL,
+    siteName: "逐星",
     type: "website",
     locale: "zh_CN",
   },
   twitter: {
     card: "summary",
-    title: "逐星｜今夜观测",
+    title: "逐星｜星空摄影观测平台",
     description:
-      "把今晚暗夜、月光、天文事件与当地可靠天气放在一张地图上。",
+      "逐小时云量、卫星云观测、暗夜选址、火烧云与高山云海摄影条件的一体化地图工作台。",
   },
 };
 

@@ -10,10 +10,33 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
+    version: "v1.0.5",
+    date: "2026-09-06",
+    tag: "发布完整性与数据真实性修复",
+    current: true,
+    highlights: [
+      {
+        icon: ShieldCheck,
+        title: "数据真实性优先",
+        desc: "删除云海人工天气兜底，修复 AIFS 模型映射、跨地点天气缓存借用和火烧云快照年龄；关键数据缺失时明确降级。",
+      },
+      {
+        icon: CloudSun,
+        title: "云海条件指数 Beta",
+        desc: "使用真实 Open-Meteo 相对湿度，将未校准的概率语义降级为条件指数；云底与云顶继续明确标注为启发式估算。",
+      },
+      {
+        icon: Layers,
+        title: "发布门禁恢复",
+        desc: "更新高风险传递依赖并恢复生产依赖审计，补齐云海、火烧云与缓存来源的回归测试。",
+      },
+    ],
+  },
+  {
     version: "v1.0.4",
     date: "2026-09-06",
     tag: "统一工作台契约与版本追踪修复",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: Layers,

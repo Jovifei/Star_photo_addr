@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFireGlowSnapshot, probabilityRangeFor, scoreFireGlowSite } from "@/lib/fireglow";
+import { buildFireGlowSnapshot, isHighFireGlowLevel, probabilityRangeFor, scoreFireGlowSite } from "@/lib/fireglow";
 import type { FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
 
 function recordWithHours(
@@ -101,6 +101,19 @@ describe("scoreFireGlowSite", () => {
     expect(score.evening.score).toBeNull();
   });
 
+  it("does not coerce missing twilight cloud data into clear zeroes", () => {
+    const record = recordWithHours([
+      { time: "2026-08-22T19:00", mid: 40, high: 30, low: 5, precip: 0 },
+    ]);
+    record.hourly!.cloud_cover_high[0] = null;
+
+    const score = scoreFireGlowSite(SITE, record, "2026-08-22");
+    expect(score.evening.band).toBe("unknown");
+    expect(score.evening.score).toBeNull();
+    expect(score.evening.probabilityLabel).toBeNull();
+    expect(score.evening.reason).toContain("数据不完整");
+  });
+
   it("builds a snapshot keyed by curated site ids", () => {
     const snapshot = buildFireGlowSnapshot("2026-08-22", "icon", {
       "2026-08-22": {},
@@ -124,13 +137,13 @@ describe("scoreFireGlowSite", () => {
     expect(highDeck.evening.score!).toBeGreaterThan(lowDeck.evening.score!);
   });
 
-  it("exposes probability bands, vividness, moments and twilight times", () => {
+  it("exposes condition-index bands, vividness, moments and twilight times", () => {
     const score = scoreFireGlowSite(
       SITE,
       recordWithHours([{ time: "2026-08-22T19:00", mid: 40, high: 35, low: 5 }]),
       "2026-08-22",
     );
-    expect(score.evening.probabilityLabel).toMatch(/^\d+–\d+%$/);
+    expect(score.evening.probabilityLabel).toMatch(/^\d+–\d+$/);
     expect(score.evening.probabilityLevel).toMatch(/^p(20|40|60|80|88|95|100)$/);
     expect(score.evening.vividness).not.toBeNull();
     expect(score.evening.vividness!).toBeLessThan(1);
@@ -142,18 +155,29 @@ describe("scoreFireGlowSite", () => {
   });
 });
 
-describe("probabilityRangeFor", () => {
-  it("maps scores to probability bands with a subdivided top tier", () => {
-    expect(probabilityRangeFor(95)?.label).toBe("95–100%");
+describe("condition index presentation bands", () => {
+  it("maps scores to condition-index ranges while retaining legacy level ids", () => {
+    expect(probabilityRangeFor(95)?.label).toBe("95–100");
     expect(probabilityRangeFor(88)?.level).toBe("p100");
-    expect(probabilityRangeFor(84)?.label).toBe("88–95%");
+    expect(probabilityRangeFor(84)?.label).toBe("88–95");
     expect(probabilityRangeFor(80)?.level).toBe("p95");
-    expect(probabilityRangeFor(74)?.label).toBe("80–88%");
+    expect(probabilityRangeFor(74)?.label).toBe("80–88");
     expect(probabilityRangeFor(72)?.level).toBe("p88");
-    expect(probabilityRangeFor(60)?.label).toBe("60–80%");
+    expect(probabilityRangeFor(60)?.label).toBe("60–80");
     expect(probabilityRangeFor(40)?.level).toBe("p60");
-    expect(probabilityRangeFor(20)?.label).toBe("20–40%");
+    expect(probabilityRangeFor(20)?.label).toBe("20–40");
     expect(probabilityRangeFor(5)?.level).toBe("p20");
     expect(probabilityRangeFor(null)).toBeNull();
+  });
+});
+
+describe("isHighFireGlowLevel", () => {
+  it("counts every high presentation tier including subdivided top tiers", () => {
+    expect(isHighFireGlowLevel("p80")).toBe(true);
+    expect(isHighFireGlowLevel("p88")).toBe(true);
+    expect(isHighFireGlowLevel("p95")).toBe(true);
+    expect(isHighFireGlowLevel("p100")).toBe(true);
+    expect(isHighFireGlowLevel("p60")).toBe(false);
+    expect(isHighFireGlowLevel(null)).toBe(false);
   });
 });

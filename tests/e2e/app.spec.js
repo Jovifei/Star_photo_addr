@@ -236,6 +236,9 @@ test("规划器兼容链接不会创建已退役的独立详情抽屉", async ({
 
 test("375、768、1024、1440 宽度下统一工作台无页面级横向溢出", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "桌面项目统一覆盖断点");
+  // This matrix deliberately performs 12 production navigations. Keep the
+  // layout assertions strict but give slower CI runners enough wall-clock time.
+  test.setTimeout(120_000);
   const plannerCompatibilityUrl = "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=2026-08-09&model=icon";
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: width < 800 ? 900 : 1000 });

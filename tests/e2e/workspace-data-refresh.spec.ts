@@ -62,6 +62,21 @@ async function openHourlyMatrix(page: Page) {
   await expect(page.locator("#hourly-forecast-panel")).toBeVisible({ timeout: 20000 });
 }
 
+/**
+ * The matrix is always 20:00 → 05:00. During Shanghai 00:00–05:00 the first
+ * four columns belong to the previous evening and a current-day provider
+ * forecast legitimately has no values for them. The 00:00 weather cell is in
+ * the current provider domain both before and after that midnight boundary,
+ * so it is the stable assertion target for refresh/recovery tests.
+ */
+function midnightWeatherCell(page: Page) {
+  return page
+    .locator("#hourly-forecast-panel tbody tr")
+    .first()
+    .locator("td")
+    .nth(4);
+}
+
 test("unavailable hourly forecast shows reason with retry and recovers real values", async ({
   page,
 }, testInfo) => {
@@ -106,10 +121,8 @@ test("unavailable hourly forecast shows reason with retry and recovers real valu
   // The target point is now allowed to recover, so switching the time domain
   // cannot replace the intended 429 → retry transition.
   await openHourlyMatrix(page);
-  const firstCell = page
-    .locator("#hourly-forecast-panel tbody td")
-    .first();
-  await expect(firstCell).not.toHaveText("—", { timeout: 20000 });
+  const recoveredCell = midnightWeatherCell(page);
+  await expect(recoveredCell).not.toHaveText("—", { timeout: 20000 });
 });
 
 test("manual refresh failure keeps last good values and says so", async ({
@@ -120,9 +133,9 @@ test("manual refresh failure keeps last good values and says so", async ({
   const availability = page.getByTestId("forecast-availability");
   await expect(availability).toContainText(/数据更新|最近成功/, { timeout: 20000 });
   await openHourlyMatrix(page);
-  const firstCell = page.locator("#hourly-forecast-panel tbody td").first();
-  await expect(firstCell).not.toHaveText("—", { timeout: 20000 });
-  const goodValue = await firstCell.textContent();
+  const stableCell = midnightWeatherCell(page);
+  await expect(stableCell).not.toHaveText("—", { timeout: 20000 });
+  const goodValue = await stableCell.textContent();
 
   await page.route("**/api/forecast?**", async (route) => {
     await route.fulfill({
@@ -136,7 +149,7 @@ test("manual refresh failure keeps last good values and says so", async ({
 
   await expect(availability).toContainText(/使用最近成功数据/, { timeout: 20000 });
   await expect(availability).toContainText("429");
-  await expect(firstCell).toHaveText(goodValue ?? "");
+  await expect(stableCell).toHaveText(goodValue ?? "");
 });
 
 test("fireglow date and phase switch real data and stale snapshot forces refresh", async ({

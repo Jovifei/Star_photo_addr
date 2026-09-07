@@ -1164,3 +1164,16 @@
   }
 }
 
+
+
+.cloudsea-beta-banner,
+.cs-beta-note {
+  margin: 8px 14px 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(72, 181, 181, 0.28);
+  border-radius: 10px;
+  background: rgba(72, 181, 181, 0.08);
+  color: var(--cs-muted, #9db7bf);
+  font-size: 12px;
+  line-height: 1.55;
+}

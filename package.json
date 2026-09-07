@@ -1,10 +1,10 @@
 {
   "name": "star-weather-planner",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "private": true,
-  "description": "逐星｜今夜观测、暗夜选址与观星计划平台",
-  "author": "JCodesMore",
+  "description": "逐星｜今夜观测、暗夜选址、火烧云与高山云海摄影决策平台",
+  "author": "Jovifei",
   "license": "MIT",
   "engines": {
     "node": ">=24"

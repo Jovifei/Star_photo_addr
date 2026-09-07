@@ -30,7 +30,7 @@ export default function DecisionSummary({
     updatedAt:
       state.forecast?.metadata?.fetchedAt ??
       state.forecast?.fetchedAt ??
-      state.cloudState.activeForecastTime ??
+      state.forecastAvailability.lastSuccessAt ??
       null,
   });
 
