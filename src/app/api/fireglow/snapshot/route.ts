@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getShanghaiDate,
-} from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
+import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { buildFireGlowSnapshot } from "@/lib/fireglow";
 import type { FireGlowSnapshot } from "@/lib/fireglow";
 import {
