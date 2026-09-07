@@ -60,10 +60,15 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
   if (testInfo.project.name === "mobile") {
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
   }
-  await expect(page.locator(".dark-sky-unavailable-note")).toContainText(
-    "卫星夜光及地理模型估算值",
+  const darkSkyNote = page.locator(".dark-sky-unavailable-note");
+  await expect(darkSkyNote).toContainText(
+    "本地暗夜数据未随仓库分发",
     { timeout: 15000 },
   );
+  await expect(darkSkyNote).toContainText(
+    "不会根据坐标、海拔或点位目录推算 Bortle/SQM",
+  );
+  await expect(darkSkyNote).not.toContainText("卫星夜光及地理模型估算值");
   if (testInfo.project.name === "mobile") {
     await openMobileMapPanel(page, "layers");
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
