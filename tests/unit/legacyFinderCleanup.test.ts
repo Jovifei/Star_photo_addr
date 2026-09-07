@@ -62,7 +62,7 @@ describe("retired Finder shell cleanup", () => {
   it("documents catalog B1–B4 as reference metadata rather than live dark-sky data", () => {
     const readme = fs.readFileSync("README.md", "utf8");
     expect(readme).toContain("目录参考 B1–B4");
-    expect(readme).toContain("仅用于点位库筛选与着色");
+    expect(readme).toMatch(/目录参考 B1–B4 [仅只]用于点位库筛选与着色/);
     expect(readme).toContain("不进入实时天气推荐分");
   });
 });

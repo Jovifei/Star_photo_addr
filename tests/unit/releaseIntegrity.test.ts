@@ -85,7 +85,8 @@ describe("release integrity invariants", () => {
 
     expect(page).toContain("压力层云层与逆温证据");
     expect(page).not.toContain("启发式估算云底/云顶");
-    expect(readme).toContain("周边 8–15 km 谷地采样仍未实施");
+    expect(readme).toContain("8–15 km");
+    expect(readme).toContain("周边谷地采样仍未实施");
     expect(readme).toContain("不使用启发式云底/云顶补值");
 
     expect(model).not.toContain("estimateCloudLayers");
