@@ -1,10 +1,27 @@
 "use client";
 
-import { estimateDarkSky } from "@/lib/darksky";
+import { useEffect, useMemo, useState } from "react";
+import { describeDarkSkyStatus, sampleBortle } from "@/lib/darksky";
 import { formatElevationMeters } from "@/lib/locationPresentation";
 import { statusMeta } from "@/lib/scoring";
 import type { DarkSkySample, Location, NightEvaluation } from "@/lib/types";
 import ScoreRing from "@/components/ScoreRing";
+
+function sampleMatchesLocation(
+  sample: DarkSkySample | null,
+  location: Location,
+): boolean {
+  return Boolean(
+    sample &&
+      Math.abs(sample.latitude - location.latitude) < 1e-6 &&
+      Math.abs(sample.longitude - location.longitude) < 1e-6,
+  );
+}
+
+interface FetchedDarkSkySample {
+  locationKey: string;
+  sample: DarkSkySample;
+}
 
 /** Observation detail: dark-sky, weather window, moon, galaxy, confidence. */
 export default function ObservationDetails({
@@ -23,42 +40,70 @@ export default function ObservationDetails({
   onRemoveCandidate?: () => void;
 }) {
   const meta = statusMeta(evaluation?.status ?? "no");
-  const hasReading = sample != null && sample.status === "ok";
+  const [fetchedSample, setFetchedSample] =
+    useState<FetchedDarkSkySample | null>(null);
+  const locationKey = location
+    ? `${location.latitude.toFixed(6)},${location.longitude.toFixed(6)}`
+    : "";
+  const storeSampleMatches = Boolean(
+    location && sampleMatchesLocation(sample, location),
+  );
 
-  const estimate = location
-    ? estimateDarkSky(
-        location.latitude,
-        location.longitude,
-        location.elevation,
-        location.bortle,
-      )
-    : null;
+  // A curated site selected through selectLocation() does not necessarily pass
+  // through store.sampleAt(). Sample the exact coordinate here so installed
+  // licensed rasters remain usable without falling back to catalog Bortle.
+  // The async result is tagged with locationKey; old-location results therefore
+  // become inert immediately when the selected coordinate changes. The effect
+  // only updates state from the external async callback, never synchronously.
+  useEffect(() => {
+    if (!location || storeSampleMatches) return;
+    let cancelled = false;
+    const key = locationKey;
+    void sampleBortle(location.latitude, location.longitude).then((next) => {
+      if (!cancelled) {
+        setFetchedSample({ locationKey: key, sample: next });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    location,
+    locationKey,
+    storeSampleMatches,
+  ]);
 
-  const mpsasText =
-    hasReading && sample.mpsas != null
-      ? sample.mpsas.toFixed(2)
-      : estimate
-        ? `~${estimate.mpsas.toFixed(2)}`
-        : "—";
+  const resolvedSample = useMemo(() => {
+    if (!location) return null;
+    if (storeSampleMatches) return sample;
+    return fetchedSample?.locationKey === locationKey ? fetchedSample.sample : null;
+  }, [fetchedSample, location, locationKey, sample, storeSampleMatches]);
 
+  const hasReading =
+    resolvedSample?.status === "ok" &&
+    resolvedSample.mpsas != null &&
+    resolvedSample.bortle != null;
+
+  const mpsasText = hasReading ? resolvedSample.mpsas!.toFixed(2) : "—";
   const mpsasUnit = hasReading
     ? "mpsas"
-    : estimate
-      ? "mpsas (估算)"
+    : location
+      ? "无可信数值"
       : "待选择地点";
 
-  const bortleText =
-    hasReading && sample.bortle != null
-      ? `B${sample.bortle}`
-      : estimate
-        ? `B${estimate.bortle}`
-        : "—";
-
+  const bortleText = hasReading ? `B${resolvedSample.bortle}` : "—";
   const bortleName = hasReading
-    ? (sample.bortleName ?? "")
-    : estimate
-      ? `${estimate.bortleName} · ${estimate.sourceLabel}`
+    ? (resolvedSample.bortleName ?? "")
+    : location
+      ? "无可信栅格读数"
       : "待选择地点";
+
+  const darkSkyStatusNote =
+    location && !hasReading
+      ? resolvedSample
+        ? `${describeDarkSkyStatus(resolvedSample.status)} 不会根据坐标、海拔或点位目录推算 Bortle/SQM。`
+        : "正在读取当前坐标的暗夜数值；没有可信栅格时不会根据坐标、海拔或点位目录推算 Bortle/SQM。"
+      : null;
 
   return (
     <div className="panel-section">
@@ -143,7 +188,7 @@ export default function ObservationDetails({
         </div>
       </div>
 
-      {location && !hasReading && (
+      {darkSkyStatusNote && (
         <p
           className="dark-sky-unavailable-note"
           style={{
@@ -153,7 +198,7 @@ export default function ObservationDetails({
             lineHeight: 1.55,
           }}
         >
-          暗夜等级与天顶亮度为卫星夜光及地理模型估算值，供选点参考。
+          {darkSkyStatusNote}
         </p>
       )}
 

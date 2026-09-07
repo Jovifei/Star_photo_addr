@@ -17,7 +17,11 @@ export const OBSERVING_SITE_COUNT = FINDER_LOCATIONS.length;
 export const DEFAULT_RECOMMENDATION_THRESHOLD = 70;
 export const MAX_SHORTLIST_SIZE = 12;
 
-/** The one Adapter used by both product routes. */
+/**
+ * Catalog Bortle classes are retained for site-library filtering/colour only.
+ * They are curated reference metadata, not a measured dark-sky sample, and must
+ * never contribute to the live recommendation score.
+ */
 export function finderLocationToObservingSite(
   location: FinderLocation,
 ): ObservingSite {
@@ -93,8 +97,24 @@ function bandFor(score: number, blocker: boolean): RecommendationBand {
   return "not-recommended";
 }
 
-function darknessScore(bortle: ObservingSite["bortle"]): number {
-  return ({ 1: 100, 2: 90, 3: 78, 4: 62 } as const)[bortle];
+const CLOUD_SCORE_WEIGHT = 0.55;
+const WEATHER_RISK_WEIGHT = 0.15;
+const VERIFIED_SCORE_WEIGHT = CLOUD_SCORE_WEIGHT + WEATHER_RISK_WEIGHT;
+
+/**
+ * Build a 0–100 score only from signals that are verified for the requested
+ * forecast time. The former catalog-Bortle 30% term was removed: catalog B1–B4
+ * is reference metadata and cannot stand in for a real per-coordinate raster
+ * sample. When a trustworthy dark-sky sample becomes available server-side it
+ * can be added as a separately provenance-tracked signal.
+ */
+function verifiedWeatherScore(cloudScore: number, weatherRisk: number): number {
+  return Math.round(
+    clamp(
+      (cloudScore * CLOUD_SCORE_WEIGHT + weatherRisk * WEATHER_RISK_WEIGHT) /
+        VERIFIED_SCORE_WEIGHT,
+    ),
+  );
 }
 
 function scoreConfidence(
@@ -112,11 +132,13 @@ function unknownHourScore(
   site: ObservingSite,
   blockers: string[],
 ): RecommendationScore {
+  // Touch the catalog identity without treating its Bortle reference as data.
+  void site.id;
   return {
     score: null,
     band: "unknown",
     cloud: null,
-    darkness: darknessScore(site.bortle),
+    darkness: null,
     weatherRisk: null,
     bestWindow: null,
     blockers,
@@ -150,9 +172,7 @@ export function findBestContiguousWindow(
   if (minimumHours < 1) return [];
   const sorted = [...rows]
     .filter((row) => Number.isFinite(wallClockMillis(row.time)))
-    .sort((left, right) =>
-      left.time.localeCompare(right.time),
-    );
+    .sort((left, right) => left.time.localeCompare(right.time));
   const groups: ClearWindowRow[][] = [];
   for (const row of sorted) {
     const group = groups.at(-1);
@@ -179,8 +199,10 @@ export function findBestContiguousWindow(
     const average = (items: ClearWindowRow[]) =>
       items.reduce((sum, item) => sum + (item.cloud ?? 100), 0) /
       items.length;
-    return average(left) - average(right) ||
-      left[0]!.time.localeCompare(right[0]!.time);
+    return (
+      average(left) - average(right) ||
+      left[0]!.time.localeCompare(right[0]!.time)
+    );
   });
   return candidates[0]?.map((row) => row.time) ?? [];
 }
@@ -220,17 +242,13 @@ export function scoreObservingSiteAtTime(
       : []),
     ...(gust != null && gust >= 15 ? ["阵风达到 15 m/s"] : []),
   ];
-  const score = Math.round(
-    cloudScore * 0.55 +
-      darknessScore(site.bortle) * 0.3 +
-      weatherRisk * 0.15,
-  );
+  const score = verifiedWeatherScore(cloudScore, weatherRisk);
 
   return {
     score,
     band: bandFor(score, blockers.length > 0),
     cloud,
-    darkness: darknessScore(site.bortle),
+    darkness: null,
     weatherRisk: Math.round(weatherRisk),
     bestWindow: null,
     blockers,
@@ -248,17 +266,7 @@ export function scoreObservingSite(
 ): RecommendationScore {
   const hourly = record?.hourly;
   if (!hourly?.time?.length) {
-    return {
-      score: null,
-      band: "unknown",
-      cloud: null,
-      darkness: darknessScore(site.bortle),
-      weatherRisk: null,
-      bestWindow: null,
-      blockers: ["暂无逐小时天气数据"],
-      confidence: "unknown",
-      validHours: 0,
-    };
+    return unknownHourScore(site, ["暂无逐小时天气数据"]);
   }
 
   const indexes = hourly.time
@@ -281,7 +289,7 @@ export function scoreObservingSite(
       score: null,
       band: "unknown",
       cloud: null,
-      darkness: darknessScore(site.bortle),
+      darkness: null,
       weatherRisk: null,
       bestWindow: null,
       blockers: ["有效天气时次不足 70%"],
@@ -330,11 +338,7 @@ export function scoreObservingSite(
       ? ["阵风达到 15 m/s"]
       : []),
   ];
-  const rawScore = Math.round(
-    (cloudScore ?? 0) * 0.55 +
-      darknessScore(site.bortle) * 0.3 +
-      weatherRisk * 0.15,
-  );
+  const rawScore = verifiedWeatherScore(cloudScore ?? 0, weatherRisk);
   const clearRows = rows.filter(
     (row) =>
       row.cloud != null &&
@@ -348,7 +352,7 @@ export function scoreObservingSite(
     score: rawScore,
     band: bandFor(rawScore, hardBlockers.length > 0),
     cloud: cloudScore == null ? null : Math.round(averageCloud ?? 0),
-    darkness: darknessScore(site.bortle),
+    darkness: null,
     weatherRisk: Math.round(weatherRisk),
     bestWindow: formatWindow(bestWindow),
     blockers: hardBlockers,
@@ -394,7 +398,7 @@ export function buildObservationSnapshot(
     model,
     generatedAt: new Date().toISOString(),
     source:
-      "Open-Meteo Forecast API + curated dark-sky site metadata",
+      "Open-Meteo Forecast API + curated dark-sky site metadata (catalog only; excluded from live score)",
     stale: records.some(
       (record) => record.status === "stale" || record.status === "error",
     ),

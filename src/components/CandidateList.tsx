@@ -6,13 +6,12 @@ import { useStore } from "@/lib/store";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
 import { formatNightLabel } from "@/lib/nighttime";
 import { DEFAULT_CANDIDATE_SEEDS } from "@/lib/constants";
-import { FINDER_LOCATIONS } from "@/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
 import type { CityCandidate, Location, LocationForecast, NightEvaluation } from "@/lib/types";
 import type { CityCandidateStatus } from "@/data/cities";
 
 interface CandidateNightData {
   nightKey: string;
-  score: number;
+  score: number | null;
   statusTone: string;
   statusLabel: string;
   windowLabel: string;
@@ -114,7 +113,6 @@ export default function CandidateList({
         elevation: cand.elevation ?? null,
         source: "自定义",
         province: cand.province,
-        bortle: cand.bortle,
       };
 
       const forecast =
@@ -155,20 +153,11 @@ export default function CandidateList({
             loading: false,
           });
         } else {
-          // Pre-computed snapshot fallback from finderData
-          const finder = FINDER_LOCATIONS.find(
-            (f) =>
-              f.id === cand.id ||
-              (Math.abs(f.latitude - cand.latitude) < 0.08 &&
-                Math.abs(f.longitude - cand.longitude) < 0.08) ||
-              (cand.name && (f.name.includes(cand.name) || cand.name.includes(f.name))),
-          );
-
-          // Baseline estimation based on Bortle
-          const baseScore = Math.max(40, 95 - (cand.bortle || 3) * 8);
+          // Do not fabricate a placeholder score from catalog Bortle metadata.
+          // Until real weather is available, preserve an explicit no-data state.
           nights.set(key, {
             nightKey: key,
-            score: finder ? Math.max(50, baseScore) : baseScore,
+            score: null,
             statusTone: "muted",
             statusLabel: "加载中",
             windowLabel: "计算中…",
@@ -185,7 +174,7 @@ export default function CandidateList({
         nights.get(selectedNight) ??
         nights.values().next().value ?? {
           nightKey: selectedNight,
-          score: 50,
+          score: null,
           statusTone: "muted",
           statusLabel: "无数据",
           windowLabel: "暂无数据",
@@ -211,9 +200,19 @@ export default function CandidateList({
     state.forecast,
   ]);
 
-  // Sort descending by current night's score
+  // Sort scored candidates first. Pending/no-data rows keep deterministic order
+  // without inventing a Bortle-derived baseline score.
   const sortedCandidates = useMemo(() => {
-    return [...evaluatedCandidates].sort((a, b) => b.currentNight.score - a.currentNight.score);
+    return [...evaluatedCandidates].sort((a, b) => {
+      const right = b.currentNight.score;
+      const left = a.currentNight.score;
+      if (left === null && right === null) {
+        return a.candidate.name.localeCompare(b.candidate.name, "zh-CN");
+      }
+      if (left === null) return 1;
+      if (right === null) return -1;
+      return right - left;
+    });
   }, [evaluatedCandidates]);
 
   const handleResetSeeds = useCallback(() => {
@@ -314,15 +313,14 @@ export default function CandidateList({
                       <span className="candidate-meta">
                         {candidate.province || "未知"}
                         {candidate.elevation ? ` · ${candidate.elevation}m` : ""}
-                        {candidate.bortle > 0 ? ` · B${candidate.bortle}` : ""}
                       </span>
                     </div>
                   </div>
 
                   <div className="candidate-card-score-box">
                     <div className="candidate-score-number">
-                      <strong>{currentNight.score}</strong>
-                      <small>分</small>
+                      <strong>{currentNight.score ?? "—"}</strong>
+                      {currentNight.score !== null && <small>分</small>}
                     </div>
                     <span className={`candidate-status-pill tone-${currentNight.statusTone}`}>
                       {currentNight.statusLabel}
@@ -352,7 +350,7 @@ export default function CandidateList({
                   </div>
                   <div className="candidate-metric-item" title="最高降水概率">
                     <CloudRain size={12} className="metric-icon" />
-                    <span>降水 {currentNight.precipitation != null ? `${currentNight.precipitation}%` : "0%"}</span>
+                    <span>降水 {currentNight.precipitation != null ? `${currentNight.precipitation}%` : "—"}</span>
                   </div>
                   <div className="candidate-metric-item" title="最大阵风速度">
                     <Wind size={12} className="metric-icon" />
@@ -368,12 +366,20 @@ export default function CandidateList({
                 <div className="candidate-7day-capsules">
                   {nightKeys.map((key, dayIdx) => {
                     const nightData = nights.get(key);
-                    const score = nightData?.score ?? 50;
+                    const score = nightData?.score ?? null;
                     const isKeySelected = key === selectedNight;
                     const dayLabel = getDayShortLabel(key, dayIdx);
 
                     const scoreTone =
-                      score >= 80 ? "capsule--great" : score >= 65 ? "capsule--good" : score >= 50 ? "capsule--fair" : "capsule--poor";
+                      score === null
+                        ? ""
+                        : score >= 80
+                          ? "capsule--great"
+                          : score >= 65
+                            ? "capsule--good"
+                            : score >= 50
+                              ? "capsule--fair"
+                              : "capsule--poor";
 
                     return (
                       <button
@@ -384,10 +390,14 @@ export default function CandidateList({
                           e.stopPropagation();
                           selectNight(key);
                         }}
-                        title={`${formatNightLabel(key, true)}: ${score}分 (${nightData?.statusLabel ?? ""})；点击切换`}
+                        title={
+                          score === null
+                            ? `${formatNightLabel(key, true)}: 数据加载中`
+                            : `${formatNightLabel(key, true)}: ${score}分 (${nightData?.statusLabel ?? ""})；点击切换`
+                        }
                       >
                         <span className="mini-capsule-day">{dayLabel}</span>
-                        <span className="mini-capsule-score">{score}</span>
+                        <span className="mini-capsule-score">{score ?? "—"}</span>
                       </button>
                     );
                   })}

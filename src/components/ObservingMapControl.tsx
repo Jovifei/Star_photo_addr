@@ -202,12 +202,12 @@ export default function ObservingMapControl({
       <div className="observing-mode-hint">
         <small>
           {isSitesWorkspace
-            ? "选址模式：比较长期暗空本底（Bortle / 海拔 / 光污染），不依赖今晚天气。"
+            ? "选址模式：先用点位库参考 B 与海拔筛长期候选，再结合 VIIRS 夜光参考；参考 B 不是当前栅格/SQM 实测，也不进入今晚天气评分。"
             : "图层（云图 · 预报/实况、光污染）请使用地图顶部图层条；本面板专注地点筛选与评分门槛。"}
         </small>
       </div>
       <label className="observing-filter-row">
-        <span>Bortle 筛选 · {describeBortleLevels(state.observingBortleLevels)}</span>
+        <span>参考 B 筛选 · {describeBortleLevels(state.observingBortleLevels)}</span>
         <select
           value={state.observingBortleLevels.length === 3 && state.observingBortleLevels.every((level, index) => level === index + 1) ? "3" : state.observingBortleLevels.length === 4 ? "4" : "custom"}
           onChange={(event) => {
@@ -215,21 +215,21 @@ export default function ObservingMapControl({
               setObservingBortleLimit(Number(event.target.value) as 3 | 4);
             }
           }}
-          aria-label="Bortle 地点范围"
+          aria-label="目录参考 B 地点范围"
         >
-          <option value="3">B1–B3 · 222 个</option>
-          <option value="4">B1–B4 · 242 个</option>
+          <option value="3">参考 B1–B3 · 222 个</option>
+          <option value="4">参考 B1–B4 · 242 个</option>
           <option value="custom" disabled>自定义档位</option>
         </select>
       </label>
       <small className="observing-bortle-legend">
-        Bortle 是 1–9 级夜空亮度分级，数字越小越暗、越适合星空摄影：
-        B1 极佳暗夜（银河细节清晰）· B2 典型自然暗夜 · B3 乡村夜空 · B4 乡村/郊区过渡（银河可见但发灰）。
-        本库只收录 B1–B4，它描述的是光污染本底，与今晚天气评分无关。
+        参考 B 借用 Bortle 1–4 的含义做点位目录标注，数字越小代表整理资料中的暗空条件越好：
+        B1 极暗 · B2 自然暗夜 · B3 乡村夜空 · B4 乡村/郊区过渡。
+        这些值只用于点位库筛选与着色，不是当前坐标的授权栅格或现场 SQM 实测，也不进入实时天气推荐分。
       </small>
       {isSitesWorkspace ? (
-        <div className="observing-baseline-stats" aria-label="全国点位 Bortle 本底分布">
-          <span className="observing-baseline-title">本底分布 · 全国点位库</span>
+        <div className="observing-baseline-stats" aria-label="全国点位目录参考 B 分布">
+          <span className="observing-baseline-title">参考分布 · 全国点位库</span>
           <div className="observing-baseline-grid">
             {[1, 2, 3, 4].map((band) => (
               <button
@@ -238,15 +238,15 @@ export default function ObservingMapControl({
                 className="observing-baseline-chip"
                 data-bortle={band}
                 aria-pressed={state.observingBortleLevels.includes(band as BortleLevel)}
-                aria-label={`筛选 B${band} 点位，${bortleCounts[band] ?? 0} 个`}
+                aria-label={`筛选参考 B${band} 点位，${bortleCounts[band] ?? 0} 个`}
                 onClick={() => setObservingBortleLevels(toggleBortleLevel(state.observingBortleLevels, band as BortleLevel))}
               >
-                <b>B{band}</b>
+                <b>参考 B{band}</b>
                 <span>{bortleCounts[band] ?? 0} 个</span>
               </button>
             ))}
           </div>
-          <small>先按本底圈出够暗的长期机位，再切回今夜观测核对当天云况与窗口。</small>
+          <small>先按目录参考 B 圈出长期候选，再结合 VIIRS 夜光和可用的真实栅格读数复核；最后切回今夜观测核对当天云况与窗口。</small>
         </div>
       ) : (
         <>
@@ -307,7 +307,7 @@ export default function ObservingMapControl({
           </div>
         </>
       )}
-      <small className="observing-map-control-note">{isSitesWorkspace ? "点击 B1–B4 档位可组合筛选；地图上的点按光污染本底着色，点击地点查看暗夜档案与海拔。" : "Bortle 档位与评分档位共同控制地图上的点；灰色点为当前时次数据不足，不代表低分。"}</small>
+      <small className="observing-map-control-note">{isSitesWorkspace ? "点击参考 B1–B4 档位可组合筛选；地图点颜色表示目录参考等级，不代表当前 SQM/栅格实测。点击地点后可在详情中读取可用的真实暗夜数值。" : "参考 B 档位只筛点位目录；评分档位由当前时次天气计算。灰色点为当前时次数据不足，不代表低分。"}</small>
     </section>
   );
 }

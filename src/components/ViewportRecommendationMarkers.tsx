@@ -55,7 +55,7 @@ export default function ViewportRecommendationMarkers({
                 <b>{item.rank}. {item.site.name}</b>
                 <small>
                   {item.score?.score == null ? "等待评分" : `观星分 ${item.score.score}`}
-                  {" · "}B{item.site.bortle}
+                  {" · "}参考 B{item.site.bortle}
                 </small>
               </span>
             </Tooltip>

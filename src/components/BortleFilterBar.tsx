@@ -7,10 +7,9 @@ import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { BortleLevel } from "@/lib/types";
 
 /**
- * Point-library Bortle colours for dark surfaces. The official VIIRS ramp
- * renders B1/B2 near-black, which disappears on the night background, so the
- * site library uses this monochrome light-to-dark ramp instead: brighter dot
- * = darker sky. Text labels carry the meaning; colour is never the only cue.
+ * Catalog-reference dark-sky colours for dark surfaces. These B1–B4 values are
+ * curated site-library metadata, not a live raster/SQM measurement. Brighter
+ * dot = darker reference class; text labels carry the meaning.
  */
 export const SITE_BORTLE_COLORS: Record<BortleLevel, string> = {
   1: "#e8f4ff",
@@ -23,7 +22,7 @@ export function siteBortleColor(level: number): string {
   return SITE_BORTLE_COLORS[level as BortleLevel] ?? "#56636f";
 }
 
-/** Sites-workspace B1–B4 combined filter, docked above the map. */
+/** Sites-workspace catalog-reference B1–B4 combined filter. */
 export default function BortleFilterBar() {
   const { state, setObservingBortleLevels } = useStore();
   const counts = useMemo(() => {
@@ -38,7 +37,7 @@ export default function BortleFilterBar() {
       className="bortle-filter-bar"
       data-testid="bortle-filter-bar"
       role="group"
-      aria-label="按 Bortle 本底筛选点位"
+      aria-label="按目录参考暗空级别筛选点位"
     >
       {([1, 2, 3, 4] as BortleLevel[]).map((level) => {
         const pressed = state.observingBortleLevels.includes(level);
@@ -47,14 +46,15 @@ export default function BortleFilterBar() {
             key={level}
             type="button"
             aria-pressed={pressed}
-            aria-label={`筛选 B${level} 点位，${counts[level]} 个`}
+            aria-label={`筛选目录参考 B${level} 点位，${counts[level]} 个`}
+            title={`目录参考 B${level}，仅用于点位库筛选；不是当前栅格或现场 SQM 实测`}
             onClick={() =>
               setObservingBortleLevels(toggleBortleLevel(state.observingBortleLevels, level))
             }
           >
             <i style={{ background: siteBortleColor(level) }} aria-hidden="true" />
             <span>
-              B{level}
+              参考 B{level}
               <small>{counts[level]}</small>
             </span>
           </button>
