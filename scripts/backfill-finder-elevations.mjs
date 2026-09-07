@@ -1,6 +1,6 @@
-// Backfill missing site elevations in finder-locations.json.
+// Backfill missing site elevations in the modern observing-site catalog.
 //
-// The curated source has no elevation field; finderData.ts parses what it can
+// The curated source has no elevation field; catalog.ts parses what it can
 // from description text (peaks like 太子尖 keep their hand-checked values,
 // which beat 90 m DEM smoothing). Only sites with no parseable elevation are
 // filled from the Open-Meteo elevation API (Copernicus DEM GLO-90).
@@ -13,7 +13,7 @@ import path from "node:path";
 
 const DATA_FILE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../src/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finder-locations.json",
+  "../src/data/observingSites/catalog.json",
 );
 const BATCH_SIZE = 100; // Open-Meteo accepts up to 100 coordinates per call.
 const MAX_ATTEMPTS = 3;
