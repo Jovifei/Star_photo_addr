@@ -6,7 +6,8 @@ import { FINDER_LOCATIONS } from "@/data/observingSites/catalog";
 const legacyRoot =
   "src/components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2";
 const legacyImportFragment =
-  "components/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/finderData";
+  "components/sites/stargazing-finder-dark-com-" +
+  "a038da11/root-8a5edab2/finderData";
 const legacyPublicAsset =
   "public/sites/stargazing-finder-dark-com-a038da11/root-8a5edab2/province-boundaries.geojson";
 const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
