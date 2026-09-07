@@ -1,7 +1,6 @@
 // Deterministic Open-Meteo mock for flake-free E2E.
 // Synthesizes raw Open-Meteo responses from a real captured fixture so the
 // browser app receives contract-correct data without depending on the live API.
-import { PRESSURE_LEVELS } from "../../src/features/planner/lib/clouds.js";
 
 const SURFACE_RAW = [
   ["temperature_2m", "temperature"],
@@ -110,6 +109,22 @@ export function buildNormalizedForecasts(fixture, lats, lons, days, model = "ico
   }));
 }
 
+function pressureLevelsFromFixture(fixture) {
+  const profiles = Object.values(fixture.pressure?.profiles ?? {});
+  const levels = new Set();
+  for (const profile of profiles) {
+    if (!Array.isArray(profile)) continue;
+    for (const point of profile) {
+      if (Number.isFinite(point?.pressure)) levels.add(Number(point.pressure));
+    }
+  }
+  const ordered = [...levels].sort((a, b) => b - a);
+  if (ordered.length < 6) {
+    throw new Error(`pressure fixture only contains ${ordered.length} levels`);
+  }
+  return ordered;
+}
+
 function buildPressureRaw(fixture, days) {
   const src = fixture.pressure.hourly.slice(0, days * 24);
   const profiles = fixture.pressure.profiles;
@@ -118,7 +133,7 @@ function buildPressureRaw(fixture, days) {
   for (const [raw, field] of SURFACE_RAW) {
     hourly[raw] = src.map((r) => r[field]);
   }
-  for (const level of PRESSURE_LEVELS) {
+  for (const level of pressureLevelsFromFixture(fixture)) {
     hourly[`cloud_cover_${level}hPa`] = times.map(
       (t) => profiles[t]?.find((p) => p.pressure === level)?.cloudCover ?? null,
     );
