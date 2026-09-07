@@ -93,6 +93,14 @@ describe("release integrity invariants", () => {
     expect(e2eMock).not.toContain("src/features/planner");
   });
 
+  it("keeps the retired planner route as a noindex compatibility surface", () => {
+    const plannerPage = fs.readFileSync("src/app/planner/page.tsx", "utf8");
+    expect(plannerPage).toContain("观星计划兼容入口");
+    expect(plannerPage).toContain("index: false");
+    expect(plannerPage).toContain("follow: false");
+    expect(plannerPage).not.toContain("多地点星空与云海天气决策");
+  });
+
   it("marks the runtime-mounted fireglow snapshot volume as excluded from Turbopack tracing", () => {
     const fireglowRoute = fs.readFileSync("src/app/api/fireglow/snapshot/route.ts", "utf8");
     expect(fireglowRoute).toContain("OBSERVING_SNAPSHOT_DIR");
