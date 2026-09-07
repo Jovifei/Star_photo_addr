@@ -366,8 +366,8 @@ export default function ViewportRecommendationPanel({
         {zoomReady && !loading && !recommendations.length && !error && (
           <p className="viewport-recommendation-empty">
             {viewportSiteCount
-              ? "点击“生成区域推荐”，按当前时次观星分、Bortle 与海拔排序。"
-              : "当前视野内没有符合 Bortle 筛选的整理点位。"}
+              ? "点击“生成区域推荐”，按当前时次观星分排序；参考 B 只用于点位库筛选，海拔仅用于同分排序。"
+              : "当前视野内没有符合参考 B 筛选的整理点位。"}
           </p>
         )}
         {error && <p className="viewport-recommendation-error" role="status">{error}</p>}
@@ -397,7 +397,7 @@ export default function ViewportRecommendationPanel({
                   </span>
                   <span className="viewport-recommendation-reason">{item.reason}</span>
                   <span className="viewport-recommendation-meta">
-                    <b>B{item.site.bortle}</b>
+                    <b title="目录参考暗空级别；不是当前栅格或现场 SQM 实测">参考 B{item.site.bortle}</b>
                     <b>{item.site.altitude == null ? "海拔未知" : `海拔 ${Math.round(item.site.altitude)}m`}</b>
                     {state.forecastTheme === "cloud" ? (
                       <b className="metric-primary">{item.score?.cloud == null ? "云海 —" : `云海 ${Math.round(100 - item.score.cloud)}`}</b>
@@ -413,7 +413,7 @@ export default function ViewportRecommendationPanel({
         )}
 
         <small className="viewport-recommendation-note">
-          编号表示当前视野排行；颜色与推荐档位沿用现有评分。VIIRS 只作人工夜光参考，出发前仍需核对道路与现场条件。
+          编号表示当前时次的天气推荐排行；参考 B 只用于点位库筛选，不进入实时分、星级或推荐理由。VIIRS 仅作人工夜光参考，出发前仍需核对道路与现场条件。
         </small>
       </div>
     </section>

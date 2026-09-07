@@ -19,9 +19,9 @@ export interface MapViewport {
 }
 
 export interface ViewportRecommendationFilters {
-  /** Legacy contiguous filter kept for old callers. */
+  /** Legacy contiguous catalog-reference filter kept for old callers. */
   bortleLimit?: 3 | 4;
-  /** Individually selected Bortle classes from the map control. */
+  /** Individually selected catalog-reference Bortle classes from the map control. */
   bortleLevels?: BortleLevel[];
   recommendationThreshold: number;
   recommendedOnly: boolean;
@@ -80,10 +80,10 @@ export function recommendationReason(
   if (score?.score == null) {
     return site.description?.trim() || "当前时次天气数据不足，建议稍后复核";
   }
-  if (score.cloud != null && score.cloud <= 20 && site.bortle <= 2) {
-    return "暗夜基础突出，当前时次云量较低";
-  }
   if (score.bestWindow) return `连续观测窗口 ${score.bestWindow}`;
+  if (score.cloud != null && score.cloud <= 20) {
+    return "当前时次云量较低，适合优先查看详情";
+  }
   if (score.cloud != null && score.cloud <= 35) {
     return "当前云量较低，适合优先查看详情";
   }
@@ -98,9 +98,12 @@ export function dominantProvince(
   for (const item of recommendations) {
     counts.set(item.site.province, (counts.get(item.site.province) ?? 0) + 1);
   }
-  return [...counts.entries()].sort(
-    (left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "zh-CN"),
-  )[0]?.[0] ?? null;
+  return (
+    [...counts.entries()].sort(
+      (left, right) =>
+        right[1] - left[1] || left[0].localeCompare(right[0], "zh-CN"),
+    )[0]?.[0] ?? null
+  );
 }
 
 export function rankViewportRecommendations(
@@ -130,7 +133,9 @@ export function rankViewportRecommendations(
       ) {
         return false;
       }
-      return !score?.band || score.band === "unknown" || visibleBands.has(score.band);
+      return (
+        !score?.band || score.band === "unknown" || visibleBands.has(score.band)
+      );
     })
     .sort((left, right) => {
       const leftScore = left.score?.score ?? Number.NEGATIVE_INFINITY;
@@ -139,7 +144,6 @@ export function rankViewportRecommendations(
         rightScore - leftScore ||
         BAND_ORDER[left.score?.band ?? "unknown"] -
           BAND_ORDER[right.score?.band ?? "unknown"] ||
-        left.site.bortle - right.site.bortle ||
         (right.site.altitude ?? -1) - (left.site.altitude ?? -1) ||
         left.site.name.localeCompare(right.site.name, "zh-CN")
       );
