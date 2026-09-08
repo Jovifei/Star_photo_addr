@@ -53,13 +53,21 @@ const HEIGHTS: Record<number, number> = {
   500: 5600,
 };
 
-function profileSamples(mode: "low-deck" | "high-only" = "low-deck"): PressureLevelSample[] {
-  return PRESSURE_LEVELS.map((pressure) => {
+function profileSamples(
+  mode: "low-deck" | "high-only" = "low-deck",
+  inversion = true,
+): PressureLevelSample[] {
+  return PRESSURE_LEVELS.map((pressure, index) => {
     const lowDeck = [950, 925, 900].includes(pressure);
     const highDeck = [600, 500].includes(pressure);
     const cloudy = mode === "low-deck" ? lowDeck : highDeck;
-    const temperature =
-      pressure === 950 ? 8 : pressure === 925 ? 10.2 : 12 - (1000 - pressure) * 0.012;
+    const temperature = inversion
+      ? pressure === 950
+        ? 8
+        : pressure === 925
+          ? 10.2
+          : 12 - (1000 - pressure) * 0.012
+      : 12 - index * 1.5;
     return {
       pressure,
       cloudCover: cloudy ? 82 : 10,
@@ -70,11 +78,26 @@ function profileSamples(mode: "low-deck" | "high-only" = "low-deck"): PressureLe
   });
 }
 
+function sparseProfile(completeLevels: number): PressureLevelSample[] {
+  return profileSamples().map((sample, index) =>
+    index < completeLevels
+      ? sample
+      : {
+          ...sample,
+          cloudCover: null,
+          humidity: null,
+          temperature: null,
+          heightMsl: null,
+        },
+  );
+}
+
 function pressureFor(
   siteId: string,
   times: string[],
   mode: "low-deck" | "high-only" = "low-deck",
   modelElevation = 400,
+  inversion = true,
 ): PressureForecastResponse {
   return {
     locationId: siteId,
@@ -86,7 +109,9 @@ function pressureFor(
     model: "icon",
     stale: false,
     hourly: times.map((time) => ({ time, temperature: 10 })),
-    profiles: Object.fromEntries(times.map((time) => [time, profileSamples(mode)])),
+    profiles: Object.fromEntries(
+      times.map((time) => [time, profileSamples(mode, inversion)]),
+    ),
   };
 }
 
@@ -122,6 +147,17 @@ describe("pressure-derived cloud-sea vertical evidence", () => {
     expect(evidence.layer?.topMsl).toBe(1000);
     expect(evidence.layer?.relation).toBe("云上");
     expect(evidence.inversion.status).toBe("detected");
+  });
+
+  it("does not treat a sparse hour with fewer than six complete levels as pressure-available", () => {
+    const evidence = deriveCloudSeaVerticalEvidence(
+      sparseProfile(5),
+      400,
+      MOCK_HIGH_SITE.altitude,
+    );
+    expect(evidence.profileAvailable).toBe(false);
+    expect(evidence.layer).toBeNull();
+    expect(evidence.inversion.status).toBe("unavailable");
   });
 
   it("does not treat high-only 600/500 hPa cloud as valley cloud sea", () => {
@@ -206,6 +242,18 @@ describe("evaluateCloudSeaWindow", () => {
     expect(result.pressureStatus).toBe("unavailable");
   });
 
+  it("does not require unused surface temperature_2m to publish an otherwise valid result", () => {
+    const hourly = hourlyFixture({ temperature_2m: [null, null, null, null] });
+    const result = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE,
+      hourly,
+      [5, 6, 7, 8],
+      pressureFor(MOCK_HIGH_SITE.id, hourly.time),
+    );
+    expect(result.score).not.toBeNull();
+    expect(result.cloudPosition).toBe("above");
+  });
+
   it("returns data-insufficient when a critical provider series is missing", () => {
     const hourly = {
       time: ["2026-09-04T06:00"],
@@ -227,17 +275,58 @@ describe("evaluateCloudSeaWindow", () => {
       cloud_cover_low: [90, null, null, null],
       cloud_cover_mid: [5, 80, 80, 80],
       cloud_cover_high: [5, 80, 80, 80],
-      temperature_2m: [8, 20, 20, 20],
+      temperature_2m: [null, null, null, null],
       relative_humidity_2m: [90, 40, 40, 40],
       wind_speed_10m: [1, 10, 10, 10],
       precipitation: [0, 0, 0, 0],
     });
     const pressure = pressureFor(MOCK_HIGH_SITE.id, hourly.time);
-    const result = evaluateCloudSeaWindow(MOCK_HIGH_SITE, hourly, [5, 6, 7, 8], pressure);
+    const result = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE,
+      hourly,
+      [5, 6, 7, 8],
+      pressure,
+    );
     expect(result.lowCloud).toBe(90);
     expect(result.humidity).toBe(90);
     expect(result.windSpeed).toBe(1);
     expect(result.peakTime).toBe("05:00");
+  });
+
+  it("requires a strict majority of surface-valid hours to be scoreable", () => {
+    const hourly = hourlyFixture();
+    const pressure = pressureFor(MOCK_HIGH_SITE.id, hourly.time);
+    pressure.profiles[hourly.time[2]!] = sparseProfile(5);
+    pressure.profiles[hourly.time[3]!] = sparseProfile(5);
+
+    const result = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE,
+      hourly,
+      [5, 6, 7, 8],
+      pressure,
+    );
+    expect(result.score).toBeNull();
+    expect(result.pressureStatus).toBe("partial");
+    expect(result.summary).toContain("必须超过半数");
+  });
+
+  it("does not inflate the condition score merely because inversion evidence is detected", () => {
+    const hourly = hourlyFixture();
+    const withInversion = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE,
+      hourly,
+      [5, 6, 7, 8],
+      pressureFor(MOCK_HIGH_SITE.id, hourly.time, "low-deck", 400, true),
+    );
+    const withoutInversion = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE,
+      hourly,
+      [5, 6, 7, 8],
+      pressureFor(MOCK_HIGH_SITE.id, hourly.time, "low-deck", 400, false),
+    );
+    expect(withInversion.inversion.status).toBe("detected");
+    expect(withoutInversion.inversion.status).toBe("not-detected");
+    expect(withInversion.score).toBe(withoutInversion.score);
   });
 
   it("chooses the highest pressure-aware hourly score as peakTime", () => {
