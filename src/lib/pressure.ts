@@ -42,6 +42,8 @@ export interface PressureForecastBatchResult {
   errors: Record<string, string>;
 }
 
+const MIN_USABLE_PRESSURE_LEVELS = 6;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -167,10 +169,41 @@ function valueAt(
   return Array.isArray(values) ? values[index] : undefined;
 }
 
+export function isCompletePressureLevelSample(
+  sample: PressureLevelSample,
+): boolean {
+  return (
+    Number.isFinite(sample.pressure) &&
+    sample.cloudCover !== null &&
+    Number.isFinite(sample.cloudCover) &&
+    sample.humidity !== null &&
+    Number.isFinite(sample.humidity) &&
+    sample.temperature !== null &&
+    Number.isFinite(sample.temperature) &&
+    sample.heightMsl !== null &&
+    Number.isFinite(sample.heightMsl)
+  );
+}
+
+export function usablePressureLevelCount(
+  samples: PressureLevelSample[] | null | undefined,
+): number {
+  if (!samples) return 0;
+  return samples.filter(isCompletePressureLevelSample).length;
+}
+
+export function hasUsablePressureProfile(
+  samples: PressureLevelSample[] | null | undefined,
+  minimumLevels = MIN_USABLE_PRESSURE_LEVELS,
+): boolean {
+  return usablePressureLevelCount(samples) >= minimumLevels;
+}
+
 /**
  * Parse one Open-Meteo pressure response. A pressure level only counts toward
- * the reliability threshold when cloud cover, RH, temperature and geopotential
- * height are all aligned to the same hourly time axis.
+ * the schema reliability threshold when cloud cover, RH, temperature and
+ * geopotential height are all aligned to the same hourly time axis. Individual
+ * hours are checked separately by hasUsablePressureProfile().
  */
 export function parsePressureForecast(
   raw: unknown,
@@ -189,6 +222,11 @@ export function parsePressureForecast(
   ) {
     throw new Error("气压上游返回了无效逐小时时间轴");
   }
+  const modelElevation = numberOrNull(raw.elevation);
+  if (modelElevation === null) {
+    throw new Error("气压上游缺少可靠的模式地形高程 elevation");
+  }
+
   const times = rawTimes;
   const availableLevels = PRESSURE_LEVELS.filter((level) =>
     [
@@ -198,7 +236,7 @@ export function parsePressureForecast(
       `geopotential_height_${level}hPa`,
     ].every((key) => isAlignedNumericSeries(hourly[key], times.length)),
   );
-  if (availableLevels.length < 6) {
+  if (availableLevels.length < MIN_USABLE_PRESSURE_LEVELS) {
     throw new Error(
       `气压上游仅返回 ${availableLevels.length} 个完整可用层，无法形成可靠剖面`,
     );
@@ -223,9 +261,13 @@ export function parsePressureForecast(
     }));
   });
 
+  if (!Object.values(profiles).some((profile) => hasUsablePressureProfile(profile))) {
+    throw new Error("气压上游没有任何小时具备至少 6 个完整压力层");
+  }
+
   return {
     locationId,
-    modelElevation: numberOrNull(raw.elevation) ?? 0,
+    modelElevation,
     timezone: typeof raw.timezone === "string" ? raw.timezone : "Asia/Shanghai",
     utcOffsetSeconds: numberOrNull(raw.utc_offset_seconds) ?? 0,
     fetchedAt: new Date().toISOString(),

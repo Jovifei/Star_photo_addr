@@ -27,23 +27,64 @@ const VALID_MODELS = new Set<ForecastModel>([
   "aifs",
 ]);
 const TTL_MS = 30 * 60_000;
+const STALE_TTL_MS = 6 * 60 * 60_000;
 const TIMEOUT_MS = 40_000;
 const FORCE_REFRESH_COOLDOWN_MS = 60_000;
 const CACHE_MAX_ENTRIES = 32;
+const FORCE_TRACK_MAX_ENTRIES = 128;
 const PRESSURE_BATCH_SIZE = 18;
 const PRESSURE_WORKERS = 2;
 
-const cache = new Map<string, { snapshot: CloudSeaSnapshot; at: number }>();
+interface CachedSnapshot {
+  snapshot: CloudSeaSnapshot;
+  at: number;
+}
+
+const cache = new Map<string, CachedSnapshot>();
 const inFlight = new Map<string, Promise<CloudSeaSnapshot>>();
 const lastForceAt = new Map<string, number>();
 
 function rememberSnapshot(key: string, snapshot: CloudSeaSnapshot) {
+  // Refresh insertion order so the cap behaves as an LRU-like bound instead of
+  // evicting a recently refreshed key merely because it was first inserted long ago.
+  cache.delete(key);
   cache.set(key, { snapshot, at: Date.now() });
   while (cache.size > CACHE_MAX_ENTRIES) {
     const oldest = cache.keys().next().value as string | undefined;
     if (oldest === undefined) break;
     cache.delete(oldest);
   }
+}
+
+function rememberForceRefresh(key: string, at: number) {
+  lastForceAt.delete(key);
+  lastForceAt.set(key, at);
+  while (lastForceAt.size > FORCE_TRACK_MAX_ENTRIES) {
+    const oldest = lastForceAt.keys().next().value as string | undefined;
+    if (oldest === undefined) break;
+    lastForceAt.delete(oldest);
+  }
+}
+
+function cacheAgeMs(entry: CachedSnapshot): number {
+  return Math.max(0, Date.now() - entry.at);
+}
+
+function usableStaleCache(key: string): CachedSnapshot | null {
+  const entry = cache.get(key);
+  return entry && cacheAgeMs(entry) <= STALE_TTL_MS ? entry : null;
+}
+
+function withCacheFreshness(
+  entry: CachedSnapshot,
+  refreshError: string,
+): CloudSeaSnapshot {
+  const stale = cacheAgeMs(entry) > TTL_MS || Boolean(entry.snapshot.stale);
+  return {
+    ...entry.snapshot,
+    stale,
+    refreshError,
+  };
 }
 
 function validAlignedSeries(value: unknown, expectedLength: number): boolean {
@@ -67,11 +108,13 @@ function validCloudSeaHourly(hourly: Record<string, unknown>): boolean {
   ) {
     return false;
   }
+  // Keep this list exactly aligned with the fields that affect the current
+  // CloudSea condition index. temperature_2m/visibility/total-cloud are not
+  // score inputs anymore and therefore must not make an otherwise usable site fail.
   const required = [
     "cloud_cover_low",
     "cloud_cover_mid",
     "cloud_cover_high",
-    "temperature_2m",
     "relative_humidity_2m",
     "precipitation",
     "wind_speed_10m",
@@ -92,14 +135,11 @@ async function fetchCloudSeaWeather(
     latitude: lats,
     longitude: lngs,
     hourly: [
-      "temperature_2m",
       "relative_humidity_2m",
-      "cloud_cover",
       "cloud_cover_low",
       "cloud_cover_mid",
       "cloud_cover_high",
       "precipitation",
-      "visibility",
       "wind_speed_10m",
     ].join(","),
     timezone: "Asia/Shanghai",
@@ -144,18 +184,13 @@ async function fetchCloudSeaWeather(
           >;
           result[site.id] = {
             time: hourly.time as string[],
-            cloud_cover: hourly.cloud_cover as
-              | Array<number | null>
-              | undefined,
             cloud_cover_low: hourly.cloud_cover_low as Array<number | null>,
             cloud_cover_mid: hourly.cloud_cover_mid as Array<number | null>,
             cloud_cover_high: hourly.cloud_cover_high as Array<number | null>,
-            temperature_2m: hourly.temperature_2m as Array<number | null>,
             relative_humidity_2m: hourly.relative_humidity_2m as Array<
               number | null
             >,
             precipitation: hourly.precipitation as Array<number | null>,
-            visibility: hourly.visibility as Array<number | null> | undefined,
             wind_speed_10m: hourly.wind_speed_10m as Array<number | null>,
           };
         }
@@ -213,9 +248,8 @@ async function fetchCloudSeaPressure(
         Object.assign(data, result.data);
         Object.assign(errors, result.errors);
       } catch (error) {
-        // Surface is already valid before pressure fetching begins. Pressure
-        // timeout/abort must degrade only the vertical evidence, not convert a
-        // real surface snapshot into a route-level 502.
+        // Surface has already succeeded. Pressure timeout/abort is allowed to
+        // degrade vertical evidence, but must not turn real surface data into 502.
         const message =
           error instanceof Error ? error.message : "压力层剖面请求失败";
         batch.forEach((location) => {
@@ -231,6 +265,13 @@ async function fetchCloudSeaPressure(
     ),
   );
   return { data, errors };
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message))
+  );
 }
 
 export async function GET(request: NextRequest) {
@@ -257,14 +298,10 @@ export async function GET(request: NextRequest) {
     const last = lastForceAt.get(key) ?? 0;
     const elapsed = Date.now() - last;
     if (elapsed < FORCE_REFRESH_COOLDOWN_MS) {
-      const cached = cache.get(key);
+      const cached = usableStaleCache(key);
       if (cached) {
         return NextResponse.json(
-          {
-            ...cached.snapshot,
-            stale: true,
-            refreshError: "强制刷新冷却中",
-          },
+          withCacheFreshness(cached, "强制刷新冷却中"),
           {
             headers: {
               "Cache-Control": "no-store",
@@ -290,11 +327,11 @@ export async function GET(request: NextRequest) {
         },
       );
     }
-    lastForceAt.set(key, Date.now());
+    rememberForceRefresh(key, Date.now());
   }
 
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.at < TTL_MS && !forceRefresh) {
+  if (cached && cacheAgeMs(cached) < TTL_MS && !forceRefresh) {
     return NextResponse.json(cached.snapshot, {
       headers: {
         "Cache-Control":
@@ -310,9 +347,8 @@ export async function GET(request: NextRequest) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {
-        // Surface is mandatory. Only request the much larger pressure payload
-        // after surface data succeeds, so a surface outage cannot multiply
-        // unnecessary upstream pressure traffic.
+        // Surface is mandatory. Only request the larger pressure payload after
+        // surface succeeds, so a surface outage cannot multiply upstream traffic.
         const siteWeather = await fetchCloudSeaWeather(
           date,
           model,
@@ -332,10 +368,15 @@ export async function GET(request: NextRequest) {
         );
       } finally {
         clearTimeout(timeout);
-        inFlight.delete(key);
       }
     })();
     inFlight.set(key, activeTask);
+    const trackedTask = activeTask;
+    trackedTask
+      .finally(() => {
+        if (inFlight.get(key) === trackedTask) inFlight.delete(key);
+      })
+      .catch(() => undefined);
   }
 
   try {
@@ -345,26 +386,28 @@ export async function GET(request: NextRequest) {
       headers: {
         "Cache-Control":
           "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
-        "X-Cloudsea-Cache": "fresh",
+        "X-Cloudsea-Cache": forceRefresh ? "forced-fresh" : "fresh",
       },
     });
   } catch (error) {
+    const fallback = usableStaleCache(key);
     const message =
       error instanceof Error ? error.message : "获取云海气象数据失败";
-    if (cached) {
-      return NextResponse.json(
-        { ...cached.snapshot, stale: true, refreshError: message },
-        {
-          headers: {
-            "Cache-Control": "no-store",
-            "X-Cloudsea-Cache": "stale-on-error",
-          },
+    if (fallback) {
+      return NextResponse.json(withCacheFreshness(fallback, message), {
+        headers: {
+          "Cache-Control": "no-store",
+          "X-Cloudsea-Cache": "stale-on-error",
         },
-      );
+      });
     }
+    const timedOut = isTimeoutError(error);
     return NextResponse.json(
-      { error: message },
-      { status: 502, headers: { "Cache-Control": "no-store" } },
+      { error: timedOut ? "云海 surface 数据请求超时" : message },
+      {
+        status: timedOut ? 504 : 502,
+        headers: { "Cache-Control": "no-store" },
+      },
     );
   }
 }

@@ -3,29 +3,46 @@ import {
   buildPressureForecastBatchUrl,
   fetchPressureForecast,
   fetchPressureForecastBatch,
+  hasUsablePressureProfile,
   parsePressureForecast,
   PRESSURE_LEVELS,
 } from "@/lib/pressure";
 
-function rawPressure(options: { brokenLevels?: number } = {}) {
+function rawPressure(
+  options: {
+    brokenLevels?: number;
+    sparseSecondHourLevels?: number;
+    omitElevation?: boolean;
+  } = {},
+) {
   const time = ["2026-09-08T05:00", "2026-09-08T06:00"];
   const hourly: Record<string, unknown> = {
     time,
     temperature_2m: [10, 11],
   };
   const brokenLevels = options.brokenLevels ?? 0;
+  const sparseSecondHourLevels = options.sparseSecondHourLevels ?? 0;
   PRESSURE_LEVELS.forEach((level, index) => {
-    hourly[`cloud_cover_${level}hPa`] = [70 - index, 72 - index];
+    const secondHourMissing = index < sparseSecondHourLevels;
+    hourly[`cloud_cover_${level}hPa`] = [
+      70 - index,
+      secondHourMissing ? null : 72 - index,
+    ];
     hourly[`relative_humidity_${level}hPa`] =
-      index < brokenLevels ? [88] : [88 - index, 87 - index];
-    hourly[`temperature_${level}hPa`] = [9 - index * 1.5, 10 - index * 1.5];
+      index < brokenLevels
+        ? [88]
+        : [88 - index, secondHourMissing ? null : 87 - index];
+    hourly[`temperature_${level}hPa`] = [
+      9 - index * 1.5,
+      secondHourMissing ? null : 10 - index * 1.5,
+    ];
     hourly[`geopotential_height_${level}hPa`] = [
       120 + index * 500,
-      125 + index * 500,
+      secondHourMissing ? null : 125 + index * 500,
     ];
   });
   return {
-    elevation: 980,
+    ...(options.omitElevation ? {} : { elevation: 980 }),
     timezone: "Asia/Shanghai",
     utc_offset_seconds: 28800,
     hourly,
@@ -62,11 +79,49 @@ describe("pressure forecast batch", () => {
     expect(hourly).not.toContain("visibility");
   });
 
-  it("requires at least six fully aligned pressure levels", () => {
+  it("requires at least six fully aligned pressure-level series", () => {
     expect(() => parsePressureForecast(rawPressure(), "site-a", "icon")).not.toThrow();
     expect(() =>
       parsePressureForecast(rawPressure({ brokenLevels: 5 }), "site-a", "icon"),
     ).toThrow(/5 个完整可用层/);
+  });
+
+  it("requires provider model elevation instead of silently substituting sea level", () => {
+    expect(() =>
+      parsePressureForecast(rawPressure({ omitElevation: true }), "site-a", "icon"),
+    ).toThrow(/模式地形高程 elevation/);
+  });
+
+  it("tracks hourly profile completeness separately from aligned day-level arrays", () => {
+    const parsed = parsePressureForecast(
+      rawPressure({ sparseSecondHourLevels: 5 }),
+      "site-a",
+      "icon",
+    );
+    expect(hasUsablePressureProfile(parsed.profiles["2026-09-08T05:00"])).toBe(true);
+    expect(hasUsablePressureProfile(parsed.profiles["2026-09-08T06:00"])).toBe(false);
+  });
+
+  it("rejects a response whose whole day has no hour with six complete levels", () => {
+    expect(() =>
+      parsePressureForecast(
+        rawPressure({ sparseSecondHourLevels: 10, brokenLevels: 0 }),
+        "site-a",
+        "icon",
+      ),
+    ).not.toThrow();
+
+    const raw = rawPressure();
+    const hourly = raw.hourly as Record<string, unknown>;
+    for (const level of PRESSURE_LEVELS) {
+      hourly[`cloud_cover_${level}hPa`] = [null, null];
+      hourly[`relative_humidity_${level}hPa`] = [null, null];
+      hourly[`temperature_${level}hPa`] = [null, null];
+      hourly[`geopotential_height_${level}hPa`] = [null, null];
+    }
+    expect(() => parsePressureForecast(raw, "site-a", "icon")).toThrow(
+      /没有任何小时具备至少 6 个完整压力层/,
+    );
   });
 
   it("isolates one malformed site without discarding valid peers", async () => {
@@ -128,6 +183,8 @@ describe("pressure forecast batch", () => {
     expect(result.locationId).toBe("pressure");
     expect(result.source).toBe("Open-Meteo");
     expect(result.model).toBe("icon");
-    expect(result.profiles["2026-09-08T05:00"]).toHaveLength(PRESSURE_LEVELS.length);
+    expect(result.profiles["2026-09-08T05:00"]).toHaveLength(
+      PRESSURE_LEVELS.length,
+    );
   });
 });

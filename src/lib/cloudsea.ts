@@ -11,9 +11,11 @@ import {
   type TemperatureInversionEvidence,
 } from "@/lib/cloudLayers";
 import { CLOUD_SEA_SITES, type CloudSeaSite } from "@/lib/cloudseaSites";
-import type {
-  PressureForecastResponse,
-  PressureLevelSample,
+import {
+  hasUsablePressureProfile,
+  isCompletePressureLevelSample,
+  type PressureForecastResponse,
+  type PressureLevelSample,
 } from "@/lib/pressure";
 import type { CloudLayer, ForecastModel, PressureLevel } from "@/lib/types";
 
@@ -179,7 +181,6 @@ interface CloudSeaConditions {
   lowCloud: number;
   midCloud: number;
   highCloud: number;
-  tempC: number;
   humidity: number;
   windSpeed: number;
   precip: number;
@@ -228,23 +229,25 @@ function pressureProfileAt(
 
 /**
  * Select the lowest pressure-derived cloud deck that still belongs to the
- * lower troposphere. High-only 600/500 hPa decks are not treated as valley
- * cloud sea. This remains a model-grid diagnosis; surrounding-valley sampling
- * is a separate later phase.
+ * lower troposphere. An hour is only treated as pressure-available when at
+ * least six levels contain cloud/RH/temperature/geopotential-height together.
+ * High-only 600/500 hPa decks are not treated as valley cloud sea.
  */
 export function deriveCloudSeaVerticalEvidence(
   samples: PressureLevelSample[] | null,
   modelElevation: number,
   siteElevation: number,
 ): VerticalEvidence {
-  if (!samples?.length) {
+  if (!hasUsablePressureProfile(samples)) {
     return {
       profileAvailable: false,
       layer: null,
       inversion: EMPTY_INVERSION,
     };
   }
-  const profile = samples.map(pressureLevelFromSample);
+
+  const completeSamples = samples!.filter(isCompletePressureLevelSample);
+  const profile = completeSamples.map(pressureLevelFromSample);
   const layers = deriveCloudLayers(profile, modelElevation, siteElevation);
   const lowerTroposphereLayers = layers
     .filter(
@@ -268,16 +271,9 @@ function relationToPosition(relation: CloudLayer["relation"]): CloudPosition {
   return "below";
 }
 
-function inversionBonus(evidence: TemperatureInversionEvidence): number {
-  if (evidence.status !== "detected") return 0;
-  if (evidence.strength === "strong") return 8;
-  if (evidence.strength === "moderate") return 6;
-  return 3;
-}
-
 function inversionSummary(evidence: TemperatureInversionEvidence): string {
   if (evidence.status !== "detected") return "";
-  return `；并检测到约 ${evidence.deltaTempC}°C 的低层逆温证据`;
+  return `；同一低层模式剖面另检测到约 ${evidence.deltaTempC}°C 的逆温证据`;
 }
 
 function evaluateConditions(
@@ -318,7 +314,8 @@ function evaluateConditions(
       pressureAvailable: false,
       pressureConfidence: null,
       inversion: EMPTY_INVERSION,
-      summary: "surface 低云条件存在，但该时次压力层剖面不可用；不使用启发式云底补算山顶层位。",
+      summary:
+        "surface 低云条件存在，但该时次不足 6 个完整压力层；不使用启发式云底补算山顶层位。",
     };
   }
 
@@ -332,7 +329,8 @@ function evaluateConditions(
       pressureAvailable: true,
       pressureConfidence: null,
       inversion: vertical.inversion,
-      summary: "surface 低云条件存在，但压力层剖面未能定位连续低层云 deck；暂不推断云海层位。",
+      summary:
+        "surface 低云条件存在，但压力层剖面未能定位连续低层云 deck；暂不推断云海层位。",
     };
   }
 
@@ -361,15 +359,27 @@ function evaluateConditions(
     else if (upperClouds > 60) baseScore -= 10;
 
     if (altitudeDiffM >= 100 && altitudeDiffM <= 1500) baseScore += 5;
-    baseScore += inversionBonus(vertical.inversion);
     if (conditions.precip > 1.5) baseScore -= 15;
     else if (conditions.precip >= 0.3) baseScore -= 5;
 
+    // Inversion remains model evidence shown to the user. It is intentionally
+    // not a score bonus until its relation to the selected cloud deck is
+    // calibrated against observations; otherwise an unrelated inversion aloft
+    // can incorrectly inflate the cloud-sea index.
     score = clamp(Math.round(baseScore), 25, 98);
-    summary = `数值模式压力剖面显示山顶高出低层云顶 ${Math.max(0, altitudeDiffM)}m；低云 ${Math.round(conditions.lowCloud)}%，${conditions.windSpeed < 3.5 ? "近地风较弱" : "风力偏大"}${inversionSummary(vertical.inversion)}。`;
+    summary = `数值模式压力剖面显示山顶高出低层云顶 ${Math.max(
+      0,
+      altitudeDiffM,
+    )}m；低云 ${Math.round(conditions.lowCloud)}%，${
+      conditions.windSpeed < 3.5 ? "近地风较弱" : "风力偏大"
+    }${inversionSummary(vertical.inversion)}。`;
   } else if (position === "in") {
     score = clamp(
-      Math.round(20 + (conditions.lowCloud > 60 ? 6 : 0) - conditions.windSpeed * 2),
+      Math.round(
+        20 +
+          (conditions.lowCloud > 60 ? 6 : 0) -
+          conditions.windSpeed * 2,
+      ),
       8,
       35,
     );
@@ -410,9 +420,9 @@ function pressureStatusFor(
 
 /**
  * Evaluate a morning/evening window. Surface metrics are averaged over hours
- * where all critical surface fields coexist. The 0–100 window score is the
- * mean of pressure-aware hourly scores; at least half of the surface-valid
- * hours must be scoreable, otherwise the cloud-sea conclusion is fail-closed.
+ * where all critical score inputs coexist. The 0–100 window score is the mean
+ * of interpretable hourly scores. A strict majority of the surface-valid hours
+ * must be scoreable; exactly half is not enough to publish a window conclusion.
  */
 export function evaluateCloudSeaWindow(
   site: CloudSeaSite,
@@ -425,7 +435,9 @@ export function evaluateCloudSeaWindow(
   const activeIndices: number[] = [];
   hourly.time.forEach((time, index) => {
     const match = time.match(/T(\d{2}):/);
-    const hour = match ? Number.parseInt(match[1], 10) : new Date(time).getHours();
+    const hour = match
+      ? Number.parseInt(match[1], 10)
+      : new Date(time).getHours();
     if (windowHours.includes(hour)) activeIndices.push(index);
   });
 
@@ -441,7 +453,6 @@ export function evaluateCloudSeaWindow(
       finiteAt(hourly.cloud_cover_low, index) !== null &&
       finiteAt(hourly.cloud_cover_mid, index) !== null &&
       finiteAt(hourly.cloud_cover_high, index) !== null &&
-      finiteAt(hourly.temperature_2m, index) !== null &&
       finiteAt(hourly.relative_humidity_2m, index) !== null &&
       finiteAt(hourly.wind_speed_10m, index) !== null &&
       finiteAt(hourly.precipitation, index) !== null,
@@ -450,7 +461,8 @@ export function evaluateCloudSeaWindow(
   if (validIndices.length === 0) {
     return {
       ...CLOUD_SEA_EMPTY_WINDOW,
-      summary: "关键云量、湿度、风或降水数据不完整，无法计算云海条件指数。",
+      summary:
+        "关键云量、湿度、风或降水数据不完整，无法计算云海条件指数。",
     };
   }
 
@@ -464,7 +476,6 @@ export function evaluateCloudSeaWindow(
     lowCloud: average(hourly.cloud_cover_low),
     midCloud: average(hourly.cloud_cover_mid),
     highCloud: average(hourly.cloud_cover_high),
-    tempC: average(hourly.temperature_2m),
     humidity: average(hourly.relative_humidity_2m),
     windSpeed: average(hourly.wind_speed_10m),
     precip: average(hourly.precipitation),
@@ -475,7 +486,6 @@ export function evaluateCloudSeaWindow(
       lowCloud: finiteAt(hourly.cloud_cover_low, index)!,
       midCloud: finiteAt(hourly.cloud_cover_mid, index)!,
       highCloud: finiteAt(hourly.cloud_cover_high, index)!,
-      tempC: finiteAt(hourly.temperature_2m, index)!,
       humidity: finiteAt(hourly.relative_humidity_2m, index)!,
       windSpeed: finiteAt(hourly.wind_speed_10m, index)!,
       precip: finiteAt(hourly.precipitation, index)!,
@@ -491,11 +501,14 @@ export function evaluateCloudSeaWindow(
   const pressureHours = hourlyEvaluations.filter(
     ({ evaluation }) => evaluation.pressureAvailable,
   ).length;
-  const pressureStatus = pressureStatusFor(pressureHours, validIndices.length);
+  const pressureStatus = pressureStatusFor(
+    pressureHours,
+    validIndices.length,
+  );
   const scoreable = hourlyEvaluations.filter(
     ({ evaluation }) => evaluation.score !== null,
   );
-  const minimumScoreable = Math.ceil(validIndices.length * 0.5);
+  const minimumScoreable = Math.floor(validIndices.length / 2) + 1;
 
   const baseMetrics = {
     lowCloud: Math.round(averageConditions.lowCloud),
@@ -510,7 +523,7 @@ export function evaluateCloudSeaWindow(
     return {
       ...CLOUD_SEA_EMPTY_WINDOW,
       ...baseMetrics,
-      summary: `窗口内仅 ${scoreable.length}/${validIndices.length} 个有效时次具备可解释的云海层位证据；不使用启发式云底补齐。`,
+      summary: `窗口内仅 ${scoreable.length}/${validIndices.length} 个有效时次具备可解释的云海条件；必须超过半数才发布窗口指数，且不使用启发式云底补齐。`,
     };
   }
 
@@ -573,8 +586,18 @@ export function buildCloudSeaSnapshot(
     }
 
     sitesRecord[site.id] = {
-      morning: evaluateCloudSeaWindow(site, siteHourly, morningHours, pressure),
-      evening: evaluateCloudSeaWindow(site, siteHourly, eveningHours, pressure),
+      morning: evaluateCloudSeaWindow(
+        site,
+        siteHourly,
+        morningHours,
+        pressure,
+      ),
+      evening: evaluateCloudSeaWindow(
+        site,
+        siteHourly,
+        eveningHours,
+        pressure,
+      ),
     };
   }
 
@@ -591,7 +614,10 @@ export function buildCloudSeaSnapshot(
     date,
     model,
     generatedAt: new Date().toISOString(),
-    source: "Open-Meteo surface weather + pressure-level model profile (Beta)",
+    source:
+      availableSites > 0
+        ? "Open-Meteo surface weather + pressure-level model profile (Beta)"
+        : "Open-Meteo surface weather; pressure-level model profile unavailable (Beta)",
     stale: false,
     pressure: {
       status: pressureStatusFor(availableSites, totalSites),
