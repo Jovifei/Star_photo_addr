@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { FireGlowWindowScore } from "@/lib/fireglow";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
+import { markerLevelFor } from "@/lib/markerStatus";
 
 interface FireglowSiteDetailProps {
   site: {
@@ -63,7 +64,7 @@ export default function FireglowSiteDetail({
   onClose,
 }: FireglowSiteDetailProps) {
   const win = site.window;
-  const pLevel = win.probabilityLevel ?? "p20";
+  const pLevel = markerLevelFor(win.score, win.probabilityLevel);
 
   const sunEvents = useMemo(() => {
     return calculateSiteSunEvents(

@@ -60,4 +60,18 @@ describe("interpolateScoreGrid", () => {
     const grid = interpolateScoreGrid([], width, height, BOUNDS);
     expect(Array.from(grid).every((value) => Number.isNaN(value))).toBe(true);
   });
+
+  it("excludes null-score sites from interpolation", () => {
+    const grid = interpolateScoreGrid(
+      [
+        { latitude: 30, longitude: 110, score: 80 },
+        { latitude: 30, longitude: 125, score: null },
+      ],
+      3,
+      3,
+      [[30, 110], [30, 125]],
+    );
+    expect(Number.isFinite(grid[0])).toBe(true);
+    expect(Number.isNaN(grid[2])).toBe(true);
+  });
 });

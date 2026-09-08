@@ -18,6 +18,7 @@ import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
 import { fireGlowBandLabel, isHighFireGlowLevel } from "@/lib/fireglow";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
+import { markerLevelFor } from "@/lib/markerStatus";
 import FireglowSiteDetail from "./FireglowSiteDetail";
 
 type Phase = "evening" | "morning";
@@ -33,6 +34,7 @@ const LEVEL_COLORS: Record<FireGlowProbabilityLevel, string> = {
   p95: "#c45c1e",
   p100: "#a84814",
 };
+const UNKNOWN_MARKER_COLOR = "#6f7880";
 const LEVEL_LABELS: Array<{ level: FireGlowProbabilityLevel; range: string }> = [
   { level: "p20", range: "0–20" },
   { level: "p40", range: "20–40" },
@@ -104,7 +106,11 @@ interface RankedSite {
   longitude: number;
   altitude: number | null;
   window: FireGlowWindowScore;
-  days?: Array<{ date: string; score: number | null; level: FireGlowProbabilityLevel | null }>;
+  days?: Array<{
+    date: string;
+    score: number | null;
+    level: FireGlowProbabilityLevel | "unknown" | null;
+  }>;
 }
 
 export default function FireglowApp() {
@@ -213,7 +219,10 @@ export default function FireglowApp() {
           ? activeDates.map((date, index) => ({
               date,
               score: windows[index].score,
-              level: windows[index].probabilityLevel,
+              level: markerLevelFor(
+                windows[index].score,
+                windows[index].probabilityLevel,
+              ),
             }))
           : undefined,
       };
@@ -321,26 +330,39 @@ export default function FireglowApp() {
             )}
             <ChineseLabelLayer />
             <BoundaryLayers />
-            {ranked.map((site) => (
-              <CircleMarker
-                key={site.id}
-                center={[site.latitude, site.longitude]}
-                radius={site.window.score == null ? 3 : 3 + (site.window.score / 100) * 3.5}
-                pathOptions={{
-                  color: site.id === selectedId ? "#ffffff" : LEVEL_COLORS[site.window.probabilityLevel ?? "p20"],
-                  fillColor: LEVEL_COLORS[site.window.probabilityLevel ?? "p20"],
-                  fillOpacity: 0.82,
-                  weight: site.id === selectedId ? 3 : 1.5,
-                }}
-                eventHandlers={{ click: () => setSelectedId(site.id) }}
-              >
-                <Popup>
-                  <div className="fireglow-popup">
-                    <strong>{site.name}</strong>
-                  </div>
-                </Popup>
-              </CircleMarker>
-            ))}
+            {ranked.map((site) => {
+              const level = markerLevelFor(
+                site.window.score,
+                site.window.probabilityLevel,
+              );
+              const isUnknown = level === "unknown";
+              const color = isUnknown
+                ? UNKNOWN_MARKER_COLOR
+                : LEVEL_COLORS[level];
+              return (
+                <CircleMarker
+                  key={site.id}
+                  center={[site.latitude, site.longitude]}
+                  radius={isUnknown ? 3 : 3 + (site.window.score! / 100) * 3.5}
+                  pathOptions={{
+                    color: site.id === selectedId ? "#ffffff" : color,
+                    fillColor: color,
+                    fillOpacity: isUnknown ? 0.38 : 0.82,
+                    dashArray: isUnknown ? "3 3" : undefined,
+                    weight: site.id === selectedId ? 3 : 1.5,
+                  }}
+                  eventHandlers={{ click: () => setSelectedId(site.id) }}
+                >
+                  <Popup>
+                    <div className="fireglow-popup">
+                      <strong>{site.name}</strong>
+                      <span>{site.window.probabilityLabel ?? "—"}</span>
+                      {isUnknown ? <span>数据不足</span> : null}
+                    </div>
+                  </Popup>
+                </CircleMarker>
+              );
+            })}
           </MapContainer>
           <div className="fireglow-legend" aria-label="火烧云条件指数等级色阶">
             <span>火烧云条件指数</span>
@@ -350,6 +372,13 @@ export default function FireglowApp() {
                 {entry.range}
               </span>
             ))}
+            <span>
+              <i
+                className="fireglow-legend-unknown"
+                style={{ background: UNKNOWN_MARKER_COLOR }}
+              />
+              数据不足
+            </span>
           </div>
         </div>
 
@@ -391,7 +420,13 @@ export default function FireglowApp() {
                       </span>
                     )}
                   </span>
-                  <span className="fireglow-score" data-level={site.window.probabilityLevel ?? "none"}>
+                  <span
+                    className="fireglow-score"
+                    data-level={markerLevelFor(
+                      site.window.score,
+                      site.window.probabilityLevel,
+                    )}
+                  >
                     <b>{site.window.probabilityLabel ?? "—"}</b>
                     <small>{site.window.bandLabel}</small>
                   </span>

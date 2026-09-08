@@ -317,6 +317,11 @@
   border-radius: 50%;
 }
 
+.fireglow-legend-unknown {
+  opacity: 0.72;
+  border: 1px dashed rgba(255, 255, 255, 0.55);
+}
+
 .fireglow-popup {
   display: grid;
   gap: 2px;
@@ -371,6 +376,8 @@
 /* 2026-08-23 v2: 莉景式五级概率色阶、三日总览、借签参数展示。 */
 .fireglow-score[data-level="p20"] b,
 .fireglow-score[data-level="p20"] small { color: #5f7078; }
+.fireglow-score[data-level="unknown"] b,
+.fireglow-score[data-level="unknown"] small { color: #9aa5aa; opacity: 0.72; }
 .fireglow-score[data-level="p40"] b,
 .fireglow-score[data-level="p40"] small { color: #6fb87d; }
 .fireglow-score[data-level="p60"] b,
@@ -662,6 +669,7 @@
 .fg-hero-score-number[data-level="p88"] { color: #e07a2f; text-shadow: 0 0 24px rgba(224, 122, 47, 0.5); }
 .fg-hero-score-number[data-level="p95"] { color: #c45c1e; text-shadow: 0 0 28px rgba(196, 92, 30, 0.6); }
 .fg-hero-score-number[data-level="p100"] { color: #ff5e1e; text-shadow: 0 0 32px rgba(255, 94, 30, 0.7); }
+.fg-hero-score-number[data-level="unknown"] { color: #9aa5aa; opacity: 0.72; }
 
 .fg-hero-badge-block {
   display: flex;
@@ -685,6 +693,7 @@
 .fg-band-pill[data-level="p88"] { background: rgba(224, 122, 47, 0.2); color: #ff9d59; border-color: rgba(224, 122, 47, 0.45); }
 .fg-band-pill[data-level="p95"] { background: rgba(196, 92, 30, 0.22); color: #ff8543; border-color: rgba(196, 92, 30, 0.5); }
 .fg-band-pill[data-level="p100"] { background: rgba(255, 94, 30, 0.25); color: #ff6e38; border-color: rgba(255, 94, 30, 0.55); box-shadow: 0 0 12px rgba(255, 94, 30, 0.3); }
+.fg-band-pill[data-level="unknown"] { background: rgba(111, 120, 128, 0.16); color: #9aa5aa; border-color: rgba(154, 165, 170, 0.4); }
 
 .fg-moment-pill {
   display: inline-flex;

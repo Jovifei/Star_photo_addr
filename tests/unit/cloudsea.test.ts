@@ -404,4 +404,18 @@ describe("cloudseaOverlay IDW grid", () => {
     expect(levelIndexFor(25)).toBe(1);
     expect(levelIndexFor(95)).toBe(5);
   });
+
+  it("excludes null-score sites from interpolation", () => {
+    const grid = interpolateScoreGrid(
+      [
+        { latitude: 30, longitude: 110, score: 80 },
+        { latitude: 30, longitude: 125, score: null },
+      ],
+      3,
+      3,
+      [[30, 110], [30, 125]],
+    );
+    expect(Number.isFinite(grid[0])).toBe(true);
+    expect(Number.isNaN(grid[2])).toBe(true);
+  });
 });
