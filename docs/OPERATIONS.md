@@ -69,6 +69,6 @@
 
 | 来源 | 用途 | 说明 |
 |---|---|---|
-| 阿里云 DataV GeoAtlas（geo.datav.aliyun.com） | 中国省级行政边界回退源 | 本地许可边界包（`NEXT_PUBLIC_ASSET_BOUNDARIES`）未启用时自动使用；浏览器会话内缓存；失败静默降级为无线 |
+| 阿里云 DataV GeoAtlas（历史来源） | 已移除默认行政边界回退 | `BoundaryLayers` 不再自动请求 DataV；无本地授权边界且无天地图令牌时 fail-closed，不绘制未经授权的行政 polygon |
 | darkmap.cn WMTS | 光污染底图 | 既有 |
 | NASA GIBS / Himawari | 卫星云图 | 既有 |
