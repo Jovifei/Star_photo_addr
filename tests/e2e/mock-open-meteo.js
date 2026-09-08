@@ -216,7 +216,7 @@ export async function installNextApiMock(page, fixture) {
     const focusDayShift = (focusDayNumber % 4) * 8;
     const sites = {};
     const focusScores = {};
-    for (let index = 0; index < 242; index += 1) {
+    for (let index = 0; index < 252; index += 1) {
       const id = `finder-${String(index + 1).padStart(3, "0")}-location`;
       const scoreBand = (score) => score >= 85 ? "priority" : score >= 70 ? "recommended" : score >= 55 ? "watch" : "not-recommended";
       sites[id] = Array.from({ length: days }, (_, night) => ({

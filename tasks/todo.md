@@ -1,3 +1,19 @@
+# v1.0.7 curated location expansion (2026-09-09)
+
+- [x] Confirm clean `main@5900bd8` and audit catalog/CloudSea entry points.
+- [x] Research public, source-backed popular destinations and record caveats.
+- [x] Add 10 general photography locations, 10 CloudSea locations, and expand the default shortlist to 10.
+- [x] Synchronize dynamic catalog counts and regression fixtures.
+- [x] Run full local gates, live smoke, and local E2E.
+- [ ] Publish `codex/location-expansion-20260909` and wait for CI before merge/deploy.
+
+## Review
+
+- Plan: `tasks/plans/2026-09-09-location-expansion.md`.
+- Research record: `docs/engineering-change-log/2026-09-09-location-expansion-v1.0.7.md`.
+- Source-backed candidates are recommendations only; Bortle remains reference metadata and no score algorithm changes are planned.
+- Verification: `npm run check` PASS; `npm run test:live` PASS; `npm run check:data-sources` PASS on local standalone; Chromium E2E `102 passed / 34 skipped / 0 failed`.
+
 # v1.0.6 production hotfix (2026-09-08)
 
 - [x] Confirm clean `main` and exact `origin/main@cee9dde` baseline.

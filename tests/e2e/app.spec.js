@@ -161,7 +161,7 @@ test("暗夜选址 B1-B4 筛选可组合并同步点位数量", async ({ page },
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
   const b2 = bar.getByRole("button", { name: /参考 B2 点位/ });
   const b4 = bar.getByRole("button", { name: /参考 B4 点位/ });
-  await expect(markers).toHaveCount(222);
+  await expect(markers).toHaveCount(228);
   const initial = await markers.count();
   const b2Count = Number((await b2.getAttribute("aria-label"))?.match(/(\d+) 个$/)?.[1]);
   const b4Count = Number((await b4.getAttribute("aria-label"))?.match(/(\d+) 个$/)?.[1]);

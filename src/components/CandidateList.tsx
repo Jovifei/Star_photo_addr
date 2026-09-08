@@ -272,7 +272,7 @@ export default function CandidateList({
               onClick={handleResetSeeds}
             >
               <RotateCcw size={14} />
-              <span>载入 4 大经典观星名山</span>
+              <span>载入 10 个精选摄影地点</span>
             </button>
           </div>
         ) : (

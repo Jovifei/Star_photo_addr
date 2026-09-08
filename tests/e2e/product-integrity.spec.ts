@@ -83,16 +83,16 @@ test("sites workspace shows a B1–B4 filter bar above the map with visible colo
   }
 
   const container = page.locator(".leaflet-container").first();
-  await expect(container).toHaveAttribute("data-observing-site-count", "222");
+  await expect(container).toHaveAttribute("data-observing-site-count", "228");
   await expect(page.locator('.observing-site-dot[data-bortle="1"]').first()).toBeAttached();
 
   await buttons.nth(3).click();
   await expect(buttons.nth(3)).toHaveAttribute("aria-pressed", "true");
-  await expect(container).toHaveAttribute("data-observing-site-count", "242");
+  await expect(container).toHaveAttribute("data-observing-site-count", "252");
 
   await buttons.nth(0).click();
   await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "false");
-  await expect(container).toHaveAttribute("data-observing-site-count", "205");
+  await expect(container).toHaveAttribute("data-observing-site-count", "215");
 });
 
 test("稀疏坐标的观星计划兼容链接保留选点上下文", async ({ page }) => {

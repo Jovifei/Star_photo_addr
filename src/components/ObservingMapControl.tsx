@@ -126,6 +126,7 @@ export default function ObservingMapControl({
     }
     return counts;
   }, []);
+  const bortleThreeCount = bortleCounts[1] + bortleCounts[2] + bortleCounts[3];
   const scoreByBand = useMemo(() => {
     const counts: Record<Exclude<RecommendationBand, "unknown">, number> = {
       priority: 0,
@@ -217,8 +218,8 @@ export default function ObservingMapControl({
           }}
           aria-label="目录参考 B 地点范围"
         >
-          <option value="3">参考 B1–B3 · 222 个</option>
-          <option value="4">参考 B1–B4 · 242 个</option>
+          <option value="3">参考 B1–B3 · {bortleThreeCount} 个</option>
+          <option value="4">参考 B1–B4 · {OBSERVING_SITE_COUNT} 个</option>
           <option value="custom" disabled>自定义档位</option>
         </select>
       </label>
