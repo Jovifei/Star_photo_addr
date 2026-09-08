@@ -100,9 +100,9 @@ const EMPTY_WINDOW: FireGlowWindowScore = {
 const NONE_WINDOW: FireGlowWindowScore = {
   score: null,
   band: "none",
-  bandLabel: "窗口缺失",
-  probabilityLabel: "0–20",
-  probabilityLevel: "p20",
+  bandLabel: "数据不足",
+  probabilityLabel: null,
+  probabilityLevel: null,
   vividness: null,
   momentLabel: null,
   peakTime: null,

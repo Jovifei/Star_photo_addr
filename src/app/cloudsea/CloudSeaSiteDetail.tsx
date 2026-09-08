@@ -19,6 +19,7 @@ import {
 import type { CloudSeaSite } from "@/lib/cloudseaSites";
 import type { CloudSeaWindowScore } from "@/lib/cloudsea";
 import { positionBadgeTone } from "@/lib/cloudsea";
+import { markerLevelFor } from "@/lib/markerStatus";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
 
 interface CloudSeaSiteDetailProps {
@@ -97,7 +98,7 @@ export default function CloudSeaSiteDetail({
   dateKey,
   onClose,
 }: CloudSeaSiteDetailProps) {
-  const pLevel = win.conditionLevel ?? "p20";
+  const pLevel = markerLevelFor(win.score, win.conditionLevel);
   const badgeTone = positionBadgeTone(win.cloudPosition);
 
   const sunEvents = useMemo(

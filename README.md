@@ -85,7 +85,7 @@
 
 当前第一阶段数据链为：
 
-1. **surface weather**：低/中/高云、`relative_humidity_2m`、温度、降水、能见度、10 m 风；
+1. **surface weather**：`relative_humidity_2m`、`cloud_cover_low`、`cloud_cover_mid`、`cloud_cover_high`、`precipitation`、`wind_speed_10m`；
 2. **pressure-level model profile**：1000 / 975 / 950 / 925 / 900 / 850 / 800 / 700 / 600 / 500 hPa 的云量、相对湿度、温度和位势高度；
 3. 复用统一 pressure cloud-layer 推导，识别连续低层 cloud deck；
 4. 用站点海拔与模式云底/云顶的 MSL 高度判断“山顶在云上 / 云中 / 云下”；
@@ -101,6 +101,7 @@
 - pressure 临时失败不会推翻已经成功取得的真实 surface 数据；页面会标明 pressure coverage，缺失地点不推断垂直层位；
 - 逆温是**数值模式证据**，不是探空、云底仪或山顶传感器实测；
 - 0–100 仍是工程条件指数，尚未用长期实拍标签校准成统计事件概率。
+- 当窗口 `score` 缺失时，地图标记与图例显示为独立的“数据不足”状态，不等同于最低条件等级。
 
 ### 尚未完成的云海 Phase 2
 

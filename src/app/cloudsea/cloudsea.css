@@ -183,6 +183,11 @@
   color: #fff;
 }
 
+.cloudsea-legend-unknown {
+  border: 1px dashed rgba(255, 255, 255, 0.55);
+  opacity: 0.72;
+}
+
 /* 侧边点位列表 */
 .cloudsea-sidebar {
   display: flex;
@@ -283,6 +288,18 @@
   font-size: 18px;
   font-weight: 800;
   line-height: 1;
+}
+
+.cloudsea-score-badge[data-level="unknown"] {
+  color: #9aa5aa !important;
+  opacity: 0.72;
+}
+
+.cloudsea-score-state,
+.cloudsea-popup-unavailable {
+  color: #8d999e;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .cloudsea-pos-badge {
@@ -574,6 +591,7 @@
 .cs-hero-score-number[data-level="p80"] { color: #2ecc71; text-shadow: 0 0 24px rgba(46, 204, 113, 0.4); }
 .cs-hero-score-number[data-level="p90"] { color: #2ecc71; text-shadow: 0 0 28px rgba(46, 204, 113, 0.5); }
 .cs-hero-score-number[data-level="p100"] { color: #5ef1a8; text-shadow: 0 0 32px rgba(94, 241, 168, 0.6); }
+.cs-hero-score-number[data-level="unknown"] { color: #9aa5aa; opacity: 0.72; }
 
 .cs-hero-badge-block {
   display: flex;

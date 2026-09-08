@@ -3,6 +3,7 @@
 import { Suspense, useState, type ReactNode } from "react";
 import NavTabs, { NavTabsFallback } from "@/components/NavTabs";
 import ChangelogModal from "@/components/ChangelogModal";
+import { APP_VERSION_LABEL } from "@/lib/appVersion";
 
 /**
  * The one header shared by every product workspace. Geometry lives here and
@@ -39,10 +40,10 @@ export default function ProductHeader({
               type="button"
               className="app-header-version-badge"
               onClick={() => setChangelogOpen(true)}
-              title="查看版本更新记录 (v1.0.4)"
-              aria-label="查看版本更新记录 v1.0.4"
+              title={`查看版本更新记录 (${APP_VERSION_LABEL})`}
+              aria-label={`查看版本更新记录 ${APP_VERSION_LABEL}`}
             >
-              v1.0.4
+              {APP_VERSION_LABEL}
             </button>
           </div>
           <h1 className="app-header-title">{title}</h1>

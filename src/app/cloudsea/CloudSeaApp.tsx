@@ -34,6 +34,7 @@ import {
   type CloudSeaWindowScore,
 } from "@/lib/cloudsea";
 import { buildProbabilityOverlay } from "@/lib/cloudseaOverlay";
+import { markerLevelFor } from "@/lib/markerStatus";
 import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
 
@@ -48,6 +49,7 @@ const LEVEL_COLORS: Record<CloudSeaConditionLevel, string> = {
   p90: "#1956b3",
   p100: "#4b2ca5",
 };
+const UNKNOWN_MARKER_COLOR = "#6f7880";
 
 const LEVEL_LABELS: Array<{ level: CloudSeaConditionLevel; range: string }> = [
   { level: "p20", range: "0–20" },
@@ -379,20 +381,25 @@ export default function CloudSeaApp() {
             )}
 
             {rankedSites.map(({ site, window: windowScore }) => {
-              const level = windowScore.conditionLevel ?? "p20";
-              const color = LEVEL_COLORS[level];
+              const level = markerLevelFor(
+                windowScore.score,
+                windowScore.conditionLevel,
+              );
+              const isUnknown = level === "unknown";
+              const color = isUnknown ? UNKNOWN_MARKER_COLOR : LEVEL_COLORS[level];
               const isSelected = site.id === selectedSiteId;
 
               return (
                 <CircleMarker
                   key={site.id}
                   center={[site.latitude, site.longitude]}
-                  radius={isSelected ? 10 : 7}
+                  radius={isSelected ? 10 : isUnknown ? 6 : 7}
                   pathOptions={{
                     color: isSelected ? "#ffffff" : color,
                     weight: isSelected ? 3 : 1.5,
                     fillColor: color,
-                    fillOpacity: 0.88,
+                    fillOpacity: isUnknown ? 0.38 : 0.88,
+                    dashArray: isUnknown ? "3 3" : undefined,
                   }}
                   eventHandlers={{
                     click: () => setSelectedSiteId(site.id),
@@ -436,6 +443,9 @@ export default function CloudSeaApp() {
                           {windowScore.positionLabel}
                         </span>
                       </div>
+                      {windowScore.score == null ? (
+                        <div className="cloudsea-popup-unavailable">数据不足</div>
+                      ) : null}
                       <div style={{ fontSize: "11px", color: "#666" }}>
                         模式云顶: {windowScore.cloudTopM != null ? `${windowScore.cloudTopM}m` : "—"} · 模式云底:{" "}
                         {windowScore.cloudBaseM != null
@@ -463,6 +473,12 @@ export default function CloudSeaApp() {
                   {item.range}
                 </span>
               ))}
+              <span
+                className="cloudsea-legend-chip cloudsea-legend-unknown"
+                style={{ backgroundColor: UNKNOWN_MARKER_COLOR }}
+              >
+                数据不足
+              </span>
             </div>
           </div>
         </div>
@@ -531,8 +547,14 @@ export default function CloudSeaApp() {
             ) : (
               rankedSites.map(({ site, window: windowScore }) => {
                 const isSelected = site.id === selectedSiteId;
-                const level = windowScore.conditionLevel ?? "p20";
-                const scoreColor = LEVEL_COLORS[level];
+                const level = markerLevelFor(
+                  windowScore.score,
+                  windowScore.conditionLevel,
+                );
+                const isUnknown = level === "unknown";
+                const scoreColor = isUnknown
+                  ? UNKNOWN_MARKER_COLOR
+                  : LEVEL_COLORS[level];
                 const badgeTone = positionBadgeTone(
                   windowScore.cloudPosition,
                 );
@@ -554,10 +576,15 @@ export default function CloudSeaApp() {
                       <div className="cloudsea-card-score">
                         <span
                           className="cloudsea-score-badge"
+                          data-level={level}
                           style={{ color: scoreColor }}
+                          title={isUnknown ? "数据不足" : undefined}
                         >
                           {windowScore.conditionLabel ?? "—"}
                         </span>
+                        {isUnknown ? (
+                          <small className="cloudsea-score-state">数据不足</small>
+                        ) : null}
                         <span
                           className={`cloudsea-pos-badge ${badgeTone}`}
                         >

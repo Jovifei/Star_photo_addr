@@ -1,3 +1,18 @@
+# v1.0.6 production hotfix (2026-09-08)
+
+- [x] Confirm clean `main` and exact `origin/main@cee9dde` baseline.
+- [x] Create `fix/v1.0.6-production-hotfix-20260908` from the baseline.
+- [x] Add RED regression coverage for version consistency, unknown markers, and DataV fallback.
+- [x] Implement only the scoped hotfix changes and align docs/changelog.
+- [x] Run local gates, live smoke, and permitted local E2E (`102 passed / 34 skipped / 0 failed`).
+- [ ] Push branch, open PR, wait for all five CI gates, and merge.
+- [ ] Deploy merged `main` and complete production API/page/network verification.
+
+## Review
+
+- Plan: `tasks/plans/2026-09-08-v1.0.6-production-hotfix.md`.
+- Baseline evidence: local and remote `main` both equal `cee9dde09ed7a4d6e8736dc2ea020b244d49cd95`; worktree was clean before branching.
+
 # v1.0.4 release and main integration (2026-09-06)
 
 - [x] Bump package and lock metadata from 1.0.3 to 1.0.4.
