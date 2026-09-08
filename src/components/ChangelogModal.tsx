@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { X, History, Sparkles, ShieldCheck, Mountain, Layers, CloudSun } from "lucide-react";
+import { APP_VERSION_LABEL } from "@/lib/appVersion";
 
 interface ChangelogModalProps {
   open: boolean;
@@ -10,10 +11,33 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
+    version: APP_VERSION_LABEL,
+    date: "2026-09-08",
+    tag: "生产验收一致性 Hotfix",
+    current: true,
+    highlights: [
+      {
+        icon: ShieldCheck,
+        title: "版本来源统一",
+        desc: "顶栏、健康接口和版本记录统一读取 package.json 的唯一版本源。",
+      },
+      {
+        icon: CloudSun,
+        title: "无数据语义收口",
+        desc: "CloudSea 与 Fireglow 的无数据点位使用独立 muted 状态，不再视觉上冒充最低条件等级。",
+      },
+      {
+        icon: Layers,
+        title: "边界请求 fail-closed",
+        desc: "移除不可靠的 DataV 自动行政边界 fallback，并同步生产数据源与 CloudSea pressure-level 文档。",
+      },
+    ],
+  },
+  {
     version: "v1.0.5",
     date: "2026-09-06",
     tag: "发布完整性与数据真实性修复",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: ShieldCheck,
@@ -23,7 +47,7 @@ const VERSIONS = [
       {
         icon: CloudSun,
         title: "云海条件指数 Beta",
-        desc: "使用真实 Open-Meteo 相对湿度，将未校准的概率语义降级为条件指数；云底与云顶继续明确标注为启发式估算。",
+        desc: "使用真实 Open-Meteo 相对湿度，将未校准的概率语义降级为条件指数；云底与云顶来自 pressure-level model profile，并明确标注为模式推导。",
       },
       {
         icon: Layers,
