@@ -62,7 +62,18 @@ describe("release integrity invariants", () => {
 
     expect(route).toContain("fetchPressureForecastBatch");
     expect(route).toContain("PRESSURE_BATCH_SIZE");
-    expect(route).toContain("degrade only the vertical evidence");
+    const pressureLoaderStart = route.indexOf(
+      "async function fetchCloudSeaPressure",
+    );
+    const pressureLoaderEnd = route.indexOf(
+      "function isTimeoutError",
+      pressureLoaderStart,
+    );
+    expect(pressureLoaderStart).toBeGreaterThanOrEqual(0);
+    expect(pressureLoaderEnd).toBeGreaterThan(pressureLoaderStart);
+    const pressureLoader = route.slice(pressureLoaderStart, pressureLoaderEnd);
+    expect(pressureLoader).toContain("errors[location.id] = message");
+    expect(pressureLoader).not.toContain("throw error");
     expect(model).toContain("deriveCloudLayers");
     expect(model).toContain("detectTemperatureInversion");
     expect(model).toContain("不使用启发式云底");
