@@ -29,4 +29,5 @@
 - TDD GREEN：新构建后顶部直接控件回归桌面/移动端 2/2 通过；`/sites` B1 与 B1–B4 组合点位回归 2/2 通过；最终命令栏 focused 回归 5/5 通过。
 - `npm run check`：51 个 Vitest 文件 / 302 个测试、Lint、TypeScript、生产构建全部通过。
 - `npm run test:e2e`：106 passed / 34 skipped / 0 failed（140 实例）；`npm run test:live` required/optional 全部通过；`npm audit --omit=dev --audit-level=high` 为 0 vulnerabilities。
-- 合并后的主线 SHA、远端部署 SHA 与公网 `/healthz` 将在发布后补录。
+- 发布收口：`main@db830ee834ca` 已部署至 `/opt/star-photo`；app 与 worker 均 healthy，远端 `/healthz` 返回 v1.0.11 / `db830ee834ca`。
+- 公网验收：`npm run check:data-sources -- https://photo.joviluma.com` 通过，天气/卫星/VIIRS 可用，天地图未配置与本地暗夜栅格未安装按既有语义报告；Chrome 截图确认顶部单行搜索、推荐开关、B1–B4、评分时间与推荐门槛控件。
