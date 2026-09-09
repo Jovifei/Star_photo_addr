@@ -47,7 +47,7 @@ export default function ObservingMapControl({
 }: {
   docked?: boolean;
 } = {}) {
-  const { state, setCloud, setRecommendationThreshold, setObservingBortleLevels, setObservingBortleLimit, setRecommendedOnly, setRecommendationBands } = useStore();
+  const { state, setCloud, setRecommendationThreshold, setObservingBortleLevels, setObservingBortleLimit, setRecommendationBands } = useStore();
   const isSitesWorkspace = state.mapWorkspace === "sites";
   // Floating phone panels default to a title strip. Inside the mobile drawer
   // the full form remains expanded because the drawer itself provides the
@@ -298,10 +298,6 @@ export default function ObservingMapControl({
             <span>当前显示 <b>{activeSnapshot ? visibleCount : "—"}</b></span>
             <span>≥{state.recommendationThreshold}分 <b>{activeSnapshot ? thresholdCount : "—"}</b></span>
           </div>
-          <label className="observing-check-row">
-            <input type="checkbox" checked={state.recommendedOnly} onChange={(event) => setRecommendedOnly(event.target.checked)} />
-            <span>仅显示达到推荐门槛的地点</span>
-          </label>
           <div className="observing-score-legend" aria-label="推荐评分颜色筛选">
             {BAND_FILTERS.map((filter) => (
               <label className="observing-band-option" key={filter.id}>

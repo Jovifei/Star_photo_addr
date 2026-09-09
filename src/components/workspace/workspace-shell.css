@@ -422,6 +422,13 @@
 }
 
 @media (max-width: 1023px) {
+  .workspace-commandbar .search-only-row {
+    flex-wrap: wrap;
+  }
+  .workspace-commandbar .search-combobox {
+    flex: 1 1 100%;
+  }
+
   .workspace-shell-body {
     grid-template-columns: 1fr;
   }

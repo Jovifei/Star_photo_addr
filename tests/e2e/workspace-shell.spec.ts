@@ -182,6 +182,50 @@ test("workspace command bar carries search and locate above the three columns", 
   await expect(page.getByTestId("workspace-input").locator(".map-search-card")).toHaveCount(0);
 });
 
+test("command bar exposes recommendation-only filtering after locate", async ({ page }) => {
+  await page.goto("/?overlay=forecast-cloud&view=combined");
+  const commandBar = page.getByTestId("workspace-commandbar");
+  const locate = commandBar.locator(".locate-button");
+  const toggle = commandBar.getByRole("checkbox", {
+    name: "仅显示达到推荐门槛的地点",
+  });
+
+  await expect(locate).toBeVisible();
+  await expect(toggle).toBeVisible();
+  const followsLocate = await commandBar.evaluate((bar) => {
+    const locateButton = bar.querySelector(".locate-button");
+    const filterInput = bar.querySelector(
+      '[aria-label="仅显示达到推荐门槛的地点"]',
+    );
+    return Boolean(
+      locateButton &&
+        filterInput &&
+        (locateButton.compareDocumentPosition(filterInput) &
+          Node.DOCUMENT_POSITION_FOLLOWING),
+    );
+  });
+  expect(followsLocate).toBe(true);
+  await expect(toggle).not.toBeChecked();
+
+  const map = page.locator(".leaflet-container").first();
+  await expect(map).toHaveAttribute("data-observing-site-count", /\d+/, {
+    timeout: 30_000,
+  });
+  const before = Number(await map.getAttribute("data-observing-site-count"));
+  expect(before).toBeGreaterThan(0);
+
+  await toggle.check();
+  await expect(toggle).toBeChecked();
+  await expect.poll(async () =>
+    Number(await map.getAttribute("data-observing-site-count")),
+  ).toBeLessThan(before);
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("jovi-observing-recommended-only-v1"),
+    ),
+  ).toBe("true");
+});
+
 test("left input column is adjustable by pointer, keyboard, presets and reset", async ({
   page,
 }, testInfo) => {

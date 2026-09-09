@@ -1,3 +1,19 @@
+# v1.0.9 顶部推荐地点筛选开关（2026-09-09）
+
+- [x] 确认 v1.0.8 `main` 干净基线，并定位已有推荐门槛状态与地图过滤契约。
+- [x] 创建 `codex/recommended-only-filter-20260909` 分支。
+- [x] 先补充顶部命令栏开关的桌面/移动端回归测试并观察 RED。
+- [x] 将“仅显示达到推荐门槛的地点”放到“我的位置”后，并保持现有筛选状态单一来源。
+- [x] 调整窄屏布局、无障碍语义和相关文档/版本记录为 v1.0.9。
+- [x] 运行 focused/full gates、审阅 diff 并确认无回归。
+- [ ] 推送 `codex/` 分支、等待 CI、合并到 `main`，按部署文档上线并完成公网验证。
+
+## Review
+
+- Plan: `tasks/plans/2026-09-09-recommended-only-filter.md`。
+- Baseline: `main@a578dab65e22e3cbe823d0f1f79f56bf53c58f0f`，v1.0.8 已部署。
+- Scope: 顶部入口与既有推荐过滤状态的 UI 接线；不改评分算法、点位数据和数据源契约。
+
 # v1.0.8 Zhoushan island photography-location expansion (2026-09-09)
 
 - [x] Complete source-backed candidate research and deduplicate existing `东极岛东福山`.
