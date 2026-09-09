@@ -13,7 +13,7 @@
 - `src/components/BortleFilterBar.tsx`：补充可见的 B1 极暗、B2 自然暗夜、B3 乡村夜空、B4 乡村/郊区过渡文案，并支持命令栏紧凑变体。
 - `src/components/MapSearchCard.tsx`：移除命令栏 `<details>` 与完整 `ObservingMapControl`，保留推荐开关并挂载直接控件。
 - `src/components/PerseidsApp.tsx`：移除地图重复的 Bortle 筛选条，避免顶部与地图双重入口；右侧/移动端详细面板保持不变。
-- `src/app/globals.css`、`src/components/workspace/workspace-shell.css`：搜索框收窄至约 220px，桌面 1280/1440 同排呈现，窄屏按可读顺序堆叠，控件满足键盘焦点与无水平溢出要求。
+- `src/app/globals.css`、`src/components/workspace/workspace-shell.css`：搜索框收窄至约 220px，桌面 1280/1440 同排呈现，B1–B4 按文案自然分配宽度，窄屏按可读顺序堆叠，控件满足键盘焦点与无水平溢出要求。
 - `src/lib/store.tsx`：读取推荐门槛时区分缺失 key 与数值 0，避免新用户默认值 70 被错误夹到 50。
 - 测试、版本记录、Changelog、任务计划同步至 v1.0.11。
 
