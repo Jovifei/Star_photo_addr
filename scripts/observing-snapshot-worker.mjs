@@ -94,7 +94,7 @@ async function refresh() {
 }
 
 // Pre-warm today/+1/+2 fireglow snapshots so evening page loads hit memory
-// instead of a cold 252-point upstream fan-out. Serial and non-fatal: a
+// instead of a cold 257-point upstream fan-out. Serial and non-fatal: a
 // failed date must never block the observing snapshot or the other dates.
 async function prewarmFireglow() {
   const date = shanghaiDate();

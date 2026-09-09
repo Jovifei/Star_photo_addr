@@ -138,6 +138,19 @@ export const DEFAULT_CANDIDATE_SEEDS: CityCandidate[] = [
     kind: "village",
     note: "古茶林村寨晚霞、云海与星空",
   },
+  {
+    id: "zhujiajian-daqingshan-maotiao",
+    adcode: 330903,
+    province: "浙江",
+    city: "舟山",
+    name: "朱家尖大青山猫跳",
+    latitude: 29.84823,
+    longitude: 122.393101,
+    elevation: 48,
+    bortle: 4,
+    kind: "coast",
+    note: "猫跳平台海上银河与晚霞候选点",
+  },
 ];
 
 /** Peak of the 2026 Perseids, used by the headline countdown. */

@@ -18,8 +18,8 @@ const changelogSource = readFileSync(
 );
 
 describe("release version consistency", () => {
-  it("publishes v1.0.7 from the package and lockfile", () => {
-    expect(packageJson.version).toBe("1.0.7");
+  it("publishes v1.0.8 from the package and lockfile", () => {
+    expect(packageJson.version).toBe("1.0.8");
     expect(APP_VERSION).toBe(packageJson.version);
     expect(APP_VERSION_LABEL).toBe(`v${packageJson.version}`);
     expect(packageLock.version).toBe(packageJson.version);

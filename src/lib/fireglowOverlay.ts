@@ -1,6 +1,6 @@
 // Probability region fill for the fire-glow map.
 //
-// 252 curated sites become a continuous colour field via inverse-distance
+// 257 curated sites become a continuous colour field via inverse-distance
 // weighting (power 3, ~340 km radius of influence), banded into the same
 // five 20% probability levels as the markers. The grid renders to a canvas
 // data URL for a Leaflet ImageOverlay, giving the light-pollution-style

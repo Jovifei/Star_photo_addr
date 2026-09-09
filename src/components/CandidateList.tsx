@@ -272,7 +272,7 @@ export default function CandidateList({
               onClick={handleResetSeeds}
             >
               <RotateCcw size={14} />
-              <span>载入 10 个精选摄影地点</span>
+              <span>载入 {DEFAULT_CANDIDATE_SEEDS.length} 个精选摄影地点</span>
             </button>
           </div>
         ) : (

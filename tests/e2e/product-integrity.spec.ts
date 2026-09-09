@@ -88,11 +88,11 @@ test("sites workspace shows a B1–B4 filter bar above the map with visible colo
 
   await buttons.nth(3).click();
   await expect(buttons.nth(3)).toHaveAttribute("aria-pressed", "true");
-  await expect(container).toHaveAttribute("data-observing-site-count", "252");
+  await expect(container).toHaveAttribute("data-observing-site-count", "257");
 
   await buttons.nth(0).click();
   await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "false");
-  await expect(container).toHaveAttribute("data-observing-site-count", "215");
+  await expect(container).toHaveAttribute("data-observing-site-count", "220");
 });
 
 test("稀疏坐标的观星计划兼容链接保留选点上下文", async ({ page }) => {

@@ -27,8 +27,8 @@ function sourceFiles(root: string): string[] {
 }
 
 describe("retired Finder shell cleanup", () => {
-  it("keeps the 252-site catalog in the modern data namespace", () => {
-    expect(FINDER_LOCATIONS).toHaveLength(252);
+  it("keeps the 257-site catalog in the modern data namespace", () => {
+    expect(FINDER_LOCATIONS).toHaveLength(257);
     expect(fs.existsSync("src/data/observingSites/catalog.json")).toBe(true);
     expect(fs.existsSync("src/data/observingSites/catalog.ts")).toBe(true);
   });
