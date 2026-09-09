@@ -3025,6 +3025,66 @@
       "cityCode": "101290401",
       "description": "哈尼梯田云海、日出与晚霞摄影点，梯田线条和村寨适合长焦压缩；具体观景台坐标、道路和景区公告需出发前核对。",
       "elevation": 2000
+    },
+    {
+      "id": "finder-253-location",
+      "name": "朱家尖大青山猫跳",
+      "area": "猫跳观景平台",
+      "province": "浙江",
+      "lng": 122.393101,
+      "lat": 29.84823,
+      "bortle": 4,
+      "cityCode": "101211105",
+      "description": "舟山滨海星空与晚霞摄影候选，猫跳平台视野开阔；公开观星报道提到6—10月银河季，但景区夜间活动、预约、接驳和清场规则需当天确认。",
+      "elevation": 48
+    },
+    {
+      "id": "finder-254-location",
+      "name": "东极岛庙子湖",
+      "area": "东翔亭 / 红色灯塔海岸",
+      "province": "浙江",
+      "lng": 122.686982,
+      "lat": 30.193518,
+      "bortle": 4,
+      "cityCode": "101211105",
+      "description": "东极岛庙子湖的灯塔、海岸晚霞与星空摄影候选；居民区、港口灯光和船期会影响夜间拍摄，海况、步道和景区开放需现场确认。",
+      "elevation": 136
+    },
+    {
+      "id": "finder-255-location",
+      "name": "枸杞岛山海奇观",
+      "area": "山海奇观 / 五里碑",
+      "province": "浙江",
+      "lng": 122.781567,
+      "lat": 30.70492,
+      "bortle": 4,
+      "cityCode": "101211102",
+      "description": "枸杞岛制高点，适合海上牧场、归航渔船、日落与海岛星空构图；养殖区与居民灯光、风浪、潮汐和保护区道路开放需确认。",
+      "elevation": 102
+    },
+    {
+      "id": "finder-256-location",
+      "name": "嵊山岛东崖绝壁",
+      "area": "东崖绝壁栈道",
+      "province": "浙江",
+      "lng": 122.835933,
+      "lat": 30.701761,
+      "bortle": 4,
+      "cityCode": "101211103",
+      "description": "嵊山岛东端的经典海蚀崖与日出摄影机位，也可作海岸星空前景候选；朝东更适合日出，绝壁步道、海风、湿滑和景区清场时段需重点确认。",
+      "elevation": 40
+    },
+    {
+      "id": "finder-257-location",
+      "name": "花鸟岛前坑顶",
+      "area": "前坑顶 / 观星栈道",
+      "province": "浙江",
+      "lng": 122.685613,
+      "lat": 30.845996,
+      "bortle": 4,
+      "cityCode": "101211102",
+      "description": "嵊泗花鸟岛最高峰及观星、海岛晚霞候选点，适合灯塔、海岸和银河前景；岛际船期、雾况、灯塔照明、夜间步道和限流需出发前确认。",
+      "elevation": 237
     }
   ],
   "elevationBackfill": {
@@ -3034,7 +3094,7 @@
   },
   "curatedExpansion": {
     "addedAt": "2026-09-09",
-    "source": "官方景区/政府/文旅资料与地图 POI 交叉核对，详见 docs/engineering-change-log/2026-09-09-location-expansion-v1.0.7.md",
+    "source": "官方景区/政府/文旅资料与地图 POI 交叉核对，详见 docs/engineering-change-log/2026-09-09-zhoushan-location-expansion-v1.0.8.md",
     "note": "新增点位为摄影候选与目录参考，不代表现场暗空、云海或晚霞概率已校准。"
   }
 }

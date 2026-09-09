@@ -18,6 +18,34 @@ const VERSIONS = [
     highlights: [
       {
         icon: Mountain,
+        title: "舟山海岛机位扩展",
+        desc: "新增朱家尖大青山猫跳、东极岛庙子湖、枸杞岛山海奇观、嵊山岛东崖绝壁与花鸟岛前坑顶 5 个海岛摄影候选。",
+      },
+      {
+        icon: CloudSun,
+        title: "银河与晚霞边界",
+        desc: "按公开观星、文旅与地图 POI 资料记录银河、日出、日落和海岸构图方向；不把目录 Bortle 当作现场暗空测量。",
+      },
+      {
+        icon: Layers,
+        title: "默认精选更实用",
+        desc: "首页默认候选从 10 个扩展为 11 个，加入大青山猫跳并保留候选加入空间；保留用户 LocalStorage 候选。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "海岛出行边界",
+        desc: "候选说明补充船期、海况、潮汐、夜间开放、清场、灯光和绝壁/步道风险，出发前需核对景区与客运公告。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.7",
+    date: "2026-09-09",
+    tag: "舟山海岛机位扩展",
+    current: false,
+    highlights: [
+      {
+        icon: Mountain,
         title: "云海点位扩展",
         desc: "CloudSea 新增 10 个有公开景区资料支持的山顶、梯田与云海观景点，压力层接口仍按同一契约计算。",
       },

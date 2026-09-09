@@ -1,3 +1,20 @@
+# v1.0.8 Zhoushan island photography-location expansion (2026-09-09)
+
+- [x] Complete source-backed candidate research and deduplicate existing `东极岛东福山`.
+- [x] Add five Zhoushan/Shengsi general catalog locations with conservative reference metadata.
+- [x] Expand the default shortlist with representative sea-island photography spots without overwriting user-owned candidates.
+- [x] Bump version records, changelogs, engineering log, tests and dynamic counts.
+- [x] Run focused tests, full local gates, live/data-source checks and browser acceptance.
+- [ ] Push the `codex/` branch, wait for CI, merge to `main`, deploy and verify the public domain.
+
+## Review
+
+- Plan: `tasks/plans/2026-09-09-zhoushan-location-expansion.md`.
+- Baseline: `main@21051b7409e34ec5ef578e7b27a2233a08723e90`, already deployed as v1.0.7.
+- Scope: curated location data and release records only; no score/provider contract changes.
+- Verification: focused unit 23/23; `npm run check` 51 files / 302 tests PASS; `npm run test:live` PASS; local data-source probe PASS; Chromium E2E 102 passed / 34 skipped / 0 failed; npm audit 0 vulnerabilities.
+- The first E2E run used a stale standalone build and exposed a candidate-cap false failure; after rebuilding from current v1.0.8 source, the isolated 2/2 test and full suite passed.
+
 # v1.0.7 curated location expansion (2026-09-09)
 
 - [x] Confirm clean `main@5900bd8` and audit catalog/CloudSea entry points.
