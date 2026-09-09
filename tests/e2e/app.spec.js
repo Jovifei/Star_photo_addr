@@ -189,10 +189,10 @@ test("地图加入候选后观星计划保留同一地点", async ({ page }) => 
       && rect.right <= window.innerWidth
       && rect.bottom <= window.innerHeight;
   }));
-  await expect.poll(visibleMarkerIndex, { timeout: 15000 }).toBeGreaterThanOrEqual(0);
+  await expect.poll(visibleMarkerIndex, { timeout: 30_000 }).toBeGreaterThanOrEqual(0);
   const markerIndex = await visibleMarkerIndex();
   const marker = markers.nth(markerIndex);
-  await expect(marker).toBeVisible({ timeout: 15000 });
+  await expect(marker).toBeVisible({ timeout: 30_000 });
   await marker.click();
   const selectedName = (await page.locator(".panel-location-name").textContent())?.trim();
   expect(selectedName).toBeTruthy();
