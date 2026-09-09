@@ -5,6 +5,7 @@
 - [x] Add 10 general photography locations, 10 CloudSea locations, and expand the default shortlist to 10.
 - [x] Synchronize dynamic catalog counts and regression fixtures.
 - [x] Fix the rolling score-window clamp so a selected night-matrix hour is preserved.
+- [x] Apply the non-force dependency security update and verify production audit is clean.
 - [x] Run full local gates, live smoke, and local E2E.
 - [ ] Publish `codex/location-expansion-20260909` and wait for CI before merge/deploy.
 

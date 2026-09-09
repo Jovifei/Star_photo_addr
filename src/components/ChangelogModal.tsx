@@ -36,6 +36,11 @@ const VERSIONS = [
         title: "夜间时次选择稳定",
         desc: "矩阵选中评分窗口之前但属于当前夜间的时次时，不再被当前小时自动回弹。",
       },
+      {
+        icon: ShieldCheck,
+        title: "生产依赖已加固",
+        desc: "升级 Next.js、sharp 与传递依赖，生产依赖审计不再报告高风险漏洞。",
+      },
     ],
   },
   {

@@ -13,6 +13,7 @@
 - CloudSea `cloudseaSites.ts`：44 条 → 54 条，新增猫儿山、武夷山天游峰、神农顶、巴朗山、云和梯田、金佛山、瓦屋山、苏宝顶、九华山天台峰、元阳坝达。
 - 默认候选：`DEFAULT_CANDIDATE_SEEDS` 4 条 → 10 条；用户已有 LocalStorage 候选不被覆盖。
 - 时间选择边界：修复凌晨时段夜间矩阵选中 `01:00` 等时次会被当前评分窗口错误回弹的问题；评分窗口仍只负责实时评分范围。
+- 依赖安全：升级 Next.js `16.3.0` → `16.3.4`、sharp `0.35.3` → `0.35.4`，并通过 npm audit fix 更新 hono/js-yaml；生产依赖审计为 0 vulnerabilities。
 
 ## 来源与核对
 
@@ -42,4 +43,5 @@
 
 - 回归覆盖：ID/坐标/海拔/字段、252 条通用目录、54 条 CloudSea、默认 10 条精选、时间选择边界回归，以及现有 242→252 计数夹具同步。
 - 计划运行：`npm ci`、`npm run check`、`npm run test:live`、本地 Chromium E2E、CI 五项门禁和生产四页面验收。
+- 最新本地结果：`npm run check`、`npm run test:live`、`npm run check:data-sources`、`npm audit --omit=dev --audit-level=high` 均 PASS；Chromium E2E `102 passed / 34 skipped / 0 failed`。
 - 回滚目标：`5900bd8f01a17dddf52dafe1a22d4d382ae02b81`。
