@@ -9,7 +9,7 @@ import { resolveElevation } from "@/lib/elevationLookup";
 
 /** Search row + "我的位置" button. */
 export default function MapSearchCard() {
-  const { sampleAt } = useStore();
+  const { state, sampleAt, setRecommendedOnly } = useStore();
 
   const handlePick = useCallback(
     (result: GeocodeResult) => {
@@ -53,6 +53,19 @@ export default function MapSearchCard() {
           <span aria-hidden="true">⌾</span>
           {loading ? "定位中" : "我的位置"}
         </button>
+        <label
+          className="recommended-only-toggle"
+          data-testid="recommended-only-toggle"
+          title={`仅显示评分 ≥${state.recommendationThreshold} 的地点`}
+        >
+          <input
+            type="checkbox"
+            aria-label="仅显示达到推荐门槛的地点"
+            checked={state.recommendedOnly}
+            onChange={(event) => setRecommendedOnly(event.target.checked)}
+          />
+          <span>仅显示达到推荐门槛的地点</span>
+        </label>
       </div>
       {error && (
         <div

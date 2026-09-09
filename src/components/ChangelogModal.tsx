@@ -13,8 +13,31 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-09-09",
-    tag: "热门摄影地点扩展",
+    tag: "推荐地点筛选入口",
     current: true,
+    highlights: [
+      {
+        icon: Layers,
+        title: "首屏推荐地点筛选",
+        desc: "将“仅显示达到推荐门槛的地点”放到顶部命令栏，紧跟“我的位置”，进入页面即可切换地图点位。",
+      },
+      {
+        icon: CloudSun,
+        title: "评分过滤保持一致",
+        desc: "开关继续沿用右侧推荐门槛、评分档位与当前时次，立即同步地图 marker、显示数量和视口推荐。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "偏好持久化与窄屏适配",
+        desc: "保留现有 LocalStorage 偏好与无障碍复选框语义，并为手机命令栏增加换行布局，避免横向溢出。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.8",
+    date: "2026-09-09",
+    tag: "热门摄影地点扩展",
+    current: false,
     highlights: [
       {
         icon: Mountain,
