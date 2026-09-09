@@ -226,6 +226,42 @@ test("command bar exposes recommendation-only filtering after locate", async ({ 
   ).toBe("true");
 });
 
+test("command bar exposes the full recommendation settings after locate", async ({ page }) => {
+  await page.goto("/?overlay=forecast-cloud&view=combined");
+  const commandBar = page.getByTestId("workspace-commandbar");
+  const settings = commandBar.getByTestId("recommendation-settings");
+
+  await expect(settings).toBeVisible();
+  const order = await commandBar.evaluate((bar) => {
+    const elements = [
+      bar.querySelector(".locate-button"),
+      bar.querySelector('[data-testid="recommended-only-toggle"]'),
+      bar.querySelector('[data-testid="recommendation-settings"]'),
+    ];
+    return elements.every((element, index) =>
+      element && elements.slice(index + 1).every((next) =>
+        Boolean(next && (element.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      ),
+    );
+  });
+  expect(order).toBe(true);
+
+  await settings.locator("summary").click();
+  const panel = settings.locator(".observing-map-control");
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("slider", { name: "推荐分数门槛" })).toBeVisible();
+  await expect(panel.getByRole("slider", { name: "观星评分时间滑窗" })).toBeVisible();
+  await expect(panel.getByLabel("当前时次评分数量")).toContainText("当前显示");
+  await expect(panel.getByLabel("推荐评分颜色筛选").locator('input[type="checkbox"]')).toHaveCount(4);
+  for (const range of ["85–100", "70–84", "55–69", "0–54"]) {
+    await expect(panel.getByLabel("推荐评分颜色筛选")).toContainText(range);
+  }
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
 test("left input column is adjustable by pointer, keyboard, presets and reset", async ({
   page,
 }, testInfo) => {

@@ -37,6 +37,21 @@
   transform: none !important;
 }
 
+.workspace-commandbar .search-only-row {
+  flex-wrap: wrap;
+}
+.workspace-commandbar .recommendation-settings[open] {
+  flex: 1 1 100%;
+}
+.workspace-commandbar .recommendation-settings[open] .observing-map-control {
+  position: static;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  margin-top: 8px;
+  box-shadow: none;
+}
+
 .workspace-input-frame {
   position: relative;
   min-width: 0;
@@ -422,9 +437,6 @@
 }
 
 @media (max-width: 1023px) {
-  .workspace-commandbar .search-only-row {
-    flex-wrap: wrap;
-  }
   .workspace-commandbar .search-combobox {
     flex: 1 1 100%;
   }

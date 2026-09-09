@@ -13,8 +13,31 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-09-09",
-    tag: "推荐地点筛选入口",
+    tag: "命令栏评分设置",
     current: true,
+    highlights: [
+      {
+        icon: Layers,
+        title: "评分设置前置",
+        desc: "在“我的位置”后的命令栏增加“评分设置”折叠入口，进入页面即可打开完整评分筛选。",
+      },
+      {
+        icon: CloudSun,
+        title: "门槛与时次可调",
+        desc: "顶部设置复用推荐门槛滑块、评分时次滑窗和当前显示/达标数量，保持地图评分同一时次。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "四档筛选完整保留",
+        desc: "85–100、70–84、55–69、0–54 四档复选框在展开面板中保持可用，并沿用原有偏好与无障碍语义。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.9",
+    date: "2026-09-09",
+    tag: "推荐地点筛选入口",
+    current: false,
     highlights: [
       {
         icon: Layers,
