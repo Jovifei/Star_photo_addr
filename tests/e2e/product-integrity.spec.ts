@@ -45,22 +45,21 @@ test("暗夜选址的 B1-B4 卡片可组合筛选并同步点位数量", async (
   await expect(panel).toContainText("B1、B3、B4");
 });
 
-test("sites workspace shows a B1–B4 filter bar above the map with visible colors and synced markers", async ({
+test("sites workspace exposes the B1–B4 filter bar in the command bar with visible colors and synced markers", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Bortle 过滤条几何只测桌面");
   await page.goto("/sites");
-  const bar = page.getByTestId("bortle-filter-bar");
+  const commandBar = page.getByTestId("workspace-commandbar");
+  const bar = commandBar.getByTestId("bortle-filter-bar");
   await expect(bar).toBeVisible();
-  const mapBox = await page.locator(".leaflet-container").first().boundingBox();
+  await expect(page.locator(".workspace-canvas .bortle-filter-bar")).toHaveCount(0);
+  const commandBox = await commandBar.boundingBox();
   const barBox = await bar.boundingBox();
-  expect(mapBox).not.toBeNull();
+  expect(commandBox).not.toBeNull();
   expect(barBox).not.toBeNull();
-  expect(barBox!.y).toBeGreaterThanOrEqual(mapBox!.y - 8);
-  expect(barBox!.y).toBeLessThanOrEqual(mapBox!.y + 140);
-  const barCenter = barBox!.x + barBox!.width / 2;
-  const mapCenter = mapBox!.x + mapBox!.width / 2;
-  expect(Math.abs(barCenter - mapCenter)).toBeLessThanOrEqual(280);
+  expect(barBox!.y).toBeGreaterThanOrEqual(commandBox!.y);
+  expect(barBox!.y + barBox!.height).toBeLessThanOrEqual(commandBox!.y + commandBox!.height + 1);
 
   const buttons = bar.getByRole("button");
   await expect(buttons).toHaveCount(4);

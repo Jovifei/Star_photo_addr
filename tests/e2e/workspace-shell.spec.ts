@@ -226,17 +226,35 @@ test("command bar exposes recommendation-only filtering after locate", async ({ 
   ).toBe("true");
 });
 
-test("command bar exposes the full recommendation settings after locate", async ({ page }) => {
+test("command bar exposes direct Bortle and score controls without an extra panel", async ({ page }) => {
   await page.goto("/?overlay=forecast-cloud&view=combined");
   const commandBar = page.getByTestId("workspace-commandbar");
-  const settings = commandBar.getByTestId("recommendation-settings");
+  const quickControls = commandBar.getByTestId("recommendation-quick-controls");
+  const bortle = quickControls.getByTestId("bortle-filter-bar");
+  const threshold = quickControls.getByRole("slider", { name: "推荐分数门槛" });
+  const scoreTime = quickControls.getByRole("slider", { name: "观星评分时间滑窗" });
 
-  await expect(settings).toBeVisible();
+  await expect(commandBar.getByTestId("recommendation-settings")).toHaveCount(0);
+  await expect(commandBar.locator(".observing-map-control")).toHaveCount(0);
+  await expect(quickControls).toBeVisible();
+  await expect(bortle).toBeVisible();
+  await expect(threshold).toBeVisible();
+  await expect(scoreTime).toBeVisible();
+  await expect(threshold).toHaveValue("70");
+  await expect(bortle).toContainText("B1");
+  await expect(bortle).toContainText("极暗");
+  await expect(bortle).toContainText("B2");
+  await expect(bortle).toContainText("自然暗夜");
+  await expect(bortle).toContainText("B3");
+  await expect(bortle).toContainText("乡村夜空");
+  await expect(bortle).toContainText("B4");
+  await expect(bortle).toContainText("乡村/郊区过渡");
+
   const order = await commandBar.evaluate((bar) => {
     const elements = [
       bar.querySelector(".locate-button"),
       bar.querySelector('[data-testid="recommended-only-toggle"]'),
-      bar.querySelector('[data-testid="recommendation-settings"]'),
+      bar.querySelector('[data-testid="recommendation-quick-controls"]'),
     ];
     return elements.every((element, index) =>
       element && elements.slice(index + 1).every((next) =>
@@ -246,16 +264,13 @@ test("command bar exposes the full recommendation settings after locate", async 
   });
   expect(order).toBe(true);
 
-  await settings.locator("summary").click();
-  const panel = settings.locator(".observing-map-control");
-  await expect(panel).toBeVisible();
-  await expect(panel.getByRole("slider", { name: "推荐分数门槛" })).toBeVisible();
-  await expect(panel.getByRole("slider", { name: "观星评分时间滑窗" })).toBeVisible();
-  await expect(panel.getByLabel("当前时次评分数量")).toContainText("当前显示");
-  await expect(panel.getByLabel("推荐评分颜色筛选").locator('input[type="checkbox"]')).toHaveCount(4);
-  for (const range of ["85–100", "70–84", "55–69", "0–54"]) {
-    await expect(panel.getByLabel("推荐评分颜色筛选")).toContainText(range);
-  }
+  await threshold.press("ArrowRight");
+  await expect(threshold).toHaveValue("75");
+  expect(
+    await page.evaluate(() => localStorage.getItem("jovi-observing-threshold-v1")),
+  ).toBe("75");
+  await expect(scoreTime).toHaveAttribute("aria-valuetext", /.+/);
+
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
