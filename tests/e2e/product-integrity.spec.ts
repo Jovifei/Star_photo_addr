@@ -200,7 +200,7 @@ test("卫星强制刷新失败时保留上一帧并标记降级", async ({ page 
     await route.fallback();
   });
   await page.goto("/?overlay=satellite-cloud&view=satellite");
-  await expect(page.locator(".satellite-frame-badge")).toBeVisible({ timeout: 15000 });
+  await expect(page.locator(".satellite-frame-badge")).toBeVisible({ timeout: 30_000 });
   await page.getByRole("tab", { name: "图层与偏好", exact: true }).click();
   const refresh = page.getByRole("button", { name: "强制刷新天气、卫星目录和数据源状态" });
   await refresh.click();

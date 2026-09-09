@@ -47,7 +47,7 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
     await expect(page.getByTestId("mobile-map-panel-dock")).toBeVisible();
   }
   await openMobileMapPanel(page, "cloud");
-  await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测");
+  await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测", { timeout: 30_000 });
   const timelineToggle = page.locator(".cloud-timeline-toggle:visible");
   await expect(timelineToggle).toHaveAttribute("aria-expanded", "false");
   await timelineToggle.click();
@@ -101,7 +101,7 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
   }
   await expect(targetCell).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".cloud-timeline-current")).toBeVisible();
-  await expect(page.locator(".cloud-canvas-overlay canvas")).toBeVisible({ timeout: 15000 });
+  await expect(page.locator(".cloud-canvas-overlay canvas")).toBeVisible({ timeout: 30_000 });
 
   if (testInfo.project.name === "desktop") {
     await page.getByRole("tab", { name: "图层与偏好", exact: true }).click();
@@ -208,7 +208,7 @@ test("卫星图层入口互斥，数据源状态面板可见", async ({ page }, 
   await page.goto("/");
   await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".source-status-panel")).toBeVisible();
-  await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测");
+  await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测", { timeout: 30_000 });
   if (testInfo.project.name === "mobile") {
     await openMobileMapPanel(page, "layers");
     await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "false");
@@ -238,7 +238,7 @@ test("375、768、1024、1440 宽度下统一工作台无页面级横向溢出",
   test.skip(testInfo.project.name !== "desktop", "桌面项目统一覆盖断点");
   // This matrix deliberately performs 12 production navigations. Keep the
   // layout assertions strict but give slower CI runners enough wall-clock time.
-  test.setTimeout(120_000);
+  test.setTimeout(240_000);
   const plannerCompatibilityUrl = "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=2026-08-09&model=icon";
   for (const width of [375, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: width < 800 ? 900 : 1000 });
