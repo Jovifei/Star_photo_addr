@@ -4,7 +4,7 @@
 - [x] 将 B1–B4 参考档位及含义（极暗 / 自然暗夜 / 乡村夜空 / 乡村-郊区过渡）与两个滑块放入顶部命令栏，复用现有状态与 LocalStorage。
 - [x] 移除命令栏里的完整 `ObservingMapControl` 展开面板和地图重复的 Bortle 筛选条，保留右侧/移动端详细面板作为低频检查入口。
 - [x] 完成窄屏堆叠、1280/1440 单行、键盘与无水平溢出回归；更新 v1.0.11 版本、Changelog、工程记录和 lessons。
-- [ ] 运行完整本地门禁，提交 `codex:` commit，推送分支并合并 `main`，按部署文档上线后完成公网验收。
+- [x] 运行完整本地门禁，提交 `codex:` commit，推送分支并合并 `main`，按部署文档上线后完成公网验收。
 
 ## Review
 
@@ -12,6 +12,8 @@
 - Baseline: `main@fed0565dbe9ff3c978a383663e800f73e77ef92a`，当前生产 v1.0.10。
 - Scope: 只调整首屏命令栏筛选呈现与响应式布局；评分算法、天气数据、点位目录和状态持久化契约不变。
 - Verification: `npm run check`（51 文件 / 302 测试）通过；完整 E2E `106 passed / 34 skipped / 0 failed`；命令栏 focused `5 passed`；live sources 与生产依赖审计通过。
+- Publication: `codex/direct-commandbar-filters-20260909` 与 `codex/direct-bortle-labels-20260909` 均已推送；最终 `main@db830ee834ca` 已部署到 `/opt/star-photo`，app/worker healthy。
+- Public acceptance: `https://photo.joviluma.com/healthz` 返回 v1.0.11 / `db830ee834ca`；公网数据源检查通过，页面截图确认顶部单行控件与四档 Bortle 文案完整可读。
 
 # v1.0.10 命令栏评分设置前置（2026-09-09）
 
