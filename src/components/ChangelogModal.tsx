@@ -12,9 +12,42 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
+    date: "2026-09-09",
+    tag: "热门摄影地点扩展",
+    current: true,
+    highlights: [
+      {
+        icon: Mountain,
+        title: "云海点位扩展",
+        desc: "CloudSea 新增 10 个有公开景区资料支持的山顶、梯田与云海观景点，压力层接口仍按同一契约计算。",
+      },
+      {
+        icon: CloudSun,
+        title: "晚霞与星空选址扩展",
+        desc: "补充东山岛、霞浦东壁、涠洲岛、东极岛、四姑娘山、元阳与景迈山等热门摄影候选。",
+      },
+      {
+        icon: Layers,
+        title: "默认精选更实用",
+        desc: "首页默认候选从 4 个扩展为 10 个，保留用户 LocalStorage 候选，不把目录 Bortle 当作实时测量。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "夜间时次选择稳定",
+        desc: "矩阵选中评分窗口之前但属于当前夜间的时次时，不再被当前小时自动回弹。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "生产依赖已加固",
+        desc: "升级 Next.js、sharp 与传递依赖，生产依赖审计不再报告高风险漏洞。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.6",
     date: "2026-09-08",
     tag: "生产验收一致性 Hotfix",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: ShieldCheck,

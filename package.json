@@ -1,6 +1,6 @@
 {
   "name": "star-weather-planner",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "private": true,
   "description": "逐星｜今夜观测、暗夜选址、火烧云与高山云海摄影决策平台",
@@ -40,7 +40,7 @@
     "echarts-for-react": "^3.0.6",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.6.0",
-    "next": "16.3.0",
+    "next": "16.3.4",
     "opencc-js": "^1.4.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",

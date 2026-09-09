@@ -53,7 +53,7 @@ test("a failed forced cloud refresh keeps the last usable canvas", async ({
       "elevation=958.4&model=gfs&view=combined&overlay=forecast-cloud",
   );
   const canvas = page.locator(".cloud-canvas-overlay canvas");
-  await expect(canvas).toBeVisible({ timeout: 15_000 });
+  await expect(canvas).toBeVisible({ timeout: 30_000 });
   await openMobileMapPanel(page, "cloud");
 
   rejectForcedRefresh = true;

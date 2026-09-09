@@ -2905,11 +2905,136 @@
       "cityCode": "101281101",
       "description": "台州黄岩西部，括苍山余脉，平均海拔900m，主峰大寺尖1252m，森林覆盖率98%，黄岩永宁江与永嘉楠溪江发源地，全省唯一未来国有林场试点",
       "elevation": 900
+    },
+    {
+      "id": "finder-243-location",
+      "name": "东山岛",
+      "area": "金銮湾 / 南门湾",
+      "province": "福建",
+      "lng": 117.414,
+      "lat": 23.676,
+      "bortle": 4,
+      "cityCode": "101230601",
+      "description": "滨海摄影与晚霞点，金銮湾镜面沙滩、南门湾日落和渔火适合海岸剪影；潮汐、海风与开放信息需出发前确认。",
+      "elevation": 16
+    },
+    {
+      "id": "finder-244-location",
+      "name": "霞浦东壁",
+      "area": "三沙镇东壁 / 光影栈道",
+      "province": "福建",
+      "lng": 120.215,
+      "lat": 26.926,
+      "bortle": 4,
+      "cityCode": "101230901",
+      "description": "霞浦滩涂光影摄影点，东壁日落、三沙光影栈道与潮汐纹理适合晚霞构图；滩涂作业、潮汐和海况需现场确认。",
+      "elevation": 20
+    },
+    {
+      "id": "finder-245-location",
+      "name": "涠洲岛滴水丹屏",
+      "area": "滴水丹屏 / 石螺口海滩",
+      "province": "广西",
+      "lng": 109.110,
+      "lat": 21.040,
+      "bortle": 4,
+      "cityCode": "101281301",
+      "description": "火山海岛晚霞与海岸摄影点，滴水丹屏、石螺口可拍海上日落；船期、潮汐、礁石湿滑与景区开放需确认。",
+      "elevation": 20
+    },
+    {
+      "id": "finder-246-location",
+      "name": "东极岛东福山",
+      "area": "东福山岛观日台",
+      "province": "浙江",
+      "lng": 122.766,
+      "lat": 30.136,
+      "bortle": 4,
+      "cityCode": "101211401",
+      "description": "海岛日出、日落与星空摄影点，远离大陆城市灯光；船期、海况和岛上步道开放情况决定可达性。",
+      "elevation": 257
+    },
+    {
+      "id": "finder-247-location",
+      "name": "四姑娘山猫鼻梁",
+      "area": "猫鼻梁观景台",
+      "province": "四川",
+      "lng": 102.842,
+      "lat": 30.989,
+      "bortle": 3,
+      "cityCode": "101271901",
+      "description": "四姑娘山经典雪山观景台，适合拍摄日照金山、晚霞与云雾层次；高原天气变化快，未开放区域禁止进入。",
+      "elevation": 3478
+    },
+    {
+      "id": "finder-248-location",
+      "name": "峨眉山金顶",
+      "area": "金顶十方普贤 / 舍身崖",
+      "province": "四川",
+      "lng": 103.337,
+      "lat": 29.525,
+      "bortle": 3,
+      "cityCode": "101271401",
+      "description": "峨眉山金顶的云海、日出、佛光与星空摄影候选点；索道末班、高海拔和景区开放规则需确认。",
+      "elevation": 3079
+    },
+    {
+      "id": "finder-249-location",
+      "name": "景迈山翁基",
+      "area": "翁基古寨 / 景迈山古茶林",
+      "province": "云南",
+      "lng": 100.008,
+      "lat": 22.184,
+      "bortle": 3,
+      "cityCode": "101290801",
+      "description": "古茶林与山地村寨的晚霞、云海和星空摄影候选点；遗产地保护、村寨安静拍摄与道路情况需尊重当地规定。",
+      "elevation": 1400
+    },
+    {
+      "id": "finder-250-location",
+      "name": "神农顶",
+      "area": "神农架神农顶景区",
+      "province": "湖北",
+      "lng": 110.307,
+      "lat": 31.440,
+      "bortle": 3,
+      "cityCode": "101201201",
+      "description": "华中高山云海、日出与星空候选点，主峰高海拔、云雾和原始森林形成纵深；高海拔与景区开放规则需确认。",
+      "elevation": 3106
+    },
+    {
+      "id": "finder-251-location",
+      "name": "巴朗山垭口",
+      "area": "巴朗山高山草甸",
+      "province": "四川",
+      "lng": 102.903,
+      "lat": 30.944,
+      "bortle": 3,
+      "cityCode": "101271901",
+      "description": "卧龙至四姑娘山之间的高山草甸与云海摄影点，适合雪山晚霞、云海和星空；高海拔道路、落石与天气风险需重点确认。",
+      "elevation": 4480
+    },
+    {
+      "id": "finder-252-location",
+      "name": "元阳坝达",
+      "area": "哈尼梯田坝达观景区",
+      "province": "云南",
+      "lng": 102.780,
+      "lat": 23.093,
+      "bortle": 3,
+      "cityCode": "101290401",
+      "description": "哈尼梯田云海、日出与晚霞摄影点，梯田线条和村寨适合长焦压缩；具体观景台坐标、道路和景区公告需出发前核对。",
+      "elevation": 2000
     }
   ],
   "elevationBackfill": {
     "source": "Open-Meteo elevation API (Copernicus DEM GLO-90)",
     "backfilledAt": "2026-08-22T10:24:11.049Z",
     "demFilled": 110
+  },
+  "curatedExpansion": {
+    "addedAt": "2026-09-09",
+    "source": "官方景区/政府/文旅资料与地图 POI 交叉核对，详见 docs/engineering-change-log/2026-09-09-location-expansion-v1.0.7.md",
+    "note": "新增点位为摄影候选与目录参考，不代表现场暗空、云海或晚霞概率已校准。"
   }
 }
