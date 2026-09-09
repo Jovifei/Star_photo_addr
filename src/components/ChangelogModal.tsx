@@ -31,6 +31,11 @@ const VERSIONS = [
         title: "默认精选更实用",
         desc: "首页默认候选从 4 个扩展为 10 个，保留用户 LocalStorage 候选，不把目录 Bortle 当作实时测量。",
       },
+      {
+        icon: ShieldCheck,
+        title: "夜间时次选择稳定",
+        desc: "矩阵选中评分窗口之前但属于当前夜间的时次时，不再被当前小时自动回弹。",
+      },
     ],
   },
   {

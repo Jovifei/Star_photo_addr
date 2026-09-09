@@ -16,6 +16,7 @@ import {
 import {
   forecastTimeWindow,
   formatNightLabel,
+  isInNight,
   scoreDateForForecastTime,
 } from "@/lib/nighttime";
 import type { BortleLevel, ObservationSnapshot, RecommendationBand } from "@/lib/types";
@@ -29,6 +30,17 @@ const BAND_FILTERS: Array<{ id: Exclude<RecommendationBand, "unknown">; label: s
   { id: "watch", label: "观望", range: "55–69", color: "#e8bb72" },
   { id: "not-recommended", label: "不推荐", range: "0–54", color: "#e97979" },
 ];
+
+export function shouldClampActiveForecastTime(
+  activeForecastTime: string | null | undefined,
+  scoreTimes: string[],
+  selectedNight: string,
+): boolean {
+  if (!scoreTimes.length) return false;
+  if (!activeForecastTime) return true;
+  if (scoreTimes.includes(activeForecastTime)) return false;
+  return !isInNight(activeForecastTime, selectedNight);
+}
 
 export default function ObservingMapControl({
   docked = false,
@@ -66,9 +78,16 @@ export default function ObservingMapControl({
   const snapshotRequestKey = `${activeScoreTime}|${state.cloudState.model}|${state.selectedNight}`;
 
   useEffect(() => {
-    if (!activeScoreTime || activeScoreTime === state.cloudState.activeForecastTime) return;
+    if (
+      !activeScoreTime ||
+      !shouldClampActiveForecastTime(
+        state.cloudState.activeForecastTime,
+        scoreTimes,
+        state.selectedNight,
+      )
+    ) return;
     setCloud({ activeForecastTime: activeScoreTime, playing: false });
-  }, [activeScoreTime, setCloud, state.cloudState.activeForecastTime]);
+  }, [activeScoreTime, scoreTimes, setCloud, state.cloudState.activeForecastTime, state.selectedNight]);
 
   useEffect(() => {
     if (!activeScoreTime) return;

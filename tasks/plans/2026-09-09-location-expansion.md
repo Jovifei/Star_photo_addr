@@ -40,13 +40,16 @@ coverage.
 3. **Homepage shortlist** — update `DEFAULT_CANDIDATE_SEEDS` and reset copy in
    `src/lib/constants.ts` / `src/components/CandidateList.tsx` to expose the
    curated choices without overwriting user candidates.
-4. **Release metadata/docs** — run `npm version 1.0.7 --no-git-tag-version`,
+4. **Time-selection regression** — preserve a matrix-selected hour that belongs
+   to the selected night even when it precedes the rolling score window; keep
+   scoring and provider contracts unchanged.
+5. **Release metadata/docs** — run `npm version 1.0.7 --no-git-tag-version`,
    update root and docs changelogs plus an engineering record with source URLs,
    caveats, and rollback target. Keep historical counts in historical notes.
-5. **Verification** — run `npm ci`, `npm run lint`, `npm run typecheck`,
+6. **Verification** — run `npm ci`, `npm run lint`, `npm run typecheck`,
    `npm run test`, `npm run build`, `npm run test:live`, `npm run check`, and
    local Chromium E2E. Inspect changed counts and data payload shape.
-6. **Publish boundary** — use focused `codex:` commits, push the branch, open
+7. **Publish boundary** — use focused `codex:` commits, push the branch, open
    a PR, and wait for all required CI jobs before any merge/deploy decision.
 
 ## Rollback and stop conditions
