@@ -649,6 +649,41 @@
   outline: 2px solid var(--green-soft);
   outline-offset: 2px;
 }
+.recommendation-settings {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.recommendation-settings > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  list-style: none;
+  white-space: nowrap;
+}
+.recommendation-settings > summary::-webkit-details-marker { display: none; }
+.recommendation-settings > summary::after {
+  content: "▾";
+  margin-left: 7px;
+  color: var(--green-soft);
+}
+.recommendation-settings[open] > summary {
+  border-color: var(--green);
+  color: var(--green-soft);
+}
+.recommendation-settings[open] > summary::after { content: "▴"; }
+.recommendation-settings > summary:focus-visible {
+  outline: 2px solid var(--green-soft);
+  outline-offset: 2px;
+}
 .suggestions {
   position: absolute;
   left: 0;

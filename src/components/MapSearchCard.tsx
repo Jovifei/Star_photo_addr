@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import type { GeocodeResult } from "@/lib/types";
 import SearchCombobox from "@/components/SearchCombobox";
 import { resolveElevation } from "@/lib/elevationLookup";
+import ObservingMapControl from "@/components/ObservingMapControl";
 
-/** Search row + "我的位置" button. */
+/** Search row + top-level location and recommendation controls. */
 export default function MapSearchCard() {
   const { state, sampleAt, setRecommendedOnly } = useStore();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handlePick = useCallback(
     (result: GeocodeResult) => {
@@ -66,6 +68,15 @@ export default function MapSearchCard() {
           />
           <span>仅显示达到推荐门槛的地点</span>
         </label>
+        <details
+          className="recommendation-settings"
+          data-testid="recommendation-settings"
+          open={settingsOpen}
+          onToggle={(event) => setSettingsOpen(event.currentTarget.open)}
+        >
+          <summary>评分设置 · ≥{state.recommendationThreshold}分</summary>
+          {settingsOpen ? <ObservingMapControl docked /> : null}
+        </details>
       </div>
       {error && (
         <div
