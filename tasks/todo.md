@@ -7,6 +7,7 @@
 - [x] Fix the rolling score-window clamp so a selected night-matrix hour is preserved.
 - [x] Apply the non-force dependency security update and verify production audit is clean.
 - [x] Increase only slow-CI E2E condition-wait budgets after reproducing the timeout root cause.
+- [x] Align the remaining initial cloud-canvas gate with the same 30-second condition wait.
 - [x] Run full local gates, live smoke, and local E2E.
 - [ ] Publish `codex/location-expansion-20260909` and wait for CI before merge/deploy.
 

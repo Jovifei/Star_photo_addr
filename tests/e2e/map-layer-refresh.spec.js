@@ -65,7 +65,7 @@ test("手动刷新只启动一个云量网格请求并保留已有画布", async
     "/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&model=gfs&view=combined&overlay=forecast-cloud",
   );
   const canvas = page.locator(".cloud-canvas-overlay canvas");
-  await expect(canvas).toBeVisible({ timeout: 15000 });
+  await expect(canvas).toBeVisible({ timeout: 30_000 });
   await openMobileMapPanel(page, "cloud");
 
   await page
