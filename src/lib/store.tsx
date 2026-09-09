@@ -415,9 +415,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       // Stargazing workspace always defaults to 'star' theme. Cloud sea has its own dedicated workspace.
       dispatch({ type: "SET_FORECAST_THEME", theme: "star" });
-      const threshold = Number(localStorage.getItem(OBSERVING_THRESHOLD_STORAGE_KEY));
-      if (Number.isFinite(threshold)) {
-        dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });
+      const rawThreshold = localStorage.getItem(OBSERVING_THRESHOLD_STORAGE_KEY);
+      if (rawThreshold !== null) {
+        const threshold = Number(rawThreshold);
+        if (Number.isFinite(threshold)) {
+          dispatch({ type: "SET_RECOMMENDATION_THRESHOLD", threshold });
+        }
       }
       const limit = Number(localStorage.getItem(OBSERVING_BORTLE_LIMIT_STORAGE_KEY));
       if (limit === 3 || limit === 4) {

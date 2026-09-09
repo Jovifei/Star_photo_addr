@@ -13,8 +13,31 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-09-09",
-    tag: "命令栏评分设置",
+    tag: "顶部直接筛选控件",
     current: true,
+    highlights: [
+      {
+        icon: Layers,
+        title: "B1–B4 直接筛选",
+        desc: "顶部状态栏直接显示 B1 极暗、B2 自然暗夜、B3 乡村夜空、B4 乡村/郊区过渡，点击即可组合筛选目录点位。",
+      },
+      {
+        icon: CloudSun,
+        title: "评分时间滑块",
+        desc: "评分时间滑块直接位于顶部，调整后地图点位评分跟随同一预报时次。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "推荐门槛保持可见",
+        desc: "推荐分数门槛滑块与“仅显示达到推荐门槛的地点”开关同处顶部；移除命令栏里的大面板，保留状态与无障碍语义。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.10",
+    date: "2026-09-09",
+    tag: "命令栏评分设置",
+    current: false,
     highlights: [
       {
         icon: Layers,

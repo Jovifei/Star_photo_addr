@@ -11,7 +11,6 @@ import ObservationDetails from "@/components/ObservationDetails";
 import StarWindowTable from "@/components/StarWindowTable";
 import CloudControl from "@/components/CloudControl";
 import BortleControl from "@/components/BortleControl";
-import BortleFilterBar from "@/components/BortleFilterBar";
 import MapLegend from "@/components/MapLegend";
 import MapViewActions from "@/components/MapViewActions";
 import MapPanelManager from "@/components/MapPanelManager";
@@ -165,9 +164,6 @@ export default function PerseidsApp() {
             viewportRecommendations={viewportRecommendations}
             onRecommendationsChange={setViewportRecommendations}
             summaryPane={evidence}
-            viewportOverlay={
-              state.mapWorkspace === "sites" ? <BortleFilterBar /> : null
-            }
           />
         </>
       }
