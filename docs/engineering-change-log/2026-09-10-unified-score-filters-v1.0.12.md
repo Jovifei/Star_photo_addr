@@ -4,7 +4,8 @@
 
 - 日期：2026-09-10
 - 基线：`main@a66ad049dfd69a87b0f97b5a5870679163260427`（v1.0.11）
-- 候选分支：`codex/unified-score-filters-20260910`
+- 候选分支：`codex/unified-score-filters-20260910`（已合并）
+- main 合并提交：`d64009276db0dbc55cc1963afbc31587703fbc18`
 - 版本：v1.0.12
 - 范围：首屏筛选控件、主页默认图层、火烧云/云海排行显示和配套测试/文档；不改天气 Provider、评分算法、地点目录或快照协议。
 
@@ -45,7 +46,7 @@
 
 - [x] 完整 `npm run test:e2e`：144 实例，110 passed / 34 skipped / 0 failed。
 - [x] `npm run test:live`（真实 Open-Meteo、NASA GIBS、NOAA、VIIRS）和 `npm audit --omit=dev --audit-level=high`（0 vulnerabilities）。
-- [ ] 分支推送、main 合并后的最终 SHA。
+- [x] 分支推送、main 合并：`codex/unified-score-filters-20260910` → `main@d64009276db0`。
 - [ ] 生产 app/worker、`/healthz`、`/api/data-status` 和公网 `check:data-sources`。
 - [ ] Obsidian `sync-project-docs.ps1 -DryRun` 结果；项目未映射时保留 `NO_PROJECT_MEMORY`，不创建 Vault 项目。
 

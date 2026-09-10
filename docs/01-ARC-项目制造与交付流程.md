@@ -1,9 +1,9 @@
 # 逐星项目制造与交付流程
 
 > 文档类型：ARC（Architecture / Release Process）
-> 当前版本：v1.0.12（发布候选）
-> 基线主线：`main@a66ad049dfd6`（v1.0.11）
-> 当前工作分支：`codex/unified-score-filters-20260910`
+> 当前版本：v1.0.12（已合并，待部署）
+> 当前主线合并提交：`main@d64009276db0dbc55cc1963afbc31587703fbc18`
+> 上一发布基线：`main@a66ad049dfd69a87b0f97b5a5870679163260427`（v1.0.11）
 > 生产站点：[photo.joviluma.com](https://photo.joviluma.com/)
 
 ## 1. 项目要制造什么
@@ -95,7 +95,7 @@ npm audit --omit=dev --audit-level=high
 - `test:live`：发布前真实 Open-Meteo、NASA GIBS、NOAA 和 VIIRS 冒烟；
 - 人工/真机：iPhone Safari、Android、多浏览器缩放、色觉/高对比、性能和现场科学校准。
 
-上一版 v1.0.11 已验证：`npm run check` 的 51 个 Vitest 文件 / 302 项测试通过；Chromium E2E 140 个实例中 106 passed、34 skipped、0 failed。本候选 v1.0.12 已验证 `npm run check`（52 个 Vitest 文件 / 304 项测试）、Chromium E2E 144 个实例中 110 passed、34 skipped、0 failed、真实数据源冒烟通过和生产依赖 0 vulnerabilities；生产部署与公网结果待合并后回写。skipped、MANUAL、BLOCKED 不得写成 PASS。
+上一版 v1.0.11 已验证：`npm run check` 的 51 个 Vitest 文件 / 302 项测试通过；Chromium E2E 140 个实例中 106 passed、34 skipped、0 failed。v1.0.12 已验证 `npm run check`（52 个 Vitest 文件 / 304 项测试）、Chromium E2E 144 个实例中 110 passed、34 skipped、0 failed、真实数据源冒烟通过和生产依赖 0 vulnerabilities；已合并到主线，生产部署与公网结果待本轮回写。skipped、MANUAL、BLOCKED 不得写成 PASS。
 
 ## 3. 版本与交付
 

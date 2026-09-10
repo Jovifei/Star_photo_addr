@@ -22,4 +22,4 @@
 
 ## 当前版本索引
 
-当前工作分支正在收口 v1.0.12 发布候选；生产主线仍为 v1.0.11，合并后的最终 SHA、部署和公网验收必须回写到 tracking/testing 文档。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 `engineering-change-log/`。
+v1.0.12 已合并到主线 `d640092`，生产部署和公网验收结果会继续回写到 tracking/testing 文档；部署前生产仍为 v1.0.11。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 `engineering-change-log/`。

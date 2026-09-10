@@ -4,9 +4,8 @@
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
 > 状态日期：2026-09-10
-> 当前 main：`a66ad049dfd69a87b0f97b5a5870679163260427`（v1.0.11）
-> 当前候选分支：`codex/unified-score-filters-20260910`（v1.0.12）
-> 当前测试工作分支：无
+> 当前 main：`d64009276db0dbc55cc1963afbc31587703fbc18`（v1.0.12）
+> 当前测试工作分支：无（候选已合并）
 
 ## 状态定义
 
@@ -29,7 +28,7 @@
 | `npm run test:e2e` | PASS | Chromium 桌面/移动 144 实例：110 passed / 34 skipped / 0 failed；修正 3 个旧断言后重跑通过 |
 | `npm run test:live` | PASS | Open-Meteo 四模型/压力层/地理编码/AQI、NASA GIBS、NOAA Kp、VIIRS 瓦片均 OK（2026-09-10） |
 | `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
-| 生产 Compose / 公网 | 待部署 | 合并 main 后按 `docs/ALIYUN_DEPLOYMENT.md` 执行 |
+| 生产 Compose / 公网 | 待部署 | `main@d64009276db0` 已合并；按 `docs/ALIYUN_DEPLOYMENT.md` 执行 |
 
 本候选结果来自当前分支的本地构建和脱敏 Mock E2E；生产 v1.0.11 仍是当前公网版本。真机、200% 缩放、压力测试、授权暗夜资产和现场 Bortle/SQM 科学校准不因本表自动化通过而完成。
 
