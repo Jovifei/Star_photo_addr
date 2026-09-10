@@ -13,8 +13,31 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-09-10",
-    tag: "统一评分筛选与默认图层",
+    tag: "本地点位搜索修复",
     current: true,
+    highlights: [
+      {
+        icon: Mountain,
+        title: "太子尖等网红机位可直接搜索",
+        desc: "搜索优先匹配本地观星点位目录；即使远端地理编码没有山峰结果，也能显示临安太子尖等已收录地点。",
+      },
+      {
+        icon: CloudSun,
+        title: "城市搜索继续使用远端地理编码",
+        desc: "本地目录没有命中时继续查询 Open-Meteo，全球城市与目录机位共用同一个搜索入口。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "搜索结果回归测试",
+        desc: "补充 API、单元和桌面/移动浏览器回归，保证本地点位命中、远端空结果和异常边界都有明确行为。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.12",
+    date: "2026-09-10",
+    tag: "统一评分筛选与默认图层",
+    current: false,
     highlights: [
       {
         icon: Layers,

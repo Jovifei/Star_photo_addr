@@ -1,6 +1,7 @@
 // Server-only Open-Meteo geocoding proxy logic.
 
 import { toSimplifiedChinese } from "./chineseText";
+import { OBSERVING_SITES } from "./observingSites";
 import type { GeocodeResponse, GeocodeResult } from "./types";
 
 interface RawGeocodeResult {
@@ -17,6 +18,18 @@ interface RawGeocodeResult {
 
 interface RawGeocodingResponse {
   results?: RawGeocodeResult[];
+}
+
+const CURATED_RESULT_ID_OFFSET = 1_000_000;
+
+function safeResultCount(count: number): number {
+  return Math.min(100, Math.max(1, Math.floor(count)));
+}
+
+function normalizeSearchText(value: string | null | undefined): string {
+  return toSimplifiedChinese(value?.normalize("NFKC") ?? "")
+    .toLocaleLowerCase("zh-CN")
+    .replace(/\s+/g, "");
 }
 
 export const OPEN_METEO_GEOCODE_URL =
@@ -53,6 +66,37 @@ export function normalizeGeocodeResults(
       admin1: toSimplifiedChinese(raw.admin1),
       timezone: raw.timezone,
       featureCode: raw.feature_code,
+    }));
+}
+
+/** Search the curated observing-site catalog before asking the remote geocoder. */
+export function searchCuratedPlaces(
+  query: string,
+  count = 10,
+): GeocodeResult[] {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return [];
+  const safeCount = safeResultCount(count);
+
+  return OBSERVING_SITES.map((site, index) => ({
+    site,
+    index,
+    searchable: [site.name, site.area, site.province]
+      .map((value) => normalizeSearchText(value))
+      .join(""),
+  }))
+    .filter((entry) => entry.searchable.includes(normalizedQuery))
+    .slice(0, safeCount)
+    .map(({ site, index }) => ({
+      id: -(CURATED_RESULT_ID_OFFSET + index + 1),
+      name: site.name,
+      latitude: site.latitude,
+      longitude: site.longitude,
+      elevation: site.altitude ?? undefined,
+      country: "中国",
+      admin1: site.province,
+      timezone: "Asia/Shanghai",
+      featureCode: "CURATED_OBSERVING_SITE",
     }));
 }
 
