@@ -360,7 +360,7 @@ export default function ViewportRecommendationPanel({
 
         {!zoomReady && (
           <p className="viewport-recommendation-empty">
-            先把地图放大到省域或城市群，再按当前视野生成最多 12 个地点。移动地图不会自动请求数据。
+            先把地图放大到省域或城市群，再按当前视野生成最多 20 个地点。移动地图不会自动请求数据。
           </p>
         )}
         {zoomReady && !loading && !recommendations.length && !error && (

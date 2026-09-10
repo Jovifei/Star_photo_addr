@@ -50,16 +50,16 @@ function fixture(overrides: Partial<FinderHourlyData> = {}): FinderHourlyData {
 }
 
 describe("观星地点查询快照与评分", () => {
-  it("包含目标站 257 个地点，Bortle 3 默认显示 228 个", () => {
-    expect(FINDER_LOCATIONS).toHaveLength(257);
+  it("包含目标站 282 个地点，Bortle 3 默认显示 238 个", () => {
+    expect(FINDER_LOCATIONS).toHaveLength(282);
     expect(
       FINDER_LOCATIONS.filter((location) => location.bortle <= 3),
-    ).toHaveLength(228);
+    ).toHaveLength(238);
     expect(
       FINDER_LOCATIONS.filter((location) => location.bortle <= 4),
-    ).toHaveLength(257);
+    ).toHaveLength(282);
     expect(new Set(FINDER_LOCATIONS.map((location) => location.id)).size).toBe(
-      257,
+      282,
     );
   });
 

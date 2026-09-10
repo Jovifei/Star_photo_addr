@@ -27,8 +27,8 @@ describe("GET /api/geocode", () => {
     expect(response.headers.get("X-Geocode-Source")).toBe("curated-observing-sites");
     expect(body.results[0]).toMatchObject({
       name: "临安太子尖",
-      latitude: 30.182,
-      longitude: 119.072,
+      latitude: 30.175219,
+      longitude: 118.897919,
       featureCode: "CURATED_OBSERVING_SITE",
     });
     expect(fetchMock).not.toHaveBeenCalled();

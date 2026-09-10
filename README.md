@@ -310,7 +310,7 @@ Star_photo_addr/
 ├─ src/
 │  ├─ app/                     # 页面、兼容路由与同源 API
 │  ├─ components/              # 统一工作台与共享 UI
-│  ├─ data/observingSites/     # 257 地点正式 catalog
+│  ├─ data/observingSites/     # 282 地点正式 catalog
 │  └─ lib/                     # 天气、pressure、天文、卫星、评分、缓存
 ├─ scripts/
 ├─ tests/

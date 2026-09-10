@@ -19,6 +19,31 @@ const NEW_FINDER_IDS = [
   "finder-255-location",
   "finder-256-location",
   "finder-257-location",
+  "finder-258-location",
+  "finder-259-location",
+  "finder-260-location",
+  "finder-261-location",
+  "finder-262-location",
+  "finder-263-location",
+  "finder-264-location",
+  "finder-265-location",
+  "finder-266-location",
+  "finder-267-location",
+  "finder-268-location",
+  "finder-269-location",
+  "finder-270-location",
+  "finder-271-location",
+  "finder-272-location",
+  "finder-273-location",
+  "finder-274-location",
+  "finder-275-location",
+  "finder-276-location",
+  "finder-277-location",
+  "finder-278-location",
+  "finder-279-location",
+  "finder-280-location",
+  "finder-281-location",
+  "finder-282-location",
 ];
 
 const NEW_CLOUDSEA_IDS = [
@@ -36,8 +61,8 @@ const NEW_CLOUDSEA_IDS = [
 
 describe("curated photography location expansion", () => {
   it("adds the source-backed general locations without duplicate IDs", () => {
-    expect(FINDER_LOCATIONS).toHaveLength(257);
-    expect(new Set(FINDER_LOCATIONS.map((site) => site.id)).size).toBe(257);
+    expect(FINDER_LOCATIONS).toHaveLength(282);
+    expect(new Set(FINDER_LOCATIONS.map((site) => site.id)).size).toBe(282);
     for (const id of NEW_FINDER_IDS) {
       expect(FINDER_LOCATIONS.some((site) => site.id === id)).toBe(true);
     }
@@ -74,6 +99,40 @@ describe("curated photography location expansion", () => {
     }
   });
 
+  it("keeps the Hangzhou-area mountain anchors aligned to public POI coordinates", () => {
+    expect(FINDER_LOCATIONS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "finder-226-location",
+          name: "临安牵牛岗",
+          latitude: 30.025903,
+          longitude: 119.007399,
+        }),
+        expect.objectContaining({
+          id: "finder-232-location",
+          name: "临安太子尖",
+          latitude: 30.175219,
+          longitude: 118.897919,
+        }),
+      ]),
+    );
+  });
+
+  it("covers every mainland provincial-level region represented by the guide", () => {
+    const provinces = new Set(FINDER_LOCATIONS.map((site) => site.province));
+    expect(provinces.size).toBe(31);
+    expect(provinces.has("天津")).toBe(true);
+    expect(FINDER_LOCATIONS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "finder-282-location",
+          name: "天津蓟州九山顶",
+          province: "天津",
+        }),
+      ]),
+    );
+  });
+
   it("adds ten independent CloudSea viewpoints with complete site metadata", () => {
     expect(CLOUD_SEA_SITES).toHaveLength(54);
     expect(new Set(CLOUD_SEA_SITES.map((site) => site.id)).size).toBe(54);
@@ -89,8 +148,8 @@ describe("curated photography location expansion", () => {
   });
 
   it("exposes a larger default shortlist without changing user-owned candidates", () => {
-    expect(DEFAULT_CANDIDATE_SEEDS).toHaveLength(11);
-    expect(new Set(DEFAULT_CANDIDATE_SEEDS.map((site) => site.id)).size).toBe(11);
+    expect(DEFAULT_CANDIDATE_SEEDS).toHaveLength(17);
+    expect(new Set(DEFAULT_CANDIDATE_SEEDS.map((site) => site.id)).size).toBe(17);
     expect(DEFAULT_CANDIDATE_SEEDS.map((site) => site.name)).toEqual(
       expect.arrayContaining([
         "黄山光明顶",
@@ -99,6 +158,12 @@ describe("curated photography location expansion", () => {
         "元阳坝达",
         "景迈山翁基",
         "朱家尖大青山猫跳",
+        "开化高田坑村",
+        "东白山太白峰",
+        "东至星空之城",
+        "闽侯大湖888观景台",
+        "铅山葛仙村摘星楼",
+        "宝兴达瓦更扎",
       ]),
     );
   });

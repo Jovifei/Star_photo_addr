@@ -180,7 +180,7 @@ sudo systemctl reload nginx
 
 - 应用只回源 `127.0.0.1:3100`；
 - `/api/` 边缘限流；
-- API 最长读取超时 150 秒，覆盖首次 257 点快照；
+- API 最长读取超时 150 秒，覆盖首次 282 点快照；
 - `/_next/static/` 一年 immutable 缓存；
 - `/healthz` 关闭访问日志；
 - TLS 1.2/1.3 和安全响应头。

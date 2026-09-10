@@ -81,7 +81,7 @@ export function observationSnapshotKey(
 /**
  * Forced-refresh protection is intentionally broader than the exact snapshot
  * cache key. Varying days or focusTime must not bypass the cooldown and launch
- * repeated 257-location upstream jobs for the same date/model family.
+ * repeated 282-location upstream jobs for the same date/model family.
  */
 export function observationRefreshFamilyKey(
   date: string,

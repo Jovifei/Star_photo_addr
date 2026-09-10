@@ -82,14 +82,14 @@ test("sites workspace exposes the B1–B4 presets in the command bar with visibl
   }
 
   const container = page.locator(".leaflet-container").first();
-  await expect(container).toHaveAttribute("data-observing-site-count", "228");
+  await expect(container).toHaveAttribute("data-observing-site-count", "238");
   await expect(page.locator('.observing-site-dot[data-bortle="1"]').first()).toBeAttached();
 
   const threshold = commandBar.getByRole("slider", { name: "推荐分数门槛" });
   await buttons.nth(3).click();
   await expect(buttons.nth(3)).toHaveAttribute("aria-pressed", "true");
   await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "false");
-  await expect(container).toHaveAttribute("data-observing-site-count", "29");
+  await expect(container).toHaveAttribute("data-observing-site-count", "44");
   await expect(threshold).toHaveValue("50");
 
   await buttons.nth(0).click();

@@ -13,8 +13,31 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-09-10",
-    tag: "本地点位搜索修复",
+    tag: "省级网红观星地点扩充",
     current: true,
+    highlights: [
+      {
+        icon: Mountain,
+        title: "目录扩展到 282 个省级候选",
+        desc: "按公开观星指南、政府/文旅资料和地图 POI 交叉核对，新增山地、海岸、草原、营地和高原摄影点，补入天津蓟州九山顶后覆盖 31 个省级行政区。",
+      },
+      {
+        icon: CloudSun,
+        title: "首页精选与视野候选更充足",
+        desc: "默认精选从 11 个扩展为 17 个，当前视野候选上限从 12 个调整为 20 个；用户已经保存的自定义候选保持不变。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "资料边界与安全提示同步",
+        desc: "新增点位的 Bortle 只作目录参考，坐标可能是景区范围近似点；夜间开放、票务、保护区、防火、海况和道路条件仍需出发前核验。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.13",
+    date: "2026-09-10",
+    tag: "本地点位搜索修复",
+    current: false,
     highlights: [
       {
         icon: Mountain,

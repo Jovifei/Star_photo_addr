@@ -174,7 +174,7 @@ test("暗夜选址 B1-B4 预设可切换并同步推荐门槛", async ({ page },
   const b2 = bar.getByRole("button", { name: /参考 B2 点位/ });
   const b4 = bar.getByRole("button", { name: /参考 B4 点位/ });
   const threshold = page.getByRole("slider", { name: "推荐分数门槛" });
-  await expect(markers).toHaveCount(228);
+  await expect(markers).toHaveCount(238);
   const b2Count = Number((await b2.getAttribute("aria-label"))?.match(/(\d+) 个$/)?.[1]);
   const b4Count = Number((await b4.getAttribute("aria-label"))?.match(/(\d+) 个$/)?.[1]);
   expect(b2Count).toBeGreaterThan(0);

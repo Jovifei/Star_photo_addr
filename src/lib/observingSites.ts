@@ -15,7 +15,7 @@ import type {
 
 export const OBSERVING_SITE_COUNT = FINDER_LOCATIONS.length;
 export const DEFAULT_RECOMMENDATION_THRESHOLD = 70;
-export const MAX_SHORTLIST_SIZE = 12;
+export const MAX_SHORTLIST_SIZE = 20;
 
 /**
  * Catalog Bortle classes are retained for site-library filtering/colour only.
