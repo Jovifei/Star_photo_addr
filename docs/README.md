@@ -22,4 +22,4 @@
 
 ## 当前版本索引
 
-v1.0.12 已合并到主线 `d640092`，生产部署和公网验收结果会继续回写到 tracking/testing 文档；部署前生产仍为 v1.0.11。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 `engineering-change-log/`。
+v1.0.12 已合并并部署，生产 `/healthz` 返回版本 `1.0.12` / `1e550cdc5a15`；版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 `engineering-change-log/`，最终状态见 tracking/testing 文档。

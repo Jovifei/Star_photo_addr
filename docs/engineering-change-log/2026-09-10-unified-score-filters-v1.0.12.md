@@ -42,13 +42,13 @@
 - `/sites` 命令栏 Bortle 已是单选预设，旧测试的 257/220 组合数量改为 B4=29、B1=37，并断言 ≥50/≥85 联动。
 - 火烧云未知快照现在按门槛 fail-closed 显示空状态；详情布局测试补充一个有分数的脱敏点位，强刷测试断言新的空状态。
 
-### 4.3 发布前待记录
+### 4.3 发布后记录
 
 - [x] 完整 `npm run test:e2e`：144 实例，110 passed / 34 skipped / 0 failed。
 - [x] `npm run test:live`（真实 Open-Meteo、NASA GIBS、NOAA、VIIRS）和 `npm audit --omit=dev --audit-level=high`（0 vulnerabilities）。
 - [x] 分支推送、main 合并：`codex/unified-score-filters-20260910` → `main@d64009276db0`。
-- [ ] 生产 app/worker、`/healthz`、`/api/data-status` 和公网 `check:data-sources`。
-- [ ] Obsidian `sync-project-docs.ps1 -DryRun` 结果；项目未映射时保留 `NO_PROJECT_MEMORY`，不创建 Vault 项目。
+- [x] 生产 app/worker healthy；本机 `/healthz` 与 `/api/data-status` 通过；公网 `/healthz` 返回 v1.0.12 / `1e550cdc5a15`，公网 `check:data-sources` 通过。
+- [x] Obsidian `sync-project-docs.ps1 -DryRun`：列出 54 个项目文档、未写入；`discover-project` 显示 `mapped_source_root=null` / `mapping_source=null`，保留 `NO_PROJECT_MEMORY` 边界，不创建 Vault 项目。
 
 ## 5. 未覆盖边界与回滚
 

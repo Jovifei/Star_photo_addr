@@ -4,11 +4,11 @@
 > 记录范围：影响产品、数据、部署、测试体系或项目跟踪的主干提交。
 > 规则：PR 合并后记录最终主干 SHA；未完成验证的直接提交必须明确标记，不得用旧绿灯代替。
 
-## 0. 本轮已合并待部署
+## 0. 本轮已合并并部署
 
 | 日期 | 工作包 | PR / Commit | 当前交付 | 当前验证与下一步 |
 | --- | --- | --- | --- | --- |
-| 2026-09-10 | RELEASE-UI-012 | [`d640092`](https://github.com/Jovifei/Star_photo_addr/commit/d64009276db0dbc55cc1963afbc31587703fbc18) | 顶部评分时间/B1–B4/推荐门槛/推荐开关统一；主页默认云量预报 + 光污染；火烧云/云海 `score >= threshold` 滑块；v1.0.12 记录 | `npm run check` 52/304；Chromium E2E 110/34；live smoke/audit 通过；生产部署和公网验收待记录 |
+| 2026-09-10 | RELEASE-UI-012 | [`1e550cd`](https://github.com/Jovifei/Star_photo_addr/commit/1e550cdc5a15c87fcad3465fecad9e9bfb3da29a)（merge `d640092`） | 顶部评分时间/B1–B4/推荐门槛/推荐开关统一；主页默认云量预报 + 光污染；火烧云/云海 `score >= threshold` 滑块；v1.0.12 记录 | `npm run check` 52/304；Chromium E2E 110/34；live smoke/audit；app/worker healthy；公网 `/healthz` v1.0.12 / `1e550cdc5a15`；`check:data-sources` 通过 |
 
 ## 1. 已进入 main
 
@@ -31,7 +31,7 @@
 
 | 工作包 | 目标 | 已完成 | 剩余门禁 |
 | --- | --- | --- | --- |
-| RELEASE-UI-012 | v1.0.12 已合并待部署 | `main@d64009276db0` 已包含候选分支 | 部署和公网验收完成后补充健康检查 SHA；真机、性能、授权暗夜栅格/边界和科学校准仍保持原状态 |
+| — | 无活动代码工作包 | v1.0.12 已合并、部署并在公网验证 | 真机、性能、授权暗夜栅格/边界和科学校准仍保持原状态，继续按 `TEST_BACKLOG.md` 管理 |
 
 ## 3. 以后每条台账必须回答的问题
 

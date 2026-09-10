@@ -4,7 +4,7 @@
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
 > 状态日期：2026-09-10
-> 当前 main：`d64009276db0dbc55cc1963afbc31587703fbc18`（v1.0.12）
+> 当前 main 代码发布：`main@1e550cdc5a15c87fcad3465fecad9e9bfb3da29a`（v1.0.12）
 > 当前测试工作分支：无（候选已合并）
 
 ## 状态定义
@@ -18,7 +18,7 @@
 | BLOCKED | 缺少 ECS、域名、证书、授权数据或现场设备 |
 | DEFERRED | 已安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
 
-## v1.0.12 发布候选门禁结果
+## v1.0.12 发布门禁结果
 
 | 门禁 | 结果 | 说明 |
 | --- | --- | --- |
@@ -28,9 +28,9 @@
 | `npm run test:e2e` | PASS | Chromium 桌面/移动 144 实例：110 passed / 34 skipped / 0 failed；修正 3 个旧断言后重跑通过 |
 | `npm run test:live` | PASS | Open-Meteo 四模型/压力层/地理编码/AQI、NASA GIBS、NOAA Kp、VIIRS 瓦片均 OK（2026-09-10） |
 | `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
-| 生产 Compose / 公网 | 待部署 | `main@d64009276db0` 已合并；按 `docs/ALIYUN_DEPLOYMENT.md` 执行 |
+| 生产 Compose / 公网 | PASS | app/worker healthy；公网 `/healthz` 返回 v1.0.12 / `1e550cdc5a15`；`check:data-sources` 通过 |
 
-本候选结果来自当前分支的本地构建和脱敏 Mock E2E；生产 v1.0.11 仍是当前公网版本。真机、200% 缩放、压力测试、授权暗夜资产和现场 Bortle/SQM 科学校准不因本表自动化通过而完成。
+本节结果来自主线代码发布的本地构建、脱敏 Mock E2E、真实数据源冒烟和公网检查；真机、200% 缩放、压力测试、授权暗夜资产和现场 Bortle/SQM 科学校准不因本表自动化通过而完成。
 
 ## v1.0.11 发布门禁结果（历史）
 

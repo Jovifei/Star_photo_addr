@@ -11,7 +11,8 @@
 - Scope: 只调整首屏/专题排行筛选呈现与状态联动，不改变天气 Provider、评分算法或地点目录。
 - Baseline: `main@a66ad049dfd6`，当前 v1.0.11 已部署；本轮已合并为 `main@d64009276db0`（v1.0.12）。
 - Verification: `npm run check` 52 个测试文件 / 304 项通过；`npm run test:e2e` 110 passed / 34 skipped / 0 failed；`npm run test:live` PASS；`npm audit --omit=dev --audit-level=high` 0 vulnerabilities。
-- Remaining: deploy、公网 `/healthz`、`/api/data-status`、`check:data-sources` 和 Obsidian DryRun 结果。
+- Remaining: 无；Obsidian 实际镜像受项目映射缺失阻断，已完成 DryRun 并保留 `NO_PROJECT_MEMORY` 记录。
+- Publication: `main@1e550cdc5a15` 已部署；生产 app/worker healthy，公网 `/healthz` 和 `check:data-sources` 通过。
 
 # 2026-09-10 项目知识文档与 Obsidian 同步
 
