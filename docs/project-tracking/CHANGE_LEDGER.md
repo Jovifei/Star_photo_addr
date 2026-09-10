@@ -8,6 +8,7 @@
 
 | 日期 | 工作包 | PR / Commit | 当前交付 | 当前验证与下一步 |
 | --- | --- | --- | --- | --- |
+| 2026-09-10 | RELEASE-DATA-014 | [`3933849`](https://github.com/Jovifei/Star_photo_addr/commit/39338495db0d22c9ec5afe15763a023c4ba3a06b) | 通用观星目录 257 → 282，覆盖 31 个省级行政区；默认精选 11 → 17，视野候选上限 12 → 20；同步 v1.0.14 版本记录和省级来源/安全边界文档 | `npm run check` 53/308；Chromium E2E 112/34；live smoke/audit；app/worker healthy；公网 `/healthz` v1.0.14 / `39338495db0d`；`check:data-sources` 与太子尖/牵牛岗/九山顶/葛仙村/达瓦更扎搜索通过 |
 | 2026-09-10 | RELEASE-UI-013 | [`14ad3a4`](https://github.com/Jovifei/Star_photo_addr/commit/14ad3a49cf11fd103fcb5d5b60759b3fe0bc3a4a) | 本地点位目录优先搜索“太子尖”，远端无结果时仍可返回“临安太子尖”；v1.0.13 版本记录 | `npm run check` 53/306；Chromium E2E 112/34；live smoke/audit；app/worker healthy；公网 `/healthz` v1.0.13 / `14ad3a49cf1`；公网搜索通过 |
 | 2026-09-10 | RELEASE-UI-012 | [`1e550cd`](https://github.com/Jovifei/Star_photo_addr/commit/1e550cdc5a15c87fcad3465fecad9e9bfb3da29a)（merge `d640092`） | 顶部评分时间/B1–B4/推荐门槛/推荐开关统一；主页默认云量预报 + 光污染；火烧云/云海 `score >= threshold` 滑块；v1.0.12 记录 | `npm run check` 52/304；Chromium E2E 110/34；live smoke/audit；app/worker healthy；公网 `/healthz` v1.0.12 / `1e550cdc5a15`；`check:data-sources` 通过 |
 
@@ -32,7 +33,7 @@
 
 | 工作包 | 目标 | 已完成 | 剩余门禁 |
 | --- | --- | --- | --- |
-| — | 无活动代码工作包 | v1.0.13 已合并、部署并在公网验证 | 真机、性能、授权暗夜栅格/边界和科学校准仍保持原状态，继续按 `TEST_BACKLOG.md` 管理 |
+| — | 无活动代码工作包 | v1.0.14 已合并、部署并在公网验证 | 真机、性能、授权暗夜栅格/边界和科学校准仍保持原状态，继续按 `TEST_BACKLOG.md` 管理 |
 
 ## 3. 以后每条台账必须回答的问题
 

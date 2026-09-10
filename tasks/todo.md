@@ -625,12 +625,13 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - [x] 与现有 257 个观星目录、CloudSea 专用目录和 11 个默认候选去重，确定新增目录点与默认候选点。
 - [x] 先补充目录/候选数量与字段回归测试，再实现最小数据变更。
 - [x] 运行数据校验、lint/typecheck/单元/E2E，更新 v1.0.14 版本记录、工程日志和项目文档。
-- [ ] 按授权流程提交 `codex/` 分支、合并 main、部署并做公网健康与页面验收。
+- [x] 按授权流程提交 `codex/` 分支、合并 main、部署并做公网健康与页面验收。
 
 ## Review
 
 - Scope: 只扩充有公开来源的摄影/观星地点和默认候选入口；不改评分算法、天气 Provider、地图图层或推荐门槛。
 - Baseline: `main@7651302`，生产 v1.0.13 已部署。
-- Evidence: 通用目录 282 条、31 个省级行政区、B1 37 / B2 180 / B3 21 / B4 44；默认精选 17 条；`npm run check` 53 个测试文件 / 307 项通过；Chromium E2E 112 passed / 34 skipped / 0 failed；`npm run test:live` 和生产依赖审计通过。
+- Evidence: 通用目录 282 条、31 个省级行政区、B1 37 / B2 180 / B3 21 / B4 44；默认精选 17 条；`npm run check` 53 个测试文件 / 308 项通过；Chromium E2E 112 passed / 34 skipped / 0 failed；`npm run test:live` 和生产依赖审计通过。
 - Boundary: 新增点位是公开资料交叉核对的候选参考，坐标/海拔可能为 POI 或景区范围近似；夜间开放、保护区、票务、道路、海况、高反和防火仍需人工确认。
-- Remaining: 分支尚未提交、推送、合并和部署；完成后需回写最终 main SHA、构建 revision、公网 `/healthz`、`/api/data-status` 和页面验收。
+- Evidence update: 省级覆盖断言补齐后最终 `npm run check` 为 53 个测试文件 / 308 项通过；`main@39338495db0d` 已 push、生产构建 revision 为 `39338495db0d`，ECS app/worker healthy，公网 `/healthz`、`/api/data-status`、`check:data-sources` 和浏览器页面验收通过。
+- Remaining: 无本轮代码/部署剩余项；真机、性能、授权暗夜栅格和现场科学校准仍按测试台账保持 MANUAL/BLOCKED/DEFERRED。

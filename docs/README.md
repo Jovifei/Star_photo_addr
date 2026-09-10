@@ -22,4 +22,4 @@
 
 ## 当前版本索引
 
-v1.0.13 已合并并部署，生产 `/healthz` 为 v1.0.13 / `14ad3a49cf1`；首页搜索“太子尖”可返回本地目录点位“临安太子尖”。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 `engineering-change-log/`。
+v1.0.14 已合并并部署，生产 `/healthz` 为 v1.0.14 / `39338495db0d`；通用观星目录为 282 个点、覆盖 31 个省级行政区，首页搜索可返回太子尖、牵牛岗、九山顶、葛仙村和达瓦更扎等本地候选。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 [`engineering-change-log/2026-09-10-provincial-location-expansion-v1.0.14.md`](./engineering-change-log/2026-09-10-provincial-location-expansion-v1.0.14.md)。

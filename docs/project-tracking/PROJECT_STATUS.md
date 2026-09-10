@@ -1,18 +1,19 @@
 # 逐星项目状态总览
 
 > 状态日期：2026-09-10
-> 当前主干代码发布：`main@14ad3a49cf11fd103fcb5d5b60759b3fe0bc3a4a`（v1.0.13）
-> 当前活动工作分支：无（`codex/search-tai-zi-jian-20260910` 已合并）
-> 当前阶段：v1.0.13 已完成实现、本地质量门禁、main 合并、生产部署和公网验收；真机、性能和科学校准仍按边界管理
+> 当前主干代码发布：`main@39338495db0d22c9ec5afe15763a023c4ba3a06b`（v1.0.14）
+> 当前活动工作分支：无（`codex/provincial-stargazing-locations-20260910` 已合并）
+> 当前阶段：v1.0.14 已完成地点目录扩充、本地质量门禁、main 合并、生产部署和公网验收；真机、性能和科学校准仍按边界管理
 
-## 0. 当前发布快照（v1.0.13 已部署）
+## 0. 当前发布快照（v1.0.14 已部署）
 
 - 顶部命令栏按“评分时间 → B1–B4 暗空参考 → 推荐门槛 → 仅显示推荐地点”排列；搜索、定位和四组参数保持紧凑同排，窄屏才堆叠。
 - B1–B4 文案和分数预设明确为：B1 极暗 ≥85、B2 自然暗夜 ≥70、B3 乡村夜空 ≥55、B4 乡村/郊区过渡 ≥50；命令栏档位单选并同步推荐门槛，目录参考不进入实时天气评分。
 - 主页默认使用云量预报 + 光污染参考，卫星实况及其较高的 24 小时时间轴需主动选择；旧的持久化实况状态会在无显式 URL 时迁移回默认组合。
 - 火烧云和云海排行各自增加 0–100 分门槛滑块，列表只保留 `score >= threshold` 的数值评分点位；null/数据不足点位不计入达标数量，地图标记仍保留未知语义。
 - 搜索“太子尖”现优先命中本地点位目录中的“临安太子尖”；本地点位不再依赖远端地理编码是否收录山峰 POI，未命中本地时仍回退全球城市搜索。
-- 当前主线已通过 `npm run check`（53 个测试文件 / 306 项）、Chromium E2E 112 passed / 34 skipped、live smoke 和 audit；生产 app/worker healthy，公网 `/healthz` 返回 v1.0.13 / `14ad3a49cf1`，`/api/geocode?q=太子尖` 返回“临安太子尖”。
+- 通用观星目录现有 282 个候选、覆盖 31 个省级行政区；新增 25 个省级网红山地/海岸/草原/营地/高原候选，默认精选 17 个，视野候选上限 20 个。
+- 当前主线已通过 `npm run check`（53 个测试文件 / 308 项）、Chromium E2E 112 passed / 34 skipped、live smoke 和 audit；生产 app/worker healthy，公网 `/healthz` 返回 v1.0.14 / `39338495db0d`，目录搜索与 `check:data-sources` 均通过。
 
 以下第 1–8 节保留历史工作包与长期未完成项；新的发布状态以本节和对应最新工程记录为准。
 
@@ -29,6 +30,7 @@
 
 | 工作包 | 状态 | 交付 | 关键证据 |
 | --- | --- | --- | --- |
+| RELEASE-DATA-014 | PASS | 按省级公开资料扩充 282 点目录、默认 17 个精选、天津补点、版本记录、生产部署和公网验收 | `main@39338495db0d`；`npm run check` 53/308、Chromium E2E 112/34、live smoke/audit、app/worker healthy、`check:data-sources`、公网搜索 |
 | RELEASE-UI-013 | PASS | 本地点位搜索优先命中目录、v1.0.13 版本记录、生产部署和公网搜索验收 | `main@14ad3a49cf1`；`npm run check` 53/306、Chromium E2E 112/34、live smoke/audit、生产 `/healthz`、公网搜索 |
 | RELEASE-UI-012 | PASS | 顶部控件统一、主页默认图层纠偏、火烧云/云海评分门槛滑块、v1.0.12 记录、生产部署和公网验收 | `main@1e550cdc5a15`；`npm run check` 52/304、Chromium E2E 110/34、live smoke/audit、生产 `/healthz`、公网 `check:data-sources` |
 | RELEASE-UI-011 | PASS | 顶部直接筛选控件、B1–B4 说明、v1.0.11 版本记录、生产部署和公网验收 | `main@a66ad049dfd6`；`npm run check`、Chromium E2E、live smoke、audit、生产 `/healthz` |
@@ -44,7 +46,7 @@
 
 | 工作包 | 状态 | 分支 | 已提交内容 | 完成条件 |
 | --- | --- | --- | --- | --- |
-| — | 无活动代码工作包 | — | v1.0.13 已合并、部署并在公网验证；后续工作按第 5 节 MANUAL/BLOCKED/DEFERRED 管理 | 新需求确认后从最新 `main` 创建唯一 `codex/` 分支 |
+| — | 无活动代码工作包 | — | v1.0.14 已合并、部署并在公网验证；后续工作按第 5 节 MANUAL/BLOCKED/DEFERRED 管理 | 新需求确认后从最新 `main` 创建唯一 `codex/` 分支 |
 
 ## 4. 已合并、可清理的远端分支
 

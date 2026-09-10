@@ -4,8 +4,8 @@
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
 > 状态日期：2026-09-10
-> 当前 main：`main@14ad3a49cf11fd103fcb5d5b60759b3fe0bc3a4a`（v1.0.13）
-> 当前测试工作分支：无（候选已合并）
+> 当前 main：`main@39338495db0d22c9ec5afe15763a023c4ba3a06b`（v1.0.14）
+> 当前测试工作分支：无（`codex/provincial-stargazing-locations-20260910` 已合并）
 
 ## 状态定义
 
@@ -18,7 +18,20 @@
 | BLOCKED | 缺少 ECS、域名、证书、授权数据或现场设备 |
 | DEFERRED | 已安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
 
-## v1.0.13 发布门禁结果
+## v1.0.14 发布门禁结果
+
+| 门禁 | 结果 | 说明 |
+| --- | --- | --- |
+| `npm run check` | PASS | ESLint、TypeScript、53 个 Vitest 文件 / 308 项测试、Next.js 生产构建 |
+| 省级目录数据专项 | PASS | 282 个通用候选、31 个省级行政区、B1 37 / B2 180 / B3 21 / B4 44、默认精选 17；ID/坐标/海拔/说明回归通过 |
+| `npm run test:e2e` | PASS | Chromium 桌面/移动 146 实例：112 passed / 34 skipped / 0 failed |
+| `npm run test:live` | PASS | Open-Meteo 四模型/压力层/地理编码/AQI、NASA GIBS、NOAA Kp、VIIRS live smoke |
+| `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
+| 生产 Compose / 公网 | PASS | app/worker healthy；公网 `/healthz` v1.0.14 / `39338495db0d`；`check:data-sources` 和太子尖/牵牛岗/九山顶/葛仙村/达瓦更扎搜索通过 |
+
+本节结果来自 `main@39338495db0d` 的本地构建、脱敏 Mock E2E、真实数据源冒烟、ECS Compose 和公网 API/浏览器检查；真机、200% 缩放、压力测试、授权暗夜资产和现场 Bortle/SQM 科学校准仍不能因本轮自动化通过而完成。
+
+## v1.0.13 发布门禁结果（历史）
 
 | 门禁 | 结果 | 说明 |
 | --- | --- | --- |

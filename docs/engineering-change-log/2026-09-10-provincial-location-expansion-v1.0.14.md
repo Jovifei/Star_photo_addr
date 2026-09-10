@@ -2,7 +2,8 @@
 
 > 日期：2026-09-10
 > 基线：`main@7651302c92dbaa7023aeedae9eb8270e8d2369cb`（v1.0.13）
-> 工作分支：`codex/provincial-stargazing-locations-20260910`
+> 工作分支：`codex/provincial-stargazing-locations-20260910`（已合并）
+> main 合并提交：`main@39338495db0d22c9ec5afe15763a023c4ba3a06b`
 > 目标：把用户反馈的太子尖、牵牛岗这一类省级网红山地/海岸机位扩展到可搜索的候选目录，并覆盖官方观星指南涉及的省级线索。
 
 ## 1. 交付范围
@@ -69,5 +70,10 @@
 
 - 单元门禁更新为 282 条目录、238 个 B1–B3、282 个 B1–B4、44 个 B4 和 31 个省级行政区；ID、坐标、海拔、说明字段和默认 17 条精选均有回归断言。
 - E2E Mock 的天气点位生成从 257 同步至 282；B1–B4 地图计数同步为 B1–B3 238、B4 44。
-- 计划门禁：`npm run check`、`npm run test:e2e`、`npm run test:live`、`npm run check:data-sources`、生产 Compose 健康检查及公网浏览器验收。
+- `npm run check`：53 个测试文件 / 308 项通过，含 ESLint、TypeScript 和 Next.js 生产构建。
+- `npm run test:e2e`：Chromium 桌面/移动 146 实例，112 passed / 34 skipped / 0 failed。
+- `npm run test:live`：Open-Meteo 四模型/压力层/地理编码/AQI、NASA GIBS、NOAA Kp、VIIRS 均通过；`npm audit --omit=dev --audit-level=high` 为 0 vulnerabilities。
+- 生产 Compose：ECS app/worker 均 healthy；公网 `/healthz` 返回 v1.0.14 / `39338495db0d`，`/api/data-status` 的 weather/satellite/light-pollution 为 available；`npm run check:data-sources -- https://photo.joviluma.com` 通过。
+- 公网浏览器：新缓存键打开首页后确认 v1.0.14、B1/B2/B3/B4 37/180/21/44 和 17 条默认精选；搜索太子尖、牵牛岗、九山顶、葛仙村、达瓦更扎均命中本地目录。
+- 部署清理：已删除本次明确创建的 `/opt/star-photo/.deploy-39338495db0d` 与本地临时 Dockerfile；未触碰 `observing-snapshots` 命名卷。
 - 回滚目标：本轮合并前的 `main@7651302c92dbaa7023aeedae9eb8270e8d2369cb`（v1.0.13）；回滚不触碰天气快照、worker 数据卷或用户 LocalStorage。

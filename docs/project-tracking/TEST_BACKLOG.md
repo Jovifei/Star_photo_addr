@@ -5,7 +5,12 @@
 > 已完成结果：[`../testing/TEST_STATUS.md`](../testing/TEST_STATUS.md)  
 > 说明：本文件是剩余测试的执行事实源；聊天中的简表不能替代本文件。
 
-## v1.0.13 当前结论
+## v1.0.14 当前结论
+
+- 当前主线代码发布 `main@39338495db0d` 已完成 `npm run check`（53 个 Vitest 文件 / 308 项测试）、完整 Chromium E2E（112 passed / 34 skipped / 0 failed）、真实数据源冒烟和生产依赖审计；生产 app/worker healthy，公网 `/healthz`、`check:data-sources` 及 5 个新增/纠偏地点搜索通过。
+- 通用观星目录现有 282 个候选、31 个省级行政区；默认精选 17 个，视野候选上限 20 个。新增点位的开放、保护区、道路、海况、高反和防火仍保持 MANUAL 边界。
+
+## v1.0.13 当前结论（历史）
 
 - 当前主线代码发布 `main@14ad3a49cf1` 已完成 `npm run check`（53 个 Vitest 文件 / 306 项测试）、完整 Chromium E2E（112 passed / 34 skipped / 0 failed）、真实数据源冒烟和生产依赖审计；生产 app/worker healthy，公网 `/healthz` 和 `/api/geocode?q=太子尖` 通过。
 - 顶部命令栏的评分时间、B1–B4 暗空参考、推荐门槛和推荐开关已按用户指定顺序纳入回归；B1/B2/B3/B4 与 ≥85/70/55/50 预设联动，桌面 1280/1440 同排，窄屏堆叠。
