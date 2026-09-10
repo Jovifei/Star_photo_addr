@@ -22,4 +22,4 @@
 
 ## 当前版本索引
 
-当前工作分支正在收口 v1.0.13 搜索修复候选；生产仍为 v1.0.12，分支合并、部署和公网搜索验收结果会回写到 tracking/testing 文档。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 `engineering-change-log/`。
+v1.0.13 已合并并部署，生产 `/healthz` 为 v1.0.13 / `14ad3a49cf1`；首页搜索“太子尖”可返回本地目录点位“临安太子尖”。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 `engineering-change-log/`。

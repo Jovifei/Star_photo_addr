@@ -4,9 +4,8 @@
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
 > 状态日期：2026-09-10
-> 当前 main：`main@1f61690e0cba46c59ff1afd79a3562819108508f`（v1.0.12）
-> 当前候选分支：`codex/search-tai-zi-jian-20260910`（v1.0.13）
-> 当前测试工作分支：`codex/search-tai-zi-jian-20260910`
+> 当前 main：`main@14ad3a49cf11fd103fcb5d5b60759b3fe0bc3a4a`（v1.0.13）
+> 当前测试工作分支：无（候选已合并）
 
 ## 状态定义
 
@@ -19,18 +18,18 @@
 | BLOCKED | 缺少 ECS、域名、证书、授权数据或现场设备 |
 | DEFERRED | 已安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
 
-## v1.0.13 发布候选门禁结果
+## v1.0.13 发布门禁结果
 
 | 门禁 | 结果 | 说明 |
 | --- | --- | --- |
 | `npm run check` | PASS | ESLint、TypeScript、53 个 Vitest 文件 / 306 项测试、Next.js 生产构建 |
-| 本地点位搜索专项 | PASS | API/单元/集成和桌面/移动 E2E：远端返回空数组时“太子尖”显示“临安太子尖” |
+| 本地点位搜索专项 | PASS | API/单元/集成和桌面/移动 E2E；公网浏览器输入“太子尖”显示“临安太子尖” |
 | `npm run test:e2e` | PASS | Chromium 桌面/移动 146 实例：112 passed / 34 skipped / 0 failed |
 | `npm run test:live` | PASS | Open-Meteo、NASA GIBS、NOAA、VIIRS live smoke |
 | `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
-| 生产 Compose / 公网 | 待部署 | 合并 v1.0.13 后按 `docs/ALIYUN_DEPLOYMENT.md` 执行 |
+| 生产 Compose / 公网 | PASS | app/worker healthy；公网 `/healthz` v1.0.13 / `14ad3a49cf1`；`/api/geocode?q=太子尖` 返回临安太子尖 |
 
-本候选结果来自当前分支本地构建、脱敏 Mock E2E 和真实数据源冒烟；生产 v1.0.12 仍是当前公网版本。真机、200% 缩放、压力测试、授权暗夜资产和现场 Bortle/SQM 科学校准不因本表自动化通过而完成。
+本节结果来自主线代码发布的本地构建、脱敏 Mock E2E、真实数据源冒烟和公网搜索/健康检查；真机、200% 缩放、压力测试、授权暗夜资产和现场 Bortle/SQM 科学校准不因本表自动化通过而完成。
 
 ## v1.0.12 发布门禁结果（历史）
 

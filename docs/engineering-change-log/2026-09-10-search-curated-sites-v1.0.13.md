@@ -4,7 +4,8 @@
 
 - 日期：2026-09-10
 - 基线：`main@1f61690e0cba46c59ff1afd79a3562819108508f`（v1.0.12）
-- 工作分支：`codex/search-tai-zi-jian-20260910`
+- 工作分支：`codex/search-tai-zi-jian-20260910`（已合并）
+- main 合并提交：`14ad3a49cf11fd103fcb5d5b60759b3fe0bc3a4a`
 - 版本：v1.0.13
 - 范围：地点搜索候选来源和回归测试；不改变评分、地图图层、地点目录内容或天气 Provider。
 
@@ -26,7 +27,8 @@
 - RED：新增 `searchCuratedPlaces("太子尖")` 测试在实现前失败（`searchCuratedPlaces is not a function`）。
 - GREEN：单元/集成 5 项通过；ESLint、TypeScript、`npm run build` 通过。
 - 浏览器 E2E：桌面/移动 2/2 通过；在远端地理编码返回空数组时，输入“太子尖”显示“临安太子尖”和“浙江”。
-- 已完成 `npm run check`（53 个 Vitest 文件 / 306 项测试）、完整 E2E（112 passed / 34 skipped / 0 failed）、live smoke 和依赖审计；待分支推送、main 合并、生产部署和公网搜索验收。
+- 已完成 `npm run check`（53 个 Vitest 文件 / 306 项测试）、完整 E2E（112 passed / 34 skipped / 0 failed）、live smoke 和依赖审计；分支已推送、main 已合并。
+- 生产 app/worker healthy；公网 `/healthz` 返回 v1.0.13 / `14ad3a49cf1`，公网 `/api/geocode?q=太子尖` 返回“临安太子尖”；真实浏览器下拉验证通过。
 
 ## 5. 回滚与边界
 
