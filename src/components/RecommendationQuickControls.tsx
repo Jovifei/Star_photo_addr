@@ -18,7 +18,12 @@ function describeScoreTime(time: string, start: string): string {
 
 /**首屏直接可调的暗空参考、评分时次和推荐门槛。*/
 export default function RecommendationQuickControls() {
-  const { state, setCloud, setRecommendationThreshold } = useStore();
+  const {
+    state,
+    setCloud,
+    setRecommendationThreshold,
+    setRecommendedOnly,
+  } = useStore();
   const [scoreWindowStart, setScoreWindowStart] = useState("");
   const initialScoreWindowRef = useRef(state.cloudState.activeForecastTime ?? "");
 
@@ -57,10 +62,6 @@ export default function RecommendationQuickControls() {
       role="group"
       aria-label="顶部地点筛选参数"
     >
-      <div className="recommendation-quick-bortle">
-        <span className="recommendation-quick-label">暗空参考</span>
-        <BortleFilterBar variant="command" />
-      </div>
       <label className="recommendation-quick-slider">
         <span>
           <span>评分时间</span>
@@ -77,6 +78,10 @@ export default function RecommendationQuickControls() {
           disabled={!scoreTimes.length}
         />
       </label>
+      <div className="recommendation-quick-bortle">
+        <span className="recommendation-quick-label">暗空参考</span>
+        <BortleFilterBar variant="command" />
+      </div>
       <label className="recommendation-quick-slider">
         <span>
           <span>推荐门槛</span>
@@ -91,6 +96,19 @@ export default function RecommendationQuickControls() {
           onChange={(event) => setRecommendationThreshold(Number(event.target.value))}
           aria-label="推荐分数门槛"
         />
+      </label>
+      <label
+        className="recommendation-quick-toggle"
+        data-testid="recommended-only-toggle"
+        title={`仅显示评分 ≥${state.recommendationThreshold} 的地点`}
+      >
+        <input
+          type="checkbox"
+          aria-label="仅显示达到推荐门槛的地点"
+          checked={state.recommendedOnly}
+          onChange={(event) => setRecommendedOnly(event.target.checked)}
+        />
+        <span>仅显示达到推荐门槛的地点</span>
       </label>
     </div>
   );

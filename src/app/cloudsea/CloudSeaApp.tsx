@@ -35,6 +35,8 @@ import {
 } from "@/lib/cloudsea";
 import { buildProbabilityOverlay } from "@/lib/cloudseaOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
+import { filterByScoreThreshold } from "@/lib/scoreThreshold";
+import ScoreThresholdControl from "@/components/ScoreThresholdControl";
 import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
 
@@ -120,6 +122,7 @@ export default function CloudSeaApp() {
   const [refreshing, setRefreshing] = useState(false);
   const [dataNotice, setDataNotice] = useState("");
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [scoreThreshold, setScoreThreshold] = useState(0);
   const mapRef = useRef<LeafletMap | null>(null);
 
   const baseDate = useMemo(() => todayKey(), []);
@@ -247,6 +250,11 @@ export default function CloudSeaApp() {
     );
     return list;
   }, [activeDates, snapshots, phase, primaryDate]);
+
+  const filteredRankedSites = useMemo(
+    () => filterByScoreThreshold(rankedSites, scoreThreshold, (ranked) => ranked.window.score),
+    [rankedSites, scoreThreshold],
+  );
 
   const overlayPoints = useMemo(
     () =>
@@ -492,9 +500,16 @@ export default function CloudSeaApp() {
             </h2>
             <span>
               {range === 3 ? "三日最优" : dateLabel(primaryDate)} ·{" "}
-              {rankedSites.length} 处名山
+              ≥{scoreThreshold}分 {filteredRankedSites.length} 处名山
             </span>
           </div>
+          <ScoreThresholdControl
+            value={scoreThreshold}
+            count={filteredRankedSites.length}
+            label="云海推荐门槛"
+            testId="cloudsea-score-threshold"
+            onChange={setScoreThreshold}
+          />
 
           <div className="cloudsea-site-list">
             {loading && rankedSites.length === 0 ? (
@@ -544,8 +559,12 @@ export default function CloudSeaApp() {
                   <RefreshCw size={14} /> 重新获取数据
                 </button>
               </div>
+            ) : filteredRankedSites.length === 0 ? (
+              <div className="cloudsea-empty-threshold">
+                暂无达到 ≥{scoreThreshold} 分的地点
+              </div>
             ) : (
-              rankedSites.map(({ site, window: windowScore }) => {
+              filteredRankedSites.map(({ site, window: windowScore }) => {
                 const isSelected = site.id === selectedSiteId;
                 const level = markerLevelFor(
                   windowScore.score,

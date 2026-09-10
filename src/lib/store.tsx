@@ -123,7 +123,7 @@ const initialState: AppState = {
   cloudGridLoading: false,
   satelliteFrames: [],
   forecastCache: new Map(),
-  mapViewMode: "satellite",
+  mapViewMode: "combined",
   mapWorkspace: "tonight",
   forecastTheme: "star",
   recommendationThreshold: 70,

@@ -48,7 +48,10 @@ export default function ProductStateBridge() {
       setForecastTheme("star");
       if (pathname === "/") {
         setMapWorkspace("tonight");
-        if (state.cloudState.overlayMode === "night-lights") {
+        if (
+          state.cloudState.overlayMode === "satellite-cloud" ||
+          state.mapViewMode === "satellite"
+        ) {
           setCloud({ overlayMode: "forecast-cloud" });
           setMapViewMode("combined");
         }
@@ -210,6 +213,7 @@ export default function ProductStateBridge() {
     state.cloudState.activeForecastTime,
     state.cloudState.activeObservationTime,
     state.cloudState.overlayMode,
+    state.mapViewMode,
     state.nightKeys,
   ]);
 

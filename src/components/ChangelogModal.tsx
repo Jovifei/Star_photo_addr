@@ -12,14 +12,37 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
-    date: "2026-09-09",
-    tag: "顶部直接筛选控件",
+    date: "2026-09-10",
+    tag: "统一评分筛选与默认图层",
     current: true,
     highlights: [
       {
         icon: Layers,
+        title: "B1–B4 与评分门槛联动",
+        desc: "B1 极暗 ≥85、B2 自然暗夜 ≥70、B3 乡村夜空 ≥55、B4 乡村/郊区过渡 ≥50，点击档位会同步推荐门槛。",
+      },
+      {
+        icon: CloudSun,
+        title: "统一顶部顺序",
+        desc: "评分时间 → 暗空参考 → 推荐门槛 → 仅显示推荐地点；四组控件统一边框高度，桌面端紧凑同排。",
+      },
+      {
+        icon: ShieldCheck,
+        title: "专题排行分数筛选",
+        desc: "火烧云和云海排行增加 0–100 分滑块，只显示 score ≥ 门槛的地点；主页默认云量预报 + 光污染参考，实况需主动选择。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.11",
+    date: "2026-09-09",
+    tag: "顶部直接筛选控件",
+    current: false,
+    highlights: [
+      {
+        icon: Layers,
         title: "B1–B4 直接筛选",
-        desc: "顶部状态栏直接显示 B1 极暗、B2 自然暗夜、B3 乡村夜空、B4 乡村/郊区过渡，点击即可组合筛选目录点位。",
+        desc: "顶部状态栏直接显示 B1 极暗、B2 自然暗夜、B3 乡村夜空、B4 乡村/郊区过渡，点击即可筛选目录点位。",
       },
       {
         icon: CloudSun,
@@ -29,7 +52,7 @@ const VERSIONS = [
       {
         icon: ShieldCheck,
         title: "推荐门槛保持可见",
-        desc: "推荐分数门槛滑块与“仅显示达到推荐门槛的地点”开关同处顶部；移除命令栏里的大面板，保留状态与无障碍语义。",
+        desc: "推荐分数门槛滑块与“仅显示达到推荐门槛的地点”开关同处顶部；移除命令栏里的大面板。",
       },
     ],
   },

@@ -1,13 +1,20 @@
 # 逐星提交与变更台账
 
-> 状态日期：2026-08-22  
-> 记录范围：影响产品、数据、部署、测试体系或项目跟踪的主干提交。  
+> 状态日期：2026-09-10
+> 记录范围：影响产品、数据、部署、测试体系或项目跟踪的主干提交。
 > 规则：PR 合并后记录最终主干 SHA；未完成验证的直接提交必须明确标记，不得用旧绿灯代替。
+
+## 0. 当前待合并候选
+
+| 日期 | 工作包 | 分支 | 当前交付 | 当前验证与下一步 |
+| --- | --- | --- | --- | --- |
+| 2026-09-10 | RELEASE-UI-012 | `codex/unified-score-filters-20260910` | 顶部评分时间/B1–B4/推荐门槛/推荐开关统一；主页默认云量预报 + 光污染；火烧云/云海 `score >= threshold` 滑块；v1.0.12 记录 | `npm run check` 52/304；完整 E2E、live smoke、audit、push、main 合并、部署和公网验收待记录 |
 
 ## 1. 已进入 main
 
 | 日期 | 工作包 | PR / Commit | 本次解决什么 | 主要修改 | 验证与边界 |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-10 | RELEASE-UI-011 | Direct merge / [`a66ad04`](https://github.com/Jovifei/Star_photo_addr/commit/a66ad049dfd69a87b0f97b5a5870679163260427) | 首屏评分设置被大面板占用，Bortle 含义不直观，桌面命令栏出现两行 | 顶部直接 B1–B4/评分时间/推荐门槛控件，紧凑搜索，完整 Bortle 文案，v1.0.11 记录与部署经验 | `npm run check`、Chromium 106/34、live smoke、audit、生产 `/healthz`；真机、性能、授权栅格仍未覆盖 |
 | 2026-08-19 | DOC-README-001 | PR #8 / [`c16804b4`](https://github.com/Jovifei/Star_photo_addr/commit/c16804b4bdb687308ad64eb734f045a9ecd6f4b0) | README 缺少图形界面、完整使用和部署说明 | 生产截图、截图脚本、数据语义、Docker/阿里云指南 | quality、live-data、desktop/mobile E2E；截图数据不代表实时结论 |
 | 2026-08-20 | DATA-HARDEN-001 | PR #9 / [`2910b236`](https://github.com/Jovifei/Star_photo_addr/commit/2910b2369beb9163e7efbdbf4d59f7f064e9ac56) | 云量刷新、卫星、光污染、快照和部署链路存在竞态/保护不足 | 云量保留旧画布、卫星产品隔离、GIBS 原生缩放、光污染模板、刷新冷却 | 154 unit、34 E2E、live smoke、Docker；VIIRS 不等于 Bortle/SQM |
 | 2026-08-20 | DATA-AUDIT-002A | Direct / [`3ca93736`](https://github.com/Jovifei/Star_photo_addr/commit/3ca9373690b1e75785a63d9c85f3bbec6ccbd83a) | 统一坐标输入、GIBS 缓存和数据源 TTL | 坐标解析、共享 GIBS、冷缓存保护、自定义光污染署名 | 提交后发现时间轴实验性改动不应保留，见下一条纠偏 |
@@ -24,7 +31,7 @@
 
 | 工作包 | 目标 | 已完成 | 剩余门禁 |
 | --- | --- | --- | --- |
-| UX-MAP-002 | 地图可读性、暗夜说明、行政边界和附近排行 | 所有可远端实现代码、测试和文档已进入 main | `npm run check`、Chromium E2E、桌面视觉验收；需要天地图令牌/栅格的能力单独保持 BLOCKED |
+| RELEASE-UI-012 | v1.0.12 待合并 | 候选分支完成实现与本地门禁 | 分支 push、main 合并、部署和公网验收完成后记录最终 SHA；真机、性能、授权暗夜栅格/边界和科学校准仍保持原状态 |
 
 ## 3. 以后每条台账必须回答的问题
 

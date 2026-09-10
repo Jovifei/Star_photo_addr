@@ -123,7 +123,7 @@ export default function CloudTimeline() {
   const [playSpeed, setPlaySpeed] = useState<(typeof PLAY_SPEEDS)[number]>(1);
   const [aqiValue, setAqiValue] = useState<number | null>(null);
   const [kpValue, setKpValue] = useState<number | null>(null);
-  const autoExpandedLocationRef = useRef<string | null>(null);
+  const autoExpandedLocationRef = useRef<string | null>(selectedLocation?.id ?? null);
   const nightKeys = useMemo(
     () => nightRangeKeys(selectedNight, cloudState.range),
     [selectedNight, cloudState.range],

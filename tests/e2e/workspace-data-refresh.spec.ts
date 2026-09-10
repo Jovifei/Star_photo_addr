@@ -298,8 +298,9 @@ test("fireglow date and phase switch real data and stale snapshot forces refresh
   await page.goto("/fireglow");
   const list = page.locator(".fireglow-list");
   await expect(list).toBeVisible({ timeout: 20000 });
-  const todayFirst = await list.locator("li").first().textContent();
-  expect(todayFirst).toContain("阿里暗夜公园");
+  await expect(list.locator("li").first()).toContainText("阿里暗夜公园", {
+    timeout: 20000,
+  });
 
   await page.getByRole("button", { name: "明日" }).click();
   await expect(list.locator("li").first()).toContainText("那曲暗夜公园", {
@@ -318,7 +319,7 @@ test("fireglow date and phase switch real data and stale snapshot forces refresh
 
   forceStale = true;
   await page.getByRole("button", { name: /强制刷新火烧云快照/ }).click();
-  await expect(list.locator("li").first()).toContainText("暂无数据", {
+  await expect(list.locator(".fireglow-empty")).toContainText("暂无达到 ≥0 分的地点", {
     timeout: 20000,
   });
   await expect(requests.some((entry) => entry.endsWith("|1"))).toBe(true);

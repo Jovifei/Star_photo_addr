@@ -16,9 +16,11 @@ import {
 } from "@/lib/constants";
 import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
-import { fireGlowBandLabel, isHighFireGlowLevel } from "@/lib/fireglow";
+import { fireGlowBandLabel } from "@/lib/fireglow";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
+import { filterByScoreThreshold } from "@/lib/scoreThreshold";
+import ScoreThresholdControl from "@/components/ScoreThresholdControl";
 import FireglowSiteDetail from "./FireglowSiteDetail";
 
 type Phase = "evening" | "morning";
@@ -121,6 +123,7 @@ export default function FireglowApp() {
   const [error, setError] = useState("");
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [scoreThreshold, setScoreThreshold] = useState(0);
   const loadTokenRef = useRef(0);
   const loadRef = useRef<(dates: string[], options?: { force?: boolean }) => () => void>(
     () => () => undefined,
@@ -236,7 +239,10 @@ export default function FireglowApp() {
     );
   }, [ranked]);
 
-  const bestCount = ranked.filter((site) => isHighFireGlowLevel(site.window.probabilityLevel)).length;
+  const filteredRanked = useMemo(
+    () => filterByScoreThreshold(ranked, scoreThreshold, (site) => site.window.score),
+    [ranked, scoreThreshold],
+  );
   const selectedSite = ranked.find((site) => site.id === selectedId) ?? null;
   const selectedDateKey = useMemo(() => {
     if (!selectedSite) return activeDates[0] ?? baseDate;
@@ -385,12 +391,19 @@ export default function FireglowApp() {
         <aside className="fireglow-panel" aria-label="火烧云条件指数排行">
           <div className="fireglow-panel-head">
             <strong>{phase === "evening" ? "晚霞条件排行" : "朝霞条件排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
-            <span>中烧及以上 {bestCount} 个点位</span>
+            <span>符合 ≥{scoreThreshold}分 {filteredRanked.length} 个点位</span>
           </div>
+          <ScoreThresholdControl
+            value={scoreThreshold}
+            count={filteredRanked.length}
+            label="晚霞推荐门槛"
+            testId="fireglow-score-threshold"
+            onChange={setScoreThreshold}
+          />
           {status === "error" && <p className="fireglow-error" role="status">{error}</p>}
           {error && status === "ready" && <p className="fireglow-note" role="status">{error}</p>}
           <ol className="fireglow-list">
-            {ranked.map((site, index) => (
+            {filteredRanked.length ? filteredRanked.map((site, index) => (
               <li key={site.id}>
                 <button
                   type="button"
@@ -432,7 +445,9 @@ export default function FireglowApp() {
                   </span>
                 </button>
               </li>
-            ))}
+            )) : (
+              <li className="fireglow-empty">暂无达到 ≥{scoreThreshold} 分的地点</li>
+            )}
           </ol>
           <p className="fireglow-footnote">
             条件指数 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）

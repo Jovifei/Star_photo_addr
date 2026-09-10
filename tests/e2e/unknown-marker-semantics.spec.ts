@@ -38,9 +38,8 @@ test("CloudSea null scores use an unknown marker instead of p20", async ({ page 
   await mockMapTiles(page);
 
   await page.goto("/cloudsea");
-  await expect(page.locator(".cloudsea-card").first()).toBeVisible();
-  await expect(page.locator('.cloudsea-score-badge[data-level="unknown"]').first()).toContainText("—");
-  await expect(page.locator(".cloudsea-score-state").first()).toContainText("数据不足");
+  await expect(page.locator(".cloudsea-card")).toHaveCount(0);
+  await expect(page.locator(".cloudsea-empty-threshold")).toContainText("暂无达到 ≥0 分");
   await expect(page.locator(".cloudsea-legend-unknown")).toContainText("数据不足");
   await expect
     .poll(() => page.locator(".leaflet-overlay-pane path").evaluateAll((paths) =>
@@ -70,14 +69,12 @@ test("Fireglow null scores use an unknown marker instead of p20", async ({ page 
 
   await page.goto("/fireglow");
   await expect(page.locator(".fireglow-list").first()).toBeVisible();
-  await expect(page.locator('.fireglow-score[data-level="unknown"]').first()).toContainText("—");
+  await expect(page.locator(".fireglow-list li")).toHaveCount(1);
+  await expect(page.locator(".fireglow-empty")).toContainText("暂无达到 ≥0 分");
   await expect(page.locator(".fireglow-legend-unknown")).toBeAttached();
   await expect
     .poll(() => page.locator(".leaflet-overlay-pane path").evaluateAll((paths) =>
       paths.filter((path) => Number.parseFloat(getComputedStyle(path).fillOpacity) < 0.5).length,
     ))
     .toBeGreaterThan(0);
-  await page.locator(".fireglow-list button").first().click();
-  await expect(page.locator('.fg-hero-score-number[data-level="unknown"]')).toContainText("—");
-  await expect(page.locator(".fg-band-pill[data-level=\"unknown\"]")).toContainText("数据不足");
 });
