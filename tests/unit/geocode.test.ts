@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeGeocodeResults } from "@/lib/geocode";
+import { normalizeGeocodeResults, searchCuratedPlaces } from "@/lib/geocode";
 
 describe("normalizeGeocodeResults", () => {
   it("drops malformed results instead of manufacturing a 0,0 location", () => {
@@ -39,5 +39,17 @@ describe("normalizeGeocodeResults", () => {
     ]);
     expect(results[0]).toMatchObject({ name: "临安区", admin1: "浙江" });
     expect(results[1]).toMatchObject({ name: "太子街" });
+  });
+
+  it("finds curated mountain sites when the remote geocoder has no result", () => {
+    const results = searchCuratedPlaces("太子尖", 8);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0]).toMatchObject({
+      name: "临安太子尖",
+      latitude: 30.182,
+      longitude: 119.072,
+      elevation: 1557,
+      featureCode: "CURATED_OBSERVING_SITE",
+    });
   });
 });

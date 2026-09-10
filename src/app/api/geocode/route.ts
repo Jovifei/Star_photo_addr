@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchPlaces } from "@/lib/geocode";
+import { searchCuratedPlaces, searchPlaces } from "@/lib/geocode";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,19 @@ export async function GET(request: NextRequest) {
   const safeCount = Number.isFinite(count)
     ? Math.min(100, Math.max(1, Math.floor(count)))
     : 10;
+  const curatedResults = searchCuratedPlaces(q, safeCount);
+  if (curatedResults.length) {
+    return NextResponse.json(
+      { results: curatedResults },
+      {
+        headers: {
+          "Cache-Control":
+            "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+          "X-Geocode-Source": "curated-observing-sites",
+        },
+      },
+    );
+  }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
 

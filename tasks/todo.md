@@ -603,3 +603,18 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - [x] Diagnose local/public API, browser requests, fireglow phase behavior, worker scope, asset flags, and deployment state.
 - [x] Write the evidence-first repair plan at `docs/superpowers/plans/2026-08-30-data-refresh-and-map-controls.md` (local ignored plan; do not depend on GitHub visibility).
 - [ ] Get Jovi's approval for the follow-up plan before changing source code.
+# 2026-09-10 搜索“太子尖”空结果排查
+
+- [x] 复现搜索输入、候选列表和 API 请求，确认断点位置。
+- [x] 对比可搜索城市/已有点位与“太子尖”的匹配数据，形成单一根因假设。
+- [x] 先补充失败回归测试，再做最小范围修复。
+- [x] 运行 lint/typecheck/单元与搜索专项 E2E，更新工程记录和 lessons。
+
+## Review
+
+- Scope: 仅修复地点搜索无法命中已有点位的问题，不调整评分、地图图层或地点目录。
+- Baseline: `main@1f61690`，生产 v1.0.12 已部署。
+- Evidence: `https://photo.joviluma.com/api/geocode?q=太子尖&count=8&language=zh` 返回 `{"results":[]}`；同接口搜索“杭州”返回 2 条；本地 `catalog.json` 包含 `finder-232-location / 临安太子尖`。
+- Hypothesis: 搜索链路只代理 Open-Meteo，未把本地观星点目录作为候选；山峰/网红机位不在 GeoNames 时因此必然空结果。
+- Verification: `npm run check` 53 个测试文件 / 306 项通过；`npm run test:e2e` 112 passed / 34 skipped / 0 failed；`npm run test:live` PASS；`npm audit --omit=dev --audit-level=high` 0 vulnerabilities。
+- Remaining: push/merge/deploy、公网 `/api/geocode?q=太子尖`、版本/部署记录回写。
