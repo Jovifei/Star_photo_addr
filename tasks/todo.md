@@ -1,3 +1,31 @@
+# 2026-09-10 UI 统一与专题排行门槛
+
+- [x] 将主页默认图层改为云量预报 + 光污染参考，实况时间轴只在用户主动选择时出现并保持收起。
+- [x] 统一顶部控件顺序/边框：评分时间 → B1–B4 → 推荐门槛 → 仅显示推荐地点；B1–B4 与对应推荐分数门槛一一联动。
+- [x] 为火烧云与云海排行新增 0–100 分门槛滑块，列表只显示达到门槛的地点，并保留数据不足语义。
+- [x] 补充桌面/移动 E2E 与纯函数测试，运行完整门禁和视觉检查。
+- [x] 更新 v1.0.12 版本记录、工程日志、项目跟踪和 Obsidian 镜像 DryRun；按映射状态报告同步结果。
+
+## Review
+
+- Scope: 只调整首屏/专题排行筛选呈现与状态联动，不改变天气 Provider、评分算法或地点目录。
+- Baseline: `main@a66ad049dfd6`，当前 v1.0.11 已部署。
+- Verification: `npm run check` 52 个测试文件 / 304 项通过；`npm run test:e2e` 110 passed / 34 skipped / 0 failed；`npm run test:live` PASS；`npm audit --omit=dev --audit-level=high` 0 vulnerabilities。
+- Remaining: push/merge/deploy、公网 `/healthz`、`/api/data-status`、`check:data-sources` 和 Obsidian DryRun 结果。
+
+# 2026-09-10 项目知识文档与 Obsidian 同步
+
+- [x] 读取当前源码、README、部署/测试/跟踪文档，确认 v1.0.11 制造与发布事实。
+- [x] 新增 `docs/README.md`、项目制造与交付流程文档、文档地图；补充低内存部署经验与证据边界。
+- [x] 将当前主线、测试、发布和剩余 MANUAL/BLOCKED 项目同步到 tracking/testing 文档。
+- [x] 运行 `codex-memory` 文档镜像 DryRun；若项目映射缺失，保留 `NO_PROJECT_MEMORY`/`MEMORY_SYNC_BLOCKED`，不创建新 Vault 项目。
+- [x] 执行链接/路径/敏感内容/Markdown 校验，审阅 diff 并提交文档变更。
+
+## Review
+
+- Scope: 只更新项目知识文档和文档索引，不改应用源码、评分算法、数据源或生产配置。
+- Baseline: `main@a66ad049dfd6`，v1.0.11 已部署。
+
 # v1.0.11 顶部直接筛选控件纠正（2026-09-09）
 
 - [x] 先补充顶部直接控件回归：四档参考 B1–B4、评分时间滑块、推荐门槛滑块均默认可见，命令栏不再包含评分设置展开面板。

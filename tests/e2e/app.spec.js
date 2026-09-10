@@ -36,7 +36,7 @@ test("首屏导航不会因当前小时变化触发 hydration 警告", async ({ 
   expect(hydrationErrors).toEqual([]);
 });
 
-test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚动", async ({ page }, testInfo) => {
+test("主页默认云量预报与光污染参考，卫星实况需主动选择", async ({ page }, testInfo) => {
   await page.goto("/");
   await expect(page.locator(".map-stage")).toBeVisible();
   await expect(page.locator(".map-viewport")).toBeVisible();
@@ -46,6 +46,18 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
   } else {
     await expect(page.getByTestId("mobile-map-panel-dock")).toBeVisible();
   }
+  await openMobileMapPanel(page, "layers");
+  const layerBar = page.getByRole("group", { name: "地图图层模式" });
+  const forecastLayer = layerBar.getByRole("button", { name: "预报", exact: true });
+  const liveLayer = layerBar.getByRole("button", { name: "实况", exact: true });
+  await expect(forecastLayer).toHaveAttribute("aria-pressed", "true");
+  await expect(liveLayer).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator(".satellite-frame-badge")).toHaveCount(0);
+  await expect(page.locator('.cloud-timeline[data-time-domain="forecast"]')).toHaveClass(/is-collapsed/);
+  await expect(page.locator('.cloud-track[aria-label*="预报轨道"]')).toBeVisible({ timeout: 30_000 });
+
+  await liveLayer.click();
+  await expect(liveLayer).toHaveAttribute("aria-pressed", "true");
   await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测", { timeout: 30_000 });
   const timelineToggle = page.locator(".cloud-timeline-toggle:visible");
@@ -58,9 +70,7 @@ test("3100 上运行的是项目，默认卫星观测且预报矩阵可展开滚
     await openMobileMapPanel(page, "layers");
     await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "false");
   }
-  const layerBar = page.getByRole("group", { name: "地图图层模式" });
   await expect(layerBar.getByRole("button")).toHaveCount(4);
-  const forecastLayer = layerBar.getByRole("button", { name: "预报", exact: true });
   await forecastLayer.click();
   await expect(forecastLayer).toHaveAttribute("aria-pressed", "true");
   const matrix = page.locator(".hourly-matrix").first();
@@ -131,38 +141,40 @@ test("规划器兼容链接转入统一观测台并保留地点上下文", async
   expect(target.searchParams.get("model")).toBe("icon");
   await expect(page.locator(".map-stage")).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.get("night")).toBeNull();
-  await expect(page.locator(".hourly-matrix")).toBeVisible({ timeout: 15000 });
+  await expect(page.locator(".hourly-matrix").first()).toBeVisible({ timeout: 15000 });
 });
 
-test("暗夜选址 B1 颜色筛选只改变点位，不生成密集永久文字气泡", async ({ page }, testInfo) => {
+test("暗夜选址 B1 预设门槛同步筛选点位，不生成密集永久文字气泡", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "移动端 B1-B4 抽屉卡片由 product-integrity 覆盖");
   await page.goto("/sites");
   const bar = page.getByTestId("bortle-filter-bar");
   const map = page.locator(".leaflet-container");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
   const b1 = bar.getByRole("button", { name: /参考 B1 点位/ });
+  const threshold = page.getByRole("slider", { name: "推荐分数门槛" });
 
   await expect(bar).toBeVisible();
   await expect(page.locator(".observing-site-label")).toHaveCount(0);
   await expect(map).toHaveAttribute("data-observing-site-count", /\d+/, { timeout: 15000 });
   const before = await markers.count();
-  const removedCount = await page.locator('.observing-site-dot[data-bortle="1"]').count();
+  const b1Count = Number((await b1.getAttribute("aria-label"))?.match(/(\d+) 个$/)?.[1]);
   expect(before).toBeGreaterThan(0);
-  expect(removedCount).toBeGreaterThan(0);
+  expect(b1Count).toBeGreaterThan(0);
   await b1.click();
-  await expect(b1).toHaveAttribute("aria-pressed", "false");
-  await expect(markers).toHaveCount(before - removedCount);
+  await expect(b1).toHaveAttribute("aria-pressed", "true");
+  await expect(threshold).toHaveValue("85");
+  await expect(markers).toHaveCount(b1Count);
 });
 
-test("暗夜选址 B1-B4 筛选可组合并同步点位数量", async ({ page }, testInfo) => {
+test("暗夜选址 B1-B4 预设可切换并同步推荐门槛", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "移动端 B1-B4 抽屉卡片由 product-integrity 覆盖");
   await page.goto("/sites");
   const bar = page.getByTestId("bortle-filter-bar");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
   const b2 = bar.getByRole("button", { name: /参考 B2 点位/ });
   const b4 = bar.getByRole("button", { name: /参考 B4 点位/ });
+  const threshold = page.getByRole("slider", { name: "推荐分数门槛" });
   await expect(markers).toHaveCount(228);
-  const initial = await markers.count();
   const b2Count = Number((await b2.getAttribute("aria-label"))?.match(/(\d+) 个$/)?.[1]);
   const b4Count = Number((await b4.getAttribute("aria-label"))?.match(/(\d+) 个$/)?.[1]);
   expect(b2Count).toBeGreaterThan(0);
@@ -170,11 +182,14 @@ test("暗夜选址 B1-B4 筛选可组合并同步点位数量", async ({ page },
 
   await b4.click();
   await expect(b4).toHaveAttribute("aria-pressed", "true");
-  await expect(markers).toHaveCount(initial + b4Count);
+  await expect(threshold).toHaveValue("50");
+  await expect(markers).toHaveCount(b4Count);
 
   await b2.click();
-  await expect(b2).toHaveAttribute("aria-pressed", "false");
-  await expect(markers).toHaveCount(initial + b4Count - b2Count);
+  await expect(b2).toHaveAttribute("aria-pressed", "true");
+  await expect(b4).toHaveAttribute("aria-pressed", "false");
+  await expect(threshold).toHaveValue("70");
+  await expect(markers).toHaveCount(b2Count);
 });
 
 test("地图加入候选后观星计划保留同一地点", async ({ page }) => {
@@ -206,6 +221,9 @@ test("地图加入候选后观星计划保留同一地点", async ({ page }) => 
 
 test("卫星图层入口互斥，数据源状态面板可见", async ({ page }, testInfo) => {
   await page.goto("/");
+  await openMobileMapPanel(page, "layers");
+  const layerBar = page.locator(".map-layer-bar:visible");
+  await layerBar.getByRole("button", { name: "实况" }).click();
   await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".source-status-panel")).toBeVisible();
   await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测", { timeout: 30_000 });
@@ -213,7 +231,6 @@ test("卫星图层入口互斥，数据源状态面板可见", async ({ page }, 
     await openMobileMapPanel(page, "layers");
     await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "false");
   }
-  const layerBar = page.locator(".map-layer-bar:visible");
   await layerBar.getByRole("button", { name: "预报" }).click();
   await expect(page.locator(".cloud-canvas-overlay canvas")).toHaveCount(1);
   await expect(page.locator(".satellite-frame-badge")).toHaveCount(0);

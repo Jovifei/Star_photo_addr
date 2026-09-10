@@ -45,7 +45,7 @@ test("暗夜选址的 B1-B4 卡片可组合筛选并同步点位数量", async (
   await expect(panel).toContainText("B1、B3、B4");
 });
 
-test("sites workspace exposes the B1–B4 filter bar in the command bar with visible colors and synced markers", async ({
+test("sites workspace exposes the B1–B4 presets in the command bar with visible colors and synced markers", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "Bortle 过滤条几何只测桌面");
@@ -85,13 +85,18 @@ test("sites workspace exposes the B1–B4 filter bar in the command bar with vis
   await expect(container).toHaveAttribute("data-observing-site-count", "228");
   await expect(page.locator('.observing-site-dot[data-bortle="1"]').first()).toBeAttached();
 
+  const threshold = commandBar.getByRole("slider", { name: "推荐分数门槛" });
   await buttons.nth(3).click();
   await expect(buttons.nth(3)).toHaveAttribute("aria-pressed", "true");
-  await expect(container).toHaveAttribute("data-observing-site-count", "257");
+  await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "false");
+  await expect(container).toHaveAttribute("data-observing-site-count", "29");
+  await expect(threshold).toHaveValue("50");
 
   await buttons.nth(0).click();
-  await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "false");
-  await expect(container).toHaveAttribute("data-observing-site-count", "220");
+  await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "true");
+  await expect(buttons.nth(3)).toHaveAttribute("aria-pressed", "false");
+  await expect(container).toHaveAttribute("data-observing-site-count", "37");
+  await expect(threshold).toHaveValue("85");
 });
 
 test("稀疏坐标的观星计划兼容链接保留选点上下文", async ({ page }) => {
@@ -133,6 +138,26 @@ test("火烧云主要控制保持至少 44px 触控高度", async ({ page }, tes
 
 test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "三栏结构只需桌面验证");
+  const scoreWindow = {
+    score: 80,
+    band: "strong",
+    bandLabel: "大烧",
+    probabilityLabel: "80–88%",
+    probabilityLevel: "p80",
+    vividness: 0.8,
+    momentLabel: "中云爆发",
+    peakTime: "19:00",
+    deckCloud: 30,
+    lowCloud: 10,
+    midCloud: 40,
+    highCloud: 55,
+    visibilityKm: 18,
+    sunAltitude: -1.5,
+    goldenTime: "19:10",
+    blueTime: "19:30",
+    astroTime: "19:52",
+    reason: "E2E 详情点位",
+  };
   await page.route("**/api/fireglow/snapshot**", async (route) => {
     const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-08-30";
     await route.fulfill({
@@ -144,7 +169,12 @@ test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo)
         generatedAt: "2026-08-30T12:00:00.000Z",
         source: "E2E fireglow snapshot",
         stale: false,
-        sites: {},
+        sites: {
+          "finder-001-location": {
+            evening: scoreWindow,
+            morning: scoreWindow,
+          },
+        },
       }),
     });
   });

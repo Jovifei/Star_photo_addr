@@ -263,7 +263,7 @@ export const DEFAULT_CLOUD_STATE: CloudState = {
   model: "icon",
   activeForecastTime: null,
   activeObservationTime: null,
-  overlayMode: "satellite-cloud",
+  overlayMode: "forecast-cloud",
   cloudDisplayMode: "total",
   highEnabled: false,
   midEnabled: false,

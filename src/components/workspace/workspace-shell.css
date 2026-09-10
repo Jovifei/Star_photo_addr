@@ -38,15 +38,18 @@
 }
 
 .workspace-commandbar .search-combobox {
-  flex: 0 1 220px;
-  min-width: 180px;
+  flex: 0 1 180px;
+  min-width: 140px;
+}
+.workspace-commandbar .locate-button {
+  min-height: 52px;
 }
 
 .workspace-commandbar .search-only-row {
   flex-wrap: wrap;
 }
 .workspace-commandbar .recommendation-quick-controls {
-  flex: 1 1 716px;
+  flex: 1 1 915px;
 }
 .workspace-commandbar .bortle-filter-bar-command {
   position: static;
@@ -557,7 +560,7 @@
     padding: 6px 10px;
   }
   .workspace-commandbar .recommendation-quick-controls {
-    grid-template-columns: minmax(300px, 1.45fr) minmax(170px, 1fr) minmax(140px, .85fr);
+    grid-template-columns: minmax(120px, .75fr) minmax(340px, 1.55fr) minmax(120px, .8fr) minmax(135px, .85fr);
   }
   .workspace-commandbar .bortle-filter-bar-command {
     display: grid;

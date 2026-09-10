@@ -226,13 +226,16 @@ test("command bar exposes recommendation-only filtering after locate", async ({ 
   ).toBe("true");
 });
 
-test("command bar exposes direct Bortle and score controls without an extra panel", async ({ page }) => {
+test("command bar exposes direct Bortle and score controls without an extra panel", async ({ page }, testInfo) => {
   await page.goto("/?overlay=forecast-cloud&view=combined");
   const commandBar = page.getByTestId("workspace-commandbar");
   const quickControls = commandBar.getByTestId("recommendation-quick-controls");
   const bortle = quickControls.getByTestId("bortle-filter-bar");
   const threshold = quickControls.getByRole("slider", { name: "推荐分数门槛" });
   const scoreTime = quickControls.getByRole("slider", { name: "观星评分时间滑窗" });
+  const toggle = quickControls.getByRole("checkbox", {
+    name: "仅显示达到推荐门槛的地点",
+  });
 
   await expect(commandBar.getByTestId("recommendation-settings")).toHaveCount(0);
   await expect(commandBar.locator(".observing-map-control")).toHaveCount(0);
@@ -240,6 +243,7 @@ test("command bar exposes direct Bortle and score controls without an extra pane
   await expect(bortle).toBeVisible();
   await expect(threshold).toBeVisible();
   await expect(scoreTime).toBeVisible();
+  await expect(toggle).toBeVisible();
   await expect(threshold).toHaveValue("70");
   await expect(bortle).toContainText("B1");
   await expect(bortle).toContainText("极暗");
@@ -253,8 +257,10 @@ test("command bar exposes direct Bortle and score controls without an extra pane
   const order = await commandBar.evaluate((bar) => {
     const elements = [
       bar.querySelector(".locate-button"),
+      bar.querySelector('[aria-label="观星评分时间滑窗"]'),
+      bar.querySelector('[data-testid="bortle-filter-bar"]'),
+      bar.querySelector('[aria-label="推荐分数门槛"]'),
       bar.querySelector('[data-testid="recommended-only-toggle"]'),
-      bar.querySelector('[data-testid="recommendation-quick-controls"]'),
     ];
     return elements.every((element, index) =>
       element && elements.slice(index + 1).every((next) =>
@@ -263,6 +269,35 @@ test("command bar exposes direct Bortle and score controls without an extra pane
     );
   });
   expect(order).toBe(true);
+
+  if (testInfo.project.name === "desktop") {
+    const quickBoxes = await quickControls.locator(":scope > *").evaluateAll((elements) =>
+      elements.map((element) => ({
+        top: Math.round(element.getBoundingClientRect().top),
+        height: Math.round(element.getBoundingClientRect().height),
+      })),
+    );
+    expect(new Set(quickBoxes.map((box) => box.top)).size).toBe(1);
+    expect(
+      Math.max(...quickBoxes.map((box) => box.height)) -
+        Math.min(...quickBoxes.map((box) => box.height)),
+    ).toBeLessThanOrEqual(1);
+  }
+
+  await expect(bortle.getByRole("button", { name: /参考 B1 点位/ })).toContainText("≥85");
+  await expect(bortle.getByRole("button", { name: /参考 B2 点位/ })).toContainText("≥70");
+  await expect(bortle.getByRole("button", { name: /参考 B3 点位/ })).toContainText("≥55");
+  await expect(bortle.getByRole("button", { name: /参考 B4 点位/ })).toContainText("≥50");
+  await bortle.getByRole("button", { name: /参考 B1 点位/ }).click();
+  await expect(threshold).toHaveValue("85");
+  await bortle.getByRole("button", { name: /参考 B2 点位/ }).click();
+  await expect(threshold).toHaveValue("70");
+  await bortle.getByRole("button", { name: /参考 B3 点位/ }).click();
+  await expect(threshold).toHaveValue("55");
+  await bortle.getByRole("button", { name: /参考 B4 点位/ }).click();
+  await expect(threshold).toHaveValue("50");
+  await bortle.getByRole("button", { name: /参考 B2 点位/ }).click();
+  await expect(threshold).toHaveValue("70");
 
   await threshold.press("ArrowRight");
   await expect(threshold).toHaveValue("75");

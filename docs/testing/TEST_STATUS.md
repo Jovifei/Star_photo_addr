@@ -1,11 +1,12 @@
 # 《逐星》测试实施状态与待测试清单
 
-> 对应方案：[`TEST_PLAN_V1.md`](./TEST_PLAN_V1.md)  
-> 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)  
-> 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)  
-> 状态日期：2026-08-22  
-> 当前 main：`3fc11fcb00151b3ab8e80239137728132f51407e`  
-> 当前测试工作分支：无（本轮直接提交 main）
+> 对应方案：[`TEST_PLAN_V1.md`](./TEST_PLAN_V1.md)
+> 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
+> 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
+> 状态日期：2026-09-10
+> 当前 main：`a66ad049dfd69a87b0f97b5a5870679163260427`（v1.0.11）
+> 当前候选分支：`codex/unified-score-filters-20260910`（v1.0.12）
+> 当前测试工作分支：无
 
 ## 状态定义
 
@@ -17,6 +18,34 @@
 | MANUAL | 需要人工/真机，自动化不能完全替代 |
 | BLOCKED | 缺少 ECS、域名、证书、授权数据或现场设备 |
 | DEFERRED | 已安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
+
+## v1.0.12 发布候选门禁结果
+
+| 门禁 | 结果 | 说明 |
+| --- | --- | --- |
+| `npm run check` | PASS | ESLint、TypeScript、52 个 Vitest 文件 / 304 项测试、Next.js 生产构建 |
+| 专题评分门槛专项 | PASS | 火烧云与云海 0/60/100 分滑块、`score >= threshold` 列表过滤、null 数据 fail-closed |
+| 顶部控件专项 | PASS | 评分时间 → B1–B4 → 推荐门槛 → 推荐开关；B1/B2/B3/B4 联动 ≥85/70/55/50；主页默认预报 + 光污染 |
+| `npm run test:e2e` | PASS | Chromium 桌面/移动 144 实例：110 passed / 34 skipped / 0 failed；修正 3 个旧断言后重跑通过 |
+| `npm run test:live` | PASS | Open-Meteo 四模型/压力层/地理编码/AQI、NASA GIBS、NOAA Kp、VIIRS 瓦片均 OK（2026-09-10） |
+| `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
+| 生产 Compose / 公网 | 待部署 | 合并 main 后按 `docs/ALIYUN_DEPLOYMENT.md` 执行 |
+
+本候选结果来自当前分支的本地构建和脱敏 Mock E2E；生产 v1.0.11 仍是当前公网版本。真机、200% 缩放、压力测试、授权暗夜资产和现场 Bortle/SQM 科学校准不因本表自动化通过而完成。
+
+## v1.0.11 发布门禁结果（历史）
+
+| 门禁 | 结果 | 说明 |
+| --- | --- | --- |
+| `npm run check` | PASS | ESLint、TypeScript、51 个 Vitest 文件 / 302 项测试、Next.js 生产构建 |
+| `npm run test:e2e` | PASS | Chromium 桌面/移动 140 实例：106 passed / 34 skipped / 0 failed |
+| 命令栏专项 | PASS | 顶部直接 B1–B4、评分时间、推荐门槛和推荐开关；桌面 1280/1440 单行；无额外评分大面板 |
+| `npm run test:live` | PASS | Open-Meteo、NASA GIBS、NOAA、VIIRS live smoke |
+| `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
+| 生产 Compose | PASS | app/worker healthy，`/healthz` 为 v1.0.11 / `a66ad049dfd6` |
+| 公网数据源 | PASS | `npm run check:data-sources -- https://photo.joviluma.com` 通过；未配置项保持明确降级 |
+
+本节结果来自当前 `main` 的本地构建、Mock E2E、真实数据源冒烟和生产公网检查；不代表 iPhone/Android 真机、200% 缩放、压力测试或现场 Bortle/SQM 科学校准已经完成。
 
 ## 第一阶段已完成自动化工作包
 

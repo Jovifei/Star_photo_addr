@@ -152,6 +152,21 @@
   font-size: 11px;
 }
 
+.fireglow-panel .score-threshold-control {
+  border-color: var(--fg-line);
+  background: rgba(3, 13, 19, 0.58);
+  color: var(--fg-muted);
+}
+.fireglow-panel .score-threshold-control-head strong {
+  color: #f0a88f;
+}
+.fireglow-panel .score-threshold-control input[type="range"] {
+  accent-color: #e8967c;
+}
+.fireglow-panel .score-threshold-control:focus-within {
+  outline-color: #e8967c;
+}
+
 .fireglow-error {
   margin: 0;
   padding: 8px 10px;
@@ -202,6 +217,15 @@
 .fireglow-list button.active {
   border-color: rgba(232, 101, 79, 0.55);
   background: rgba(232, 101, 79, 0.08);
+}
+
+.fireglow-empty {
+  padding: 28px 12px;
+  border: 1px dashed var(--fg-line);
+  border-radius: 10px;
+  color: var(--fg-muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 .fireglow-rank {

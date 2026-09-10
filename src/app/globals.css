@@ -651,14 +651,15 @@
 }
 .recommendation-quick-controls {
   display: grid;
-  grid-template-columns: minmax(420px, 1.35fr) minmax(150px, .9fr) minmax(130px, .75fr);
+  grid-template-columns: minmax(150px, .75fr) minmax(480px, 1.55fr) minmax(130px, .8fr) minmax(155px, .85fr);
   align-items: stretch;
   gap: 8px;
-  flex: 1 1 716px;
+  flex: 1 1 915px;
   min-width: 0;
 }
 .recommendation-quick-bortle,
-.recommendation-quick-slider {
+.recommendation-quick-slider,
+.recommendation-quick-toggle {
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -668,6 +669,31 @@
   border-radius: var(--radius-sm);
   background: var(--panel);
   backdrop-filter: blur(8px);
+}
+.recommendation-quick-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.recommendation-quick-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--green);
+  flex: 0 0 auto;
+}
+.recommendation-quick-toggle:has(input:checked) {
+  border-color: var(--green);
+  color: var(--green-soft);
+  background: rgba(20, 62, 67, .72);
+}
+.recommendation-quick-toggle:focus-within {
+  outline: 2px solid var(--green-soft);
+  outline-offset: 2px;
 }
 .recommendation-quick-label,
 .recommendation-quick-slider > span > span {
@@ -700,6 +726,44 @@
 .recommendation-quick-bortle:focus-within,
 .recommendation-quick-slider:focus-within {
   outline: 2px solid var(--green-soft);
+  outline-offset: 2px;
+}
+.score-threshold-control {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line, rgba(121, 207, 226, .24));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--panel, rgba(4, 16, 24, .8));
+  color: var(--muted, #91a4ab);
+}
+.score-threshold-control-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+}
+.score-threshold-control-head strong {
+  color: var(--green-soft, #c2eef0);
+  font-family: var(--font-data, ui-monospace, monospace);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.score-threshold-control input[type="range"] {
+  width: 100%;
+  min-height: 24px;
+  accent-color: var(--green, #79cfe2);
+  cursor: pointer;
+}
+.score-threshold-control small {
+  color: var(--muted-2, #738990);
+  font-size: 10px;
+}
+.score-threshold-control:focus-within {
+  outline: 2px solid var(--green-soft, #c2eef0);
   outline-offset: 2px;
 }
 .suggestions {
