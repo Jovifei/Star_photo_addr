@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { buildTrackSegments, nightKeyOfTime } from "@/components/CloudTimeline";
+import { buildTrackSegments, forecastQualityLabel, nightKeyOfTime } from "@/components/CloudTimeline";
+
+describe("forecastQualityLabel", () => {
+  it("does not call a missing forecast available", () => {
+    expect(forecastQualityLabel("暂无有效预报", false)).toBe("数据不足");
+    expect(forecastQualityLabel("取样点", false)).toBe("可用");
+    expect(forecastQualityLabel("取样点", true)).toBe("过期/降级，禁止推荐");
+  });
+});
 
 describe("nightKeyOfTime", () => {
   it("rolls post-midnight hours into the previous date", () => {
