@@ -12,9 +12,32 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
+    date: "2026-09-14",
+    tag: "跨午夜验证稳定性",
+    current: true,
+    highlights: [
+      {
+        icon: ShieldCheck,
+        title: "凌晨仍覆盖完整观测夜",
+        desc: "00:00–05:00 的验证预报以正在进行的前一晚为起点，保留 20:00–05:00 的完整评分窗口。",
+      },
+      {
+        icon: CloudSun,
+        title: "验证夹具不改生产口径",
+        desc: "本次只修正 E2E 合成数据的日期边界，生产评分、天气来源和完整性门槛保持不变。",
+      },
+      {
+        icon: Layers,
+        title: "跨日期边界回归",
+        desc: "低云分层门禁在凌晨、桌面和移动视口均有覆盖，避免测试时间漂移掩盖真实回归。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.17",
     date: "2026-09-13",
     tag: "时间轴数据质量标签纠正",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: ShieldCheck,
