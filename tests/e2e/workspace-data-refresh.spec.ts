@@ -103,7 +103,10 @@ test("unavailable hourly forecast shows reason with retry and recovers real valu
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ locations: buildNormalizedForecasts(fixture, lats, lons, days, model) }),
+      body: JSON.stringify((() => {
+        const locations = buildNormalizedForecasts(fixture, lats, lons, days, model);
+        return { locations, metadata: locations[0]?.metadata };
+      })()),
     });
   });
 

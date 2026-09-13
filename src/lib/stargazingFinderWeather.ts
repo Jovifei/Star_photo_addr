@@ -6,8 +6,11 @@ import {
 import {
   applyOpenMeteoApiKey,
   maxForecastDaysForModel,
+  noteOpenMeteoRateLimit,
   OPEN_METEO_FORECAST_URL,
+  OpenMeteoRateLimitError,
   openMeteoModelParameter,
+  withOpenMeteoProviderSlot,
 } from "./forecast";
 import type {
   FinderHourlyData,
@@ -15,12 +18,15 @@ import type {
   FinderWeatherRecord,
   FinderWeatherResponse,
 } from "./stargazingFinderTypes";
-import type { ForecastModel } from "./types";
+import type { ForecastModel, ForecastProvenance } from "./types";
 
 const BATCH_SIZE = 24;
-const WORKERS = 4;
+const WORKERS = 2;
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const HOURLY_VARIABLES = [
+  "relative_humidity_2m",
+  "dew_point_2m",
+  "precipitation_probability",
   "weather_code",
   "cloud_cover",
   "cloud_cover_low",
@@ -35,6 +41,9 @@ const HOURLY_VARIABLES = [
 
 interface RawHourly {
   time?: unknown;
+  relative_humidity_2m?: unknown;
+  dew_point_2m?: unknown;
+  precipitation_probability?: unknown;
   weather_code?: unknown;
   cloud_cover?: unknown;
   cloud_cover_low?: unknown;
@@ -48,8 +57,29 @@ interface RawHourly {
 }
 
 interface RawForecast {
+  latitude?: unknown;
+  longitude?: unknown;
+  elevation?: unknown;
+  timezone?: unknown;
+  utc_offset_seconds?: unknown;
   hourly?: RawHourly;
 }
+
+const REQUIRED_SERIES = [
+  ["relative_humidity_2m", "湿度"],
+  ["dew_point_2m", "露点"],
+  ["precipitation_probability", "降水概率"],
+  ["weather_code", "天气代码"],
+  ["cloud_cover", "总云"],
+  ["cloud_cover_low", "低云"],
+  ["cloud_cover_mid", "中云"],
+  ["cloud_cover_high", "高云"],
+  ["precipitation", "降水"],
+  ["visibility", "能见度"],
+  ["wind_speed_10m", "风速"],
+  ["wind_gusts_10m", "阵风"],
+  ["temperature_2m", "温度"],
+] as const;
 
 interface CacheEntry {
   savedAt: number;
@@ -62,12 +92,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isRawForecast(value: unknown): value is RawForecast {
-  return (
-    isRecord(value) &&
-    isRecord(value.hourly) &&
-    Array.isArray(value.hourly.time)
-  );
+function validNumericSeries(value: unknown, length: number): boolean {
+  return Array.isArray(value) && value.length === length &&
+    value.every((item) => item === null || (typeof item === "number" && Number.isFinite(item))) &&
+    value.some((item) => typeof item === "number" && Number.isFinite(item));
+}
+
+function validTimeAxis(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length > 0 &&
+    value.every((time) => typeof time === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(time)) &&
+    new Set(value).size === value.length &&
+    value.every((time, index) => index === 0 || time > value[index - 1]!);
+}
+
+export function validateFinderRawForecast(value: unknown): asserts value is RawForecast {
+  if (!isRecord(value) || !isRecord(value.hourly)) {
+    throw new Error("Open-Meteo 返回缺少 hourly 数据");
+  }
+  if (!Number.isFinite(value.latitude) || !Number.isFinite(value.longitude) ||
+      Math.abs(Number(value.latitude)) > 90 || Math.abs(Number(value.longitude)) > 180 ||
+      !Number.isFinite(value.elevation) || typeof value.timezone !== "string" ||
+      !Number.isFinite(value.utc_offset_seconds)) {
+    throw new Error("Open-Meteo 返回缺少地点坐标、海拔或时区身份");
+  }
+  const hourly = value.hourly as RawHourly;
+  if (!validTimeAxis(hourly.time)) throw new Error("Open-Meteo 返回了无效或重复的时间轴");
+  for (const [field, label] of REQUIRED_SERIES) {
+    if (!validNumericSeries(hourly[field], hourly.time.length)) {
+      throw new Error(`Open-Meteo 返回的${label}数组缺失或未与时间轴对齐`);
+    }
+  }
 }
 
 function numberArray(
@@ -87,6 +141,25 @@ function stringArray(value: unknown): string[] {
     : [];
 }
 
+function distanceKm(
+  latitudeA: number,
+  longitudeA: number,
+  latitudeB: number,
+  longitudeB: number,
+): number {
+  const radians = Math.PI / 180;
+  const dLat = (latitudeB - latitudeA) * radians;
+  const dLon = (longitudeB - longitudeA) * radians;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(latitudeA * radians) * Math.cos(latitudeB * radians) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6_371 * Math.asin(Math.sqrt(a));
+}
+
+interface BatchResult {
+  hourlyByDate: Record<string, FinderHourlyData[]>;
+  provenance: ForecastProvenance[];
+}
+
 function sliceHourly(raw: RawForecast, date: string): FinderHourlyData {
   const hourly = raw.hourly ?? {};
   const times = stringArray(hourly.time);
@@ -104,6 +177,9 @@ function sliceHourly(raw: RawForecast, date: string): FinderHourlyData {
   };
   return {
     time: indices.map(({ time }) => time),
+    relative_humidity_2m: takeNumbers(hourly.relative_humidity_2m),
+    dew_point_2m: takeNumbers(hourly.dew_point_2m),
+    precipitation_probability: takeNumbers(hourly.precipitation_probability),
     weather_code: takeNumbers(hourly.weather_code),
     cloud_cover: takeNumbers(hourly.cloud_cover),
     cloud_cover_low: takeNumbers(hourly.cloud_cover_low),
@@ -166,16 +242,16 @@ async function requestBatch(
   dates: string[],
   signal: AbortSignal,
   model: ForecastModel,
-): Promise<Record<string, FinderHourlyData[]>> {
+): Promise<BatchResult> {
   const url = buildFinderWeatherUrl(locations, dates, model);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      const response = await withOpenMeteoProviderSlot(() => fetch(url, {
         signal,
         headers: { Accept: "application/json" },
         cache: "no-store",
-      });
+      }));
       if (!response.ok) {
         const body = await response.json().catch(() => null) as
           | { reason?: string }
@@ -185,29 +261,58 @@ async function requestBatch(
             ? `Open-Meteo 返回 ${response.status}：${body.reason}`
             : `Open-Meteo 返回 ${response.status}`,
         );
-        if (response.status < 500 && response.status !== 429) break;
+        if (response.status === 429) {
+          noteOpenMeteoRateLimit(response.headers.get("Retry-After"));
+          break;
+        }
+        if (response.status < 500) break;
+        await new Promise((resolve) => setTimeout(resolve, 250));
         continue;
       }
       const body: unknown = await response.json();
       const forecasts = Array.isArray(body) ? body : [body];
-      if (
-        forecasts.length !== locations.length ||
-        !forecasts.every(isRawForecast)
-      ) {
-        throw new Error(
-          "Open-Meteo 返回的地点数量或 hourly 结构不匹配",
-        );
+      if (forecasts.length !== locations.length) throw new Error("Open-Meteo 返回的地点数量与请求不匹配");
+      forecasts.forEach(validateFinderRawForecast);
+      if (forecasts.some((forecast, index) => distanceKm(
+        locations[index]!.latitude,
+        locations[index]!.longitude,
+        Number(forecast.latitude),
+        Number(forecast.longitude),
+      ) > 50)) {
+        throw new Error("Open-Meteo 返回地点与请求坐标映射不一致");
       }
-      return Object.fromEntries(
-        dates.map((date) => [
-          date,
-          forecasts.map((forecast) => sliceHourly(forecast, date)),
-        ]),
-      );
+      const expectedTimes = (forecasts[0]!.hourly!.time as string[]);
+      if (forecasts.some((forecast) =>
+        (forecast.hourly!.time as string[]).length !== expectedTimes.length ||
+        (forecast.hourly!.time as string[]).some((time, index) => time !== expectedTimes[index]),
+      )) {
+        throw new Error("Open-Meteo 批量响应的时间轴不一致");
+      }
+      const sourceFetchedAt = new Date().toISOString();
+      return {
+        hourlyByDate: Object.fromEntries(
+          dates.map((date) => [date, forecasts.map((forecast) => sliceHourly(forecast, date))]),
+        ),
+        provenance: forecasts.map((forecast, index) => ({
+          requestedLatitude: locations[index]!.latitude,
+          requestedLongitude: locations[index]!.longitude,
+          modelLatitude: Number(forecast.latitude),
+          modelLongitude: Number(forecast.longitude),
+          modelDistanceKm: distanceKm(locations[index]!.latitude, locations[index]!.longitude, Number(forecast.latitude), Number(forecast.longitude)),
+          modelElevation: Number(forecast.elevation),
+          elevationSource: "provider-dem",
+          sourceFetchedAt,
+          providerRunAt: null,
+          timezone: String(forecast.timezone),
+          utcOffsetSeconds: Number(forecast.utc_offset_seconds),
+        })),
+      };
     } catch (error) {
       if (signal.aborted) throw error;
       lastError = error;
+      if (error instanceof OpenMeteoRateLimitError) break;
     }
+    if (lastError instanceof OpenMeteoRateLimitError) break;
   }
   throw lastError instanceof Error
     ? lastError
@@ -312,18 +417,26 @@ export async function fetchFinderWeatherRange(
       const batch = batches[batchIndex];
       if (!batch) continue;
       try {
-        const hourlyByDate = await requestBatch(
+        const batchResult = await requestBatch(
           batch,
           missingDates,
           signal,
           model,
         );
+        const { hourlyByDate, provenance } = batchResult;
+        const sourceFetchedAt = provenance[0]?.sourceFetchedAt;
+        if (!sourceFetchedAt) throw new Error("Open-Meteo 未提供原始抓取时间");
         for (const date of missingDates) {
           const hourly = hourlyByDate[date] ?? [];
           batch.forEach((location, index) => {
             dataByDate[date][location.id] = {
               hourly: hourly[index] ?? null,
               status: hourly[index] ? "available" : "missing",
+              fetchedAt: sourceFetchedAt,
+              model,
+              timezone: provenance[index]?.timezone,
+              utcOffsetSeconds: provenance[index]?.utcOffsetSeconds,
+              provenance: provenance[index],
             };
           });
         }
@@ -350,9 +463,16 @@ export async function fetchFinderWeatherRange(
   const fetchedAt = new Date().toISOString();
   for (const date of missingDates) {
     const data = dataByDate[date];
+    const sourceFetchedAt = Object.values(data)
+      .map((record) => record.fetchedAt)
+      .filter((value): value is string => typeof value === "string")
+      .sort()[0];
     const response: FinderWeatherResponse = {
       date,
       fetchedAt,
+      ...(sourceFetchedAt ? { sourceFetchedAt } : {}),
+      model,
+      providerRunAt: null,
       source: `Open-Meteo Forecast API · ${model}`,
       stale: Object.values(data).some(
         (record) => record.status === "error",

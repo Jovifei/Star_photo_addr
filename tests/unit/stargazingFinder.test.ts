@@ -26,6 +26,7 @@ import {
   buildFinderWeatherUrl,
   isFinderRangeAllowedForModel,
 } from "@/lib/stargazingFinderWeather";
+import type { ForecastModel } from "@/lib/types";
 
 const FRESH_FETCHED_AT = new Date().toISOString();
 
@@ -40,6 +41,9 @@ function fixture(overrides: Partial<FinderHourlyData> = {}): FinderHourlyData {
     Array.from({ length: time.length }, () => value);
   return {
     time,
+    relative_humidity_2m: values(60),
+    dew_point_2m: values(10),
+    precipitation_probability: values(0),
     weather_code: values(0),
     cloud_cover: values(5),
     cloud_cover_low: values(0),
@@ -54,8 +58,8 @@ function fixture(overrides: Partial<FinderHourlyData> = {}): FinderHourlyData {
   };
 }
 
-function available(hourly: FinderHourlyData): FinderWeatherRecord {
-  return { hourly, status: "available", fetchedAt: FRESH_FETCHED_AT };
+function available(hourly: FinderHourlyData, model: ForecastModel = "icon"): FinderWeatherRecord {
+  return { hourly, status: "available", fetchedAt: FRESH_FETCHED_AT, model, timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800 };
 }
 
 function allSites(hourly: FinderHourlyData): Record<string, FinderWeatherRecord> {

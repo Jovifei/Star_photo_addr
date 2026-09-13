@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { requestCandidateForecast } from "@/lib/candidateForecastClient";
-import { useStore } from "@/lib/store";
+import { cachedForecast, useStore } from "@/lib/store";
 
 /** Both views may mount; they share one request owner per model/coordinate/day key. */
 export function useCandidateForecasts(locations: Array<{ id: string; latitude: number; longitude: number }>): void {
@@ -21,7 +21,7 @@ export function useCandidateForecasts(locations: Array<{ id: string; latitude: n
         if (active) cacheForecast(location.id, forecast);
       }).catch(() => {
         // A failed refresh must also invalidate an older store entry; it must not keep its high score.
-        const previous = cacheRef.current.get(location.id);
+        const previous = cachedForecast(cacheRef.current, location.id, model);
         if (active && previous?.metadata?.model === model) cacheForecast(location.id, {
           ...previous, metadata: { ...previous.metadata, stale: true },
         });

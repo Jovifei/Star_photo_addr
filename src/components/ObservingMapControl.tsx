@@ -298,6 +298,10 @@ export default function ObservingMapControl({
             <span>当前显示 <b>{activeSnapshot ? visibleCount : "—"}</b></span>
             <span>≥{state.recommendationThreshold}分 <b>{activeSnapshot ? thresholdCount : "—"}</b></span>
           </div>
+          <small className="observing-score-provenance" data-testid="observing-score-provenance">
+            数据身份：{state.cloudState.model.toUpperCase()} · 预报时次 {activeScoreTime || "—"} · 原始抓取 {activeSnapshot?.sourceFetchedAt ?? "未提供"} ·
+            {activeSnapshot?.stale ? "质量：过期/降级，禁止推荐" : activeSnapshot ? "质量：可用" : "质量：数据不足"} · 多模型核验：未检查
+          </small>
           <div className="observing-score-legend" aria-label="推荐评分颜色筛选">
             {BAND_FILTERS.map((filter) => (
               <label className="observing-band-option" key={filter.id}>

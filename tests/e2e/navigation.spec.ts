@@ -55,6 +55,20 @@ function buildForecastResponse(requestUrl: string) {
         hourly,
       },
     ],
+    metadata: {
+      source: "E2E",
+      model,
+      fetchedAt,
+      sourceFetchedAt: fetchedAt,
+      providerRunAt: null,
+      stale: false,
+      units: {
+        cloudCover: "%",
+        precipitation: "mm",
+        windSpeed: "m/s",
+        windDirection: "°",
+      },
+    },
   };
 }
 

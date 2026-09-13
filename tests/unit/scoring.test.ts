@@ -41,8 +41,8 @@ describe("evaluateNight — 结构与窗口", () => {
     expect(times).not.toContain(OUT_TIMES[1]);
   });
   it("identifies the integrity-reviewed scoring revision", () => {
-    expect(evaluateNight(forecast(), location, NIGHT)!.scoreModelVersion).toBe("star-v1.1-integrity");
-    expect(SCORE_MODEL_VERSION).toBe("star-v1.1-integrity");
+    expect(evaluateNight(forecast(), location, NIGHT)!.scoreModelVersion).toBe("star-v1.2-integrity");
+    expect(SCORE_MODEL_VERSION).toBe("star-v1.2-integrity");
   });
   it("决策字段存在且类型正确，单模型不宣称高置信度", () => {
     const result = evaluateNight(forecast(), location, NIGHT)!;

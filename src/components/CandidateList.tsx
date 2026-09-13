@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback } from "react";
 import { Sparkles, Trash2, RotateCcw, Cloud, CloudRain, Wind, Clock } from "lucide-react";
-import { useStore } from "@/lib/store";
+import { cachedForecast, useStore } from "@/lib/store";
 import { useCandidateForecasts } from "@/hooks/useCandidateForecasts";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
 import { forecastTrustIssue } from "@/lib/forecastIntegrity";
@@ -15,6 +15,7 @@ interface CandidateNightData {
   nightKey: string; score: number | null; statusTone: string; statusLabel: string;
   windowLabel: string; windowLength: number; cloud: number | null;
   precipitation: number | null; wind: number | null; loading: boolean;
+  sourceFetchedAt: string | null; model: string | null; scoreTime: string | null; aggregation: string | null;
 }
 function getDayShortLabel(dateKey: string, index: number): string {
   if (index === 0) return "今";
@@ -38,7 +39,7 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
   const evaluatedCandidates = useMemo(() => candidates.map((candidate) => {
     const location: Location = { id: candidate.id, name: candidate.name, latitude: candidate.latitude,
       longitude: candidate.longitude, elevation: candidate.elevation ?? null, source: "自定义", province: candidate.province };
-    const cached = state.forecastCache.get(candidate.id);
+    const cached = cachedForecast(state.forecastCache, candidate.id, state.cloudState.model);
     const sameSelectedPoint = state.selectedLocation && Math.abs(state.selectedLocation.latitude - candidate.latitude) < 1e-6 && Math.abs(state.selectedLocation.longitude - candidate.longitude) < 1e-6;
     const available = cached?.metadata?.model === state.cloudState.model ? cached : sameSelectedPoint ? state.forecast : null;
     const forecast = available?.metadata?.model === state.cloudState.model ? available : null;
@@ -46,7 +47,7 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
     const nights = new Map<string, CandidateNightData>();
     nightKeys.forEach((nightKey, index) => {
       const result = forecast && !issue ? evaluateNight(forecast, location, nightKey, index) : null;
-      if (result) {
+      if (result && forecast) {
         const meta = statusMeta(result.status);
         const hours = result.hours;
         const probabilities = hours.map((hour) => hour.precipitationProbability);
@@ -54,14 +55,16 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
           windowLabel: result.windowLabel, windowLength: result.window.length,
           cloud: Math.round(hours.reduce((sum, hour) => sum + hour.cloudCover!, 0) / hours.length),
           precipitation: probabilities.every((value) => typeof value === "number" && Number.isFinite(value)) ? Math.round(Math.max(...probabilities as number[])) : null,
-          wind: Math.round(Math.max(...hours.map((hour) => hour.windSpeed!)) * 10) / 10, loading: false });
+          wind: Math.round(Math.max(...hours.map((hour) => hour.windSpeed!)) * 10) / 10, loading: false,
+          sourceFetchedAt: forecast.metadata?.sourceFetchedAt ?? forecast.fetchedAt ?? null,
+          model: forecast.metadata?.model ?? null, scoreTime: result.scoreTime ?? null, aggregation: result.aggregation ?? null });
       } else {
         nights.set(nightKey, { nightKey, score: null, statusTone: "muted", statusLabel: "数据不足",
           windowLabel: issue ?? "关键气象字段或夜间时次不完整", windowLength: 0,
-          cloud: null, precipitation: null, wind: null, loading: false });
+          cloud: null, precipitation: null, wind: null, loading: false, sourceFetchedAt: null, model: null, scoreTime: null, aggregation: null });
       }
     });
-    const currentNight = nights.get(selectedNight) ?? { nightKey: selectedNight, score: null, statusTone: "muted", statusLabel: "数据不足", windowLabel: "暂无数据", windowLength: 0, cloud: null, precipitation: null, wind: null, loading: false };
+    const currentNight = nights.get(selectedNight) ?? { nightKey: selectedNight, score: null, statusTone: "muted", statusLabel: "数据不足", windowLabel: "暂无数据", windowLength: 0, cloud: null, precipitation: null, wind: null, loading: false, sourceFetchedAt: null, model: null, scoreTime: null, aggregation: null };
     return { candidate, nights, currentNight };
   }), [candidates, nightKeys, selectedNight, state.forecastCache, state.selectedLocation, state.forecast, state.cloudState.model]);
   const sortedCandidates = useMemo(() => [...evaluatedCandidates].sort((a, b) => {
@@ -114,6 +117,7 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
               <div className="candidate-metric-item" title="夜间最大风速"><Wind size={12} className="metric-icon" /><span>风速 {currentNight.wind != null ? `${currentNight.wind}m/s` : "—"}</span></div>
               <div className="candidate-metric-item" title={currentNight.windowLabel}><Clock size={12} className="metric-icon" /><span>窗口 {currentNight.windowLength > 0 ? `${currentNight.windowLength} 个小时采样` : "无"}</span></div>
             </div>
+            <p className="candidate-provenance" data-testid="candidate-provenance">数据身份：{currentNight.model?.toUpperCase() ?? state.cloudState.model.toUpperCase()} · 原始抓取：{currentNight.sourceFetchedAt ?? "未提供"} · 评分：{currentNight.aggregation ?? "数据不足"}{currentNight.scoreTime ? `（${currentNight.scoreTime}）` : ""}（{currentNight.score ?? "—"}）</p>
             <div className="candidate-7day-capsules">{nightKeys.map((key, dayIdx) => {
               const data = nights.get(key), score = data?.score ?? null;
               const tone = score === null ? "" : score >= 80 ? "capsule--great" : score >= 65 ? "capsule--good" : score >= 50 ? "capsule--fair" : "capsule--poor";

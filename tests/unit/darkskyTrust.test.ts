@@ -34,8 +34,9 @@ describe("dark-sky trust boundary", () => {
     const times = Array.from({ length: 10 }, (_, index) =>
       new Date(Date.parse("2026-09-07T20:00:00Z") + index * 3600000).toISOString().slice(0, 16));
     const values = (value: number) => times.map(() => value);
-    const record: FinderWeatherRecord = { status: "available", fetchedAt: new Date().toISOString(), hourly: {
+    const record: FinderWeatherRecord = { status: "available", fetchedAt: new Date().toISOString(), model: "icon", timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, hourly: {
       time: times, cloud_cover: values(10), cloud_cover_low: values(5), cloud_cover_mid: values(5), cloud_cover_high: values(5),
+      relative_humidity_2m: values(60), dew_point_2m: values(8), precipitation_probability: values(0),
       precipitation: values(0), wind_speed_10m: values(1), wind_gusts_10m: values(2), weather_code: values(0),
       visibility: values(20000), temperature_2m: values(15),
     } };
@@ -43,13 +44,12 @@ describe("dark-sky trust boundary", () => {
     const hourB4 = scoreObservingSiteAtTime(b4, record, times[0]);
     expect(hourB1.score).not.toBeNull();
     expect(hourB1.score).toBe(hourB4.score);
-    expect(hourB1.darkness).toBeNull();
-    expect(hourB4.darkness).toBeNull();
+    expect(hourB1.darkness).toBe(hourB4.darkness);
+    expect(hourB1.scoreBasis).toBe("selected-forecast-hour");
     const nightB1 = scoreObservingSite(b1, record, "2026-09-07");
     const nightB4 = scoreObservingSite(b4, record, "2026-09-07");
     expect(nightB1.score).not.toBeNull();
     expect(nightB1.score).toBe(nightB4.score);
-    expect(nightB1.darkness).toBeNull();
-    expect(nightB4.darkness).toBeNull();
+    expect(nightB1.darkness).toBe(nightB4.darkness);
   });
 });

@@ -25,7 +25,7 @@ function snapshot(): IntegritySnapshot {
 }
 const SITE: ObservingSite = { id: "test", name: "测试", province: "湖北", area: "利川", latitude: 30.182, longitude: 108.882, altitude: 1681, bortle: 2 };
 function record(): FinderWeatherRecord {
-  return { status: "available", fetchedAt: AT, hourly: { time: ["2026-09-13T21:00"], cloud_cover: [8], cloud_cover_low: [0], cloud_cover_mid: [3], cloud_cover_high: [4],
+  return { status: "available", fetchedAt: AT, model: "icon", timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, hourly: { time: ["2026-09-13T21:00"], relative_humidity_2m: [60], dew_point_2m: [8], precipitation_probability: [0], cloud_cover: [8], cloud_cover_low: [0], cloud_cover_mid: [3], cloud_cover_high: [4],
     precipitation: [0], wind_speed_10m: [1], wind_gusts_10m: [2], visibility: [20000], weather_code: [0], temperature_2m: [15] } };
 }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -36,7 +36,7 @@ describe("P0 original timestamps and stale scores", () => {
     for (const age of [MAX_FORECAST_AGE_MS, MAX_FORECAST_AGE_MS + 1, 7 * 86400000]) {
       value.fetchedAt = new Date(NOW - age).toISOString();
       value.metadata!.fetchedAt = value.fetchedAt;
-      expect(usableDiskForecast({ locations: [value] }, "icon", 1, MAX_FORECAST_AGE_MS, NOW)).toBe(age <= MAX_FORECAST_AGE_MS);
+      expect(usableDiskForecast({ locations: [value], metadata: value.metadata }, "icon", 1, MAX_FORECAST_AGE_MS, NOW)).toBe(age <= MAX_FORECAST_AGE_MS);
     }
     value.fetchedAt = "";
     expect(usableDiskForecast({ locations: [value] }, "icon", 1, MAX_FORECAST_AGE_MS, NOW)).toBe(false);
@@ -77,6 +77,28 @@ describe("P0 original timestamps and stale scores", () => {
   });
 });
 describe("P0 layer-aware scoring gate", () => {
+  it("uses the same canonical hour score for the map and detail views", () => {
+    const times = Array.from({ length: 10 }, (_, index) => {
+      const utc = Date.parse("2026-09-13T20:00:00Z") + index * 3_600_000;
+      return new Date(utc).toISOString().slice(0, 16);
+    });
+    const values = (value: number) => times.map(() => value);
+    const weather = {
+      time: times,
+      relative_humidity_2m: values(60), dew_point_2m: values(8), precipitation_probability: values(0),
+      weather_code: values(0), cloud_cover: values(8), cloud_cover_low: values(0), cloud_cover_mid: values(3), cloud_cover_high: values(4),
+      precipitation: values(0), visibility: values(20_000), wind_speed_10m: values(1), wind_gusts_10m: values(2), temperature_2m: values(15),
+    };
+    const finderRecord: FinderWeatherRecord = { status: "available", fetchedAt: AT, model: "icon", timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, hourly: weather };
+    const detail = evaluateNight({ ...forecast(), hourly: times.map((time) => hour(time)) }, { ...SITE, elevation: SITE.altitude, source: "参考点位" }, "2026-09-13");
+    const map = scoreObservingSiteAtTime(SITE, finderRecord, times[0]!, "icon");
+    const detailHour = detail?.hours.find((item) => item.time === times[0]);
+    expect(detailHour?.score).toBe(map.score);
+    expect(detailHour?.blockers).toEqual(map.blockers);
+    expect(map).toMatchObject({ scoreBasis: "selected-forecast-hour", scoreTime: times[0], aggregation: "single-hour" });
+    expect(detail).toMatchObject({ scoreBasis: "night-best-contiguous-window", aggregation: "best-contiguous-3h" });
+  });
+
   it("uses a conservative maximum, NOT addition of overlapping cloud layers", () => {
     expect(effectiveCloudForScore({ ...hour(), cloudCover: 8, cloudLow: 61, cloudMid: 40, cloudHigh: 30 })).toBe(61);
     expect(effectiveCloudForScore({ ...hour(), cloudLow: null })).toBeNull();

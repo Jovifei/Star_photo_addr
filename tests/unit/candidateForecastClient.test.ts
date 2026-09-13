@@ -3,7 +3,7 @@ const POINT = { latitude: 30.182, longitude: 108.882 };
 function response(model = "icon", stale = false) {
   const fetchedAt = new Date().toISOString();
   const metadata = { source: "Open-Meteo", model, fetchedAt, stale, units: {} };
-  return Response.json({ metadata, locations: [{ locationId: "loc-0", modelLatitude: 30.18, modelLongitude: 108.88, modelElevation: 1402, fetchedAt, metadata, hourly: [{ time: "2026-09-13T21:00" }] }] });
+  return Response.json({ metadata, locations: [{ locationId: "loc-0", modelLatitude: 30.18, modelLongitude: 108.88, modelElevation: 1402, timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, fetchedAt, metadata, hourly: [{ time: "2026-09-13T21:00" }] }] });
 }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("bounded shared candidate loader", () => {

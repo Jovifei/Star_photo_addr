@@ -87,6 +87,23 @@ export interface HourWeather {
 
 export type ForecastModel = "best_match" | "icon" | "gfs" | "aifs";
 
+export type ForecastElevationSource = "provider-dem" | "native-grid" | "unknown";
+
+/** Provenance for a provider response; run time is null when the provider does not expose it. */
+export interface ForecastProvenance {
+  requestedLatitude: number;
+  requestedLongitude: number;
+  modelLatitude: number;
+  modelLongitude: number;
+  modelDistanceKm: number;
+  modelElevation: number | null;
+  elevationSource: ForecastElevationSource;
+  sourceFetchedAt: string;
+  providerRunAt: string | null;
+  timezone?: string;
+  utcOffsetSeconds?: number;
+}
+
 export type CloudDisplayMode = "total" | "high" | "mid" | "low";
 
 export interface SatelliteFrame {
@@ -162,6 +179,16 @@ export interface RecommendationScore {
   blockers: string[];
   confidence: RecommendationConfidence;
   validHours: number;
+  /** How this value was produced; scores with different bases must not be borrowed. */
+  scoreBasis?: "selected-forecast-hour" | "night-weather-average";
+  scoreTime?: string | null;
+  aggregation?: "single-hour" | "mean-hours";
+  cloudLow?: number | null;
+  cloudMid?: number | null;
+  cloudHigh?: number | null;
+  effectiveCloudForScore?: number | null;
+  fetchedAt?: string | null;
+  modelAgreement?: "not-checked" | "checked" | "divergent";
 }
 
 export interface ObservationSnapshot {
@@ -175,6 +202,10 @@ export interface ObservationSnapshot {
   /** Optional score for the exact forecast hour selected on the map. */
   focusTime?: string;
   focusScores?: Record<string, RecommendationScore>;
+  /** Integrity contract version; legacy snapshots without it are rejected. */
+  integrityVersion?: string;
+  /** Oldest source fetch timestamp represented by this snapshot. */
+  sourceFetchedAt?: string;
 }
 
 export type CloudTimeDomain = "observation" | "forecast" | "reference";
@@ -211,6 +242,10 @@ export interface ForecastMetadata {
   fetchedAt: string;
   stale: boolean;
   units: Record<string, string>;
+  /** Application fetch timestamp retained separately from provider run time. */
+  sourceFetchedAt?: string;
+  /** Open-Meteo does not currently expose a model-run timestamp in this response. */
+  providerRunAt?: string | null;
 }
 
 /** Server-normalised forecast for a single location. */
@@ -224,6 +259,12 @@ export interface LocationForecast {
   fetchedAt: string;
   metadata?: ForecastMetadata;
   hourly: HourWeather[];
+  requestedLatitude?: number;
+  requestedLongitude?: number;
+  modelDistanceKm?: number;
+  elevationSource?: ForecastElevationSource;
+  providerRunAt?: string | null;
+  provenance?: ForecastProvenance;
 }
 
 export interface ForecastResponse {
@@ -271,6 +312,10 @@ export interface HourEvaluation extends HourWeather {
   quality: Quality;
   blockers: string[];
   components: ScoreComponents;
+  scoreBasis?: "astronomy-weather-hour";
+  scoreTime?: string;
+  effectiveCloudForScore?: number;
+  weatherRisk?: number;
 }
 
 export interface Confidence {
@@ -296,6 +341,9 @@ export interface NightEvaluation {
   blockers: string[];
   reason: string;
   scoreModelVersion: string;
+  scoreBasis?: "night-best-contiguous-window";
+  scoreTime?: string | null;
+  aggregation?: "best-contiguous-3h" | "dark-hours-fallback";
 }
 
 /** Cloud layer derived from a pressure-level profile. */
@@ -412,7 +460,11 @@ export interface CloudGridData {
   nightKeys: string[];
   /** Data fetch timestamp. */
   fetchedAt: string;
-  model?: ForecastModel;
+  /** Original source fetch time; never replaced with client receive time. */
+  sourceFetchedAt?: string | null;
+  stale?: boolean;
+  missingFields?: string[];
+  model: ForecastModel;
   rows?: number;
   cols?: number;
 }

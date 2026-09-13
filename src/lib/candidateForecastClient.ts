@@ -1,5 +1,6 @@
-import type { ForecastModel, ForecastResponse, LocationForecast } from "./types";
-import { dataAgeMs, forecastAgeMs, FORECAST_FRESH_MS } from "./forecastIntegrity";
+import type { ForecastModel, LocationForecast } from "./types";
+import { forecastAgeMs, FORECAST_FRESH_MS } from "./forecastIntegrity";
+import { requestForecastResponse } from "./forecastClient";
 
 type Coordinates = { latitude: number; longitude: number };
 const MAX_ACTIVE = 2;
@@ -47,23 +48,12 @@ export function requestCandidateForecast(location: Coordinates, model: ForecastM
   if (entries.size >= MAX_ENTRIES) return Promise.reject(new Error("候选天气请求过多，请稍后重试"));
   const entry = { promise: Promise.resolve(null as unknown as LocationForecast), expiresAt: Infinity, settled: false, refreshRevision, failed: false };
   entry.promise = schedule(async () => {
-    const params = new URLSearchParams({
-      latitude: String(Number(location.latitude.toFixed(6))),
-      longitude: String(Number(location.longitude.toFixed(6))),
-      days: String(normalizedDays(days, model)), model,
-    });
-    if (refreshRevision > 0) params.set("refresh", "1");
-    const response = await fetch(`/api/forecast?${params}`, { cache: "no-store", signal: AbortSignal.timeout(35_000) });
-    if (!response.ok) throw new Error(`候选天气不可用（HTTP ${response.status}），请稍后手动刷新`);
-    const body = await response.json() as ForecastResponse;
-    if (!Array.isArray(body?.locations) || body.locations.length !== 1) throw new Error("候选天气响应地点数量不符");
-    const forecast = body.locations[0];
-    const metadata = forecast?.metadata ?? body.metadata;
-    if (!forecast || !metadata || metadata.model !== model || !Array.isArray(forecast.hourly) || !forecast.hourly.length) throw new Error("候选天气模型或数据结构不符");
-    const fetchedAge = Math.max(forecastAgeMs(forecast), body.metadata ? dataAgeMs(body.metadata.fetchedAt) : 0);
-    const stale = metadata.stale || body.metadata?.stale === true || response.headers.get("X-Data-Stale") === "true" || fetchedAge > FORECAST_FRESH_MS;
-    const oldestTime = body.metadata && dataAgeMs(body.metadata.fetchedAt) > dataAgeMs(forecast.fetchedAt) ? body.metadata.fetchedAt : forecast.fetchedAt;
-    const normalized = { ...forecast, fetchedAt: oldestTime, metadata: { ...metadata, fetchedAt: oldestTime, stale } };
+    const result = await requestForecastResponse([location], model, normalizedDays(days, model), refreshRevision > 0);
+    const forecast = result.data.locations[0];
+    if (!forecast) throw new Error("候选天气响应地点数量不符");
+    const fetchedAge = forecastAgeMs(forecast);
+    const stale = result.stale || fetchedAge > FORECAST_FRESH_MS;
+    const normalized = { ...forecast, metadata: { ...forecast.metadata!, stale } };
     entry.failed = stale;
     entry.expiresAt = Date.now() + (stale ? FAILURE_COOLDOWN_MS : Math.min(FORECAST_FRESH_MS, Math.max(0, FORECAST_FRESH_MS - fetchedAge)));
     return normalized;

@@ -1,5 +1,6 @@
 import type L from "leaflet";
 import { maxForecastDaysForModel } from "@/lib/forecast";
+import { normalizeForecastDaysForModel, requestForecastResponse } from "@/lib/forecastClient";
 import type {
   CloudGridData,
   CloudGridSample,
@@ -57,37 +58,38 @@ export async function fetchCloudGrid(
   forceRefresh = false,
 ): Promise<CloudGridData> {
   if (!samples.length) throw new Error("云图网格没有采样点");
-  const params = new URLSearchParams({
-    latitude: samples.map((sample) => sample.latitude).join(","),
-    longitude: samples.map((sample) => sample.longitude).join(","),
-    days: String(days),
-    model,
-  });
-  if (forceRefresh) params.set("refresh", "1");
-  const response = await fetch(`/api/forecast?${params.toString()}`, {
-    signal,
-    cache: forceRefresh ? "no-store" : "default",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.error ?? `云图网格请求失败 (${response.status})`);
-  }
-  const data = await response.json();
-  const forecasts = (data.locations ?? []) as LocationForecast[];
+  void signal;
+  const result = await requestForecastResponse(samples, model, normalizeForecastDaysForModel(days, model), forceRefresh);
+  const data = result.data;
+  const forecasts = data.locations as LocationForecast[];
   if (forecasts.length !== samples.length) {
     throw new Error(
       `云图网格响应数量不匹配：采样 ${samples.length} 点，收到 ${forecasts.length} 点`,
     );
   }
-  const sortedForecasts = forecasts.map((forecast) => ({
-    ...forecast,
-    hourly: [...forecast.hourly].sort((left, right) =>
-      left.time.localeCompare(right.time),
-    ),
-  }));
+  const expectedTimes = forecasts[0]?.hourly.map((hour) => hour.time) ?? [];
+  if (!expectedTimes.length || forecasts.some((forecast, index) =>
+    forecast.metadata?.model !== model ||
+    (forecast.requestedLatitude !== undefined && Math.abs(forecast.requestedLatitude - samples[index]!.latitude) > 1e-5) ||
+    (forecast.requestedLongitude !== undefined && Math.abs(forecast.requestedLongitude - samples[index]!.longitude) > 1e-5) ||
+    forecast.hourly.length !== expectedTimes.length ||
+    forecast.hourly.some((hour, hourIndex) => hour.time !== expectedTimes[hourIndex]),
+  )) {
+    throw new Error("云图网格返回的模型或时间轴不一致");
+  }
   const latitudes = samples.map((sample) => sample.latitude);
   const longitudes = samples.map((sample) => sample.longitude);
+  const sourceTimes = [
+    data.metadata?.sourceFetchedAt,
+    data.metadata?.fetchedAt,
+    ...forecasts.flatMap((forecast) => [
+      forecast.metadata?.sourceFetchedAt,
+      forecast.metadata?.fetchedAt,
+      forecast.fetchedAt,
+    ]),
+  ].filter((value): value is string => typeof value === "string" && Number.isFinite(Date.parse(value)));
+  sourceTimes.sort((left, right) => Date.parse(left) - Date.parse(right));
+  const sourceFetchedAt = sourceTimes[0] ?? null;
   return {
     samples,
     bounds: {
@@ -96,9 +98,12 @@ export async function fetchCloudGrid(
       east: Math.max(...longitudes),
       west: Math.min(...longitudes),
     },
-    forecasts: sortedForecasts,
+    forecasts,
     nightKeys,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt: data.metadata?.fetchedAt ?? forecasts[0]?.fetchedAt ?? "",
+    sourceFetchedAt,
+    stale: result.stale,
+    ...(result.stale ? { missingFields: ["源天气数据过期或降级"] } : {}),
     model,
     rows,
     cols,

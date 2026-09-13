@@ -202,6 +202,17 @@ export default function CloudControl() {
     CLOUD_MODES.find((mode) => mode.id === cloudState.cloudDisplayMode) ??
     CLOUD_MODES[0];
   const selectedValue = values[selectedMode.id];
+  const activeForecast = forecastMatchesModel
+    ? forecast
+    : cloudGrid?.model === cloudState.model
+      ? cloudGrid.forecasts[0] ?? null
+      : null;
+  const rawFetchedAt = activeForecast
+    ? activeForecast.metadata?.sourceFetchedAt ?? activeForecast.fetchedAt ?? null
+    : cloudGrid?.sourceFetchedAt ?? null;
+  const activeStale = activeForecast
+    ? Boolean(activeForecast.metadata?.stale)
+    : Boolean(cloudGrid?.stale);
   const sources = health?.sources;
   const healthSummary = healthError
     ? `最近复检失败：${healthError}`
@@ -369,6 +380,9 @@ export default function CloudControl() {
               {typeof time === "string"
                 ? time.replace("T", " ")
                 : "当前夜间时次"}
+            </small>
+            <small className="cloud-data-quality-note" data-testid="cloud-data-quality">
+              数据质量：{activeStale ? "过期/降级，禁止推荐" : activeForecast ? "可用" : "数据不足"} · 原始抓取：{rawFetchedAt ?? "未提供"} · 模型运行：供应商未提供 · 多模型核验：未检查
             </small>
             <div
               className="cloud-legend"

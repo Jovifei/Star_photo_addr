@@ -248,18 +248,19 @@ export default function CloudLayer() {
     return null;
   }
 
-  const bounds = cloudGrid
+  const activeGrid = cloudGrid?.model === cloudState.model ? cloudGrid : null;
+  const bounds = activeGrid
     ? ([
-        [cloudGrid.bounds.south, cloudGrid.bounds.west],
-        [cloudGrid.bounds.north, cloudGrid.bounds.east],
+        [activeGrid.bounds.south, activeGrid.bounds.west],
+        [activeGrid.bounds.north, activeGrid.bounds.east],
       ] as [[number, number], [number, number]])
     : null;
 
   return (
     <>
-      {cloudGrid && (
+      {activeGrid && (
         <CloudCanvasOverlay
-          gridData={cloudGrid}
+          gridData={activeGrid}
           timeIndex={cloudState.timeIndex}
           activeForecastTime={cloudState.activeForecastTime}
           displayMode={cloudState.cloudDisplayMode}
@@ -282,7 +283,7 @@ export default function CloudLayer() {
       {error && (
         <div className="cloud-overlay-error" role="status">
           <span>
-            {cloudGrid
+            {activeGrid
               ? `云图刷新失败，已保留上一次结果：${error}`
               : `云图加载失败：${error}`}
           </span>

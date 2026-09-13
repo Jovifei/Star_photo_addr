@@ -18,9 +18,13 @@ export interface FinderLocation {
 
 /** Adapter target shared by the map and the decision workspace. */
 export type { ObservingSite } from "./types";
+import type { ForecastModel, ForecastProvenance } from "./types";
 
 export interface FinderHourlyData {
   time: string[];
+  relative_humidity_2m: Array<number | null>;
+  dew_point_2m: Array<number | null>;
+  precipitation_probability: Array<number | null>;
   weather_code: Array<number | null>;
   cloud_cover: Array<number | null>;
   cloud_cover_low: Array<number | null>;
@@ -37,12 +41,19 @@ export interface FinderWeatherRecord {
   hourly: FinderHourlyData | null;
   status: FinderWeatherStatus;
   fetchedAt?: string;
+  model?: ForecastModel;
+  timezone?: string;
+  utcOffsetSeconds?: number;
+  provenance?: ForecastProvenance;
   error?: string;
 }
 
 export interface FinderWeatherResponse {
   date: string;
   fetchedAt: string;
+  sourceFetchedAt?: string;
+  model?: ForecastModel;
+  providerRunAt?: string | null;
   source: string;
   stale: boolean;
   data: Record<string, FinderWeatherRecord>;

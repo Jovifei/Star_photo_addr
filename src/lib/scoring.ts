@@ -1,36 +1,18 @@
 // Night astronomy score. This is a best-window forecast, NOT an arrival-time observation.
-import { astronomyAt, moonPhaseName } from "./astronomy";
-import { formatHour, isInNight, parseProviderTime } from "./nighttime";
-import { effectiveCloudForScore, forecastTrustIssue, missingNightInputs } from "./forecastIntegrity";
+import { moonPhaseName } from "./astronomy";
+import { formatHour, isInNight } from "./nighttime";
+import { forecastTrustIssue, missingNightInputs } from "./forecastIntegrity";
+import { scoreHour } from "./hourScore";
 import type { HourEvaluation, HourWeather, Location, LocationForecast, NightEvaluation, NightStatus } from "./types";
 
 const clamp = (value: number, min = 0, max = 100): number => Math.min(max, Math.max(min, value));
-const scale = (value: number, low: number, high: number): number => clamp(((value - low) / (high - low)) * 100);
-export const SCORE_MODEL_VERSION = "star-v1.1-integrity";
+export const SCORE_MODEL_VERSION = "star-v1.2-integrity";
 
 /** Called only after missingNightInputs; no clear-weather defaults for missing core fields. */
 function evaluateHour(hour: HourWeather, location: Location, utcOffsetSeconds: number): HourEvaluation {
-  const astro = astronomyAt(parseProviderTime(hour.time, utcOffsetSeconds), location);
-  const effectiveCloud = effectiveCloudForScore(hour)!;
-  const clearSky = 100 - effectiveCloud;
-  // Some models lack precipitation probability. Rain AMOUNT remains mandatory; this does not fill the displayed probability.
-  const precipitation = clamp(100 - Math.max(hour.precipitationProbability ?? 0, Math.min(100, hour.precipitation! * 160)));
-  const dewSpread = hour.temperature! - hour.dewPoint!;
-  const transparency = (scale(hour.visibility!, 3000, 30000) + 100 - scale(hour.humidity!, 45, 100) + scale(dewSpread, 1, 10)) / 3;
-  const windScore = clamp(100 - scale(hour.windSpeed!, 3, 12) * 0.65 - scale(hour.windGust!, 6, 18) * 0.35);
-  const darkness = astro.sunAltitude <= -18 ? 100 : astro.sunAltitude >= -12 ? 0 : ((-12 - astro.sunAltitude) / 6) * 100;
-  const moonAltitudeFactor = clamp((astro.moonAltitude + 5) / 50, 0, 1);
-  const moonlight = clamp(100 - astro.moonIllumination * moonAltitudeFactor * 100);
-  const score = Math.round(clearSky * 0.35 + precipitation * 0.2 + transparency * 0.15 + windScore * 0.1 + darkness * 0.1 + moonlight * 0.1);
-  const blockers: string[] = [];
-  if (hour.weatherCode! >= 95) blockers.push("雷暴风险");
-  if (hour.precipitation! >= 0.2 || (hour.precipitationProbability ?? 0) >= 70) blockers.push("降水风险");
-  if (hour.visibility! < 3000) blockers.push("能见度过低");
-  if (hour.windGust! >= 15) blockers.push("阵风过大");
-  if (effectiveCloud >= 50) blockers.push("总云或分层云覆盖偏高");
-  const quality: HourEvaluation["quality"] = blockers.length ? "blocked" : score >= 76 ? "excellent" : score >= 62 ? "candidate" : "poor";
-  return { ...hour, ...astro, score, quality, blockers,
-    components: { clearSky, precipitation, transparency, wind: windScore, darkness, moonlight } };
+  const result = scoreHour(hour, location, utcOffsetSeconds);
+  if (!result) throw new Error("关键天气字段缺失，不能计算小时评分");
+  return result;
 }
 function timestamp(time: string): number { return Date.parse(`${time}Z`); }
 function longestWindow(hours: HourEvaluation[], threshold = 62): HourEvaluation[] {
@@ -77,7 +59,15 @@ export function evaluateNight(forecast: LocationForecast, location: Location, ni
     ? { level: "趋势", kind: "trend" as const, reason: "8 天后趋势；单模型，未核验模型分歧" }
     : { level: "中", kind: "medium" as const, reason: "字段完整不等于预报准确；单模型，未核验模型分歧" };
   const blockers = [...new Set(hours.flatMap((hour) => hour.blockers))];
-  const status: NightStatus = leadIndex >= 7 ? "trend" : top.length === 3 && window.length >= 3 && score >= 72 ? "go" : score >= 56 ? "watch" : "no";
+  const status: NightStatus = leadIndex >= 7
+    ? "trend"
+    : blockers.length
+      ? "no"
+      : top.length === 3 && window.length >= 3 && score >= 72
+        ? "go"
+        : score >= 56
+          ? "watch"
+          : "no";
   const moon = hours[Math.floor(hours.length / 2)]!;
   const cloudSeaPotential = Math.round(clamp(hours.reduce((sum, hour) => {
     const lowCloudBand = 100 - Math.abs(hour.cloudLow! - 65) * 1.35;
@@ -93,6 +83,9 @@ export function evaluateNight(forecast: LocationForecast, location: Location, ni
     moonIllumination: moon.moonIllumination, moonPhase: moonPhaseName(moon.moonIllumination), blockers,
     reason: top.length ? "整晚最佳连续 3 小时预报分，不代表当前时次或现场保证；出发前复核云图与预警" : "无完整连续 3 小时窗口；分数为暗夜时次参考，不构成出行推荐",
     scoreModelVersion: SCORE_MODEL_VERSION,
+    scoreBasis: "night-best-contiguous-window",
+    scoreTime: top[0]?.time ?? null,
+    aggregation: top.length === 3 ? "best-contiguous-3h" : "dark-hours-fallback",
   };
 }
 export function statusMeta(status: NightStatus) {

@@ -21,7 +21,7 @@ const requestTimeoutMs = boundedNumber(
   5 * 60_000,
 );
 const daysValue = Number(process.env.SNAPSHOT_DAYS);
-const days = [1, 3, 5, 7].includes(daysValue) ? daysValue : 7;
+const days = [1, 3, 5, 7].includes(daysValue) ? daysValue : 1;
 const supportedModels = new Set(["best_match", "icon", "gfs", "aifs"]);
 const requestedModel = process.env.SNAPSHOT_MODEL || "icon";
 const model = supportedModels.has(requestedModel) ? requestedModel : "icon";
@@ -44,12 +44,26 @@ function shanghaiDate() {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function shanghaiForecastTime() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:00`;
+}
+
 async function refresh() {
   const date = shanghaiDate();
   const params = new URLSearchParams({
     date,
     days: String(days),
     model,
+    time: shanghaiForecastTime(),
     refresh: "1",
   });
   activeController = new AbortController();
@@ -74,6 +88,7 @@ async function refresh() {
       throw new Error(payload?.error || `HTTP ${response.status}`);
     }
     lastErrorWasRateLimit = false;
+    console.log(`[snapshot-worker] observing ${date} ${model} ${params.get("time")} fresh`);
   } catch (error) {
     const errText = error instanceof Error ? error.message : String(error);
     lastErrorWasRateLimit = /429|limit exceeded/i.test(errText);

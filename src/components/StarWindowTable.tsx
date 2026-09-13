@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
-import { useStore } from "@/lib/store";
+import { cachedForecast, useStore } from "@/lib/store";
 import { useCandidateForecasts } from "@/hooks/useCandidateForecasts";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
 import { formatNightLabel } from "@/lib/nighttime";
@@ -32,7 +32,7 @@ export default function StarWindowTable() {
     const matrix = new Map<string, Map<string, Cell>>();
     for (const location of tableLocations) {
       const row = new Map<string, Cell>();
-      const available = location.isCandidate ? forecastCache.get(location.id) : state.forecast;
+      const available = location.isCandidate ? cachedForecast(forecastCache, location.id, state.cloudState.model) : state.forecast;
       const forecast = available?.metadata?.model === state.cloudState.model ? available : null;
       nightKeys.forEach((night, leadIndex) => {
         const result = forecast ? evaluateNight(forecast, location, night, leadIndex) : null;

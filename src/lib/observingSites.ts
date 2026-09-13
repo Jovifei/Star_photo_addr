@@ -2,9 +2,10 @@ import { FINDER_LOCATIONS } from "@/data/observingSites/catalog";
 import type { FinderLocation, FinderMode, FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
 import type { ForecastModel, HourWeather, ObservationSnapshot, ObservingSite, RecommendationBand, RecommendationScore } from "@/lib/types";
 import {
-  dataAgeMs, effectiveCloudForScore, MAX_FORECAST_AGE_MS, missingWeatherInputs,
+  dataAgeMs, MAX_FORECAST_AGE_MS,
   OBSERVATION_INTEGRITY_VERSION, sanitizeObservationSnapshot, observationSnapshotIssue, withholdRecommendation, type IntegritySnapshot,
 } from "./forecastIntegrity";
+import { scoreHour } from "./hourScore";
 
 export const OBSERVING_SITE_COUNT = FINDER_LOCATIONS.length;
 export const DEFAULT_RECOMMENDATION_THRESHOLD = 70;
@@ -22,7 +23,6 @@ export function observingSiteToLocation(site: ObservingSite) {
     elevation: site.altitude, source: "参考点位" as const, bortle: site.bortle,
     province: site.province, area: site.area, description: site.description };
 }
-function clamp(value: number, min = 0, max = 100): number { return Math.min(max, Math.max(min, value)); }
 function numberAt(values: Array<number | null> | undefined, index: number): number | null {
   const value = values?.[index];
   return typeof value === "number" && Number.isFinite(value) ? value : null;
@@ -46,25 +46,26 @@ function bandFor(score: number, blocker: boolean): RecommendationBand {
   if (score >= 55) return "watch";
   return "not-recommended";
 }
-const CLOUD_SCORE_WEIGHT = 0.55;
-const WEATHER_RISK_WEIGHT = 0.15;
-const VERIFIED_SCORE_WEIGHT = CLOUD_SCORE_WEIGHT + WEATHER_RISK_WEIGHT;
-function verifiedWeatherScore(cloudScore: number, weatherRisk: number): number {
-  return Math.round(clamp((cloudScore * CLOUD_SCORE_WEIGHT + weatherRisk * WEATHER_RISK_WEIGHT) / VERIFIED_SCORE_WEIGHT));
-}
-function unknownHourScore(site: ObservingSite, blockers: string[]): RecommendationScore {
+function unknownHourScore(site: ObservingSite, blockers: string[], scoreTime: string | null = null): RecommendationScore {
   void site.id;
   return { score: null, band: "unknown", cloud: null, darkness: null, weatherRisk: null,
-    bestWindow: null, blockers, confidence: "unknown", validHours: 0 };
+    bestWindow: null, blockers, confidence: "unknown", validHours: 0,
+    scoreBasis: "selected-forecast-hour", scoreTime, aggregation: "single-hour" };
 }
-function recordIssue(record: FinderWeatherRecord | undefined): string | null {
+function unknownNightScore(site: ObservingSite, blockers: string[]): RecommendationScore {
+  return { ...unknownHourScore(site, blockers), scoreBasis: "night-weather-average", scoreTime: null, aggregation: "mean-hours" };
+}
+function recordIssue(record: FinderWeatherRecord | undefined, expectedModel?: ForecastModel): string | null {
   if (!record || record.status !== "available") return "天气过期、缺失或上游失败，不发布推荐分";
+  if (expectedModel && record.model !== expectedModel) return "天气数据模型缺失或与当前选择不一致，不发布推荐分";
   if (dataAgeMs(record.fetchedAt) > MAX_FORECAST_AGE_MS) return "天气抓取时间缺失、异常或超过 6 小时";
+  if (!Number.isFinite(record.utcOffsetSeconds ?? record.provenance?.utcOffsetSeconds)) return "天气数据缺少时区偏移，不发布推荐分";
   return null;
 }
 function weatherHour(record: FinderWeatherRecord, index: number): HourWeather {
   const hourly = record.hourly!;
-  return { time: hourly.time[index]!, cloudCover: numberAt(hourly.cloud_cover, index),
+  return { time: hourly.time[index]!, temperature: numberAt(hourly.temperature_2m, index), humidity: numberAt(hourly.relative_humidity_2m, index),
+    dewPoint: numberAt(hourly.dew_point_2m, index), precipitationProbability: numberAt(hourly.precipitation_probability, index), cloudCover: numberAt(hourly.cloud_cover, index),
     cloudLow: numberAt(hourly.cloud_cover_low, index), cloudMid: numberAt(hourly.cloud_cover_mid, index),
     cloudHigh: numberAt(hourly.cloud_cover_high, index), precipitation: numberAt(hourly.precipitation, index),
     windSpeed: numberAt(hourly.wind_speed_10m, index), windGust: numberAt(hourly.wind_gusts_10m, index),
@@ -92,45 +93,55 @@ export function findBestContiguousWindow(rows: ClearWindowRow[], minimumHours = 
 }
 
 /** Exact selected forecast hour, not a night-best score or an observation. */
-export function scoreObservingSiteAtTime(site: ObservingSite, record: FinderWeatherRecord | undefined, time: string): RecommendationScore {
-  const issue = recordIssue(record);
+export function scoreObservingSiteAtTime(
+  site: ObservingSite,
+  record: FinderWeatherRecord | undefined,
+  time: string,
+  expectedModel?: ForecastModel,
+): RecommendationScore {
+  const issue = recordIssue(record, expectedModel);
   if (issue) return unknownHourScore(site, [issue]);
   const hourly = record?.hourly;
   const index = hourly?.time?.indexOf(time) ?? -1;
   if (!hourly || index < 0 || hourly.time.lastIndexOf(time) !== index) return unknownHourScore(site, ["此时暂无唯一对应的天气时次"]);
   const hour = weatherHour(record!, index);
-  const missing = missingWeatherInputs(hour);
-  if (missing.length) return unknownHourScore(site, [`此时关键天气数据缺失或无效：${missing.join("、")}`]);
-  // Do not sum overlapping clouds or relabel this conservative input as provider total cloud.
-  const effectiveCloud = effectiveCloudForScore(hour)!;
-  const precipitation = hour.precipitation!;
-  const gust = hour.windGust!;
-  const weatherRisk = clamp(100 - (precipitation >= 0.5 ? 75 : 0) - Math.max(0, hour.windSpeed! - 4) * 3 - Math.max(0, gust - 8) * 2);
-  const blockers = [
-    ...(hour.weatherCode! >= 95 ? ["雷暴风险"] : []),
-    ...(precipitation >= 0.2 ? ["降水风险"] : []),
-    ...(gust >= 15 ? ["阵风达到 15 m/s"] : []),
-    ...(hour.visibility! < 3000 ? ["能见度过低"] : []),
-    ...(effectiveCloud >= 50 ? ["总云或分层云覆盖偏高"] : []),
-  ];
-  const score = verifiedWeatherScore(100 - effectiveCloud, weatherRisk);
-  return Object.assign({ score, band: bandFor(score, blockers.length > 0), cloud: hour.cloudCover!, darkness: null,
-    weatherRisk: Math.round(weatherRisk), bestWindow: null, blockers, confidence: "medium" as const, validHours: 1 }, {
-    cloudLow: hour.cloudLow, cloudMid: hour.cloudMid, cloudHigh: hour.cloudHigh,
-    effectiveCloudForScore: effectiveCloud, scoreTime: time, scoreBasis: "selected-forecast-hour",
-    modelAgreement: "not-checked", fetchedAt: record!.fetchedAt,
-  });
+  const evaluation = scoreHour(
+    hour,
+    observingSiteToLocation(site),
+    record!.utcOffsetSeconds ?? record!.provenance?.utcOffsetSeconds ?? 0,
+  );
+  if (!evaluation) return unknownHourScore(site, ["此时关键天气数据缺失或无效"], time);
+  return {
+    score: evaluation.score,
+    band: bandFor(evaluation.score, evaluation.blockers.length > 0),
+    cloud: evaluation.cloudCover ?? null,
+    darkness: Math.round(evaluation.components.darkness),
+    weatherRisk: evaluation.weatherRisk ?? null,
+    bestWindow: null,
+    blockers: evaluation.blockers,
+    confidence: "medium",
+    validHours: 1,
+    cloudLow: evaluation.cloudLow ?? null,
+    cloudMid: evaluation.cloudMid ?? null,
+    cloudHigh: evaluation.cloudHigh ?? null,
+    effectiveCloudForScore: evaluation.effectiveCloudForScore ?? null,
+    scoreTime: time,
+    scoreBasis: "selected-forecast-hour",
+    aggregation: "single-hour",
+    modelAgreement: "not-checked",
+    fetchedAt: record!.fetchedAt,
+  };
 }
 
 /** Night summary remains separate from the exact-hour view; missing hours cannot inflate it. */
-export function scoreObservingSite(site: ObservingSite, record: FinderWeatherRecord | undefined, date: string, mode: FinderMode = "photo"): RecommendationScore {
-  const issue = recordIssue(record);
-  if (issue) return unknownHourScore(site, [issue]);
+export function scoreObservingSite(site: ObservingSite, record: FinderWeatherRecord | undefined, date: string, mode: FinderMode = "photo", expectedModel?: ForecastModel): RecommendationScore {
+  const issue = recordIssue(record, expectedModel);
+  if (issue) return unknownNightScore(site, [issue]);
   const times = record?.hourly?.time.filter((time) => isNightHour(time, date)) ?? [];
-  if (times.length < 7 || new Set(times).size !== times.length) return unknownHourScore(site, ["夜间有效天气时次不足或重复"]);
-  const rows = times.map((time) => ({ time, result: scoreObservingSiteAtTime(site, record, time) }));
+  if (times.length < 7 || new Set(times).size !== times.length) return unknownNightScore(site, ["夜间有效天气时次不足或重复"]);
+  const rows = times.map((time) => ({ time, result: scoreObservingSiteAtTime(site, record, time, expectedModel) }));
   // Critical input gaps are not silently filled with sunny defaults or skipped as bad weather.
-  if (rows.some(({ result }) => result.score === null)) return unknownHourScore(site, ["夜间关键天气字段不完整，不发布推荐分"]);
+  if (rows.some(({ result }) => result.score === null)) return unknownNightScore(site, ["夜间关键天气字段不完整，不发布推荐分"]);
   const average = (select: (score: RecommendationScore) => number) => rows.reduce((sum, row) => sum + select(row.result), 0) / rows.length;
   const blockers = [...new Set(rows.flatMap(({ result }) => result.blockers))];
   const score = Math.round(average((result) => result.score!));
@@ -138,12 +149,12 @@ export function scoreObservingSite(site: ObservingSite, record: FinderWeatherRec
     .map(({ time, result }) => ({ time, cloud: (result as RecommendationScore & { effectiveCloudForScore: number }).effectiveCloudForScore }));
   return Object.assign({ score, band: bandFor(score, blockers.length > 0), cloud: Math.round(average((result) => result.cloud!)), darkness: null,
     weatherRisk: Math.round(average((result) => result.weatherRisk!)), bestWindow: formatWindow(findBestContiguousWindow(clearRows, 3)), blockers,
-    confidence: "medium" as const, validHours: rows.length }, { scoreBasis: "night-weather-average", modelAgreement: "not-checked" });
+    confidence: "medium" as const, validHours: rows.length }, { scoreBasis: "night-weather-average" as const, scoreTime: null, aggregation: "mean-hours" as const, modelAgreement: "not-checked" as const, fetchedAt: record?.fetchedAt ?? null });
 }
 
 export function buildObservationSnapshot(date: string, days: 1 | 3 | 5 | 7, model: ForecastModel, weatherByDate: Record<string, Record<string, FinderWeatherRecord>>, focusTime?: string): ObservationSnapshot {
   const dates = Array.from({ length: days }, (_, index) => addDays(date, index));
-  const sites = Object.fromEntries(OBSERVING_SITES.map((site) => [site.id, dates.map((night) => scoreObservingSite(site, weatherByDate[night]?.[site.id], night))]));
+  const sites = Object.fromEntries(OBSERVING_SITES.map((site) => [site.id, dates.map((night) => scoreObservingSite(site, weatherByDate[night]?.[site.id], night, "photo", model))]));
   const records = dates.flatMap((night) => OBSERVING_SITES.map((site) => weatherByDate[night]?.[site.id]));
   const validTimes = records.map((record) => record?.fetchedAt).filter((time): time is string => typeof time === "string" && Number.isFinite(dataAgeMs(time)));
   validTimes.sort((a, b) => Date.parse(a) - Date.parse(b));
@@ -152,7 +163,7 @@ export function buildObservationSnapshot(date: string, days: 1 | 3 | 5 | 7, mode
     integrityVersion: OBSERVATION_INTEGRITY_VERSION,
     source: "Open-Meteo Forecast API; single-model weather conditions, not on-site assurance; catalog only, excluded from live score",
     stale: records.some((record) => Boolean(recordIssue(record))), sites,
-    ...(focusTime ? { focusTime, focusScores: Object.fromEntries(OBSERVING_SITES.map((site) => [site.id, scoreObservingSiteAtTime(site, weatherByDate[date]?.[site.id], focusTime)])) } : {}),
+    ...(focusTime ? { focusTime, focusScores: Object.fromEntries(OBSERVING_SITES.map((site) => [site.id, scoreObservingSiteAtTime(site, weatherByDate[date]?.[site.id], focusTime, model)])) } : {}),
   };
   return sanitizeObservationSnapshot(snapshot);
 }

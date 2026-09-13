@@ -104,6 +104,11 @@ export default function HourlyForecastMatrix({
         return typeof value === "number" && Number.isFinite(value);
       }),
   );
+  const missingFields = ROWS.filter((row) => row.key !== "weather" && row.key !== "moon" &&
+    columns.every(({ hour }) => {
+      const value = hour[row.key as keyof HourWeather];
+      return typeof value !== "number" || !Number.isFinite(value);
+    })).map((row) => row.label);
 
   const selectByIndex = (index: number) => {
     const next = times[(index + times.length) % times.length];
@@ -119,8 +124,10 @@ export default function HourlyForecastMatrix({
         </div>
         {loading
           ? <span className="hourly-matrix-status" role="status">数据加载中…</span>
-          : !hasGroundParameters
-            ? <span className="hourly-matrix-status" role="status">地面参数暂未返回，缺失值显示为“—”</span>
+          : missingFields.length
+            ? <span className="hourly-matrix-status" role="status">缺失字段：{missingFields.join("、")}；显示为“—”</span>
+            : !hasGroundParameters
+              ? <span className="hourly-matrix-status" role="status">地面参数暂未返回，缺失值显示为“—”</span>
             : null}
       </div>
       <div className="hourly-matrix-scroll" tabIndex={0} role="region" aria-label="逐小时参数，可上下及左右滚动">
