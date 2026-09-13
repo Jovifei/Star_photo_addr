@@ -669,3 +669,15 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - 浏览器门禁：完整 Chromium `118 passed / 36 designed skips / 0 failed`；Firefox/WebKit `4 passed / 0 failed`；P0 stale94、低云61、候选并发/模型切换/429 冷却和云图强刷回归均通过。
 - GitHub CI：PR #29 的 `quality`、`live-data-smoke`、`container-smoke`、`e2e`、`cross-browser-smoke` 全部成功；版本提交后的最终 CI 仍需重新执行。
 - 准确率校准、生产部署和最终 main SHA 仍保持阻断；版本记录已先写明未校准边界，不把代码绿灯写成现场预报准确。
+
+# 2026-09-13 Worker stale 语义纠正
+
+- [x] 复现生产 HTTP 200 stale 快照被 worker 误记为 fresh、且空 `sourceFetchedAt` 的问题。
+- [x] 让 worker 核验 stale/integrity/sourceFetchedAt，stale 时跳过专题预热并退避；快照缺少源时间时省略字段。
+- [x] 增加 worker stale 合同测试并完成 Node 语法、P0 定向测试；版本记录升级为 v1.0.16。
+- [ ] 重新通过最终 CI、合并本 hotfix、按回滚保护部署并完成公网天气配额恢复后的验收。
+
+## Review
+
+- 生产复现：`v1.0.15 / 0e25bb1961bf` 的 worker 日志为 `fresh`，对应快照为 `stale: true`、`sourceFetchedAt` 缺失；天气探针 HTTP 429。
+- 当前部署仍保留 `v1.0.15 / 0e25bb1961bf` 回滚镜像，active snapshot volume 未删除；本 hotfix 尚未合并或部署。

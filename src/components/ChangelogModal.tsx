@@ -13,8 +13,31 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-09-13",
-    tag: "观星数据完整性 P0 修复",
+    tag: "Worker stale 语义纠正",
     current: true,
+    highlights: [
+      {
+        icon: ShieldCheck,
+        title: "HTTP 200 也会核验 stale",
+        desc: "worker 同时检查快照 stale、完整性版本和原始抓取时间；过期或身份不完整的响应明确记录为数据过期，不再误报 fresh。",
+      },
+      {
+        icon: CloudSun,
+        title: "限流后停止专题预热",
+        desc: "观测快照不可用时跳过火烧云预热并延长退避，避免 Open-Meteo 429 后继续制造请求压力。",
+      },
+      {
+        icon: Layers,
+        title: "缺少源时间直接不足",
+        desc: "没有有效 sourceFetchedAt 时不写空字符串，快照保持 fail-closed，页面显示数据不足而不是伪造更新时间。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.15",
+    date: "2026-09-13",
+    tag: "观星数据完整性 P0 修复",
+    current: false,
     highlights: [
       {
         icon: ShieldCheck,

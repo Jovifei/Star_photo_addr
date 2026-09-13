@@ -159,7 +159,8 @@ export function buildObservationSnapshot(date: string, days: 1 | 3 | 5 | 7, mode
   const validTimes = records.map((record) => record?.fetchedAt).filter((time): time is string => typeof time === "string" && Number.isFinite(dataAgeMs(time)));
   validTimes.sort((a, b) => Date.parse(a) - Date.parse(b));
   const snapshot: IntegritySnapshot = {
-    date, days, model, generatedAt: new Date().toISOString(), sourceFetchedAt: validTimes[0] ?? "",
+    date, days, model, generatedAt: new Date().toISOString(),
+    ...(validTimes[0] ? { sourceFetchedAt: validTimes[0] } : {}),
     integrityVersion: OBSERVATION_INTEGRITY_VERSION,
     source: "Open-Meteo Forecast API; single-model weather conditions, not on-site assurance; catalog only, excluded from live score",
     stale: records.some((record) => Boolean(recordIssue(record))), sites,

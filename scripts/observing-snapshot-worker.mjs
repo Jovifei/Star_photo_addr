@@ -1,3 +1,5 @@
+import { snapshotHealth } from "./observing-snapshot-worker-utils.mjs";
+
 const baseUrl = (
   process.env.SNAPSHOT_BASE_URL || "http://127.0.0.1:3000"
 ).replace(/\/$/, "");
@@ -30,6 +32,7 @@ let stopped = false;
 let timer = null;
 let activeController = null;
 let lastErrorWasRateLimit = false;
+let lastRefreshWasStale = false;
 
 function shanghaiDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -58,6 +61,7 @@ function shanghaiForecastTime() {
 }
 
 async function refresh() {
+  lastRefreshWasStale = false;
   const date = shanghaiDate();
   const params = new URLSearchParams({
     date,
@@ -87,8 +91,10 @@ async function refresh() {
     if (!response.ok) {
       throw new Error(payload?.error || `HTTP ${response.status}`);
     }
+    const health = snapshotHealth(payload);
+    lastRefreshWasStale = health.stale;
     lastErrorWasRateLimit = false;
-    console.log(`[snapshot-worker] observing ${date} ${model} ${params.get("time")} fresh`);
+    console.log(`[snapshot-worker] observing ${date} ${model} ${params.get("time")} ${health.logLabel}`);
   } catch (error) {
     const errText = error instanceof Error ? error.message : String(error);
     lastErrorWasRateLimit = /429|limit exceeded/i.test(errText);
@@ -168,11 +174,11 @@ async function prewarmFireglow() {
 async function runLoop() {
   if (stopped) return;
   await refresh();
-  if (!stopped && !lastErrorWasRateLimit) {
+  if (!stopped && !lastErrorWasRateLimit && !lastRefreshWasStale) {
     await prewarmFireglow();
   }
   if (!stopped) {
-    const nextWait = lastErrorWasRateLimit
+    const nextWait = lastErrorWasRateLimit || lastRefreshWasStale
       ? Math.max(intervalMs, 2 * 60 * 60 * 1000)
       : intervalMs;
     timer = setTimeout(runLoop, nextWait);
