@@ -635,3 +635,18 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - Boundary: 新增点位是公开资料交叉核对的候选参考，坐标/海拔可能为 POI 或景区范围近似；夜间开放、保护区、票务、道路、海况、高反和防火仍需人工确认。
 - Evidence update: 省级覆盖断言补齐后最终 `npm run check` 为 53 个测试文件 / 308 项通过；`main@39338495db0d` 已 push、生产构建 revision 为 `39338495db0d`，ECS app/worker healthy，公网 `/healthz`、`/api/data-status`、`check:data-sources` 和浏览器页面验收通过。
 - Remaining: 无本轮代码/部署剩余项；真机、性能、授权暗夜栅格和现场科学校准仍按测试台账保持 MANUAL/BLOCKED/DEFERRED。
+# 2026-09-13 生产观星指数与全数据源审计
+
+- [x] 复现“网页 94 分、现场低/中层云较多”的评分输入、时间和地点上下文。
+- [x] 审查 Open-Meteo 各模型/总云/低云/中云/高云/降水/能见度字段映射与评分门禁。
+- [x] 审查 forecast、observing snapshot、worker、客户端缓存、强刷冷却和 stale 降级的时效性。
+- [x] 审查 NASA GIBS/Himawari、VIIRS、NOAA Kp、AQI、pressure-level、geocode 与 `/api/data-status` 来源边界。
+- [x] 核对 ECS 容器、构建 revision、日志、快照卷和公网 API 是否与当前 `main` 一致。
+- [x] 汇总证据、风险分级和修复计划；本轮不在未确认根因前修改评分算法或部署代码。
+
+## Review
+
+- Evidence: 生产复现 `2026-09-12T21:00` 的 `finder-088-location / 利川星斗山` 返回 `stale=true + score=94 + cloud=8`；同地点同时间多模型总云量 8–100；ECS 日志出现 Open-Meteo 429；候选页单次访问约 164 个 forecast 请求。
+- Evidence: 生产 v1.0.14/build `39338495db0d`，app/worker healthy、worker 重启 0；数据源 API 连通和字段探测通过，但这不等于单点预报准确。
+- Findings: P0 为请求风暴、超龄磁盘 forecast fallback、stale 高分仍显示、地图评分忽略分层云；P1 为双评分链、乐观缺失值、worker/首页模型键不一致、provider 时间/网格元数据不足、健康探测覆盖不足。
+- Next: 等 Jovi 确认后另开 `codex/` 分支实施 P0 失败测试与最小修复；修复前不调整生产评分或删除快照。
