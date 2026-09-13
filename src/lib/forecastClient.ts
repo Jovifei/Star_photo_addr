@@ -11,29 +11,32 @@ const MAX_ENTRIES = 128;
 const FAILURE_COOLDOWN_MS = 60_000;
 const MAX_ACTIVE = 4;
 const MAX_PENDING = 128;
-const inFlight = new Map<string, Promise<ForecastClientResult>>();
+const inFlight = new Map<string, { promise: Promise<ForecastClientResult>; forceRefresh: boolean }>();
 const failedUntil = new Map<string, number>();
-const pending: Array<() => void> = [];
+const pending: Array<{ start: () => void; priority: number }> = [];
 let active = 0;
 let globalCooldownUntil = 0;
 
-function schedule<T>(operation: () => Promise<T>, allowDuringCooldown = false): Promise<T> {
+function schedule<T>(operation: () => Promise<T>, allowDuringCooldown = false, priority = 0): Promise<T> {
   if (pending.length >= MAX_PENDING) return Promise.reject(new Error("天气请求队列已满，请稍后重试"));
   return new Promise<T>((resolve, reject) => {
     const start = () => {
       if (!allowDuringCooldown && globalCooldownUntil > Date.now()) {
         reject(new Error(`天气上游限流冷却中，请 ${Math.ceil((globalCooldownUntil - Date.now()) / 1000)} 秒后重试`));
-        pending.shift()?.();
+        pending.shift()?.start();
         return;
       }
       active += 1;
       void operation().then(resolve, reject).finally(() => {
         active -= 1;
-        pending.shift()?.();
+        pending.shift()?.start();
       });
     };
     if (active < MAX_ACTIVE) start();
-    else pending.push(start);
+    else {
+      pending.push({ start, priority });
+      pending.sort((left, right) => right.priority - left.priority);
+    }
   });
 }
 
@@ -166,7 +169,15 @@ export function requestForecastResponse(
   const normalizedDays = normalizeForecastDaysForModel(days, model);
   const key = forecastRequestKey(locations, model, normalizedDays);
   const existing = inFlight.get(key);
-  if (existing) return existing;
+  if (existing) {
+    if (forceRefresh && !existing.forceRefresh) {
+      return existing.promise.then(
+        () => requestForecastResponse(locations, model, normalizedDays, true),
+        () => requestForecastResponse(locations, model, normalizedDays, true),
+      );
+    }
+    return existing.promise;
+  }
   const now = Date.now();
   trimFailures(now);
   if (!forceRefresh && globalCooldownUntil > now) {
@@ -186,7 +197,7 @@ export function requestForecastResponse(
     cache: "no-store",
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(35_000),
-  }), forceRefresh)
+  }), forceRefresh, forceRefresh ? 1 : 0)
     .then(async (response) => {
       const body = await response.json().catch(() => null) as ForecastResponse | null;
       if (!response.ok) {
@@ -204,8 +215,8 @@ export function requestForecastResponse(
       throw error;
     })
     .finally(() => {
-      if (inFlight.get(key) === promise) inFlight.delete(key);
+      if (inFlight.get(key)?.promise === promise) inFlight.delete(key);
     });
-  inFlight.set(key, promise);
+  inFlight.set(key, { promise, forceRefresh });
   return promise;
 }

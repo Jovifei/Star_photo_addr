@@ -653,15 +653,17 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 
 # 2026-09-13 观星数据完整性 P0 接收与收敛
 
-- [ ] 接收 `codex/data-source-integrity-audit-20260913` 候选，核对祖先关系、依赖版本与交接边界。
-- [ ] 在 Node24 下运行新增完整性测试与 `npm run check`，记录第一个真实失败和最小修复。
-- [ ] 修复选中地点 store 的 metadata/stale/model/sourceFetchedAt 传播与模型切换隔离。
-- [ ] 统一同地点同模型同时次的核心小时评分输入与可见 `scoreBasis/scoreTime/aggregation` 契约。
-- [ ] 补齐 store、cloudGrid、observing snapshot、worker 的请求去重、批量校验、时间轴和故障冷却。
+- [x] 接收 `codex/data-source-integrity-audit-20260913` 候选，核对祖先关系、依赖版本与交接边界。
+- [x] 在 Node24 下运行新增完整性测试与 `npm run check`，记录第一个真实失败和最小修复。
+- [x] 修复选中地点 store 的 metadata/stale/model/sourceFetchedAt 传播与模型切换隔离。
+- [x] 统一同地点同模型同时次的核心小时评分输入与可见 `scoreBasis/scoreTime/aggregation` 契约。
+- [x] 补齐 store、cloudGrid、observing snapshot、worker 的请求去重、批量校验、时间轴和故障冷却。
 - [ ] 完成 React/Playwright 回归；未执行项明确标记 `NOT_RUN`，不以隔离检查代替真实验证。
 - [ ] 仅在所有发布门禁真实通过后，按当前 main 版本规则准备提交/PR；未通过不得合并或部署。
 
 ## Review
 
-- 接收基线：候选 `ee313b9d1da61a177fbd07f152283cc262b17408` 已核对为当前审计分支 HEAD 的祖先；尚未证明可发布。
-- 当前阶段：代码与浏览器门禁待执行；准确率校准、生产部署和版本升级均保持阻断。
+- 接收基线：候选 `ee313b9d1da61a177fbd07f152283cc262b17408` 已核对为当前审计分支 HEAD 的祖先。
+- 代码证据：Node24、定向完整性 22 项、全量 Vitest 58 文件/337 项、lint、typecheck、Next 构建均通过；P0 React/Chromium 故障注入与候选并发回归通过。
+- 浏览器门禁：完整 Chromium 曾在修复前出现 2 个云图强刷计数失败，修复后相关定向用例通过；需再跑一次完整套件作为最终证据。
+- 准确率校准、生产部署和版本升级仍保持阻断，直到完整浏览器/交叉浏览器/CI 门禁完成。
