@@ -31,6 +31,24 @@ function shanghaiDateKey(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function addShanghaiDays(dateKey, days) {
+  const value = new Date(`${dateKey}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return shanghaiDateKey(value);
+}
+
+function forecastStartDateKey(now = new Date()) {
+  const today = shanghaiDateKey(now);
+  const hour = Number(new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Shanghai",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).format(now));
+  // Before 06:00 the current observation night is keyed to yesterday. Start
+  // there so the 20:00–05:00 window remains scoreable across midnight.
+  return hour <= 5 ? addShanghaiDays(today, -1) : today;
+}
+
 function perturb(field, value, offset) {
   if (value == null) return value;
   if (CLOUD_FIELDS.has(field)) {
@@ -67,7 +85,7 @@ export function buildNormalizedForecasts(fixture, lats, lons, days, model = "ico
   // date so the 20:00–05:00 matrix and the current→72h rail share one time
   // domain. A stale 8/7 start makes a click on tonight's columns immediately
   // get reset by the forecast-timeline guard.
-  const start = Date.parse(`${shanghaiDateKey()}T00:00:00Z`);
+  const start = Date.parse(`${forecastStartDateKey()}T00:00:00Z`);
   const src = Array.from({ length: days * 24 }, (_, hourIndex) => ({
     time: new Date(start + hourIndex * 3_600_000).toISOString().slice(0, 16),
     temperature: 12 + (hourIndex % 9),
