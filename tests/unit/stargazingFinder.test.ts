@@ -10,7 +10,10 @@ import {
   FINDER_LOCATIONS,
   getShanghaiDate,
 } from "@/data/observingSites/catalog";
-import type { FinderHourlyData } from "@/lib/stargazingFinderTypes";
+import type {
+  FinderHourlyData,
+  FinderWeatherRecord,
+} from "@/lib/stargazingFinderTypes";
 import {
   buildObservationSnapshot,
   findBestContiguousWindow,
@@ -23,6 +26,8 @@ import {
   buildFinderWeatherUrl,
   isFinderRangeAllowedForModel,
 } from "@/lib/stargazingFinderWeather";
+
+const FRESH_FETCHED_AT = new Date().toISOString();
 
 function fixture(overrides: Partial<FinderHourlyData> = {}): FinderHourlyData {
   const time = Array.from({ length: 33 }, (_, index) => {
@@ -47,6 +52,16 @@ function fixture(overrides: Partial<FinderHourlyData> = {}): FinderHourlyData {
     temperature_2m: values(22),
     ...overrides,
   };
+}
+
+function available(hourly: FinderHourlyData): FinderWeatherRecord {
+  return { hourly, status: "available", fetchedAt: FRESH_FETCHED_AT };
+}
+
+function allSites(hourly: FinderHourlyData): Record<string, FinderWeatherRecord> {
+  return Object.fromEntries(
+    OBSERVING_SITES.map((observingSite) => [observingSite.id, available(hourly)]),
+  );
 }
 
 describe("观星地点查询快照与评分", () => {
@@ -127,7 +142,7 @@ describe("观星地点查询快照与评分", () => {
     expect(location).toBeDefined();
     const evaluation = evaluateFinderLocation(
       location!,
-      { hourly: fixture(), status: "available" },
+      available(fixture()),
       "2026-08-09",
       "photo",
     );
@@ -152,28 +167,28 @@ describe("观星地点查询快照与评分", () => {
     });
     const score = scoreObservingSite(
       site,
-      { hourly: rainy, status: "available" },
+      available(rainy),
       "2026-08-09",
     );
     expect(score.score).toBeTypeOf("number");
     expect(score.band).toBe("not-recommended");
-    expect(score.blockers).toContain("小时降水达到 0.5 mm");
+    expect(score.blockers).toContain("降水风险");
 
     const snapshot = buildObservationSnapshot("2026-08-09", 3, "icon", {
       "2026-08-09": {
-        [site.id]: { hourly: fixture(), status: "available" },
+        ...allSites(fixture()),
       },
       "2026-08-10": {
-        [site.id]: { hourly: fixture(), status: "available" },
+        ...allSites(fixture()),
       },
       "2026-08-11": {
-        [site.id]: { hourly: fixture(), status: "available" },
+        ...allSites(fixture()),
       },
     });
     expect(snapshot.days).toBe(3);
     expect(snapshot.sites[site.id]).toHaveLength(3);
     expect(snapshot.sites[site.id]?.[0]?.score).toBeTypeOf("number");
-    expect(snapshot.source).toContain("curated dark-sky site metadata");
+    expect(snapshot.source).toContain("single-model weather conditions");
   });
 
   it("does not score a night when cloud coverage is mostly missing", () => {
@@ -186,7 +201,7 @@ describe("观星地点查询快照与评分", () => {
     });
     const score = scoreObservingSite(
       site,
-      { hourly: missingCloud, status: "available" },
+      available(missingCloud),
       "2026-08-09",
     );
     expect(score.score).toBeNull();
@@ -202,12 +217,12 @@ describe("观星地点查询快照与评分", () => {
     });
     const clearScore = scoreObservingSiteAtTime(
       site,
-      { hourly: clear, status: "available" },
+      available(clear),
       "2026-08-09T20:00",
     );
     const cloudyScore = scoreObservingSiteAtTime(
       site,
-      { hourly: cloudy, status: "available" },
+      available(cloudy),
       "2026-08-09T20:00",
     );
     expect(clearScore.score).not.toBe(cloudyScore.score);
@@ -219,7 +234,7 @@ describe("观星地点查询快照与评分", () => {
       "icon",
       {
         "2026-08-09": {
-          [site.id]: { hourly: clear, status: "available" },
+          ...allSites(clear),
         },
       },
       "2026-08-09T20:00",

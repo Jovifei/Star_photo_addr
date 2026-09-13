@@ -12,6 +12,9 @@ import type {
   ObservingSite,
   RecommendationScore,
 } from "@/lib/types";
+import { OBSERVATION_INTEGRITY_VERSION } from "@/lib/forecastIntegrity";
+
+const FRESH_FETCHED_AT = new Date().toISOString();
 
 const sites: ObservingSite[] = [
   {
@@ -70,7 +73,9 @@ const snapshot: ObservationSnapshot = {
   date: "2026-08-20",
   days: 1,
   model: "gfs",
-  generatedAt: "2026-08-20T12:00:00Z",
+  generatedAt: FRESH_FETCHED_AT,
+  integrityVersion: OBSERVATION_INTEGRITY_VERSION,
+  sourceFetchedAt: FRESH_FETCHED_AT,
   source: "test",
   stale: false,
   sites: {},

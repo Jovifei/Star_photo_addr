@@ -650,3 +650,18 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - Evidence: 生产 v1.0.14/build `39338495db0d`，app/worker healthy、worker 重启 0；数据源 API 连通和字段探测通过，但这不等于单点预报准确。
 - Findings: P0 为请求风暴、超龄磁盘 forecast fallback、stale 高分仍显示、地图评分忽略分层云；P1 为双评分链、乐观缺失值、worker/首页模型键不一致、provider 时间/网格元数据不足、健康探测覆盖不足。
 - Next: 等 Jovi 确认后另开 `codex/` 分支实施 P0 失败测试与最小修复；修复前不调整生产评分或删除快照。
+
+# 2026-09-13 观星数据完整性 P0 接收与收敛
+
+- [ ] 接收 `codex/data-source-integrity-audit-20260913` 候选，核对祖先关系、依赖版本与交接边界。
+- [ ] 在 Node24 下运行新增完整性测试与 `npm run check`，记录第一个真实失败和最小修复。
+- [ ] 修复选中地点 store 的 metadata/stale/model/sourceFetchedAt 传播与模型切换隔离。
+- [ ] 统一同地点同模型同时次的核心小时评分输入与可见 `scoreBasis/scoreTime/aggregation` 契约。
+- [ ] 补齐 store、cloudGrid、observing snapshot、worker 的请求去重、批量校验、时间轴和故障冷却。
+- [ ] 完成 React/Playwright 回归；未执行项明确标记 `NOT_RUN`，不以隔离检查代替真实验证。
+- [ ] 仅在所有发布门禁真实通过后，按当前 main 版本规则准备提交/PR；未通过不得合并或部署。
+
+## Review
+
+- 接收基线：候选 `ee313b9d1da61a177fbd07f152283cc262b17408` 已核对为当前审计分支 HEAD 的祖先；尚未证明可发布。
+- 当前阶段：代码与浏览器门禁待执行；准确率校准、生产部署和版本升级均保持阻断。
