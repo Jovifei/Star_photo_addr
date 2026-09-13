@@ -635,3 +635,37 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - Boundary: 新增点位是公开资料交叉核对的候选参考，坐标/海拔可能为 POI 或景区范围近似；夜间开放、保护区、票务、道路、海况、高反和防火仍需人工确认。
 - Evidence update: 省级覆盖断言补齐后最终 `npm run check` 为 53 个测试文件 / 308 项通过；`main@39338495db0d` 已 push、生产构建 revision 为 `39338495db0d`，ECS app/worker healthy，公网 `/healthz`、`/api/data-status`、`check:data-sources` 和浏览器页面验收通过。
 - Remaining: 无本轮代码/部署剩余项；真机、性能、授权暗夜栅格和现场科学校准仍按测试台账保持 MANUAL/BLOCKED/DEFERRED。
+# 2026-09-13 生产观星指数与全数据源审计
+
+- [x] 复现“网页 94 分、现场低/中层云较多”的评分输入、时间和地点上下文。
+- [x] 审查 Open-Meteo 各模型/总云/低云/中云/高云/降水/能见度字段映射与评分门禁。
+- [x] 审查 forecast、observing snapshot、worker、客户端缓存、强刷冷却和 stale 降级的时效性。
+- [x] 审查 NASA GIBS/Himawari、VIIRS、NOAA Kp、AQI、pressure-level、geocode 与 `/api/data-status` 来源边界。
+- [x] 核对 ECS 容器、构建 revision、日志、快照卷和公网 API 是否与当前 `main` 一致。
+- [x] 汇总证据、风险分级和修复计划；本轮不在未确认根因前修改评分算法或部署代码。
+
+## Review
+
+- Evidence: 生产复现 `2026-09-12T21:00` 的 `finder-088-location / 利川星斗山` 返回 `stale=true + score=94 + cloud=8`；同地点同时间多模型总云量 8–100；ECS 日志出现 Open-Meteo 429；候选页单次访问约 164 个 forecast 请求。
+- Evidence: 生产 v1.0.14/build `39338495db0d`，app/worker healthy、worker 重启 0；数据源 API 连通和字段探测通过，但这不等于单点预报准确。
+- Findings: P0 为请求风暴、超龄磁盘 forecast fallback、stale 高分仍显示、地图评分忽略分层云；P1 为双评分链、乐观缺失值、worker/首页模型键不一致、provider 时间/网格元数据不足、健康探测覆盖不足。
+- Next: 等 Jovi 确认后另开 `codex/` 分支实施 P0 失败测试与最小修复；修复前不调整生产评分或删除快照。
+
+# 2026-09-13 观星数据完整性 P0 接收与收敛
+
+- [x] 接收 `codex/data-source-integrity-audit-20260913` 候选，核对祖先关系、依赖版本与交接边界。
+- [x] 在 Node24 下运行新增完整性测试与 `npm run check`，记录第一个真实失败和最小修复。
+- [x] 修复选中地点 store 的 metadata/stale/model/sourceFetchedAt 传播与模型切换隔离。
+- [x] 统一同地点同模型同时次的核心小时评分输入与可见 `scoreBasis/scoreTime/aggregation` 契约。
+- [x] 补齐 store、cloudGrid、observing snapshot、worker 的请求去重、批量校验、时间轴和故障冷却。
+- [x] 完成 React/Playwright 回归；未执行项明确标记 `NOT_RUN`，不以隔离检查代替真实验证。
+- [x] 完成本地完整门禁、真实数据源冒烟、依赖审计和 PR #29 的五项 GitHub CI；开始准备 v1.0.15 发布记录。
+- [ ] 版本提交推送后重新通过最终 CI，再合并 `main`、按部署手册上线并完成公网四工作区验收。
+
+## Review
+
+- 接收基线：候选 `ee313b9d1da61a177fbd07f152283cc262b17408` 已核对为当前审计分支 HEAD 的祖先。
+- 代码证据：Node24、定向完整性 22 项、全量 Vitest 58 文件/337 项、lint、typecheck、Next 构建均通过；P0 React/Chromium 故障注入与候选并发回归通过。
+- 浏览器门禁：完整 Chromium `118 passed / 36 designed skips / 0 failed`；Firefox/WebKit `4 passed / 0 failed`；P0 stale94、低云61、候选并发/模型切换/429 冷却和云图强刷回归均通过。
+- GitHub CI：PR #29 的 `quality`、`live-data-smoke`、`container-smoke`、`e2e`、`cross-browser-smoke` 全部成功；版本提交后的最终 CI 仍需重新执行。
+- 准确率校准、生产部署和最终 main SHA 仍保持阻断；版本记录已先写明未校准边界，不把代码绿灯写成现场预报准确。

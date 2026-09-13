@@ -155,6 +155,8 @@ test("manual refresh bypasses application caches for weather, health and site sc
         days: Number(url.searchParams.get("days") ?? 1),
         model: url.searchParams.get("model") ?? "gfs",
         generatedAt: new Date().toISOString(),
+        integrityVersion: "weather-integrity-v2",
+        sourceFetchedAt: new Date().toISOString(),
         source: "E2E",
         stale: false,
         sites: {},

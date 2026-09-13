@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   averageLayer,
   aggregateForecastHour,
@@ -9,8 +9,14 @@ import {
   getValuesAtTime,
   getCloudCoverAtTime,
   idwInterpolate,
+  fetchCloudGrid,
 } from "@/lib/cloudGrid";
 import type { CloudGridData } from "@/lib/types";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("云图网格与时间轴", () => {
   it("为高、中、低云使用可区分的颜色并限制比例范围", () => {
@@ -61,6 +67,7 @@ describe("云图网格与时间轴", () => {
         hourly,
       }],
       fetchedAt: "2026-08-07T00:00:00Z",
+      model: "icon",
     } satisfies CloudGridData;
 
     const finalTick = getValuesAtTime(grid, "2026-08-13T05:00");
@@ -136,5 +143,20 @@ describe("云图网格与时间轴", () => {
     // The easternmost column should wrap, not be 233 which Open-Meteo rejects.
     const lons = samples.map((s) => s.longitude);
     expect(Math.max(...lons)).toBeLessThanOrEqual(180);
+  });
+
+  it("云图网格保留响应源时间和 stale，不用客户端当前时间洗新", async () => {
+    const sourceFetchedAt = new Date(Date.now() - 2 * 60_000).toISOString();
+    const metadata = { source: "Open-Meteo" as const, model: "icon" as const, fetchedAt: sourceFetchedAt, sourceFetchedAt, stale: false, units: {} };
+    const forecast = {
+      locationId: "grid-0", modelLatitude: 30, modelLongitude: 120, modelElevation: 0,
+      timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, fetchedAt: sourceFetchedAt, metadata,
+      hourly: [{ time: "2026-09-13T20:00", cloudCover: 8, cloudLow: 0, cloudMid: 3, cloudHigh: 4 }],
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ metadata, locations: [forecast] }, { headers: { "X-Data-Stale": "true" } })));
+    const grid = await fetchCloudGrid([{ latitude: 30, longitude: 120 }], ["2026-09-13"], 1, "icon", 1, 1);
+    expect(grid.fetchedAt).toBe(sourceFetchedAt);
+    expect(grid.sourceFetchedAt).toBe(sourceFetchedAt);
+    expect(grid.stale).toBe(true);
   });
 });

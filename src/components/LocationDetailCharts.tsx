@@ -87,7 +87,7 @@ function buildWeatherChart(hours: HourEvaluation[]) {
         name: "总云",
         type: "line",
         smooth: true,
-        data: hours.map((h) => h.cloudCover ?? 0),
+        data: hours.map((h) => h.cloudCover ?? null),
         lineStyle: { color: "#d5e1f0", width: 2 },
         itemStyle: { color: "#d5e1f0" },
         areaStyle: { color: "rgba(213, 225, 240, 0.08)" },
@@ -96,21 +96,21 @@ function buildWeatherChart(hours: HourEvaluation[]) {
         name: "低云",
         type: "line",
         smooth: true,
-        data: hours.map((h) => h.cloudLow ?? 0),
+        data: hours.map((h) => h.cloudLow ?? null),
         lineStyle: { color: "#38bdf8", width: 2 },
         itemStyle: { color: "#38bdf8" },
       },
       {
         name: "降水",
         type: "bar",
-        data: hours.map((h) => h.precipitationProbability ?? 0),
+        data: hours.map((h) => h.precipitationProbability ?? null),
         itemStyle: { color: "rgba(59, 130, 246, 0.45)", borderRadius: [3, 3, 0, 0] },
       },
       {
         name: "风速",
         type: "line",
         yAxisIndex: 1,
-        data: hours.map((h) => h.windSpeed ?? 0),
+        data: hours.map((h) => h.windSpeed ?? null),
         lineStyle: { color: "#f59e0b", type: "dashed", width: 1.5 },
         itemStyle: { color: "#f59e0b" },
       },
@@ -147,7 +147,7 @@ function buildAstroChart(hours: HourEvaluation[]) {
         name: "太阳",
         type: "line",
         smooth: true,
-        data: hours.map((h) => Math.round(h.sunAltitude ?? 0)),
+        data: hours.map((h) => h.sunAltitude == null ? null : Math.round(h.sunAltitude)),
         lineStyle: { color: "#f59e0b", width: 2 },
         itemStyle: { color: "#f59e0b" },
         markLine: {
@@ -161,7 +161,7 @@ function buildAstroChart(hours: HourEvaluation[]) {
         name: "月亮",
         type: "line",
         smooth: true,
-        data: hours.map((h) => Math.round(h.moonAltitude ?? 0)),
+        data: hours.map((h) => h.moonAltitude == null ? null : Math.round(h.moonAltitude)),
         lineStyle: { color: "#cbd5e1", width: 1.8 },
         itemStyle: { color: "#cbd5e1" },
       },
@@ -169,7 +169,7 @@ function buildAstroChart(hours: HourEvaluation[]) {
         name: "银河核心",
         type: "line",
         smooth: true,
-        data: hours.map((h) => Math.round(h.galacticAltitude ?? 0)),
+        data: hours.map((h) => h.galacticAltitude == null ? null : Math.round(h.galacticAltitude)),
         lineStyle: { color: "#38bdf8", width: 2.5 },
         itemStyle: { color: "#38bdf8" },
       },
@@ -177,7 +177,7 @@ function buildAstroChart(hours: HourEvaluation[]) {
   };
 }
 
-function buildProfileChart(profile: PressureLevel[], siteElevation: number) {
+function buildProfileChart(profile: PressureLevel[], siteElevation: number | null) {
   const valid = profile.filter((l) => Number.isFinite(l.heightMsl));
   const base = baseChartStyle();
   return {
@@ -201,16 +201,18 @@ function buildProfileChart(profile: PressureLevel[], siteElevation: number) {
       {
         name: "气压层云量",
         type: "line",
-        data: valid.map((l) => [l.cloudCover ?? 0, l.heightMsl]),
+        data: valid.map((l) => [l.cloudCover ?? null, l.heightMsl]),
         lineStyle: { color: "#38bdf8", width: 2.5 },
         itemStyle: { color: "#38bdf8" },
         areaStyle: { color: "rgba(56, 189, 248, 0.12)" },
-        markLine: {
-          symbol: "none",
-          label: { formatter: `点位 ${siteElevation}m`, color: "#f59e0b", fontSize: 9 },
-          lineStyle: { color: "#f59e0b", type: "dashed" },
-          data: [{ yAxis: siteElevation }],
-        },
+        ...(siteElevation == null ? {} : {
+          markLine: {
+            symbol: "none",
+            label: { formatter: `点位 ${siteElevation}m`, color: "#f59e0b", fontSize: 9 },
+            lineStyle: { color: "#f59e0b", type: "dashed" },
+            data: [{ yAxis: siteElevation }],
+          },
+        }),
       },
     ],
   };
@@ -224,7 +226,7 @@ export default function LocationDetailCharts({
   model = "icon",
 }: LocationDetailChartsProps) {
   const hours = useMemo(() => evaluation?.hours ?? [], [evaluation?.hours]);
-  const siteElevation = Math.round(location?.elevation ?? 0);
+  const siteElevation = location?.elevation == null ? null : Math.round(location.elevation);
 
   const [pressure, setPressure] = useState<PressureForecastResult | null>(null);
   const [pressureLoading, setPressureLoading] = useState(false);
@@ -284,7 +286,7 @@ export default function LocationDetailCharts({
   }, [pressure, effectiveHour]);
 
   const layers = useMemo(() => {
-    if (!pressure || !profile.length) return [];
+    if (!pressure || !profile.length || siteElevation == null) return [];
     return deriveCloudLayers(profile, pressure.modelElevation, siteElevation);
   }, [pressure, profile, siteElevation]);
 
@@ -338,7 +340,7 @@ export default function LocationDetailCharts({
                   title={`${formatHour(h.time)} · 综合 ${h.score}分`}
                 >
                   <span className="detail-hour-chip-time">{formatHour(h.time)}</span>
-                  <span className="detail-hour-chip-score">{h.score}</span>
+                  <span className="detail-hour-chip-score">{Number.isFinite(h.score) ? h.score : "—"}</span>
                 </button>
               );
             })}

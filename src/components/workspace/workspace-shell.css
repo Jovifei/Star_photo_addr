@@ -448,6 +448,14 @@
   overflow-wrap: anywhere;
 }
 
+.decision-summary-provenance {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
 .workspace-shell .cloud-timeline {
   overflow: visible;
 }

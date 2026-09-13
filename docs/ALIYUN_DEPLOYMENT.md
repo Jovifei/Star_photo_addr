@@ -54,7 +54,8 @@ cp .env.example .env
 APP_BIND=127.0.0.1
 APP_PORT=3100
 BUILD_REVISION=<当前 Git SHA>
-SNAPSHOT_MODEL=gfs
+SNAPSHOT_DAYS=1
+SNAPSHOT_MODEL=icon
 SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS=150000
 ```
 
@@ -259,6 +260,7 @@ curl -fsS 'http://127.0.0.1:3100/api/data-status?refresh=1' | jq
 - 精确缓存仍区分 `days` 和 `focusTime`；
 - 强制刷新按 `date + model` family 保护，变化 `days/focusTime` 不能绕过冷却；
 - worker 使用串行递归定时器，不会在上一任务未结束时重叠启动；
+- 默认预热首页实际使用的 ICON、当前观测夜和当前逐小时时次（`SNAPSHOT_DAYS=1`）；切换模型时应同步调整 `SNAPSHOT_MODEL`，不要无目的预热全部模型和点位；
 - worker 请求有独立超时，并响应 SIGTERM/SIGINT。
 
 ## 9. 日志与排障

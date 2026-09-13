@@ -4,6 +4,7 @@ import type {
   ForecastMetadata,
   ForecastModel,
   ForecastResponse,
+  ForecastProvenance,
   HourWeather,
   Location,
   LocationForecast,
@@ -153,7 +154,18 @@ function validAlignedSeries(
 export function validateRawForecast(
   item: RawForecastResponse | undefined,
 ): void {
-  if (!item || !Array.isArray(item.hourly?.time)) {
+  if (
+    !item ||
+    !Number.isFinite(item.latitude) ||
+    !Number.isFinite(item.longitude) ||
+    Math.abs(item.latitude) > 90 ||
+    Math.abs(item.longitude) > 180 ||
+    !Number.isFinite(item.elevation) ||
+    typeof item.timezone !== "string" ||
+    (item.utc_offset_seconds !== undefined &&
+      !Number.isFinite(item.utc_offset_seconds)) ||
+    !Array.isArray(item.hourly?.time)
+  ) {
     throw new Error("天气上游返回了无法识别的 hourly 数据");
   }
   const times = item.hourly.time;
@@ -169,11 +181,84 @@ export function validateRawForecast(
   ) {
     throw new Error("天气上游返回了无效逐小时时间轴");
   }
+  if (new Set(times).size !== times.length) {
+    throw new Error("天气上游返回了重复逐小时时间轴");
+  }
   for (const [field, label] of REQUIRED_CLOUD_SERIES) {
     if (!validAlignedSeries(item.hourly[field], times.length)) {
       throw new Error(`天气上游没有返回有效${label}数据`);
     }
   }
+}
+
+const OPEN_METEO_MAX_CONCURRENCY = 2;
+let openMeteoActive = 0;
+let openMeteoCooldownUntil = 0;
+const openMeteoQueue: Array<{
+  run: () => Promise<unknown>;
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
+}> = [];
+
+export class OpenMeteoRateLimitError extends Error {
+  constructor(readonly retryAfterMs: number) {
+    super(`Open-Meteo 限流冷却中，请 ${Math.ceil(retryAfterMs / 1000)} 秒后重试`);
+    this.name = "OpenMeteoRateLimitError";
+  }
+}
+
+function openMeteoRetryAfterMs(value: string | null): number {
+  if (!value) return 30_000;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.min(120_000, Math.max(1_000, seconds * 1_000));
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.min(120_000, Math.max(1_000, date - Date.now())) : 30_000;
+}
+
+function drainOpenMeteoQueue(): void {
+  while (openMeteoActive < OPEN_METEO_MAX_CONCURRENCY && openMeteoQueue.length) {
+    const task = openMeteoQueue.shift()!;
+    const remaining = openMeteoCooldownUntil - Date.now();
+    if (remaining > 0) {
+      task.reject(new OpenMeteoRateLimitError(remaining));
+      continue;
+    }
+    openMeteoActive += 1;
+    void task.run().then(task.resolve, task.reject).finally(() => {
+      openMeteoActive -= 1;
+      drainOpenMeteoQueue();
+    });
+  }
+}
+
+export function withOpenMeteoProviderSlot<T>(run: () => Promise<T>): Promise<T> {
+  const remaining = openMeteoCooldownUntil - Date.now();
+  if (remaining > 0) return Promise.reject(new OpenMeteoRateLimitError(remaining));
+  return new Promise<T>((resolve, reject) => {
+    openMeteoQueue.push({ run, resolve: resolve as (value: unknown) => void, reject });
+    drainOpenMeteoQueue();
+  });
+}
+
+export function noteOpenMeteoRateLimit(retryAfter: string | null): void {
+  openMeteoCooldownUntil = Math.max(openMeteoCooldownUntil, Date.now() + openMeteoRetryAfterMs(retryAfter));
+}
+
+function distanceKm(
+  latitudeA: number,
+  longitudeA: number,
+  latitudeB: number,
+  longitudeB: number,
+): number {
+  const radians = Math.PI / 180;
+  const dLat = (latitudeB - latitudeA) * radians;
+  const dLon = (longitudeB - longitudeA) * radians;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(latitudeA * radians) *
+      Math.cos(latitudeB * radians) *
+      Math.sin(dLon / 2) ** 2;
+  return 2 * 6_371 * Math.asin(Math.sqrt(a));
 }
 
 async function providerError(response: Response): Promise<Error> {
@@ -196,11 +281,11 @@ async function requestJson(
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      const response = await withOpenMeteoProviderSlot(() => fetch(url, {
         signal,
         cache: "no-store",
         headers: { Accept: "application/json" },
-      });
+      }));
       if (response.ok) {
         const data = (await response.json()) as
           | RawForecastResponse
@@ -210,10 +295,17 @@ async function requestJson(
         return data;
       }
       lastError = await providerError(response);
-      if (response.status < 500 && response.status !== 429) break;
+      if (response.status === 429) {
+        // Do not immediately retry a rate-limited request; the route-level
+        // coordinator exposes Retry-After/cooldown to the caller instead.
+        noteOpenMeteoRateLimit(response.headers.get("Retry-After"));
+        break;
+      }
+      if (response.status < 500) break;
     } catch (error) {
       if (signal?.aborted) throw error;
       lastError = error;
+      if (error instanceof OpenMeteoRateLimitError) break;
     }
     if (attempt === 0) {
       await new Promise((resolve) => setTimeout(resolve, 250));
@@ -279,12 +371,32 @@ export async function fetchSurfaceForecasts(
     source: "Open-Meteo",
     model,
     fetchedAt,
+    sourceFetchedAt: fetchedAt,
+    providerRunAt: null,
     stale: false,
     units: FORECAST_UNITS,
   };
   return locations.map((location, index) => {
     const single = responses[index];
     if (!single) throw new Error("天气上游缺少对应地点的响应");
+    const provenance: ForecastProvenance = {
+      requestedLatitude: location.latitude,
+      requestedLongitude: location.longitude,
+      modelLatitude: single.latitude,
+      modelLongitude: single.longitude,
+      modelDistanceKm: distanceKm(
+        location.latitude,
+        location.longitude,
+        single.latitude,
+        single.longitude,
+      ),
+      modelElevation: single.elevation,
+      elevationSource: "provider-dem",
+      sourceFetchedAt: fetchedAt,
+      providerRunAt: null,
+      timezone: single.timezone,
+      utcOffsetSeconds: single.utc_offset_seconds ?? 0,
+    };
     return {
       locationId: location.id,
       modelLatitude: single.latitude,
@@ -294,6 +406,17 @@ export async function fetchSurfaceForecasts(
       utcOffsetSeconds: single.utc_offset_seconds ?? 0,
       fetchedAt,
       metadata,
+      requestedLatitude: location.latitude,
+      requestedLongitude: location.longitude,
+      modelDistanceKm: distanceKm(
+        location.latitude,
+        location.longitude,
+        single.latitude,
+        single.longitude,
+      ),
+      elevationSource: "provider-dem",
+      providerRunAt: null,
+      provenance,
       hourly: normalizeHourly(single),
     };
   });

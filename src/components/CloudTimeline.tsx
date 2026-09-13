@@ -8,6 +8,7 @@ import { formatHourWithDate, formatNightLabel, nightRangeKeys } from "@/lib/nigh
 import { HOURS_PER_NIGHT } from "@/lib/nighttime";
 import { isInNight } from "@/lib/nighttime";
 import { aggregateForecastHour, getValuesAtTime } from "@/lib/cloudGrid";
+import { scoreCoreWeather } from "@/lib/forecastIntegrity";
 import type { SatelliteFrame } from "@/lib/types";
 import HourlyForecastMatrix, { buildNightTimes } from "@/components/HourlyForecastMatrix";
 import { evaluateNight } from "@/lib/scoring";
@@ -192,6 +193,13 @@ export default function CloudTimeline() {
   // a 72-hour forecast. Keep the summary/card bound to the actual active hour
   // even when the selected hour is outside the currently expanded night.
   const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime) ?? matrixHours[0];
+  const selectedWeatherScore = selectedHour ? scoreCoreWeather(selectedHour)?.weatherScore ?? null : null;
+  const forecastStale = pointForecast
+    ? Boolean(pointForecast.metadata?.stale)
+    : Boolean(cloudGrid?.stale);
+  const sourceFetchedAt = pointForecast
+    ? pointForecast.metadata?.sourceFetchedAt ?? pointForecast.fetchedAt ?? null
+    : cloudGrid?.sourceFetchedAt ?? null;
   const activeSatelliteFrame = isSatelliteMode
     ? (observationTimeline[safeTimelineIndex] as SatelliteFrame | undefined) ?? null
     : null;
@@ -420,7 +428,7 @@ export default function CloudTimeline() {
           <span>云量 {activeForecastHour?.cloudCover == null ? "—" : `${Math.round(activeForecastHour.cloudCover)}%`}</span>
           <span>降水 {activeForecastHour?.precipitation == null ? "—" : `${activeForecastHour.precipitation.toFixed(1)} mm`}</span>
           <span>风 {activeForecastHour?.windSpeed == null ? "—" : `${activeForecastHour.windSpeed.toFixed(1)} m/s`} {activeForecastHour?.windDirection == null ? "" : `${Math.round(activeForecastHour.windDirection)}°`}</span>
-          <small>来源：{forecastSource} · Open-Meteo · {cloudState.model.toUpperCase()} · 时间：{activeForecastTimeLabel(activeForecastHour?.time)}</small>
+          <small>来源：{forecastSource} · Open-Meteo · {cloudState.model.toUpperCase()} · 时间：{activeForecastTimeLabel(activeForecastHour?.time)} · 原始抓取：{sourceFetchedAt ?? "未提供"} · 数据质量：{forecastStale ? "过期/降级，禁止推荐" : "可用"}</small>
         </>}
       </div>
 
@@ -431,7 +439,8 @@ export default function CloudTimeline() {
           </div>}
 
           {!isSatelliteMode && !isNightLightsMode && <div className="cloud-summary-card" aria-label="当前小时摘要">
-            <span><b>观星分</b>{nightSummary?.score == null ? "—" : `${nightSummary.score}`}</span>
+            <span><b>时次天气分</b>{selectedWeatherScore == null || forecastStale ? "—" : `${selectedWeatherScore}`}</span>
+            <span><b>整晚窗口分</b>{nightSummary?.score == null ? "—" : `${nightSummary.score}`}</span>
             <span><b>总云量</b>{selectedHour?.cloudCover == null ? "—" : `${Math.round(selectedHour.cloudCover)}%`}</span>
             <span><b>能见度</b>{selectedHour?.visibility == null ? "—" : `${(selectedHour.visibility / 1000).toFixed(1)} km`}</span>
             <span><b>风</b>{selectedHour?.windSpeed == null ? "—" : `${selectedHour.windSpeed.toFixed(1)} m/s`}</span>

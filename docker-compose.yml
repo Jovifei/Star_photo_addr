@@ -67,8 +67,8 @@ services:
       SNAPSHOT_BASE_URL: http://star-weather:3000
       SNAPSHOT_INTERVAL_MS: ${SNAPSHOT_INTERVAL_MS:-1800000}
       SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS: ${SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS:-150000}
-      SNAPSHOT_DAYS: ${SNAPSHOT_DAYS:-7}
-      SNAPSHOT_MODEL: ${SNAPSHOT_MODEL:-gfs}
+      SNAPSHOT_DAYS: ${SNAPSHOT_DAYS:-1}
+      SNAPSHOT_MODEL: ${SNAPSHOT_MODEL:-icon}
       NODE_OPTIONS: ${WORKER_NODE_OPTIONS:---max-old-space-size=512}
     volumes:
       - observing-snapshots:/app/data/snapshots

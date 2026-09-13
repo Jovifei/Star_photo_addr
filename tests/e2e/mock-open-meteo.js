@@ -91,11 +91,13 @@ export function buildNormalizedForecasts(fixture, lats, lons, days, model = "ico
     modelElevation: fixture.surface.modelElevation + index * 7,
     timezone: "Asia/Shanghai",
     utcOffsetSeconds: 28800,
-    fetchedAt: "2026-08-09T08:00:00.000Z",
+    fetchedAt: new Date().toISOString(),
     metadata: {
       source: "Open-Meteo",
       model,
-      fetchedAt: "2026-08-09T08:00:00.000Z",
+      fetchedAt: new Date().toISOString(),
+      sourceFetchedAt: new Date().toISOString(),
+      providerRunAt: null,
       stale: false,
       units: { cloudCover: "%", precipitation: "mm", windSpeed: "m/s", windDirection: "°" },
     },
@@ -229,6 +231,9 @@ export async function installNextApiMock(page, fixture) {
         blockers: [],
         confidence: "high",
         validHours: 10,
+        scoreBasis: "night-weather-average",
+        scoreTime: null,
+        aggregation: "mean-hours",
       }));
       if (focusTime) {
         // Shift the score bands outside the per-site modulo so moving the
@@ -252,6 +257,9 @@ export async function installNextApiMock(page, fixture) {
           blockers: [],
           confidence: "high",
           validHours: 1,
+          scoreBasis: "selected-forecast-hour",
+          scoreTime: focusTime,
+          aggregation: "single-hour",
         };
       }
     }
@@ -262,7 +270,9 @@ export async function installNextApiMock(page, fixture) {
         date,
         days,
         model,
-        generatedAt: "2026-08-09T08:00:00.000Z",
+        generatedAt: new Date().toISOString(),
+        integrityVersion: "weather-integrity-v2",
+        sourceFetchedAt: new Date().toISOString(),
         source: "E2E snapshot",
         stale: false,
         sites,
@@ -324,7 +334,7 @@ export async function installNextApiMock(page, fixture) {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ locations }),
+      body: JSON.stringify({ locations, metadata: locations[0]?.metadata }),
     });
   });
 

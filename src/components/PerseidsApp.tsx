@@ -37,14 +37,18 @@ function TonightEvidence({
   const { state, addCandidate, removeCandidate, setCloud } = useStore();
   const leadIndex = Math.max(0, state.nightKeys.indexOf(state.selectedNight));
   const evaluation = useMemo(() => {
-    if (!state.forecast || !state.selectedLocation) return null;
+    if (
+      !state.forecast ||
+      state.forecast.metadata?.model !== state.cloudState.model ||
+      !state.selectedLocation
+    ) return null;
     return evaluateNight(
       state.forecast,
       state.selectedLocation,
       state.selectedNight,
       leadIndex,
     );
-  }, [state.forecast, state.selectedLocation, state.selectedNight, leadIndex]);
+  }, [state.cloudState.model, state.forecast, state.selectedLocation, state.selectedNight, leadIndex]);
 
   const isCandidate = state.selectedLocation
     ? state.candidates.some((candidate) =>
@@ -61,6 +65,7 @@ function TonightEvidence({
           sample={state.sample}
           evaluation={evaluation}
           location={state.selectedLocation}
+          forecast={state.forecast?.metadata?.model === state.cloudState.model ? state.forecast : null}
           isCandidate={isCandidate}
           onAddCandidate={() => addCandidate(state.selectedLocation!)}
           onRemoveCandidate={() => {

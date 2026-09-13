@@ -12,9 +12,32 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
+    date: "2026-09-13",
+    tag: "观星数据完整性 P0 修复",
+    current: true,
+    highlights: [
+      {
+        icon: ShieldCheck,
+        title: "过期高分不再进入推荐",
+        desc: "缺少完整身份、stale、超龄、未来时间或批次结构不一致的天气与观测快照统一显示数据过期/不足，不再把旧 94 分当作当前建议。",
+      },
+      {
+        icon: CloudSun,
+        title: "地图、候选、详情评分同源",
+        desc: "同一地点、模型和时次使用共享小时评分；总云与低/中/高云采用保守输入，并明确当前时次分、整晚窗口分和数据不足原因。",
+      },
+      {
+        icon: Layers,
+        title: "请求与来源身份可复核",
+        desc: "按地点/模型共享请求并限制并发，尊重 429 冷却；页面展示模型、网格坐标、海拔来源、原始抓取时间和 stale/缺失字段。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.14",
     date: "2026-09-10",
     tag: "省级网红观星地点扩充",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: Mountain,

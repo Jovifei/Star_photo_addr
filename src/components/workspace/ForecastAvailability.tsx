@@ -87,6 +87,8 @@ export default function ForecastAvailability() {
                 location.longitude,
                 location.elevation ?? 0,
                 location.name,
+                undefined,
+                true,
               );
             }}
           >

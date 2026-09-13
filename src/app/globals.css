@@ -65,6 +65,9 @@
 .cloud-summary-card span { display: flex; flex-direction: column; gap: 2px; border: 1px solid rgba(132, 158, 221, .22); border-radius: 8px; padding: 5px 6px; color: #eef3ff; font-size: 11px; }
 .cloud-summary-card b { color: #8795bd; font-size: 10px; font-weight: 500; }
 .cloud-source-note { display: block; margin-top: 6px; color: #91a4c5; font-size: 10px; line-height: 1.4; }
+.candidate-provenance { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.observation-provenance { margin: 12px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.observing-score-provenance { display: block; margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
 .source-status-panel { display: grid; gap: 4px; margin: 8px 0; padding: 8px 10px; border: 1px solid rgba(132, 158, 221, .22); border-radius: 9px; color: #aebbd6; font-size: 10px; }
 .source-status-panel span { display: flex; align-items: center; gap: 5px; }
 .source-status-title { color: #eef3ff; font-weight: 600; }
@@ -2670,6 +2673,7 @@
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+.cloud-data-quality-note { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
 .cloud-legend {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
