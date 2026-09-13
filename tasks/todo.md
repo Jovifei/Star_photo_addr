@@ -658,12 +658,14 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - [x] 修复选中地点 store 的 metadata/stale/model/sourceFetchedAt 传播与模型切换隔离。
 - [x] 统一同地点同模型同时次的核心小时评分输入与可见 `scoreBasis/scoreTime/aggregation` 契约。
 - [x] 补齐 store、cloudGrid、observing snapshot、worker 的请求去重、批量校验、时间轴和故障冷却。
-- [ ] 完成 React/Playwright 回归；未执行项明确标记 `NOT_RUN`，不以隔离检查代替真实验证。
-- [ ] 仅在所有发布门禁真实通过后，按当前 main 版本规则准备提交/PR；未通过不得合并或部署。
+- [x] 完成 React/Playwright 回归；未执行项明确标记 `NOT_RUN`，不以隔离检查代替真实验证。
+- [x] 完成本地完整门禁、真实数据源冒烟、依赖审计和 PR #29 的五项 GitHub CI；开始准备 v1.0.15 发布记录。
+- [ ] 版本提交推送后重新通过最终 CI，再合并 `main`、按部署手册上线并完成公网四工作区验收。
 
 ## Review
 
 - 接收基线：候选 `ee313b9d1da61a177fbd07f152283cc262b17408` 已核对为当前审计分支 HEAD 的祖先。
 - 代码证据：Node24、定向完整性 22 项、全量 Vitest 58 文件/337 项、lint、typecheck、Next 构建均通过；P0 React/Chromium 故障注入与候选并发回归通过。
-- 浏览器门禁：完整 Chromium 曾在修复前出现 2 个云图强刷计数失败，修复后相关定向用例通过；需再跑一次完整套件作为最终证据。
-- 准确率校准、生产部署和版本升级仍保持阻断，直到完整浏览器/交叉浏览器/CI 门禁完成。
+- 浏览器门禁：完整 Chromium `118 passed / 36 designed skips / 0 failed`；Firefox/WebKit `4 passed / 0 failed`；P0 stale94、低云61、候选并发/模型切换/429 冷却和云图强刷回归均通过。
+- GitHub CI：PR #29 的 `quality`、`live-data-smoke`、`container-smoke`、`e2e`、`cross-browser-smoke` 全部成功；版本提交后的最终 CI 仍需重新执行。
+- 准确率校准、生产部署和最终 main SHA 仍保持阻断；版本记录已先写明未校准边界，不把代码绿灯写成现场预报准确。
