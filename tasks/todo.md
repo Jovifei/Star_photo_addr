@@ -681,3 +681,14 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 
 - 生产复现：`v1.0.15 / 0e25bb1961bf` 的 worker 日志为 `fresh`，对应快照为 `stale: true`、`sourceFetchedAt` 缺失；天气探针 HTTP 429。
 - 当前部署仍保留 `v1.0.15 / 0e25bb1961bf` 回滚镜像，active snapshot volume 未删除；本 hotfix 尚未合并或部署。
+
+# 2026-09-13 时间轴数据质量标签纠正
+
+- [x] 复现生产时间轴“暂无有效预报/原始抓取未提供”与“数据质量：可用”并存的问题。
+- [x] 让质量标签按 stale、无有效预报、匹配可用预报三态显示，并补充 HTTP 502 真实浏览器回归；版本升级为 v1.0.17。
+- [ ] 重新通过最终 CI、合并本 hotfix、按当前回滚镜像部署并完成公网复核。
+
+## Review
+
+- 生产基线：v1.0.16 / 106155b9cf3a；天气探针仍为 Open-Meteo HTTP 429，其他数据源状态保持明确。
+- 本分支只改时间轴质量文案与测试，不放宽天气完整性门槛、不伪造数据恢复。

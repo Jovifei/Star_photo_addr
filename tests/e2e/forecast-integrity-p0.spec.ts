@@ -177,3 +177,15 @@ test("总云 8 但低云 61 时，浏览器不显示正常推荐", async ({ page
   }
   await page.screenshot({ path: `tmp/p0-integrity-layer61-${testInfo.project.name}.png`, fullPage: true });
 });
+
+test("无有效天气预报时，时间轴质量显示为数据不足", async ({ page }) => {
+  await page.route("**/api/forecast?**", async (route) => {
+    await route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ error: "天气上游不可用" }) });
+  });
+  await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&model=icon&overlay=forecast-cloud");
+  const quality = page.locator(".cloud-timeline-data-card small");
+  await expect(quality).toBeVisible({ timeout: 20_000 });
+  await expect(quality).toContainText("暂无有效预报");
+  await expect(quality).toContainText("数据质量：数据不足");
+  await expect(quality).not.toContainText("数据质量：可用");
+});

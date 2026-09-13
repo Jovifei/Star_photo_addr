@@ -78,6 +78,7 @@ describe("P0 original timestamps and stale scores", () => {
 });
 describe("P0 layer-aware scoring gate", () => {
   it("uses the same canonical hour score for the map and detail views", () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW);
     const times = Array.from({ length: 10 }, (_, index) => {
       const utc = Date.parse("2026-09-13T20:00:00Z") + index * 3_600_000;
       return new Date(utc).toISOString().slice(0, 16);

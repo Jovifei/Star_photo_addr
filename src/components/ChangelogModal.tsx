@@ -13,8 +13,31 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-09-13",
-    tag: "Worker stale 语义纠正",
+    tag: "时间轴数据质量标签纠正",
     current: true,
+    highlights: [
+      {
+        icon: ShieldCheck,
+        title: "缺失预报显示数据不足",
+        desc: "天气源不可用时，时间轴不会再把“暂无有效预报”同时标成“数据质量：可用”；stale/降级仍禁止推荐。",
+      },
+      {
+        icon: CloudSun,
+        title: "来源、时间、质量一致",
+        desc: "当原始抓取时间未提供或请求返回错误时，页面明确保留缺失状态，不用客户端时间或默认值伪造新鲜度。",
+      },
+      {
+        icon: Layers,
+        title: "新增真实浏览器回归",
+        desc: "覆盖 HTTP 502 无有效预报场景，确保首屏时间轴和数据卡的质量标签与实际输入一致。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.16",
+    date: "2026-09-13",
+    tag: "Worker stale 语义纠正",
+    current: false,
     highlights: [
       {
         icon: ShieldCheck,

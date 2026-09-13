@@ -44,6 +44,11 @@ function activeForecastTimeLabel(time?: string): string {
   return time.replace("T", " ");
 }
 
+export function forecastQualityLabel(source: string, stale: boolean): string {
+  if (stale) return "过期/降级，禁止推荐";
+  return source === "暂无有效预报" ? "数据不足" : "可用";
+}
+
 function previousDateKey(date: string): string {
   const value = new Date(`${date}T12:00:00Z`);
   value.setUTCDate(value.getUTCDate() - 1);
@@ -428,7 +433,7 @@ export default function CloudTimeline() {
           <span>云量 {activeForecastHour?.cloudCover == null ? "—" : `${Math.round(activeForecastHour.cloudCover)}%`}</span>
           <span>降水 {activeForecastHour?.precipitation == null ? "—" : `${activeForecastHour.precipitation.toFixed(1)} mm`}</span>
           <span>风 {activeForecastHour?.windSpeed == null ? "—" : `${activeForecastHour.windSpeed.toFixed(1)} m/s`} {activeForecastHour?.windDirection == null ? "" : `${Math.round(activeForecastHour.windDirection)}°`}</span>
-          <small>来源：{forecastSource} · Open-Meteo · {cloudState.model.toUpperCase()} · 时间：{activeForecastTimeLabel(activeForecastHour?.time)} · 原始抓取：{sourceFetchedAt ?? "未提供"} · 数据质量：{forecastStale ? "过期/降级，禁止推荐" : "可用"}</small>
+          <small>来源：{forecastSource} · Open-Meteo · {cloudState.model.toUpperCase()} · 时间：{activeForecastTimeLabel(activeForecastHour?.time)} · 原始抓取：{sourceFetchedAt ?? "未提供"} · 数据质量：{forecastQualityLabel(forecastSource, forecastStale)}</small>
         </>}
       </div>
 
