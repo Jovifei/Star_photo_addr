@@ -5,6 +5,7 @@ import {
   isFinderDateAllowed,
 } from "@/lib/stargazingFinderWeather";
 import type { ForecastModel } from "@/lib/types";
+import { OpenMeteoRateLimitError } from "@/lib/openMeteoRateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -173,9 +174,13 @@ export async function GET(request: NextRequest) {
     const timedOut =
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
+    const providerLimited = error instanceof OpenMeteoRateLimitError;
     return noStoreError(
-      timedOut ? "观星天气请求超时" : "观星天气暂时不可用",
-      timedOut ? 504 : 502,
+      providerLimited ? error.message : timedOut ? "观星天气请求超时" : "观星天气暂时不可用",
+      providerLimited ? 429 : timedOut ? 504 : 502,
+      providerLimited
+        ? { "Retry-After": String(Math.ceil(error.retryAfterMs / 1000)) }
+        : {},
     );
   } finally {
     if (inFlight.get(familyKey) === activeTask) {

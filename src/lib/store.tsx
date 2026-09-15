@@ -327,7 +327,7 @@ function reducer(state: AppState, action: Action): AppState {
 
 async function fetchForecastFor(
   location: Location,
-  model: CloudState["model"] = "icon",
+  model: CloudState["model"] = DEFAULT_CLOUD_STATE.model,
   forceRefresh = false,
 ): Promise<LocationForecast | null> {
   const result = await requestForecastResponse(

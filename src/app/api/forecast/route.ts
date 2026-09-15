@@ -3,6 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import { NextRequest, NextResponse } from "next/server";
 import { clampForecastDays, fetchForecastByCoords } from "@/lib/forecast";
+import { OpenMeteoRateLimitError } from "@/lib/openMeteoRateLimit";
 import { MAX_FORECAST_AGE_MS, usableDiskForecast } from "@/lib/forecastIntegrity";
 import { TimedCache } from "@/lib/serverCache";
 import { parseCoordinateLists } from "@/lib/server/queryParams";
@@ -71,6 +72,7 @@ function normalizedCoordinateKey(values: number[]): string {
   return values.map((value) => Number(value.toFixed(6)).toString()).join(",");
 }
 function safeForecastError(error: unknown, timedOut: boolean): string {
+  if (error instanceof OpenMeteoRateLimitError) return error.message;
   if (timedOut) return "天气数据请求超时";
   if (error instanceof Error) {
     if (/^天气上游/.test(error.message)) return error.message;
@@ -139,20 +141,24 @@ export async function GET(request: NextRequest) {
       headers: responseHeaders(forceRefresh, model, days, coordinated.coalesced ? "coalesced" : "refresh", false, decision.suppressed, decision.retryAfterSeconds),
     });
   } catch (error) {
+    const providerLimited = error instanceof OpenMeteoRateLimitError;
+    const retryAfterSeconds = Math.max(decision.retryAfterSeconds ?? 0,
+      providerLimited ? Math.ceil(error.retryAfterMs / 1000) : 0) || null;
     const fallback = forecastCache.read(key);
     if (fallback && fallback.ageMs <= STALE_TTL_MS) {
       return NextResponse.json(markStale(fallback.value), {
-        headers: { ...responseHeaders(true, model, days, "stale-memory", true, decision.suppressed, decision.retryAfterSeconds), Warning: '110 - "Response is stale"' },
+        headers: { ...responseHeaders(true, model, days, "stale-memory", true, decision.suppressed, retryAfterSeconds), Warning: '110 - "Response is stale"' },
       });
     }
     const diskFallback = readFromDiskCache(key, model, latitudes.length);
     if (diskFallback) {
       return NextResponse.json(markStale(diskFallback), {
-        headers: { ...responseHeaders(true, model, days, "stale-disk", true, decision.suppressed, decision.retryAfterSeconds), Warning: '110 - "Response is stale from disk"' },
+        headers: { ...responseHeaders(true, model, days, "stale-disk", true, decision.suppressed, retryAfterSeconds), Warning: '110 - "Response is stale from disk"' },
       });
     }
     const timedOut = error instanceof Error && (error.name === "AbortError" || /aborted|timeout/i.test(error.message));
     console.warn(`[api/forecast] ${timedOut ? "timeout" : "upstream failure"}`, error instanceof Error ? error.message : error);
-    return jsonError(safeForecastError(error, timedOut), timedOut ? 504 : 502);
+    return jsonError(safeForecastError(error, timedOut), providerLimited ? 429 : timedOut ? 504 : 502,
+      retryAfterSeconds ? { "Retry-After": String(retryAfterSeconds) } : {});
   }
 }

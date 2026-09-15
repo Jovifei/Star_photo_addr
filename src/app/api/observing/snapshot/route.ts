@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   addFinderDays,
-  getShanghaiDate,
 } from "@/data/observingSites/catalog";
 import { buildObservationSnapshot } from "@/lib/observingSites";
+import { currentNightKey } from "@/lib/nighttime";
+import { DEFAULT_SCORING_MODEL } from "@/lib/forecastPolicy";
+import { openMeteoCooldownRemainingMs } from "@/lib/forecast";
+import { OpenMeteoRateLimitError } from "@/lib/openMeteoRateLimit";
 import {
   markSnapshotStale,
   observationRefreshFamilyKey,
@@ -20,6 +23,19 @@ import {
 import type { ForecastModel, ObservationSnapshot } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest) {
+  const response = await getSnapshot(request);
+  const remaining = openMeteoCooldownRemainingMs();
+  if (remaining > 0) {
+    const existing = Number(response.headers.get("Retry-After") ?? 0);
+    response.headers.set("Retry-After", String(Math.max(Number.isFinite(existing) ? existing : 0, Math.ceil(remaining / 1000))));
+  }
+  if (remaining > 0 || response.headers.get("X-Data-Stale") === "true") {
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+  }
+  return response;
+}
 
 const VALID_MODELS = new Set<ForecastModel>([
   "best_match",
@@ -91,11 +107,11 @@ function trimRefreshMap(): void {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function getSnapshot(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-  const date = params.get("date") ?? getShanghaiDate();
+  const date = params.get("date") ?? currentNightKey();
   const daysValue = Number(params.get("days") ?? "1");
-  const model = (params.get("model") ?? "icon") as ForecastModel;
+  const model = (params.get("model") ?? DEFAULT_SCORING_MODEL) as ForecastModel;
 
   if (!isFinderDateAllowed(date) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return jsonError("date 必须是当前观测日附近的合法日期", 400);
@@ -291,9 +307,14 @@ export async function GET(request: NextRequest) {
     const timedOut =
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
+    const providerLimited = error instanceof OpenMeteoRateLimitError;
+    const retryAfterSeconds = providerLimited
+      ? Math.ceil(error.retryAfterMs / 1000)
+      : null;
     return jsonError(
-      timedOut ? "观星快照请求超时" : "观星快照暂时不可用",
-      timedOut ? 504 : 502,
+      providerLimited ? error.message : timedOut ? "观星快照请求超时" : "观星快照暂时不可用",
+      providerLimited ? 429 : timedOut ? 504 : 502,
+      retryAfterSeconds ? { "Retry-After": String(retryAfterSeconds) } : {},
     );
   } finally {
     if (activeTask && inFlight.get(key) === activeTask) {

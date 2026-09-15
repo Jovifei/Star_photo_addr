@@ -21,6 +21,7 @@ import {
   type DataSourceHealthResponse,
   type DataSourceProbe,
 } from "@/lib/dataSourceStatus";
+import { missingScoringHour } from "@/lib/forecastPolicy";
 import type { CloudDisplayMode } from "@/lib/types";
 
 const MODELS: { id: "icon" | "gfs" | "aifs"; label: string }[] = [
@@ -82,8 +83,10 @@ export default function CloudControl() {
       controller.abort();
     }, 20_000);
     try {
+      const query = new URLSearchParams({ model: cloudState.model });
+      if (force) query.set("refresh", "1");
       const response = await fetch(
-        `/api/data-status${force ? "?refresh=1" : ""}`,
+        `/api/data-status?${query.toString()}`,
         {
           cache: force ? "no-store" : "default",
           signal: controller.signal,
@@ -119,7 +122,7 @@ export default function CloudControl() {
         healthRequestRef.current = null;
       }
     }
-  }, []);
+  }, [cloudState.model]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -207,12 +210,25 @@ export default function CloudControl() {
     : cloudGrid?.model === cloudState.model
       ? cloudGrid.forecasts[0] ?? null
       : null;
+  const activeForecastHour = activeForecast
+    ? typeof time === "string"
+      ? activeForecast.hourly.find((item) => item.time === time) ?? null
+      : activeForecast.hourly.filter((item) => isInNight(item.time, selectedNight))[time] ?? null
+    : null;
+  const activeScoringMissing = missingScoringHour(activeForecastHour);
   const rawFetchedAt = activeForecast
     ? activeForecast.metadata?.sourceFetchedAt ?? activeForecast.fetchedAt ?? null
     : cloudGrid?.sourceFetchedAt ?? null;
   const activeStale = activeForecast
     ? Boolean(activeForecast.metadata?.stale)
     : Boolean(cloudGrid?.stale);
+  const activeDataQuality = activeStale
+    ? "过期/降级，禁止推荐"
+    : !activeForecast
+      ? "数据不足"
+      : activeScoringMissing.length
+        ? `天气可查看，评分数据不足（缺少${activeScoringMissing.join("、")}）`
+        : "可用";
   const sources = health?.sources;
   const healthSummary = healthError
     ? `最近复检失败：${healthError}`
@@ -264,6 +280,16 @@ export default function CloudControl() {
           <small title={health?.nextRefreshAt}>{healthSummary}</small>
         </span>
         <SourceStatusRow source={sources?.weather} />
+        <span data-testid="weather-cloud-capability">
+          <i className={`source-dot ${health?.cloudAvailable ? "available" : "degraded"}`} />
+          云量字段
+          <b>{health ? (health.cloudAvailable ? "可查看" : "不足") : "检测中"}</b>
+        </span>
+        <span data-testid="weather-scoring-capability">
+          <i className={`source-dot ${health?.scoringAvailable ? "available" : "degraded"}`} />
+          评分字段
+          <b>{health ? (health.scoringAvailable ? "可用" : "不足") : "检测中"}</b>
+        </span>
         <SourceStatusRow source={sources?.satellite} />
         <SourceStatusRow source={sources?.["light-pollution"]} />
         <SourceStatusRow source={sources?.tianditu} />
@@ -382,7 +408,7 @@ export default function CloudControl() {
                 : "当前夜间时次"}
             </small>
             <small className="cloud-data-quality-note" data-testid="cloud-data-quality">
-              数据质量：{activeStale ? "过期/降级，禁止推荐" : activeForecast ? "可用" : "数据不足"} · 原始抓取：{rawFetchedAt ?? "未提供"} · 模型运行：供应商未提供 · 多模型核验：未检查
+              数据质量：{activeDataQuality} · 原始抓取：{rawFetchedAt ?? "未提供"} · 模型运行：供应商未提供 · 多模型核验：未检查
             </small>
             <div
               className="cloud-legend"

@@ -34,6 +34,13 @@ afterEach(() => {
 });
 
 describe("finder weather batch integrity", () => {
+  it("rejects calendar dates that JavaScript would otherwise normalize", async () => {
+    vi.resetModules();
+    const { isValidCalendarDate } = await import("@/lib/stargazingFinderWeather");
+    expect(isValidCalendarDate("2026-02-30")).toBe(false);
+    expect(isValidCalendarDate("2026-09-15")).toBe(true);
+  });
+
   it("preserves each response identity and bounds upstream concurrency", async () => {
     vi.resetModules();
     const date = getShanghaiDate();

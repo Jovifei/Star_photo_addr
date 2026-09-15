@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { buildFireGlowSnapshot } from "@/lib/fireglow";
 import type { FireGlowSnapshot } from "@/lib/fireglow";
+import { DEFAULT_SCORING_MODEL } from "@/lib/forecastPolicy";
+import { OpenMeteoRateLimitError } from "@/lib/openMeteoRateLimit";
 import {
   fetchFinderWeatherRange,
   isFinderDateAllowed,
@@ -121,7 +123,7 @@ function rememberSnapshot(key: string, date: string, model: string, snapshot: Fi
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const date = params.get("date") ?? getShanghaiDate();
-  const model = (params.get("model") ?? "icon") as ForecastModel;
+  const model = (params.get("model") ?? DEFAULT_SCORING_MODEL) as ForecastModel;
   const forceRefresh = params.get("refresh") === "1";
 
   if (!isFinderDateAllowed(date) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -247,6 +249,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const fallback = cache.get(key)?.snapshot ?? diskCached;
+    const providerLimited = error instanceof OpenMeteoRateLimitError;
+    const retryAfter = providerLimited
+      ? String(Math.ceil(error.retryAfterMs / 1000))
+      : undefined;
     if (fallback) {
       const timedOut =
         error instanceof Error &&
@@ -261,6 +267,7 @@ export async function GET(request: NextRequest) {
           headers: {
             "Cache-Control": "no-store",
             "X-Fireglow-Cache": "stale-fallback",
+            ...(retryAfter ? { "Retry-After": retryAfter } : {}),
           },
         },
       );
@@ -269,8 +276,14 @@ export async function GET(request: NextRequest) {
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
     return NextResponse.json(
-      { error: timedOut ? "火烧云快照请求超时" : "火烧云快照暂时不可用" },
-      { status: timedOut ? 504 : 502, headers: { "Cache-Control": "no-store" } },
+      { error: providerLimited ? error.message : timedOut ? "火烧云快照请求超时" : "火烧云快照暂时不可用" },
+      {
+        status: providerLimited ? 429 : timedOut ? 504 : 502,
+        headers: {
+          "Cache-Control": "no-store",
+          ...(retryAfter ? { "Retry-After": retryAfter } : {}),
+        },
+      },
     );
   }
 }

@@ -73,7 +73,7 @@ describe("release integrity invariants", () => {
     expect(pressureLoaderEnd).toBeGreaterThan(pressureLoaderStart);
     const pressureLoader = route.slice(pressureLoaderStart, pressureLoaderEnd);
     expect(pressureLoader).toContain("errors[location.id] = message");
-    expect(pressureLoader).not.toContain("throw error");
+    expect(pressureLoader).toContain("error instanceof OpenMeteoRateLimitError");
     expect(model).toContain("deriveCloudLayers");
     expect(model).toContain("detectTemperatureInversion");
     expect(model).toContain("不使用启发式云底");

@@ -26,6 +26,11 @@ function response(
 ): DataSourceHealthResponse {
   return {
     status: "ok",
+    model: "gfs",
+    cloudAvailable: true,
+    scoringAvailable: true,
+    missingCloudFields: [],
+    missingScoringFields: [],
     checkedAt: "2026-08-20T00:00:00.000Z",
     cached: false,
     sources: {
@@ -63,7 +68,9 @@ describe("GET /api/data-status", () => {
     expect(result.status).toBe(200);
     expect(result.headers.get("x-data-source-cache")).toBe("memory");
     expect(result.headers.get("cache-control")).toContain("s-maxage=300");
-    expect(getDataSourceHealth).toHaveBeenCalledWith(false);
+    const body = await result.json();
+    expect(body).toMatchObject({ model: "gfs", cloudAvailable: true, scoringAvailable: true });
+    expect(getDataSourceHealth).toHaveBeenCalledWith(false, "gfs");
   });
 
   it("marks a coalesced provider probe", async () => {
@@ -91,6 +98,6 @@ describe("GET /api/data-status", () => {
     );
     expect(result.headers.get("x-refresh-suppressed")).toBe("true");
     expect(result.headers.get("x-next-refresh-at")).toBe(nextRefreshAt);
-    expect(getDataSourceHealth).toHaveBeenCalledWith(true);
+    expect(getDataSourceHealth).toHaveBeenCalledWith(true, "gfs");
   });
 });

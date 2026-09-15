@@ -5,7 +5,7 @@ function response(model = "icon", stale = false) {
   const metadata = { source: "Open-Meteo", model, fetchedAt, stale, units: {} };
   return Response.json({ metadata, locations: [{ locationId: "loc-0", modelLatitude: 30.18, modelLongitude: 108.88, modelElevation: 1402, timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, fetchedAt, metadata, hourly: [{ time: "2026-09-13T21:00" }] }] });
 }
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("bounded shared candidate loader", () => {
   it("coalesces two components and repeated cache renders into one request", async () => {
     vi.resetModules(); const fetchMock = vi.fn(async () => response()); vi.stubGlobal("fetch", fetchMock);
@@ -27,6 +27,20 @@ describe("bounded shared candidate loader", () => {
     const { requestCandidateForecast } = await import("@/lib/candidateForecastClient");
     await expect(requestCandidateForecast(POINT, "icon")).rejects.toThrow("429");
     await expect(requestCandidateForecast(POINT, "icon", 14, Date.now())).rejects.toThrow("429");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("honors a provider Retry-After longer than the former two-minute cap", async () => {
+    vi.resetModules();
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => new Response("limited", {
+      status: 429,
+      headers: { "Retry-After": "7200" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { requestCandidateForecast } = await import("@/lib/candidateForecastClient");
+    await expect(requestCandidateForecast(POINT, "icon")).rejects.toThrow("429");
+    vi.advanceTimersByTime(121_000);
+    await expect(requestCandidateForecast(POINT, "icon")).rejects.toThrow("冷却");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it("separates models and forces a completed success only once per refresh revision", async () => {

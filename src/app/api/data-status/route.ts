@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDataSourceHealth } from "@/lib/dataSourceHealth";
+import { DEFAULT_SCORING_MODEL, isForecastModel } from "@/lib/forecastPolicy";
 import type { DataSourceHealthResponse } from "@/lib/dataSourceStatus";
 
 // Route segment config must be declared as a local literal for Next.js to
@@ -19,7 +20,7 @@ function responseHeaders(
         ? "memory"
         : "refresh";
   const headers: Record<string, string> = {
-    "Cache-Control": forceRefresh
+    "Cache-Control": forceRefresh || data.status !== "ok"
       ? "no-store, max-age=0"
       : "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
     Vary: "Accept-Encoding",
@@ -35,8 +36,10 @@ function responseHeaders(
 /** Stable operator-facing alias for the data-source diagnostic endpoint. */
 export async function GET(request: NextRequest) {
   const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
-  const data = await getDataSourceHealth(forceRefresh);
+  const model = request.nextUrl.searchParams.get("model") ?? DEFAULT_SCORING_MODEL;
+  if (!isForecastModel(model)) return NextResponse.json({ error: "model 必须是 best_match、icon、gfs 或 aifs" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  const data = await getDataSourceHealth(forceRefresh, model);
   return NextResponse.json(data, {
-    headers: responseHeaders(forceRefresh, data),
+    headers: { ...responseHeaders(forceRefresh, data), "X-Weather-Probe-Model": model },
   });
 }

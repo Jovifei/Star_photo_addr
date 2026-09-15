@@ -19,6 +19,7 @@ import type {
   FinderWeatherResponse,
 } from "./stargazingFinderTypes";
 import type { ForecastModel, ForecastProvenance } from "./types";
+import { SCORING_REQUIRED_SERIES } from "./forecastPolicy";
 
 const BATCH_SIZE = 24;
 const WORKERS = 2;
@@ -65,21 +66,7 @@ interface RawForecast {
   hourly?: RawHourly;
 }
 
-const REQUIRED_SERIES = [
-  ["relative_humidity_2m", "湿度"],
-  ["dew_point_2m", "露点"],
-  ["precipitation_probability", "降水概率"],
-  ["weather_code", "天气代码"],
-  ["cloud_cover", "总云"],
-  ["cloud_cover_low", "低云"],
-  ["cloud_cover_mid", "中云"],
-  ["cloud_cover_high", "高云"],
-  ["precipitation", "降水"],
-  ["visibility", "能见度"],
-  ["wind_speed_10m", "风速"],
-  ["wind_gusts_10m", "阵风"],
-  ["temperature_2m", "温度"],
-] as const;
+const REQUIRED_SERIES = SCORING_REQUIRED_SERIES;
 
 interface CacheEntry {
   savedAt: number;
@@ -335,11 +322,20 @@ export function isFinderDateAllowed(
   date: string,
   today = getShanghaiDate(),
 ): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  if (!isValidCalendarDate(date)) return false;
   const target = Date.parse(`${date}T12:00:00Z`);
   const lower = Date.parse(`${addFinderDays(today, -1)}T12:00:00Z`);
   const upper = Date.parse(`${addFinderDays(today, 14)}T12:00:00Z`);
   return Number.isFinite(target) && target >= lower && target <= upper;
+}
+
+export function isValidCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day;
 }
 
 export async function fetchFinderWeather(
@@ -410,8 +406,9 @@ export async function fetchFinderWeatherRange(
     batches.push(FINDER_LOCATIONS.slice(index, index + BATCH_SIZE));
   }
   let cursor = 0;
+  let halted = false;
   const worker = async () => {
-    while (cursor < batches.length) {
+    while (!halted && cursor < batches.length) {
       const batchIndex = cursor;
       cursor += 1;
       const batch = batches[batchIndex];
@@ -442,6 +439,10 @@ export async function fetchFinderWeatherRange(
         }
       } catch (error) {
         if (signal.aborted) throw error;
+        if (error instanceof OpenMeteoRateLimitError) {
+          halted = true;
+          throw error;
+        }
         const message =
           error instanceof Error ? error.message : "天气请求失败";
         for (const date of missingDates) {

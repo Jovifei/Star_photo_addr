@@ -9,6 +9,7 @@ import { HOURS_PER_NIGHT } from "@/lib/nighttime";
 import { isInNight } from "@/lib/nighttime";
 import { aggregateForecastHour, getValuesAtTime } from "@/lib/cloudGrid";
 import { scoreCoreWeather } from "@/lib/forecastIntegrity";
+import { missingScoringHour } from "@/lib/forecastPolicy";
 import type { SatelliteFrame } from "@/lib/types";
 import HourlyForecastMatrix, { buildNightTimes } from "@/components/HourlyForecastMatrix";
 import { evaluateNight } from "@/lib/scoring";
@@ -44,9 +45,11 @@ function activeForecastTimeLabel(time?: string): string {
   return time.replace("T", " ");
 }
 
-export function forecastQualityLabel(source: string, stale: boolean): string {
+export function forecastQualityLabel(source: string, stale: boolean, missing: readonly string[] = []): string {
   if (stale) return "过期/降级，禁止推荐";
-  return source === "暂无有效预报" ? "数据不足" : "可用";
+  if (source === "暂无有效预报") return "数据不足";
+  if (missing.length) return `天气可查看，评分数据不足（缺少${missing.join("、")}）`;
+  return "可用";
 }
 
 function previousDateKey(date: string): string {
@@ -433,7 +436,7 @@ export default function CloudTimeline() {
           <span>云量 {activeForecastHour?.cloudCover == null ? "—" : `${Math.round(activeForecastHour.cloudCover)}%`}</span>
           <span>降水 {activeForecastHour?.precipitation == null ? "—" : `${activeForecastHour.precipitation.toFixed(1)} mm`}</span>
           <span>风 {activeForecastHour?.windSpeed == null ? "—" : `${activeForecastHour.windSpeed.toFixed(1)} m/s`} {activeForecastHour?.windDirection == null ? "" : `${Math.round(activeForecastHour.windDirection)}°`}</span>
-          <small>来源：{forecastSource} · Open-Meteo · {cloudState.model.toUpperCase()} · 时间：{activeForecastTimeLabel(activeForecastHour?.time)} · 原始抓取：{sourceFetchedAt ?? "未提供"} · 数据质量：{forecastQualityLabel(forecastSource, forecastStale)}</small>
+          <small>来源：{forecastSource} · Open-Meteo · {cloudState.model.toUpperCase()} · 时间：{activeForecastTimeLabel(activeForecastHour?.time)} · 原始抓取：{sourceFetchedAt ?? "未提供"} · 数据质量：{forecastQualityLabel(forecastSource, forecastStale, missingScoringHour(activeForecastHour))}</small>
         </>}
       </div>
 

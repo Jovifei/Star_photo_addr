@@ -5,6 +5,7 @@
 // only ever reached from the `/api/*` route handlers.
 
 import type { CityCandidate, CloudState } from "./types";
+import { DEFAULT_SCORING_MODEL } from "./forecastPolicy";
 
 /** Default benchmark candidates for initial visit / reset. */
 export const DEFAULT_CANDIDATE_SEEDS: CityCandidate[] = [
@@ -338,7 +339,7 @@ export const FORECAST_THEME_STORAGE_KEY = "jovi-forecast-theme-v1";
  *  renders the coverage overlay immediately — no "select a location first" gate. */
 export const DEFAULT_CLOUD_STATE: CloudState = {
   enabled: true,
-  model: "icon",
+  model: DEFAULT_SCORING_MODEL,
   activeForecastTime: null,
   activeObservationTime: null,
   overlayMode: "forecast-cloud",

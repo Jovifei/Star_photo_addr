@@ -10,28 +10,32 @@ const helperSource = readFileSync(
   "utf8",
 );
 const { snapshotHealth } = (await import("../../scripts/observing-snapshot-worker-utils.mjs")) as {
-  snapshotHealth: (payload: unknown) => { stale: boolean; logLabel: string; shouldPrewarm: boolean };
+  snapshotHealth: (payload: unknown, now?: number, expectedModel?: string) => { stale: boolean; logLabel: string; shouldPrewarm: boolean };
 };
 
 describe("observing snapshot worker stale contract", () => {
   it("classifies stale or identity-less snapshots as non-prewarmable", () => {
-    expect(helperSource).toContain('payload?.stale === true');
+    expect(helperSource).toContain("payload?.stale !== false");
     expect(helperSource).toContain('payload?.integrityVersion !== "weather-integrity-v2"');
-    expect(helperSource).toContain("!hasSourceFetchedAt");
+    expect(helperSource).toContain("sourceFetchedAt");
     expect(helperSource).toContain("shouldPrewarm: !stale");
-    expect(snapshotHealth({ stale: false, integrityVersion: "weather-integrity-v2", sourceFetchedAt: "2026-09-13T12:00:00Z" })).toEqual({
+    const now = Date.parse("2026-09-13T12:00:00Z");
+    const fresh = { model: "gfs", stale: false, integrityVersion: "weather-integrity-v2", sourceFetchedAt: "2026-09-13T12:00:00Z" };
+    expect(snapshotHealth(fresh, now, "gfs")).toEqual({
       stale: false,
       logLabel: "fresh",
       shouldPrewarm: true,
     });
-    expect(snapshotHealth({ stale: true, integrityVersion: "weather-integrity-v2", sourceFetchedAt: "2026-09-13T12:00:00Z" }).shouldPrewarm).toBe(false);
-    expect(snapshotHealth({ stale: false, integrityVersion: "weather-integrity-v2" }).logLabel).toBe("stale");
+    expect(snapshotHealth({ ...fresh, stale: true }, now, "gfs").shouldPrewarm).toBe(false);
+    expect(snapshotHealth({ ...fresh, model: "icon" }, now, "gfs").logLabel).toBe("stale");
+    expect(snapshotHealth({ ...fresh, integrityVersion: "weather-integrity-v1" }, now, "gfs").shouldPrewarm).toBe(false);
+    expect(snapshotHealth({ ...fresh, sourceFetchedAt: undefined }, now, "gfs").shouldPrewarm).toBe(false);
   });
 
   it("does not log stale HTTP-200 snapshots as fresh or prewarm fireglow", () => {
-    expect(workerSource).toContain("lastRefreshWasStale = health.stale");
-    expect(workerSource).toContain("${health.logLabel}");
-    expect(workerSource).toContain("!lastErrorWasRateLimit && !lastRefreshWasStale");
-    expect(workerSource).toContain("lastErrorWasRateLimit || lastRefreshWasStale");
+    expect(workerSource).toContain("snapshotHealth(");
+    expect(workerSource).toContain("expectedObservingModel ?? model");
+    expect(workerSource).toContain('${healthy ? "fresh" : "stale"}');
+    expect(workerSource).toContain("result.healthy && fireglowEnabled");
   });
 });

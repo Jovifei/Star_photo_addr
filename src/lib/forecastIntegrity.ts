@@ -64,6 +64,8 @@ export function missingWeatherInputs(hour: HourWeather): string[] {
   const fields: Array<[keyof HourWeather, string, number, number]> = [
     ["cloudCover", "总云量", 0, 100], ["cloudLow", "低云", 0, 100],
     ["cloudMid", "中云", 0, 100], ["cloudHigh", "高云", 0, 100],
+    ["temperature", "温度", -100, 70], ["humidity", "湿度", 0, 100],
+    ["dewPoint", "露点", -120, 70], ["precipitationProbability", "降水概率", 0, 100],
     ["precipitation", "降水量", 0, Infinity], ["windSpeed", "风速", 0, Infinity],
     ["windGust", "阵风", 0, Infinity], ["visibility", "能见度", 0, Infinity],
     ["weatherCode", "天气代码", 0, 99],
@@ -72,12 +74,7 @@ export function missingWeatherInputs(hour: HourWeather): string[] {
 }
 
 export function missingNightInputs(hour: HourWeather): string[] {
-  return [
-    ...missingWeatherInputs(hour),
-    ...(!within(hour.temperature, -100, 70) ? ["温度"] : []),
-    ...(!within(hour.humidity, 0, 100) ? ["湿度"] : []),
-    ...(!within(hour.dewPoint, -120, 70) ? ["露点"] : []),
-  ];
+  return missingWeatherInputs(hour);
 }
 
 /** Conservative scoring input only. Cloud layers overlap: this is NOT a new measured total or a sum. */
@@ -108,10 +105,12 @@ export function scoreCoreWeather(hour: HourWeather): CoreWeatherScore | null {
   if (missingWeatherInputs(hour).length) return null;
   const effectiveCloud = effectiveCloudForScore(hour);
   if (effectiveCloud === null) return null;
+  const precipitationProbability = hour.precipitationProbability;
+  if (!within(precipitationProbability, 0, 100)) return null;
   const clearSky = 100 - effectiveCloud;
   const precipitation = scoreClamp(
     100 - Math.max(
-      typeof hour.precipitationProbability === "number" ? hour.precipitationProbability : 0,
+      precipitationProbability,
       Math.min(100, hour.precipitation! * 160),
     ),
   );
@@ -124,7 +123,7 @@ export function scoreCoreWeather(hour: HourWeather): CoreWeatherScore | null {
   );
   const blockers = [
     ...(hour.weatherCode! >= 95 ? ["雷暴风险"] : []),
-    ...(hour.precipitation! >= 0.2 || (hour.precipitationProbability ?? 0) >= 70 ? ["降水风险"] : []),
+    ...(hour.precipitation! >= 0.2 || precipitationProbability >= 70 ? ["降水风险"] : []),
     ...(hour.visibility! < 3_000 ? ["能见度过低"] : []),
     ...(hour.windGust! >= 15 ? ["阵风过大"] : []),
     ...(effectiveCloud >= 50 ? ["总云或分层云覆盖偏高"] : []),

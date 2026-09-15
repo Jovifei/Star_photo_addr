@@ -63,6 +63,11 @@ function forecastPayload(requestUrl: string) {
 
 const healthySources = {
   status: "ok",
+  model: "gfs",
+  cloudAvailable: true,
+  scoringAvailable: true,
+  missingCloudFields: [],
+  missingScoringFields: [],
   checkedAt: new Date().toISOString(),
   cached: false,
   sources: {

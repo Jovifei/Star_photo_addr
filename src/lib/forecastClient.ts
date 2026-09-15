@@ -11,11 +11,25 @@ const MAX_ENTRIES = 128;
 const FAILURE_COOLDOWN_MS = 60_000;
 const MAX_ACTIVE = 4;
 const MAX_PENDING = 128;
+const MAX_PROVIDER_COOLDOWN_MS = 24 * 60 * 60_000;
 const inFlight = new Map<string, { promise: Promise<ForecastClientResult>; forceRefresh: boolean }>();
 const failedUntil = new Map<string, number>();
 const pending: Array<{ start: () => void; priority: number }> = [];
 let active = 0;
 let globalCooldownUntil = 0;
+
+function retryAfterDelayMs(value: string | null): number {
+  const text = value?.trim() ?? "";
+  const seconds = Number(text);
+  if (text && Number.isFinite(seconds)) {
+    return Math.min(MAX_PROVIDER_COOLDOWN_MS, Math.max(1_000, seconds * 1_000));
+  }
+  const timestamp = Date.parse(text);
+  if (text && Number.isFinite(timestamp)) {
+    return Math.min(MAX_PROVIDER_COOLDOWN_MS, Math.max(1_000, timestamp - Date.now()));
+  }
+  return FAILURE_COOLDOWN_MS;
+}
 
 function schedule<T>(operation: () => Promise<T>, allowDuringCooldown = false, priority = 0): Promise<T> {
   if (pending.length >= MAX_PENDING) return Promise.reject(new Error("天气请求队列已满，请稍后重试"));
@@ -202,8 +216,7 @@ export function requestForecastResponse(
       const body = await response.json().catch(() => null) as ForecastResponse | null;
       if (!response.ok) {
         if (response.status === 429) {
-          const retryAfter = Number(response.headers.get("Retry-After"));
-          const delay = Number.isFinite(retryAfter) ? Math.max(1_000, Math.min(120_000, retryAfter * 1_000)) : FAILURE_COOLDOWN_MS;
+          const delay = retryAfterDelayMs(response.headers.get("Retry-After"));
           globalCooldownUntil = Math.max(globalCooldownUntil, Date.now() + delay);
         }
         throw new Error(`天气请求失败（HTTP ${response.status}）`);

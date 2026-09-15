@@ -4,6 +4,7 @@ import {
   fetchPressureForecast,
   type PressureForecastResponse,
 } from "@/lib/pressure";
+import { OpenMeteoRateLimitError } from "@/lib/openMeteoRateLimit";
 import { TimedCache } from "@/lib/serverCache";
 import { parseCoordinatePair } from "@/lib/server/queryParams";
 import { RefreshCoordinator } from "@/lib/serverRefreshCoordinator";
@@ -160,6 +161,11 @@ export async function GET(request: NextRequest) {
       ),
     });
   } catch (error) {
+    const providerLimited = error instanceof OpenMeteoRateLimitError;
+    const retryAfterSeconds = Math.max(
+      decision.retryAfterSeconds ?? 0,
+      providerLimited ? Math.ceil(error.retryAfterMs / 1000) : 0,
+    ) || null;
     const fallback = pressureCache.read(key);
     if (fallback && fallback.ageMs <= STALE_TTL_MS) {
       return NextResponse.json(
@@ -171,7 +177,7 @@ export async function GET(request: NextRequest) {
               "stale-memory",
               true,
               decision.suppressed,
-              decision.retryAfterSeconds,
+              retryAfterSeconds,
             ),
             Warning: '110 - "Response is stale"',
           },
@@ -189,8 +195,14 @@ export async function GET(request: NextRequest) {
         stale: false,
       },
       {
-        status: timedOut ? 504 : 502,
-        headers: { "Cache-Control": "no-store" },
+        status: providerLimited ? 429 : timedOut ? 504 : 502,
+        headers: responseHeaders(
+          true,
+          "error",
+          false,
+          decision.suppressed,
+          retryAfterSeconds,
+        ),
       },
     );
   }

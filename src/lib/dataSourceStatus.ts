@@ -1,3 +1,5 @@
+import type { ForecastModel } from "@/lib/types";
+
 export type DataSourceProbeStatus =
   | "available"
   | "degraded"
@@ -16,10 +18,20 @@ export interface DataSourceProbe {
   detail: string;
   checkedAt: string;
   latencyMs?: number;
+  model?: ForecastModel;
+  cloudAvailable?: boolean;
+  scoringAvailable?: boolean;
+  missingCloudFields?: string[];
+  missingScoringFields?: string[];
 }
 
 export interface DataSourceHealthResponse {
   status: "ok" | "degraded";
+  model: ForecastModel;
+  cloudAvailable: boolean;
+  scoringAvailable: boolean;
+  missingCloudFields: string[];
+  missingScoringFields: string[];
   checkedAt: string;
   cached: boolean;
   /** Age of the shared server-side diagnostic result, when served from cache. */

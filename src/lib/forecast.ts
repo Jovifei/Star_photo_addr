@@ -9,6 +9,8 @@ import type {
   Location,
   LocationForecast,
 } from "./types.ts";
+import { withOpenMeteoProviderSlot, noteOpenMeteoRateLimit, OpenMeteoRateLimitError } from "./openMeteoRateLimit";
+export { withOpenMeteoProviderSlot, noteOpenMeteoRateLimit, OpenMeteoRateLimitError, openMeteoCooldownRemainingMs } from "./openMeteoRateLimit";
 
 interface RawHourly {
   time: string[];
@@ -42,7 +44,7 @@ export const OPEN_METEO_FORECAST_URL =
   process.env.OPEN_METEO_FORECAST_URL?.trim() ||
   "https://api.open-meteo.com/v1/forecast";
 
-/** Optional Open-Meteo Pro key; lifts the free daily call quota when set. */
+/** Use an authorized key with its matching customer endpoint; a key alone does not reset anonymous quotas. */
 export function applyOpenMeteoApiKey(params: URLSearchParams): void {
   const key = process.env.OPEN_METEO_API_KEY?.trim();
   if (key) params.set("apikey", key);
@@ -191,58 +193,7 @@ export function validateRawForecast(
   }
 }
 
-const OPEN_METEO_MAX_CONCURRENCY = 2;
-let openMeteoActive = 0;
-let openMeteoCooldownUntil = 0;
-const openMeteoQueue: Array<{
-  run: () => Promise<unknown>;
-  resolve: (value: unknown) => void;
-  reject: (error: unknown) => void;
-}> = [];
-
-export class OpenMeteoRateLimitError extends Error {
-  constructor(readonly retryAfterMs: number) {
-    super(`Open-Meteo 限流冷却中，请 ${Math.ceil(retryAfterMs / 1000)} 秒后重试`);
-    this.name = "OpenMeteoRateLimitError";
-  }
-}
-
-function openMeteoRetryAfterMs(value: string | null): number {
-  if (!value) return 30_000;
-  const seconds = Number(value);
-  if (Number.isFinite(seconds)) return Math.min(120_000, Math.max(1_000, seconds * 1_000));
-  const date = Date.parse(value);
-  return Number.isFinite(date) ? Math.min(120_000, Math.max(1_000, date - Date.now())) : 30_000;
-}
-
-function drainOpenMeteoQueue(): void {
-  while (openMeteoActive < OPEN_METEO_MAX_CONCURRENCY && openMeteoQueue.length) {
-    const task = openMeteoQueue.shift()!;
-    const remaining = openMeteoCooldownUntil - Date.now();
-    if (remaining > 0) {
-      task.reject(new OpenMeteoRateLimitError(remaining));
-      continue;
-    }
-    openMeteoActive += 1;
-    void task.run().then(task.resolve, task.reject).finally(() => {
-      openMeteoActive -= 1;
-      drainOpenMeteoQueue();
-    });
-  }
-}
-
-export function withOpenMeteoProviderSlot<T>(run: () => Promise<T>): Promise<T> {
-  const remaining = openMeteoCooldownUntil - Date.now();
-  if (remaining > 0) return Promise.reject(new OpenMeteoRateLimitError(remaining));
-  return new Promise<T>((resolve, reject) => {
-    openMeteoQueue.push({ run, resolve: resolve as (value: unknown) => void, reject });
-    drainOpenMeteoQueue();
-  });
-}
-
-export function noteOpenMeteoRateLimit(retryAfter: string | null): void {
-  openMeteoCooldownUntil = Math.max(openMeteoCooldownUntil, Date.now() + openMeteoRetryAfterMs(retryAfter));
-}
+// Provider admission/cooldown is shared with Finder and health probes.
 
 function distanceKm(
   latitudeA: number,

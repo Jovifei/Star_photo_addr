@@ -5,7 +5,9 @@ import {
   lightPollutionTemplateError,
   materializeLightPollutionTile,
 } from "@/lib/lightPollution";
-import { OPEN_METEO_FORECAST_URL } from "@/lib/forecast";
+import { OPEN_METEO_FORECAST_URL, applyOpenMeteoApiKey, openMeteoModelParameter, withOpenMeteoProviderSlot, openMeteoCooldownRemainingMs } from "@/lib/forecast";
+import { DEFAULT_SCORING_MODEL, SCORING_REQUIRED_SERIES, missingScoringSeries } from "@/lib/forecastPolicy";
+import type { ForecastModel } from "@/lib/types";
 import { TimedCache } from "@/lib/serverCache";
 import { getGibsCapabilities } from "@/lib/server/gibsCapabilities";
 import type {
@@ -68,10 +70,10 @@ const FORCE_REFRESH_COOLDOWN_MS = boundedInteger(
   15 * 60_000,
 );
 
-const healthCache = new TimedCache<DataSourceHealthResponse>(2);
+const healthCache = new TimedCache<DataSourceHealthResponse>(8);
 const sourceProbeCache = new TimedCache<DataSourceProbe>(8);
-let healthInFlight: Promise<DataSourceHealthResponse> | null = null;
-let lastProbeStartedAt = 0;
+const healthInFlight = new Map<ForecastModel, Promise<DataSourceHealthResponse>>();
+const lastProbeStartedAt = new Map<ForecastModel, number>();
 
 function numericSeries(values: unknown, expectedLength: number): boolean {
   return (
@@ -103,6 +105,26 @@ export function missingCloudFields(
   return REQUIRED_CLOUD_FIELDS.filter(
     ({ key }) => !numericSeries(hourly?.[key], times.length),
   ).map(({ label }) => label);
+}
+
+export interface WeatherCapabilities {
+  cloudAvailable: boolean;
+  scoringAvailable: boolean;
+  missingCloudFields: string[];
+  missingScoringFields: string[];
+}
+
+export function assessWeatherCapabilities(
+  hourly: Record<string, unknown> | undefined,
+): WeatherCapabilities {
+  const missingCloud = missingCloudFields(hourly);
+  const missingScoring = missingScoringSeries(hourly);
+  return {
+    cloudAvailable: missingCloud.length === 0,
+    scoringAvailable: missingScoring.length === 0,
+    missingCloudFields: missingCloud,
+    missingScoringFields: missingScoring,
+  };
 }
 
 /** Keep provider details useful without reflecting URLs or upstream bodies. */
@@ -150,47 +172,63 @@ async function timedFetch(
   }
 }
 
-async function probeWeather(checkedAt: string): Promise<DataSourceProbe> {
+async function probeWeather(checkedAt: string, model: ForecastModel): Promise<DataSourceProbe> {
   const startedAt = Date.now();
+  const unavailable: WeatherCapabilities = {
+    cloudAvailable: false,
+    scoringAvailable: false,
+    missingCloudFields: ["逐小时时间"],
+    missingScoringFields: ["有效且唯一的逐小时时间轴"],
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+  const label = `Open-Meteo ${model.toUpperCase()} 评分字段`;
   try {
     const url = new URL(OPEN_METEO_FORECAST_URL);
     url.searchParams.set("latitude", "30.2741");
     url.searchParams.set("longitude", "120.1551");
-    url.searchParams.set(
-      "hourly",
-      REQUIRED_CLOUD_FIELDS.map(({ key }) => key).join(","),
-    );
+    url.searchParams.set("hourly", SCORING_REQUIRED_SERIES.map(([key]) => key).join(","));
     url.searchParams.set("timezone", "Asia/Shanghai");
     url.searchParams.set("forecast_days", "1");
-    const response = await timedFetch(url.toString(), "application/json");
+    url.searchParams.set("wind_speed_unit", "ms");
+    const providerModel = openMeteoModelParameter(model);
+    if (providerModel) url.searchParams.set("models", providerModel);
+    applyOpenMeteoApiKey(url.searchParams);
+    // Same provider circuit as single-point and Finder requests. Never bypass 429.
+    const response = await withOpenMeteoProviderSlot(() => fetch(url.toString(), {
+      signal: controller.signal, cache: "no-store", headers: { Accept: "application/json" },
+    }));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const payload = (await response.json()) as {
-      hourly?: Record<string, unknown>;
-    };
-    const missing = missingCloudFields(payload.hourly);
-    if (missing.length) {
-      throw new Error(`天气字段不可用：${missing.join("、")}`);
+    const payload = (await response.json()) as { hourly?: Record<string, unknown> } | null;
+    const capabilities = assessWeatherCapabilities(payload?.hourly);
+    if (capabilities.missingScoringFields.length) {
+      return {
+        id: "weather",
+        label,
+        status: "degraded",
+        detail: capabilities.cloudAvailable
+          ? `云量可查看，评分字段不足：${capabilities.missingScoringFields.join("、")}`
+          : `云量字段不足：${capabilities.missingCloudFields.join("、")}`,
+        checkedAt,
+        latencyMs: Date.now() - startedAt,
+        model,
+        ...capabilities,
+      };
     }
-    const hours = Array.isArray(payload.hourly?.time)
-      ? payload.hourly.time.length
-      : 0;
+    const hours = Array.isArray(payload?.hourly?.time) ? payload.hourly.time.length : 0;
     return {
-      id: "weather",
-      label: "Open-Meteo 云量",
-      status: "available",
-      detail: `总云量、低云、中云和高云均可用 · ${hours} 个逐小时时次`,
-      checkedAt,
-      latencyMs: Date.now() - startedAt,
+      id: "weather", label, status: "available",
+      detail: `${model.toUpperCase()} 杭州单点 ${hours} 个时次：评分字段包含能见度且至少一小时完整；不代表全部地点、所有时次或预测准确率`,
+      checkedAt, latencyMs: Date.now() - startedAt, model, ...capabilities,
     };
   } catch (error) {
     return {
-      id: "weather",
-      label: "Open-Meteo 云量",
-      status: "degraded",
-      detail: sanitizeProbeError(error, "天气上游"),
-      checkedAt,
-      latencyMs: Date.now() - startedAt,
+      id: "weather", label, status: "degraded",
+      detail: `${model.toUpperCase()} 单点检查：${sanitizeProbeError(error, "天气上游")}`,
+      checkedAt, latencyMs: Date.now() - startedAt, model, ...unavailable,
     };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -277,7 +315,7 @@ async function probeLightPollution(
 }
 
 async function cachedProbe(
-  id: DataSourceProbe["id"],
+  id: string,
   ttlMs: number,
   forceRefresh: boolean,
   loader: (checkedAt: string) => Promise<DataSourceProbe>,
@@ -325,14 +363,15 @@ function staticConfigurationProbes(
 
 async function runHealthProbes(
   forceRefresh: boolean,
+  model: ForecastModel,
 ): Promise<DataSourceHealthResponse> {
   const checkedAt = new Date().toISOString();
   const [weather, satellite, lightPollution] = await Promise.all([
     cachedProbe(
-      "weather",
+      `weather|${model}`,
       WEATHER_PROBE_TTL_MS,
       forceRefresh,
-      probeWeather,
+      (sourceCheckedAt) => probeWeather(sourceCheckedAt, model),
     ),
     cachedProbe(
       "satellite",
@@ -361,11 +400,16 @@ async function runHealthProbes(
     )
       ? "ok"
       : "degraded",
+    model,
+    cloudAvailable: weather.cloudAvailable === true,
+    scoringAvailable: weather.scoringAvailable === true,
+    missingCloudFields: weather.missingCloudFields ?? [],
+    missingScoringFields: weather.missingScoringFields ?? [],
     checkedAt,
     cached: false,
     sources,
   };
-  healthCache.write("all", response);
+  healthCache.write(model, response);
   return response;
 }
 
@@ -386,37 +430,36 @@ function cachedResponse(
 
 export async function getDataSourceHealth(
   forceRefresh = false,
+  model: ForecastModel = DEFAULT_SCORING_MODEL,
 ): Promise<DataSourceHealthResponse> {
   const now = Date.now();
-  const cached = healthCache.read("all", now);
-
-  if (!forceRefresh && cached && cached.ageMs <= HEALTH_CACHE_TTL_MS) {
-    return cachedResponse(cached);
-  }
-
-  if (
-    forceRefresh &&
-    cached &&
-    now - lastProbeStartedAt < FORCE_REFRESH_COOLDOWN_MS
-  ) {
-    return cachedResponse(cached, {
+  const cached = healthCache.read(model, now);
+  const lastStartedAt = lastProbeStartedAt.get(model) ?? 0;
+  // A cached positive probe must not hide a now-known provider cooldown.
+  const withCooldown = (data: DataSourceHealthResponse): DataSourceHealthResponse => {
+    const remaining = openMeteoCooldownRemainingMs();
+    if (remaining <= 0) return data;
+    return { ...data, status: "degraded", nextRefreshAt: new Date(Date.now() + remaining).toISOString(),
+      cloudAvailable: false,
+      scoringAvailable: false,
+      missingScoringFields: [...new Set([...data.missingScoringFields, "Open-Meteo 限流冷却"])],
+      sources: { ...data.sources, weather: { ...data.sources.weather, status: "degraded",
+        cloudAvailable: false,
+        scoringAvailable: false,
+        detail: `${model.toUpperCase()} 上游 HTTP 429 冷却中；先前探针不代表当前评分链可用` } } };
+  };
+  if (!forceRefresh && cached && cached.ageMs <= HEALTH_CACHE_TTL_MS) return withCooldown(cachedResponse(cached));
+  if (forceRefresh && cached && now - lastStartedAt < FORCE_REFRESH_COOLDOWN_MS) {
+    return withCooldown(cachedResponse(cached, {
       refreshSuppressed: true,
-      nextRefreshAt: new Date(
-        lastProbeStartedAt + FORCE_REFRESH_COOLDOWN_MS,
-      ).toISOString(),
-    });
+      nextRefreshAt: new Date(lastStartedAt + FORCE_REFRESH_COOLDOWN_MS).toISOString(),
+    }));
   }
-
-  if (healthInFlight) {
-    const shared = await healthInFlight;
-    return { ...shared, coalesced: true };
-  }
-
-  lastProbeStartedAt = now;
-  healthInFlight = runHealthProbes(forceRefresh);
-  try {
-    return await healthInFlight;
-  } finally {
-    healthInFlight = null;
-  }
+  const shared = healthInFlight.get(model);
+  if (shared) return withCooldown({ ...await shared, coalesced: true });
+  lastProbeStartedAt.set(model, now);
+  const task = runHealthProbes(forceRefresh, model);
+  healthInFlight.set(model, task);
+  try { return withCooldown(await task); }
+  finally { if (healthInFlight.get(model) === task) healthInFlight.delete(model); }
 }

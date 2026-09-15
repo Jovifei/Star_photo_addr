@@ -5,6 +5,10 @@ import {
   OPEN_METEO_FORECAST_URL,
   openMeteoModelParameter,
 } from "./forecast";
+import {
+  OpenMeteoRateLimitError,
+  withOpenMeteoProviderSlot,
+} from "./openMeteoRateLimit";
 import { PRESSURE_LEVELS } from "./pressureLevels";
 import type { ForecastModel } from "./types";
 
@@ -131,17 +135,18 @@ async function requestPressureJson(
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      const response = await withOpenMeteoProviderSlot(() => fetch(url, {
         signal,
         cache: "no-store",
         headers: { Accept: "application/json" },
-      });
+      }));
       if (response.ok) return await response.json();
       lastError = await providerError(response);
       if (response.status < 500 && response.status !== 429) break;
     } catch (error) {
       if (signal?.aborted) throw error;
       lastError = error;
+      if (error instanceof OpenMeteoRateLimitError) break;
     }
   }
   throw lastError instanceof Error
@@ -167,6 +172,13 @@ function valueAt(
 ): unknown {
   const values = hourly[key];
   return Array.isArray(values) ? values[index] : undefined;
+}
+
+function validTimeAxis(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length > 0 &&
+    value.every((time) => typeof time === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(time)) &&
+    new Set(value).size === value.length &&
+    value.every((time, index) => index === 0 || time > value[index - 1]!);
 }
 
 export function isCompletePressureLevelSample(
@@ -218,7 +230,7 @@ export function parsePressureForecast(
   if (
     !Array.isArray(rawTimes) ||
     rawTimes.length === 0 ||
-    !rawTimes.every((time): time is string => typeof time === "string")
+    !validTimeAxis(rawTimes)
   ) {
     throw new Error("气压上游返回了无效逐小时时间轴");
   }

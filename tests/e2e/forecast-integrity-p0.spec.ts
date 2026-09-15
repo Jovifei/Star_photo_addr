@@ -189,3 +189,57 @@ test("无有效天气预报时，时间轴质量显示为数据不足", async ({
   await expect(quality).toContainText("数据质量：数据不足");
   await expect(quality).not.toContainText("数据质量：可用");
 });
+
+test("显式 ICON 缺少能见度时仍可看云量但不显示可用评分", async ({ page }, testInfo) => {
+  await page.route("**/api/data-status**", async (route) => {
+    const model = new URL(route.request().url()).searchParams.get("model") ?? "icon";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: "degraded",
+        model,
+        cloudAvailable: true,
+        scoringAvailable: false,
+        missingCloudFields: [],
+        missingScoringFields: ["能见度"],
+        checkedAt: new Date().toISOString(),
+        cached: false,
+        sources: {
+          weather: {
+            id: "weather",
+            label: "Open-Meteo ICON 评分字段",
+            status: "degraded",
+            detail: "云量可查看，评分字段不足：能见度",
+            checkedAt: new Date().toISOString(),
+            model,
+            cloudAvailable: true,
+            scoringAvailable: false,
+            missingCloudFields: [],
+            missingScoringFields: ["能见度"],
+          },
+        },
+      }),
+    });
+  });
+  await page.route("**/api/forecast?**", async (route) => {
+    const body = forecastBody(route.request().url(), (locations) => {
+      for (const location of locations) {
+        location.hourly = location.hourly.map((hour: Record<string, unknown>) => ({ ...hour, visibility: null }));
+      }
+    });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  });
+
+  await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&model=icon&overlay=forecast-cloud");
+  await expect(page.locator(".cloud-timeline-data-card small")).toContainText("天气可查看，评分数据不足", { timeout: 20_000 });
+  if (testInfo.project.name === "mobile") {
+    await openMobileMapPanel(page, "cloud");
+  } else {
+    await expect(page.getByRole("tab", { name: "图层与偏好" })).toBeVisible();
+    await page.getByRole("tab", { name: "图层与偏好" }).click();
+  }
+  await expect(page.getByTestId("weather-cloud-capability")).toContainText("可查看");
+  await expect(page.getByTestId("weather-scoring-capability")).toContainText("不足");
+  await expect(page.getByTestId("cloud-data-quality")).toContainText("天气可查看，评分数据不足");
+});

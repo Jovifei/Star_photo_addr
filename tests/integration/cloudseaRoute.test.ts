@@ -82,10 +82,14 @@ function successfulFetch(requested?: URL[]) {
     const url = new URL(String(input));
     requested?.push(url);
     const count = coordinateCount(url);
+    const latitudes = (url.searchParams.get("latitude") ?? "").split(",").map(Number);
+    const longitudes = (url.searchParams.get("longitude") ?? "").split(",").map(Number);
     const hourly = url.searchParams.get("hourly") ?? "";
-    const payload = hourly.includes("geopotential_height_")
-      ? Array.from({ length: count }, () => pressureEntry())
-      : Array.from({ length: count }, () => hourlyEntry());
+    const payload = Array.from({ length: count }, (_, index) => ({
+      ...(hourly.includes("geopotential_height_") ? pressureEntry() : hourlyEntry()),
+      latitude: latitudes[index],
+      longitude: longitudes[index],
+    }));
     return new Response(JSON.stringify(payload), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -103,6 +107,26 @@ afterEach(() => {
 });
 
 describe("GET /api/cloudsea/snapshot", () => {
+  it("defaults the dedicated cloudsea snapshot to GFS", async () => {
+    const requested: URL[] = [];
+    vi.stubGlobal("fetch", successfulFetch(requested));
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-07"));
+
+    expect(response.status).toBe(200);
+    expect(requested.every((url) => url.searchParams.get("models") === "gfs_seamless")).toBe(true);
+  });
+
+  it("rejects an invalid calendar date before contacting Open-Meteo", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-02-30&model=icon"));
+
+    expect(response.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("uses real surface RH plus batched pressure profiles for AIFS", async () => {
     const requested: URL[] = [];
     vi.stubGlobal("fetch", successfulFetch(requested));
@@ -173,6 +197,41 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("preserves an upstream 429 and Retry-After without retrying the surface request", async () => {
+    const fetchMock = vi.fn(async () => new Response(
+      JSON.stringify({ reason: "Minutely API request limit exceeded" }),
+      { status: 429, headers: { "Retry-After": "65" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-07&model=icon"));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("65");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a surface batch whose returned coordinates do not match the request", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      const count = coordinateCount(url);
+      const latitudes = (url.searchParams.get("latitude") ?? "").split(",").map(Number);
+      const longitudes = (url.searchParams.get("longitude") ?? "").split(",").map(Number);
+      return new Response(JSON.stringify(Array.from({ length: count }, (_, index) => ({
+        ...hourlyEntry(),
+        latitude: latitudes[index]! + (index === 0 ? 2 : 0),
+        longitude: longitudes[index],
+      }))), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-07&model=icon"));
+
+    expect(response.status).toBe(502);
+    expect(String((await response.json()).error)).toContain("坐标不一致");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps real surface data but fails vertical cloud-sea conclusions closed when pressure is unavailable", async () => {
     vi.stubGlobal(
       "fetch",
@@ -183,7 +242,11 @@ describe("GET /api/cloudsea/snapshot", () => {
           throw new Error("pressure unavailable");
         }
         return new Response(
-          JSON.stringify(CLOUD_SEA_SITES.map(() => hourlyEntry())),
+          JSON.stringify(CLOUD_SEA_SITES.map((site) => ({
+            ...hourlyEntry(),
+            latitude: site.latitude,
+            longitude: site.longitude,
+          }))),
           {
             status: 200,
             headers: { "Content-Type": "application/json" },

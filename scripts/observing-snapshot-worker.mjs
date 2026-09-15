@@ -1,197 +1,109 @@
-import { snapshotHealth } from "./observing-snapshot-worker-utils.mjs";
+import {
+  nextWorkerDelay,
+  observingContext,
+  snapshotHealth,
+  workerRetryAfterMs,
+} from "./observing-snapshot-worker-utils.mjs";
 
-const baseUrl = (
-  process.env.SNAPSHOT_BASE_URL || "http://127.0.0.1:3000"
-).replace(/\/$/, "");
-
+const baseUrl = (process.env.SNAPSHOT_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
 function boundedNumber(value, fallback, minimum, maximum) {
+  if (typeof value !== "string" || !value.trim()) return fallback;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(maximum, Math.max(minimum, Math.round(parsed)));
+  return Number.isFinite(parsed) ? Math.min(maximum, Math.max(minimum, Math.round(parsed))) : fallback;
 }
-
-const intervalMs = boundedNumber(
-  process.env.SNAPSHOT_INTERVAL_MS,
-  3 * 60 * 60 * 1000, // 3 hours (weather models only update every 6 hours)
-  60_000,
-  24 * 60 * 60 * 1000,
-);
-const requestTimeoutMs = boundedNumber(
-  process.env.SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS,
-  150_000,
-  10_000,
-  5 * 60_000,
-);
+const intervalMs = boundedNumber(process.env.SNAPSHOT_INTERVAL_MS, 3 * 60 * 60_000, 60_000, 24 * 60 * 60_000);
+const requestTimeoutMs = boundedNumber(process.env.SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS, 150_000, 10_000, 5 * 60_000);
 const daysValue = Number(process.env.SNAPSHOT_DAYS);
 const days = [1, 3, 5, 7].includes(daysValue) ? daysValue : 1;
 const supportedModels = new Set(["best_match", "icon", "gfs", "aifs"]);
-const requestedModel = process.env.SNAPSHOT_MODEL || "icon";
-const model = supportedModels.has(requestedModel) ? requestedModel : "icon";
-
+// Keep in sync with DEFAULT_SCORING_MODEL; the standalone worker image copies scripts/.
+const requestedModel = process.env.SNAPSHOT_MODEL?.trim() || "gfs";
+if (!supportedModels.has(requestedModel)) throw new Error("Invalid SNAPSHOT_MODEL; expected best_match, icon, gfs or aifs");
+const model = requestedModel;
+const fireglowEnabled = process.env.SNAPSHOT_PREWARM_FIREGLOW === "1";
+if (model === "icon" || model === "aifs") {
+  console.warn(`[snapshot-worker] explicit ${model}: missing scoring fields remain fail-closed; check visibility capability`);
+}
 let stopped = false;
 let timer = null;
 let activeController = null;
-let lastErrorWasRateLimit = false;
-let lastRefreshWasStale = false;
 
-function shanghaiDate() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(
-    parts.map((part) => [part.type, part.value]),
-  );
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
-function shanghaiForecastTime() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}T${values.hour}:00`;
+async function requestSnapshot(endpoint, params, expectedObservingModel) {
+  const controller = new AbortController();
+  activeController = controller;
+  const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
+  let retryAfterMs = 0;
+  try {
+    const response = await fetch(`${baseUrl}${endpoint}?${params.toString()}`, {
+      signal: controller.signal, cache: "no-store",
+      headers: { Accept: "application/json", "User-Agent": "star-weather-snapshot-worker/0.3.1" },
+    });
+    retryAfterMs = workerRetryAfterMs(response.headers.get("Retry-After"));
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(typeof payload?.error === "string" ? payload.error : `HTTP ${response.status}`);
+    const healthy = snapshotHealth(
+      payload,
+      Date.now(),
+      expectedObservingModel ?? model,
+      params.get("date") ?? undefined,
+    ).shouldPrewarm;
+    console.log(`[snapshot-worker] ${endpoint} ${params.get("date")} ${model} ${params.get("time") ?? ""} ${healthy ? "fresh" : "stale"}`);
+    return { healthy, retryAfterMs };
+  } catch (error) {
+    const text = error instanceof Error ? error.message : String(error);
+    if (/daily.*limit|daily.*quota/i.test(text)) retryAfterMs = Math.max(retryAfterMs, 24 * 60 * 60_000);
+    console.error(`[snapshot-worker] refresh failed: ${controller.signal.aborted ? "request timeout or shutdown" : text}`);
+    // Any failure blocks topic prewarm, not just HTTP 429.
+    return { healthy: false, retryAfterMs };
+  } finally {
+    clearTimeout(timeout);
+    if (activeController === controller) activeController = null;
+  }
 }
 
 async function refresh() {
-  lastRefreshWasStale = false;
-  const date = shanghaiDate();
-  const params = new URLSearchParams({
-    date,
-    days: String(days),
-    model,
-    time: shanghaiForecastTime(),
-    refresh: "1",
-  });
-  activeController = new AbortController();
-  const timeout = setTimeout(
-    () => activeController?.abort(),
-    requestTimeoutMs,
-  );
-  try {
-    const response = await fetch(
-      `${baseUrl}/api/observing/snapshot?${params.toString()}`,
-      {
-        signal: activeController.signal,
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "star-weather-snapshot-worker/0.3.1",
-        },
-      },
-    );
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      throw new Error(payload?.error || `HTTP ${response.status}`);
-    }
-    const health = snapshotHealth(payload);
-    lastRefreshWasStale = health.stale;
-    lastErrorWasRateLimit = false;
-    console.log(`[snapshot-worker] observing ${date} ${model} ${params.get("time")} ${health.logLabel}`);
-  } catch (error) {
-    const errText = error instanceof Error ? error.message : String(error);
-    lastErrorWasRateLimit = /429|limit exceeded/i.test(errText);
-    const timedOut =
-      activeController?.signal.aborted ||
-      (error instanceof Error && /aborted|timeout/i.test(error.message));
-    console.error(
-      `[snapshot-worker] refresh failed: ${
-        timedOut
-          ? "request timeout"
-          : errText
-      }`,
-    );
-  } finally {
-    clearTimeout(timeout);
-    activeController = null;
-  }
+  const context = observingContext();
+  return requestSnapshot("/api/observing/snapshot", new URLSearchParams({
+    date: context.date, days: String(days), model, time: context.time, refresh: "1",
+  }), model);
 }
 
-// Pre-warm today/+1/+2 fireglow snapshots so evening page loads hit memory
-// instead of a cold 257-point upstream fan-out. Serial and non-fatal: a
-// failed date must never block the observing snapshot or the other dates.
+/** Optional and serial. Stop at the first stale/error response, or on shutdown. */
 async function prewarmFireglow() {
-  const date = shanghaiDate();
-  for (let offset = 0; offset < 3; offset += 1) {
-    const value = new Date(`${date}T12:00:00Z`);
+  const { calendarDate } = observingContext();
+  let result = { healthy: true, retryAfterMs: 0 };
+  for (let offset = 0; offset < 3 && !stopped; offset += 1) {
+    const value = new Date(`${calendarDate}T12:00:00Z`);
     value.setUTCDate(value.getUTCDate() + offset);
-    const target = value.toISOString().slice(0, 10);
-    const params = new URLSearchParams({
-      date: target,
-      model,
-    });
-    activeController = new AbortController();
-    const timeout = setTimeout(
-      () => activeController?.abort(),
-      requestTimeoutMs,
-    );
-    try {
-      const response = await fetch(
-        `${baseUrl}/api/fireglow/snapshot?${params.toString()}`,
-        {
-          signal: activeController.signal,
-          cache: "no-store",
-          headers: {
-            Accept: "application/json",
-            "User-Agent": "star-weather-snapshot-worker/0.3.1",
-          },
-        },
-      );
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error || `HTTP ${response.status}`);
-      }
-      console.log(
-        `[snapshot-worker] fireglow ${target} ${model} ${payload?.stale ? "stale" : "fresh"}`,
-      );
-    } catch (error) {
-      const timedOut =
-        activeController?.signal.aborted ||
-        (error instanceof Error && /aborted|timeout/i.test(error.message));
-      console.error(
-        `[snapshot-worker] fireglow ${target} failed: ${
-          timedOut
-            ? "request timeout"
-            : error instanceof Error
-              ? error.message
-              : String(error)
-        }`,
-      );
-    } finally {
-      clearTimeout(timeout);
-      activeController = null;
-    }
+    result = await requestSnapshot("/api/fireglow/snapshot", new URLSearchParams({
+      date: value.toISOString().slice(0, 10), model,
+    }), model);
+    if (!result.healthy) break;
   }
+  return result;
 }
 
 async function runLoop() {
   if (stopped) return;
-  await refresh();
-  if (!stopped && !lastErrorWasRateLimit && !lastRefreshWasStale) {
-    await prewarmFireglow();
-  }
+  let result = await refresh();
+  if (!stopped && result.healthy && fireglowEnabled) result = await prewarmFireglow();
   if (!stopped) {
-    const nextWait = lastErrorWasRateLimit || lastRefreshWasStale
-      ? Math.max(intervalMs, 2 * 60 * 60 * 1000)
-      : intervalMs;
-    timer = setTimeout(runLoop, nextWait);
+    // Node timers overflow above 2^31-1. Keep an absolute deadline and recheck it.
+    const nextAt = Date.now() + nextWorkerDelay(intervalMs, result.healthy, result.retryAfterMs);
+    const schedule = () => {
+      if (stopped) return;
+      const remaining = nextAt - Date.now();
+      if (remaining <= 0) { void runLoop(); return; }
+      timer = setTimeout(schedule, Math.min(remaining, 2_147_483_647));
+    };
+    schedule();
   }
 }
-
 function stop() {
   stopped = true;
   if (timer) clearTimeout(timer);
   activeController?.abort();
 }
-
 process.once("SIGTERM", stop);
 process.once("SIGINT", stop);
-
 await runLoop();

@@ -92,6 +92,17 @@ describe("pressure forecast batch", () => {
     ).toThrow(/模式地形高程 elevation/);
   });
 
+  it("rejects duplicate or reversed pressure time axes", () => {
+    for (const times of [
+      ["2026-09-08T05:00", "2026-09-08T05:00"],
+      ["2026-09-08T06:00", "2026-09-08T05:00"],
+    ]) {
+      const raw = rawPressure();
+      (raw.hourly as Record<string, unknown>).time = times;
+      expect(() => parsePressureForecast(raw, "site-a", "icon")).toThrow(/无效逐小时时间轴/);
+    }
+  });
+
   it("tracks hourly profile completeness separately from aligned day-level arrays", () => {
     const parsed = parsePressureForecast(
       rawPressure({ sparseSecondHourLevels: 5 }),
