@@ -3,9 +3,9 @@
 > 对应方案：[`TEST_PLAN_V1.md`](./TEST_PLAN_V1.md)
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
-> 状态日期：2026-09-10
-> 当前 main：`main@39338495db0d22c9ec5afe15763a023c4ba3a06b`（v1.0.14）
-> 当前测试工作分支：无（`codex/provincial-stargazing-locations-20260910` 已合并）
+> 状态日期：2026-09-16
+> 已部署 main 基线：`main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`（v1.0.18）
+> 当前测试工作分支：`codex/model-capability-recovery-20260915@4118887`（未合并/未部署）
 
 ## 状态定义
 
@@ -18,7 +18,22 @@
 | BLOCKED | 缺少 ECS、域名、证书、授权数据或现场设备 |
 | DEFERRED | 已安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
 
-## v1.0.14 发布门禁结果
+## 当前候选 MODEL-RECOVERY-015 本地门禁结果（未发布）
+
+| 门禁 | 结果 | 说明 |
+| --- | --- | --- |
+| `node --experimental-strip-types scripts/test-model-recovery.mjs` | PASS | Node 24 Windows：32/32；包含 worker mock、GFS 默认、字段门禁、429 长冷却、日期/schema/stale 防线 |
+| `npm run check` | PASS | ESLint、TypeScript、65 个 Vitest 文件 / 391 项测试、Next.js 生产构建 |
+| `npm run test:e2e` | PASS | Chromium 桌面/移动 158 实例：122 passed / 36 skipped / 0 failed |
+| `npm run test:e2e:cross-browser` | PASS | Firefox desktop 2/2、WebKit mobile 2/2 |
+| `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
+| 真实 GFS 单点 | PASS | 24 小时、13 项评分字段各 24/24，`stale=false` |
+| 真实 GFS Finder 批量 | PASS | 282/282 地点可用，13 项字段各 9306 个有效值，`stale=false` |
+| Docker build / worker smoke | BLOCKED | Docker Desktop daemon 无法启动；仅 `docker compose config --quiet` 通过 |
+
+本候选尚未合并 main、未部署生产、未修改生产 `.env`。云海第一阶段与火烧云页面已实现；Beta/未校准是科学边界，不是开发状态。
+
+## v1.0.14 发布门禁结果（历史）
 
 | 门禁 | 结果 | 说明 |
 | --- | --- | --- |

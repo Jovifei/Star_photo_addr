@@ -704,3 +704,36 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 
 - 根因：上海时间凌晨仍属于前一晚观测夜，静态按当天 00:00 起始会漏掉 20:00–23:00。
 - 变更边界：仅测试夹具和版本记录；生产评分、天气 Provider、完整性门槛保持不变。
+
+# 2026-09-15 模型能力恢复候选接收与阻断修复
+
+- [x] 检查 Owner 工作区、fetch origin、确认目标远端分支仍为 v1.0.18 基线。
+- [x] 在仓库外解压候选包，完整阅读接收说明、验证台账、编辑清单和候选工程记录。
+- [x] 在干净隔离 worktree 运行应用器 dry-run（`DRY_RUN_OK`），审阅 25 文件候选 diff 后再 `--apply`。
+- [x] Node 24 安装依赖，运行候选独立测试；修正仅测试 harness 的 Windows URL/退出码兼容问题。
+- [x] 修复并验证评分链 fail-closed、健康状态能力字段、全站限流入口/错误码、worker 日期身份和健康别名模型传递。
+- [x] 重新运行候选/全仓单测、完整 Chromium/Firefox/WebKit；Docker daemon 不可用，保留 Compose 静态校验并记录容器 smoke 阻断；stale94、低云61、旧 schema、超龄缓存、模型切换防线通过。
+- [ ] 审阅最终 diff，在目标分支以 `codex:` 提交并推送；不合并 main、不部署、不改生产 `.env`。
+
+## Review
+
+- Baseline: `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`，`origin/codex/model-capability-recovery-20260915` 与其 identical。
+- Candidate dry-run/apply: 应用器校验通过；当前候选已应用但未提交。
+- Blockers: 候选原始全仓门禁首次因旧 worker 源码断言失败；独立审查还发现评分字段 fail-closed、健康能力字段、云海压力限流、429 路由、worker 日期和健康别名等缺口。
+- Resolved: 以上代码/测试缺口已最小修复；Node 24 候选 32/32、全仓 65 文件/391 项、Chromium 122/36、Firefox/WebKit 4/4；真实 GFS 单点/282 点批量/health 通过。
+- Remaining: Docker Desktop daemon 无法启动，镜像构建和容器 worker smoke 未运行；账号配额与预报准确率仍未校准。
+
+# 2026-09-16 项目文档与知识库事实源收敛
+
+- [x] 以当前源码、`main@3334e0c` 和候选 `4118887` 为基线，检查 Docs/README/CHANGELOG/跟踪台账中的旧版本和旧阶段表述。
+- [x] 新增 `docs/GUIDE.md`，明确四个正式工作区、云海第一阶段完成、Beta/未校准的科学边界及新会话读取顺序。
+- [x] 更新工作区架构、制造流程、项目状态、变更台账、测试状态、部署/测试说明和根/Docs Changelog。
+- [x] 为历史工程记录补充历史状态注记；更新 `docs/project-tracking/CODEX_HANDOFF.md`，避免后续 Agent 读取过期 main/分支和“云海开发中”结论。
+- [x] 运行过 `codex-memory` 文档镜像 DryRun；确认目标项目没有 Obsidian 映射，未写入 Vault，保留 `NO_PROJECT_MEMORY` / `MEMORY_SYNC_BLOCKED` 证据。
+- [ ] 推送文档提交后由远端 CI/PR 复核；不合并 main、不部署，直到候选发布门禁通过。
+
+## Review
+
+- 当前文档事实源：`docs/GUIDE.md`、`docs/project-tracking/PROJECT_STATUS.md`、`docs/testing/TEST_STATUS.md`、`docs/engineering-change-log/2026-09-15-model-capability-recovery-candidate.md`。
+- 当前代码候选仍为本地已验收、未发布；Docker daemon、远端 CI、生产部署和科学准确率校准不因文档更新而改变状态。
+- Obsidian 项目记忆映射缺失，不能将镜像 DryRun 写成已同步；后续需先建立经授权的项目映射，再执行实际镜像。

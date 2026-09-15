@@ -1,5 +1,7 @@
 # 工程修改跟踪：v1.0.18 跨午夜验证稳定性
 
+> 历史台账说明（2026-09-16）：本文记录 v1.0.18 生成时的待执行门禁；当前候选最终本地门禁已写入 `2026-09-15-model-capability-recovery-candidate.md`、`docs/testing/TEST_STATUS.md` 和 `docs/project-tracking/PROJECT_STATUS.md`。
+
 > 日期：2026-09-14  
 > 触发：完整 Chromium E2E 在上海时间 00:00–05:00 期间，低云 61 门禁夹具从当天 00:00 开始，遗漏正在进行的前一晚 20:00–23:00，导致测试错误落到“数据不足”。  
 > 范围：仅修正 E2E 合成预报的日期锚点，不改变生产评分、天气 Provider 或完整性门槛。

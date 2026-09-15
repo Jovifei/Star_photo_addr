@@ -55,7 +55,9 @@ APP_BIND=127.0.0.1
 APP_PORT=3100
 BUILD_REVISION=<当前 Git SHA>
 SNAPSHOT_DAYS=1
-SNAPSHOT_MODEL=icon
+SNAPSHOT_MODEL=gfs
+SNAPSHOT_INTERVAL_MS=10800000
+SNAPSHOT_PREWARM_FIREGLOW=0
 SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS=150000
 ```
 
@@ -69,6 +71,8 @@ SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS=150000
 - `*_TTL_MS`、`*_TIMEOUT_MS`、`*_FORCE_REFRESH_COOLDOWN_MS`：数据缓存、超时和公开刷新保护。
 
 `NEXT_PUBLIC_*` 在 `next build` 阶段写入浏览器包。修改此类值后必须重新构建镜像，单纯重启容器不会生效。
+
+> 现有服务器 `.env` 不会被 `.env.example` 自动覆盖。升级模型能力前必须显式核对实际生效的 `SNAPSHOT_MODEL`、`SNAPSHOT_INTERVAL_MS` 和 `SNAPSHOT_PREWARM_FIREGLOW`；本地候选默认 GFS 不等于线上已经切换。
 
 > 基础底图提示：默认 OSM 回退用于消除匿名 CARTO 的 `API KEY REQUIRED` 水印，适合个人低流量验证。公开流量增长后应切换到符合授权/用量政策的自有瓦片、受控服务或后续 OpenFreeMap/PMTiles 方案，并保留可见署名。
 

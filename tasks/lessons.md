@@ -1,5 +1,8 @@
 # Lessons
 
+- 2026-09-15: 候选补丁的独立逻辑通过不等于全仓接收；必须在目标 Node 版本和宿主平台运行 worker 子进程，Windows 的 `node --import` 需要 `file://` URL，mock 退出也要保持可观测的零退出码。
+- 2026-09-15: “云量可查看”与“评分字段可用”必须是两个健康能力；评分函数、时间轴、CloudControl 和批量 Finder 需要同一组 13 项字段门禁，不能只在探针层阻断。
+- 2026-09-15: Open-Meteo gate 必须覆盖 surface、pressure、Finder、health 等同一进程请求族；429 要在释放槽位前建立长冷却、停止后续批次并透传 Retry-After，不能转换为普通 502 或继续预热。
 - 2026-09-13: 数据质量标签必须由“实际可用且身份匹配的输入”决定；“暂无有效预报/缺少抓取时间”不能因为 stale=false 就显示可用，来源、时间和质量需要同一条 fail-closed 判定。
 - 2026-09-13: Worker 不能把 HTTP 200 当作 fresh；必须核验快照 stale、完整性版本和非空 sourceFetchedAt，stale 时跳过专题预热并退避。ECS 低内存发布先用本地 standalone + 旧镜像轻量复制，避免远端 Next 编译触发全局 OOM。
 - 2026-09-13: 观星分不能只证明上游 HTTP 200；必须同时绑定当前时次、模型、实际网格坐标、分层云字段、provider/应用时间和 stale 状态。页面评分、候选排行、详情和地图必须共用同一条评分链；上游限流或超龄 fallback 时要 fail-closed，不能继续显示高分。
