@@ -1,5 +1,7 @@
 # Lessons
 
+- 2026-09-15: 专题根容器在移动端恢复 `overflow: visible` 时不能继续使用 `100vw`；经典滚动条会让可用 clientWidth 少 15px，必须在专题断点约束 `width/max-width: 100%`，并让共享页头导航显式 `flex: 0 0 100%`、`flex-wrap: nowrap`。
+- 2026-09-15: 纵向详情滚动容器的卡片默认 `flex-shrink: 1` 会把带 `overflow: hidden` 的证据卡压成窄条；详情卡应 `flex: 0 0 auto`，由父滚动容器承载超出内容。
 - 2026-09-13: 数据质量标签必须由“实际可用且身份匹配的输入”决定；“暂无有效预报/缺少抓取时间”不能因为 stale=false 就显示可用，来源、时间和质量需要同一条 fail-closed 判定。
 - 2026-09-13: Worker 不能把 HTTP 200 当作 fresh；必须核验快照 stale、完整性版本和非空 sourceFetchedAt，stale 时跳过专题预热并退避。ECS 低内存发布先用本地 standalone + 旧镜像轻量复制，避免远端 Next 编译触发全局 OOM。
 - 2026-09-13: 观星分不能只证明上游 HTTP 200；必须同时绑定当前时次、模型、实际网格坐标、分层云字段、provider/应用时间和 stale 状态。页面评分、候选排行、详情和地图必须共用同一条评分链；上游限流或超龄 fallback 时要 fail-closed，不能继续显示高分。

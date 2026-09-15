@@ -704,3 +704,19 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 
 - 根因：上海时间凌晨仍属于前一晚观测夜，静态按当天 00:00 起始会漏掉 20:00–23:00。
 - 变更边界：仅测试夹具和版本记录；生产评分、天气 Provider、完整性门槛保持不变。
+
+# 2026-09-15 全站布局遮挡与移动端溢出修复
+
+- [x] 先以回归测试复现云海详情证据卡裁剪、专题移动端水平溢出和首页移动导航截断。
+- [x] 用最小 CSS 修复保持详情卡自然高度、移除 100vw 滚动条溢出、让移动导航完整可滚动。
+- [x] 运行针对性单测、桌面/移动 E2E、`npm run check`，并复核浏览器几何指标与截图。
+- [x] 审阅 diff，记录本次修复范围与未覆盖的真实数据问题；不改评分、数据源或部署配置。
+
+## Review
+
+- Baseline: `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`。
+- Scope: 只修复已确认的布局裁剪、移动端水平溢出和移动导航可见性；保持评分与数据契约不变。
+- RED: 新增 CSS 契约和云海详情几何断言在旧代码上失败；移动布局回归用带滚动条槽的真实浏览器几何复核确认了 15px 溢出。
+- GREEN: `npm run check`（ESLint、TypeScript、60 个 Vitest 文件 / 343 项测试、Next 构建）通过；完整 Chromium E2E `122 passed / 38 skipped / 0 failed`；Firefox/WebKit 烟雾 `4 passed / 0 failed`。
+- Browser evidence: 375px IAB 视口下火烧云/云海根容器 `360px`、页面 `scrollWidth=360`；首页四个导航项各 `80px` 且完整可见；云海证据卡约 `284px` 高、`scrollHeight=clientHeight`。
+- Publication: 未推送、未合并、未部署；版本仍为 v1.0.18。真实天气限流/评分数据问题不在本次布局修复范围。

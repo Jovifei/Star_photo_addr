@@ -536,6 +536,7 @@
 
 /* 通用卡片容器 */
 .cs-detail-card {
+  flex: 0 0 auto;
   padding: 13px 15px;
   background: rgba(6, 20, 29, 0.68);
   border: 1px solid rgba(72, 181, 181, 0.16);
@@ -1185,6 +1186,8 @@
   .cloudsea-root {
     height: auto;
     min-height: calc(100vh - 58px);
+    width: 100%;
+    max-width: 100%;
     overflow: visible;
   }
 

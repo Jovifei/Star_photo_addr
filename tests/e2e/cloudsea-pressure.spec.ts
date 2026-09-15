@@ -106,4 +106,20 @@ test("cloudsea renders pressure-derived evidence and opens the evidence inspecto
   await expect(inspector).toContainText("压力层云顶 (MSL)");
   await expect(inspector).toContainText("1000 m");
   await expect(inspector).not.toContainText("估算云顶层位");
+
+  const elevationCard = inspector.locator(".cs-elevation-card");
+  const elevationGeometry = await elevationCard.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      flexShrink: style.flexShrink,
+      overflowY: style.overflowY,
+    };
+  });
+  expect(elevationGeometry.flexShrink).toBe("0");
+  expect(elevationGeometry.clientHeight).toBeGreaterThan(80);
+  expect(elevationGeometry.clientHeight).toBeGreaterThanOrEqual(
+    elevationGeometry.scrollHeight - 1,
+  );
 });
