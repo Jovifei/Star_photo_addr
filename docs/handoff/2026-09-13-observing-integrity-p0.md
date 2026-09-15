@@ -1,5 +1,7 @@
 # 逐星：观星 94 分事故 P0 第一阶段交接
 
+> 历史交接说明（2026-09-16）：本文是 v1.0.15 接收时的未完成项清单。当前模型能力恢复候选已补齐其中的字段、模型、429 和 worker 门禁；请以 `docs/GUIDE.md`、最新工程记录和 `PROJECT_STATUS.md` 为当前事实源。
+
 状态：`REMOTE_P0_CONTAINMENT_COMMITTED_LOCAL_VALIDATION_REQUIRED`
 
 这不是生产验收通过声明。当前分支未合并 main、未部署、未重启 ECS、未删除快照，应用版本未升级。

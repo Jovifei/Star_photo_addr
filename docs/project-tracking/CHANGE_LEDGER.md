@@ -1,10 +1,18 @@
 # 逐星提交与变更台账
 
-> 状态日期：2026-09-10
+> 状态日期：2026-09-16
 > 记录范围：影响产品、数据、部署、测试体系或项目跟踪的主干提交。
 > 规则：PR 合并后记录最终主干 SHA；未完成验证的直接提交必须明确标记，不得用旧绿灯代替。
 
-## 0. 本轮已合并并部署
+## 0. 当前未合并候选（2026-09-16）
+
+| 日期 | 工作包 | PR / Commit | 当前交付 | 当前验证与下一步 |
+| --- | --- | --- | --- | --- |
+| 2026-09-16 | MODEL-RECOVERY-015 | `codex/model-capability-recovery-20260915@4118887` | 恢复 GFS 默认、显式 ICON/AIFS 字段隔离、13 项评分字段 fail-closed、`cloudAvailable/scoringAvailable`、Open-Meteo gate、429/Retry-After、worker 日期与镜像 helper；未合并 main、未部署、未改生产 `.env` | Node24 候选 32/32；`npm run check` 65/391；Chromium 122/36；Firefox/WebKit 4/4；GFS 单点 24/24 与 Finder 282/282；Docker daemon BLOCKED，等待远端 CI/PR 评审 |
+
+本条是当前唯一活动候选；后续 Agent 应先读其工程记录和本表，不要把 v1.0.14 历史绿灯当作当前候选证据。
+
+## 1. 历史已合并并部署
 
 | 日期 | 工作包 | PR / Commit | 当前交付 | 当前验证与下一步 |
 | --- | --- | --- | --- | --- |
@@ -12,7 +20,7 @@
 | 2026-09-10 | RELEASE-UI-013 | [`14ad3a4`](https://github.com/Jovifei/Star_photo_addr/commit/14ad3a49cf11fd103fcb5d5b60759b3fe0bc3a4a) | 本地点位目录优先搜索“太子尖”，远端无结果时仍可返回“临安太子尖”；v1.0.13 版本记录 | `npm run check` 53/306；Chromium E2E 112/34；live smoke/audit；app/worker healthy；公网 `/healthz` v1.0.13 / `14ad3a49cf1`；公网搜索通过 |
 | 2026-09-10 | RELEASE-UI-012 | [`1e550cd`](https://github.com/Jovifei/Star_photo_addr/commit/1e550cdc5a15c87fcad3465fecad9e9bfb3da29a)（merge `d640092`） | 顶部评分时间/B1–B4/推荐门槛/推荐开关统一；主页默认云量预报 + 光污染；火烧云/云海 `score >= threshold` 滑块；v1.0.12 记录 | `npm run check` 52/304；Chromium E2E 110/34；live smoke/audit；app/worker healthy；公网 `/healthz` v1.0.12 / `1e550cdc5a15`；`check:data-sources` 通过 |
 
-## 1. 已进入 main
+## 2. 已进入 main
 
 | 日期 | 工作包 | PR / Commit | 本次解决什么 | 主要修改 | 验证与边界 |
 | --- | --- | --- | --- | --- | --- |
@@ -29,11 +37,11 @@
 | 2026-08-22 | UX-MAP-002B | Direct / [`4c6349cb`](https://github.com/Jovifei/Star_photo_addr/commit/4c6349cb8b0457f3cd2f6be24b27d2e7ccaa23bf) | localStorage/请求状态需要避免 SSR 与旧结果污染 | 面板管理器改为纯客户端动态边界；附近排行按请求键隔离；E2E 日期动态化 | 静态代码复核完成；完整 main push CI 需由 Actions 页面或本地命令确认 |
 | 2026-08-22 | UX-MAP-002C | Direct / [`3fc11fcb`](https://github.com/Jovifei/Star_photo_addr/commit/3fc11fcb00151b3ab8e80239137728132f51407e) | “无数据”含义不清、三级边界层次弱、两个地图工作区同质化 | 侧栏未安装/无覆盖状态、海拔统一显示、国家/省/市虚线层级、暗夜选址独立标题、星空/云海/晚霞规划 | 代码和回归测试已提交；直接推送的 Actions Check Run 当前连接器不可见，工作包暂不标 PASS |
 
-## 2. 当前进行中
+## 3. 当前进行中
 
 | 工作包 | 目标 | 已完成 | 剩余门禁 |
 | --- | --- | --- | --- |
-| — | 无活动代码工作包 | v1.0.14 已合并、部署并在公网验证 | 真机、性能、授权暗夜栅格/边界和科学校准仍保持原状态，继续按 `TEST_BACKLOG.md` 管理 |
+| MODEL-RECOVERY-015 | 本地候选待 PR/CI | `4118887` 已完成代码和本地验证 | Docker smoke、远端 CI、合并/部署和准确率校准仍未完成 |
 
 ## 3. 以后每条台账必须回答的问题
 

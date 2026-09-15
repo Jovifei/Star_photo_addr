@@ -4,6 +4,21 @@
 
 ---
 
+## [Unreleased] 模型能力恢复候选（2026-09-16，未合并/未部署）
+
+> 这是 `codex/model-capability-recovery-20260915@4118887` 的本地接收记录，不是 v1.0.19 发布声明。
+
+### 🧭 模型字段与配额保护
+- 新会话、观测快照和 worker 默认 GFS；显式 ICON/AIFS 保留模型身份，缺少能见度或其他 13 项评分字段时 fail-closed。
+- 健康诊断拆分 `cloudAvailable` / `scoringAvailable`，并按模型隔离缓存、请求和冷却状态。
+- Open-Meteo surface、pressure、Finder、火烧云、云海和健康探针共享并发/429 gate，保留长 `Retry-After`，停止限流后的后续批次。
+- worker 校验模型、schema、源抓取时间和上海观测夜日期；镜像复制 helper 文件，火烧云预热默认关闭。
+
+### 🧪 本地验证边界
+- Node 24 候选回归 32/32；全仓 65 个 Vitest 文件 / 391 项；Chromium 122/36；Firefox/WebKit 4/4；生产依赖审计无漏洞。
+- 真实 GFS 单点与 282 点批量字段完整；Docker Desktop daemon 无法启动，容器 smoke 为 BLOCKED。
+- 未合并 main、未部署、未修改生产 `.env`；准确率、现场云量漏报和多模型科学校准仍未完成。
+
 ## [v1.0.18] - 2026-09-14
 
 ### 🧪 跨午夜验证稳定性

@@ -1,11 +1,9 @@
 # 逐星项目制造与交付流程
 
 > 文档类型：ARC（Architecture / Release Process）
-> 当前版本：v1.0.14（已部署）
-> 当前主线合并提交：`main@39338495db0d22c9ec5afe15763a023c4ba3a06b`
-> 上一发布基线：`main@7651302c92dbaa7023aeedae9eb8270e8d2369cb`（v1.0.13）
-> 生产部署源：`main@39338495db0d`
-> 当前工作分支：无（`codex/provincial-stargazing-locations-20260910` 已合并）
+> 已部署主线基线：v1.0.18 / `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`
+> 当前候选分支：`codex/model-capability-recovery-20260915@4118887`（未合并、未部署）
+> 候选门禁：Node24 32/32、`npm run check` 65/391、Chromium 122/36、Firefox/WebKit 4/4、GFS 单点/282点批量通过；Docker daemon BLOCKED
 > 生产站点：[photo.joviluma.com](https://photo.joviluma.com/)
 
 ## 1. 项目要制造什么
@@ -71,7 +69,7 @@ flowchart TB
 | 数据采集 | `src/app/api/`、`scripts/observing-snapshot-worker.mjs` | Open-Meteo、NASA、NOAA、缓存和快照预热 |
 | 发布运行时 | `Dockerfile`、`docker-compose*.yml`、`deploy/nginx/` | 非 root 容器、健康检查、worker、持久卷和反向代理 |
 
-当前 v1.0.12 的顶部命令栏按“评分时间 → B1–B4 → 推荐门槛 → 仅显示推荐地点”排列；B1/B2/B3/B4 分别对应 ≥85/70/55/50 分预设，主页默认云量预报 + 光污染参考，实况需主动选择。火烧云和云海排行各自提供 0–100 分滑块，只显示 `score ≥ threshold` 的地点。桌面 1280/1440 可同排显示，移动端按宽度堆叠。
+当前主线已包含顶部评分时间/B1–B4/推荐门槛/推荐开关、主页默认云量预报 + 光污染、火烧云/云海 `score ≥ threshold` 过滤。火烧云和云海已经是正式导航工作区；云海第一阶段使用 surface + pressure profile，后续 Phase 2 只扩展周边谷地采样与校准，不代表页面尚未开发。
 
 ### 2.4 测试和质量门禁
 
@@ -97,7 +95,7 @@ npm audit --omit=dev --audit-level=high
 - `test:live`：发布前真实 Open-Meteo、NASA GIBS、NOAA 和 VIIRS 冒烟；
 - 人工/真机：iPhone Safari、Android、多浏览器缩放、色觉/高对比、性能和现场科学校准。
 
-上一版 v1.0.13 已验证并部署。v1.0.14 已验证 `npm run check`（53 个 Vitest 文件 / 308 项测试）、Chromium E2E 146 个实例中 112 passed、34 skipped、0 failed、真实数据源冒烟通过和生产依赖 0 vulnerabilities；生产 app/worker healthy，公网 `/healthz` 返回 v1.0.14 / `39338495db0d`，目录搜索和 `check:data-sources` 均通过。skipped、MANUAL、BLOCKED 不得写成 PASS。
+历史 v1.0.14 及之前的发布证据保留在下方版本记录。当前候选的本地结果见 `docs/testing/TEST_STATUS.md` 和 `docs/engineering-change-log/2026-09-15-model-capability-recovery-candidate.md`；skipped、MANUAL、BLOCKED 不得写成 PASS。
 
 ## 3. 版本与交付
 

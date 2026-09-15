@@ -1,11 +1,11 @@
 # 逐星项目状态总览
 
-> 状态日期：2026-09-10
-> 当前主干代码发布：`main@39338495db0d22c9ec5afe15763a023c4ba3a06b`（v1.0.14）
-> 当前活动工作分支：无（`codex/provincial-stargazing-locations-20260910` 已合并）
-> 当前阶段：v1.0.14 已完成地点目录扩充、本地质量门禁、main 合并、生产部署和公网验收；真机、性能和科学校准仍按边界管理
+> 状态日期：2026-09-16
+> 已部署主线基线：`main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`（v1.0.18）
+> 当前活动工作分支：`codex/model-capability-recovery-20260915`（本地提交 `4118887`，待远端 CI/评审）
+> 当前阶段：四个正式工作区均已实现；模型能力恢复候选已完成 Node 24、浏览器和真实 GFS 验收，Docker daemon 阻断容器 smoke，尚未合并或部署
 
-## 0. 当前发布快照（v1.0.14 已部署）
+## 0. 当前发布快照（v1.0.18 已部署）
 
 - 顶部命令栏按“评分时间 → B1–B4 暗空参考 → 推荐门槛 → 仅显示推荐地点”排列；搜索、定位和四组参数保持紧凑同排，窄屏才堆叠。
 - B1–B4 文案和分数预设明确为：B1 极暗 ≥85、B2 自然暗夜 ≥70、B3 乡村夜空 ≥55、B4 乡村/郊区过渡 ≥50；命令栏档位单选并同步推荐门槛，目录参考不进入实时天气评分。
@@ -13,7 +13,9 @@
 - 火烧云和云海排行各自增加 0–100 分门槛滑块，列表只保留 `score >= threshold` 的数值评分点位；null/数据不足点位不计入达标数量，地图标记仍保留未知语义。
 - 搜索“太子尖”现优先命中本地点位目录中的“临安太子尖”；本地点位不再依赖远端地理编码是否收录山峰 POI，未命中本地时仍回退全球城市搜索。
 - 通用观星目录现有 282 个候选、覆盖 31 个省级行政区；新增 25 个省级网红山地/海岸/草原/营地/高原候选，默认精选 17 个，视野候选上限 20 个。
-- 当前主线已通过 `npm run check`（53 个测试文件 / 308 项）、Chromium E2E 112 passed / 34 skipped、live smoke 和 audit；生产 app/worker healthy，公网 `/healthz` 返回 v1.0.14 / `39338495db0d`，目录搜索与 `check:data-sources` 均通过。
+- 当前已部署主线为 v1.0.18；本页历史发布证据保留原版本数字，不能把旧版本测试数量当作当前候选结果。
+- `/cloudsea` 与 `/fireglow` 已是正式导航和可用的第一阶段工作区。云海 pressure profile 与逆温证据属于模式推导，火烧云/云海均为 0–100 条件指数，准确率尚未校准；CloudSea Phase 2 仅指周边谷地采样等精度扩展。
+- 当前候选 `4118887` 已通过 Node 24 候选回归 32/32、全仓 `npm run check` 65 个文件 / 391 项、Chromium 122/36、Firefox/WebKit 4/4、真实 GFS 单点与 282 点批量；Docker daemon 不可用，不能标记容器验证通过。
 
 以下第 1–8 节保留历史工作包与长期未完成项；新的发布状态以本节和对应最新工程记录为准。
 
@@ -30,6 +32,7 @@
 
 | 工作包 | 状态 | 交付 | 关键证据 |
 | --- | --- | --- | --- |
+| MODEL-RECOVERY-015-LOCAL | PASS（本地候选，未发布） | 默认 GFS、显式 ICON/AIFS 字段隔离、评分/健康 fail-closed、Open-Meteo gate、worker 观测夜与镜像 helper 修复 | `codex/model-capability-recovery-20260915@4118887`；Node24 32/32、`npm run check` 65/391、Chromium 122/36、Firefox/WebKit 4/4、GFS 单点/282点批量；Docker daemon BLOCKED |
 | RELEASE-DATA-014 | PASS | 按省级公开资料扩充 282 点目录、默认 17 个精选、天津补点、版本记录、生产部署和公网验收 | `main@39338495db0d`；`npm run check` 53/308、Chromium E2E 112/34、live smoke/audit、app/worker healthy、`check:data-sources`、公网搜索 |
 | RELEASE-UI-013 | PASS | 本地点位搜索优先命中目录、v1.0.13 版本记录、生产部署和公网搜索验收 | `main@14ad3a49cf1`；`npm run check` 53/306、Chromium E2E 112/34、live smoke/audit、生产 `/healthz`、公网搜索 |
 | RELEASE-UI-012 | PASS | 顶部控件统一、主页默认图层纠偏、火烧云/云海评分门槛滑块、v1.0.12 记录、生产部署和公网验收 | `main@1e550cdc5a15`；`npm run check` 52/304、Chromium E2E 110/34、live smoke/audit、生产 `/healthz`、公网 `check:data-sources` |
@@ -46,7 +49,7 @@
 
 | 工作包 | 状态 | 分支 | 已提交内容 | 完成条件 |
 | --- | --- | --- | --- | --- |
-| — | 无活动代码工作包 | — | v1.0.14 已合并、部署并在公网验证；后续工作按第 5 节 MANUAL/BLOCKED/DEFERRED 管理 | 新需求确认后从最新 `main` 创建唯一 `codex/` 分支 |
+| MODEL-RECOVERY-015 | 模型字段能力与配额恢复候选 | `codex/model-capability-recovery-20260915` / `4118887` | GFS 默认、显式模型隔离、13 项评分字段 fail-closed、健康能力拆分、Open-Meteo gate、429/日期/批量校验、worker helper 镜像路径 | 远端 CI、Docker/Nginx smoke、PR 评审；通过后再决定是否合并/部署 |
 
 ## 4. 已合并、可清理的远端分支
 
@@ -66,6 +69,14 @@ audit/module-data-aliyun-readiness-20260820 → 无独有提交，已被 main �
 删除这些分支不会删除已经进入 `main` 的最终功能；提交和 PR 历史仍可追溯。
 
 ## 5. 待完成工作包
+
+### 5.0 模型恢复候选发布门禁
+
+| ID | 项目 | 状态 | 优先级 | 依赖 |
+| --- | --- | --- | --- | --- |
+| MODEL-RECOVERY-015-CI | 远端 CI 与 PR 评审 | IN_PROGRESS | P0 | 推送 `4118887` 后的完整 CI |
+| MODEL-RECOVERY-015-CONTAINER | Docker/Nginx/worker 镜像 smoke | BLOCKED | P0 | 本机或 CI Docker daemon；镜像内 helper 与 worker 启动检查 |
+| MODEL-RECOVERY-015-ACCURACY | 配额、现场云量和准确率校准 | DEFERRED | P0* | 账号额度、30–90 天样本、现场观测和多模型对照 |
 
 ### 5.1 本轮需要用户环境补充
 

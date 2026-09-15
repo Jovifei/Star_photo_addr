@@ -1,13 +1,19 @@
 # 逐星剩余测试任务卡
 
-> 状态日期：2026-09-10
+> 状态日期：2026-09-16
 > 对应总方案：[`../testing/TEST_PLAN_V1.md`](../testing/TEST_PLAN_V1.md)  
 > 已完成结果：[`../testing/TEST_STATUS.md`](../testing/TEST_STATUS.md)  
 > 说明：本文件是剩余测试的执行事实源；聊天中的简表不能替代本文件。
 
-## v1.0.14 当前结论
+## 当前候选接收结论（MODEL-RECOVERY-015）
 
-- 当前主线代码发布 `main@39338495db0d` 已完成 `npm run check`（53 个 Vitest 文件 / 308 项测试）、完整 Chromium E2E（112 passed / 34 skipped / 0 failed）、真实数据源冒烟和生产依赖审计；生产 app/worker healthy，公网 `/healthz`、`check:data-sources` 及 5 个新增/纠偏地点搜索通过。
+- `codex/model-capability-recovery-20260915@4118887` 已完成 Node 24 候选回归 32/32、全仓 65 个 Vitest 文件 / 391 项、Chromium 122 passed / 36 skipped、Firefox/WebKit 4/4；真实 GFS 单点和 282 点批量字段验收通过。
+- 评分链现在对 13 项 canonical 字段 fail-closed；健康诊断分开 `cloudAvailable` / `scoringAvailable`；Open-Meteo 429 冷却和 Retry-After 覆盖 forecast/Finder/pressure/CloudSea/Fireglow/health；worker 校验模型、观测夜日期和 schema。
+- Docker daemon 无法启动，镜像 build、worker helper 存在性和容器运行 smoke 为 `BLOCKED/NOT_RUN`；候选未合并 main、未部署、未修改生产 `.env`。
+
+## v1.0.18 主线结论
+
+- 当前已部署主线基线为 `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`（v1.0.18）；上一版本的数量和生产证据保留在历史记录中，不代表当前候选的验证结果。
 - 通用观星目录现有 282 个候选、31 个省级行政区；默认精选 17 个，视野候选上限 20 个。新增点位的开放、保护区、道路、海况、高反和防火仍保持 MANUAL 边界。
 
 ## v1.0.13 当前结论（历史）

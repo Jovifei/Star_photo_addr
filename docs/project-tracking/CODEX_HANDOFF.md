@@ -1,8 +1,11 @@
 # Codex 接力说明：逐星测试与项目跟踪
 
-> 当前事实源：仓库文档，不以聊天摘要代替。  
-> 当前主分支：`main@50496e61f0be1cb666f344f36d832029df2e988e`  
-> 当前跟踪分支：`test/ux-research-quality-v2-20260820`
+> 状态日期：2026-09-16。当前事实源：仓库文档、源码和实际验证，不以聊天摘要代替。
+> 已部署主线基线：`main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`（v1.0.18）。
+> 当前活动候选：`codex/model-capability-recovery-20260915@411888764763d783b80f467641845b21b3d30e1f`，未合并、未部署、未修改生产 `.env`。
+> 当前产品事实：今夜观测、暗夜选址、火烧云、高山云海四个入口均已进入正式导航；云海第一阶段已完成。Beta/未校准描述科学边界，不表示页面仍在开发。
+
+新 Agent 必须先读 [`../GUIDE.md`](../GUIDE.md)、[`PROJECT_STATUS.md`](./PROJECT_STATUS.md)、[`../testing/TEST_STATUS.md`](../testing/TEST_STATUS.md) 和最新 `engineering-change-log`。旧章节中的历史状态、旧版本测试数字和已关闭工作包不得覆盖本段当前事实。
 
 ## 1. 开始前必须读取
 
@@ -26,7 +29,16 @@ docs/project-tracking/CHANGE_LEDGER.md
 5. 不要同时创建 performance、visual、docs 多个分支；
 6. 先完成代码与测试，再更新状态和提交台账。
 
-## 3. 推荐下一工作包
+## 3. 当前候选的下一步
+
+当前唯一活动工作包是 `MODEL-RECOVERY-015`：
+
+- 先推送 `codex/model-capability-recovery-20260915` 并等待远端 CI/PR 评审；
+- Docker daemon 可用后补镜像构建、worker helper 存在性和容器 smoke；
+- CI、评审和部署门禁通过前，不合并 `main`、不部署生产、不改生产 `.env`；
+- 账号配额、现场云量与 30–90 天准确率仍是独立的 `DEFERRED/BLOCKED` 校准项，不能写成已解决。
+
+完成上述候选闭环后，才从最新 `main` 选择下一工作包。以下性能工作包是历史建议，不是当前活动分支：
 
 优先建议：
 

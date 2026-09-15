@@ -19,6 +19,7 @@
 | 文档 | 说明 | 更新时机 |
 | --- | --- | --- |
 | [`../README.md`](../README.md) | 产品目标、四个工作区、数据边界、本地启动和 API 总览 | 产品能力、路线或运行方式变化 |
+| [`GUIDE.md`](./GUIDE.md) | 当前完成度、四个正式工作区、模型策略、候选状态和新会话接手顺序 | 主线/候选状态或完成边界变化 |
 | [`01-ARC-项目制造与交付流程.md`](./01-ARC-项目制造与交付流程.md) | 从需求到发布的制造闭环、文件职责、门禁、部署和回滚 | 架构、发布或部署经验变化 |
 | [`product/WORKSPACE_ARCHITECTURE.md`](./product/WORKSPACE_ARCHITECTURE.md) | 星空、暗夜选址、观星计划、云海、晚霞职责边界 | 工作区职责或数据模型变化 |
 | [`UNIFIED_VISUAL_SYSTEM.md`](./UNIFIED_VISUAL_SYSTEM.md) | 主题 token、面板、地图、表格和移动端视觉规则 | 设计系统变化 |
@@ -39,7 +40,7 @@
 | --- | --- | --- |
 | [`ALIYUN_DEPLOYMENT.md`](./ALIYUN_DEPLOYMENT.md) | Linux/ECS、Docker Compose、Nginx、HTTPS、健康检查 | 服务器、域名或 Compose 变化 |
 | [`DEPLOYMENT.md`](./DEPLOYMENT.md) | 通用 VPS 部署和日常升级 | 通用部署方式变化 |
-| [`REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md`](./REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md) | 维护者私有部署操作说明；包含敏感环境边界，不应直接镜像到知识库 | 运维流程或权限变化 |
+| 维护者私有部署指南（不纳入仓库/知识库镜像） | 生产私有凭据和主机操作边界；公开流程以 [`ALIYUN_DEPLOYMENT.md`](./ALIYUN_DEPLOYMENT.md) 为准 | 私有运维流程或权限变化 |
 | [`ALIYUN_DATA_REFRESH_CHECKLIST.md`](./ALIYUN_DATA_REFRESH_CHECKLIST.md) | TTL、强刷冷却、响应头和数据源刷新验收 | 缓存、刷新或 Provider 变化 |
 | [`OPERATIONS.md`](./OPERATIONS.md) | 配额、缓存、stale、故障和常见排障 | 运维故障或运行参数变化 |
 
@@ -67,7 +68,7 @@
 
 ### 新开发者接手
 
-`docs/README.md` → 根 `README.md` → `01-ARC-项目制造与交付流程.md` → `product/WORKSPACE_ARCHITECTURE.md` → 当前 `engineering-change-log` → 源码和测试。
+`docs/README.md` → `GUIDE.md` → 根 `README.md` → `01-ARC-项目制造与交付流程.md` → `product/WORKSPACE_ARCHITECTURE.md` → 当前 `engineering-change-log` → 源码和测试。
 
 ### 发布或部署
 

@@ -4,6 +4,15 @@
 
 ---
 
+## [Unreleased] 模型能力恢复候选（2026-09-16，未合并/未部署）
+
+> 对应分支 `codex/model-capability-recovery-20260915@4118887`；不是 v1.0.19 发布。
+
+- GFS 默认模型、显式 ICON/AIFS 字段隔离和 13 项评分字段 fail-closed。
+- 健康诊断拆分云量/评分能力；Open-Meteo 全部评分链共享并发/429 冷却并保留 Retry-After。
+- worker 校验模型、schema、源时间和上海观测夜；Docker runner 补齐 worker helper。
+- 本地 Node24、全仓、浏览器和真实 GFS 验收通过；Docker daemon 阻断容器 smoke；未合并/未部署。
+
 ## [v1.0.18] - 2026-09-14
 
 ### 🧪 跨午夜验证稳定性
