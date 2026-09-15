@@ -713,7 +713,7 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - [x] Node 24 安装依赖，运行候选独立测试；修正仅测试 harness 的 Windows URL/退出码兼容问题。
 - [x] 修复并验证评分链 fail-closed、健康状态能力字段、全站限流入口/错误码、worker 日期身份和健康别名模型传递。
 - [x] 重新运行候选/全仓单测、完整 Chromium/Firefox/WebKit；Docker daemon 不可用，保留 Compose 静态校验并记录容器 smoke 阻断；stale94、低云61、旧 schema、超龄缓存、模型切换防线通过。
-- [ ] 审阅最终 diff，在目标分支以 `codex:` 提交并推送；不合并 main、不部署、不改生产 `.env`。
+- [x] 审阅最终 diff，在目标分支以 `codex:` 提交并推送；不合并 main、不部署、不改生产 `.env`。
 
 ## Review
 
@@ -730,10 +730,11 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - [x] 更新工作区架构、制造流程、项目状态、变更台账、测试状态、部署/测试说明和根/Docs Changelog。
 - [x] 为历史工程记录补充历史状态注记；更新 `docs/project-tracking/CODEX_HANDOFF.md`，避免后续 Agent 读取过期 main/分支和“云海开发中”结论。
 - [x] 运行过 `codex-memory` 文档镜像 DryRun；确认目标项目没有 Obsidian 映射，未写入 Vault，保留 `NO_PROJECT_MEMORY` / `MEMORY_SYNC_BLOCKED` 证据。
-- [ ] 推送文档提交后由远端 CI/PR 复核；不合并 main、不部署，直到候选发布门禁通过。
+- [x] 推送文档提交；等待远端 CI/PR 复核；不合并 main、不部署，直到候选发布门禁通过。
 
 ## Review
 
 - 当前文档事实源：`docs/GUIDE.md`、`docs/project-tracking/PROJECT_STATUS.md`、`docs/testing/TEST_STATUS.md`、`docs/engineering-change-log/2026-09-15-model-capability-recovery-candidate.md`。
 - 当前代码候选仍为本地已验收、未发布；Docker daemon、远端 CI、生产部署和科学准确率校准不因文档更新而改变状态。
 - Obsidian 项目记忆映射缺失，不能将镜像 DryRun 写成已同步；后续需先建立经授权的项目映射，再执行实际镜像。
+- 远端分支已核对为 `8e3ac9b980b131d7e8e8d63782cf48f7931eba41`；`main` 保持 `3334e0c08f9ab2e481277628ce4ee875e2f1039e`。
