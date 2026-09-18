@@ -10,6 +10,7 @@
 | --- | --- | --- | --- | --- |
 | 2026-09-16 | MODEL-RECOVERY-015 | `codex/model-capability-recovery-20260915@4118887` | 恢复 GFS 默认、显式 ICON/AIFS 字段隔离、13 项评分字段 fail-closed、`cloudAvailable/scoringAvailable`、Open-Meteo gate、429/Retry-After、worker 日期与镜像 helper；未合并 main、未部署、未改生产 `.env` | Node24 候选 32/32；`npm run check` 65/391；Chromium 122/36；Firefox/WebKit 4/4；GFS 单点 24/24 与 Finder 282/282；Docker daemon BLOCKED，等待远端 CI/PR 评审 |
 | 2026-09-18 | RESPONSIVE-016-PLAN | `codex/mobile-responsive-layout-20260918` | 四入口移动端/平板响应式实施计划；没有源码修改、没有版本升级 | `PLAN_READY_WAITING_CODE_AUTHORIZATION`；RED、截图、真机和发布门禁均未运行 |
+| 2026-09-18 | DOCS-017 | `codex/docs-refresh-20260918@e1ff5c7` | 收口主线接力、模型恢复经验、云海完成度边界、响应式计划状态和知识库阻断说明；不改应用源码 | `git diff --check`、关键文档链接和敏感字面量检查通过；未升级版本、未部署 |
 
 上两条分别代表当前代码候选和等待授权的布局计划；后续 Agent 应先读各自工程记录和本表，不要把历史绿灯或计划状态当作已发布证据。
 
