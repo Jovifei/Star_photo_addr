@@ -1,5 +1,7 @@
 # 工程修改跟踪：项目状态、测试待办与提交台账
 
+> 历史记录说明（2026-09-18）：本文记录 2026-08-21 的治理基线；其中的 `main@50496e6` 和历史测试分支不代表当前主线。当前状态以 `docs/GUIDE.md`、`PROJECT_STATUS.md` 和最新工程记录为准。
+
 > 文档编号：`ENG-CHANGE-2026-08-21-TRACKING-TEST-BACKLOG`  
 > 基线：`main@50496e61f0be1cb666f344f36d832029df2e988e`  
 > 分支：`test/ux-research-quality-v2-20260820`  
