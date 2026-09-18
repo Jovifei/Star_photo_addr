@@ -1,16 +1,17 @@
 # 逐星提交与变更台账
 
-> 状态日期：2026-09-16
+> 状态日期：2026-09-18
 > 记录范围：影响产品、数据、部署、测试体系或项目跟踪的主干提交。
 > 规则：PR 合并后记录最终主干 SHA；未完成验证的直接提交必须明确标记，不得用旧绿灯代替。
 
-## 0. 当前未合并候选（2026-09-16）
+## 0. 当前未合并候选与计划（2026-09-18）
 
 | 日期 | 工作包 | PR / Commit | 当前交付 | 当前验证与下一步 |
 | --- | --- | --- | --- | --- |
 | 2026-09-16 | MODEL-RECOVERY-015 | `codex/model-capability-recovery-20260915@4118887` | 恢复 GFS 默认、显式 ICON/AIFS 字段隔离、13 项评分字段 fail-closed、`cloudAvailable/scoringAvailable`、Open-Meteo gate、429/Retry-After、worker 日期与镜像 helper；未合并 main、未部署、未改生产 `.env` | Node24 候选 32/32；`npm run check` 65/391；Chromium 122/36；Firefox/WebKit 4/4；GFS 单点 24/24 与 Finder 282/282；Docker daemon BLOCKED，等待远端 CI/PR 评审 |
+| 2026-09-18 | RESPONSIVE-016-PLAN | `codex/mobile-responsive-layout-20260918` | 四入口移动端/平板响应式实施计划；没有源码修改、没有版本升级 | `PLAN_READY_WAITING_CODE_AUTHORIZATION`；RED、截图、真机和发布门禁均未运行 |
 
-本条是当前唯一活动候选；后续 Agent 应先读其工程记录和本表，不要把 v1.0.14 历史绿灯当作当前候选证据。
+上两条分别代表当前代码候选和等待授权的布局计划；后续 Agent 应先读各自工程记录和本表，不要把历史绿灯或计划状态当作已发布证据。
 
 ## 1. 历史已合并并部署
 
@@ -42,6 +43,7 @@
 | 工作包 | 目标 | 已完成 | 剩余门禁 |
 | --- | --- | --- | --- |
 | MODEL-RECOVERY-015 | 本地候选待 PR/CI | `4118887` 已完成代码和本地验证 | Docker smoke、远端 CI、合并/部署和准确率校准仍未完成 |
+| RESPONSIVE-016-PLAN | 计划待授权 | 只读布局检查和实施计划已完成 | 代码授权、RED 回归、实现、截图、真机和发布门禁仍未完成 |
 
 ## 3. 以后每条台账必须回答的问题
 

@@ -1,8 +1,8 @@
 # 逐星当前工程指南
 
-> 状态日期：2026-09-16
+> 状态日期：2026-09-18
 > 已部署主线：v1.0.18 / `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`
-> 当前候选：`codex/model-capability-recovery-20260915@4118887`，未合并、未部署
+> 当前代码候选：`codex/model-capability-recovery-20260915@411888764763d783b80f467641845b21b3d30e1f`，未合并、未部署
 
 ## 先确认产品是否“已完成”
 
@@ -32,6 +32,10 @@
 ## 当前候选验证边界
 
 `4118887` 已完成 Node 24 候选 32/32、全仓 65/391、Chromium 122/36、Firefox/WebKit 4/4、真实 GFS 单点和 Finder 282 点批量验收。Docker Desktop daemon 在本机无法启动，容器 build/worker smoke 必须保持 `BLOCKED/NOT_RUN`；候选没有合并 main、没有部署生产、没有修改生产 `.env`。
+
+## 当前响应式布局计划（未实现）
+
+`codex/mobile-responsive-layout-20260918` 只包含经过只读浏览器检查后的实施计划，当前状态是 `PLAN_READY_WAITING_CODE_AUTHORIZATION`。它记录手机/平板断点、地图优先壳层、主页参数区、火烧云/云海底部详情抽屉和固定视口回归；没有源码提交，不能写成移动端布局已修复，也不能从桌面/移动 Playwright 结果推导真机通过。计划边界已在 [`2026-09-18-documentation-refresh.md`](./engineering-change-log/2026-09-18-documentation-refresh.md) 留档。
 
 ## 关键文档
 

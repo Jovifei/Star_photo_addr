@@ -1,9 +1,9 @@
 # 逐星项目状态总览
 
-> 状态日期：2026-09-16
+> 状态日期：2026-09-18
 > 已部署主线基线：`main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`（v1.0.18）
-> 当前活动工作分支：`codex/model-capability-recovery-20260915`（本地提交 `4118887`，待远端 CI/评审）
-> 当前阶段：四个正式工作区均已实现；模型能力恢复候选已完成 Node 24、浏览器和真实 GFS 验收，Docker daemon 阻断容器 smoke，尚未合并或部署
+> 当前活动工作流：模型能力恢复候选待远端 CI/评审；移动端响应式计划等待代码授权
+> 当前阶段：四个正式工作区均已实现；模型能力恢复候选已完成 Node 24、浏览器和真实 GFS 验收，Docker daemon 阻断容器 smoke，尚未合并或部署；移动端布局计划尚未改源码
 
 ## 0. 当前发布快照（v1.0.18 已部署）
 
@@ -33,6 +33,7 @@
 | 工作包 | 状态 | 交付 | 关键证据 |
 | --- | --- | --- | --- |
 | MODEL-RECOVERY-015-LOCAL | PASS（本地候选，未发布） | 默认 GFS、显式 ICON/AIFS 字段隔离、评分/健康 fail-closed、Open-Meteo gate、worker 观测夜与镜像 helper 修复 | `codex/model-capability-recovery-20260915@4118887`；Node24 32/32、`npm run check` 65/391、Chromium 122/36、Firefox/WebKit 4/4、GFS 单点/282点批量；Docker daemon BLOCKED |
+| RESPONSIVE-016-PLAN | IN_PROGRESS（仅计划） | 四入口移动端/平板响应式布局、地图优先壳层、参数显示和专题详情抽屉方案；尚未改源码 | `codex/mobile-responsive-layout-20260918`；`PLAN_READY_WAITING_CODE_AUTHORIZATION`；所有 RED、修复、截图和真机门禁均未运行 |
 | RELEASE-DATA-014 | PASS | 按省级公开资料扩充 282 点目录、默认 17 个精选、天津补点、版本记录、生产部署和公网验收 | `main@39338495db0d`；`npm run check` 53/308、Chromium E2E 112/34、live smoke/audit、app/worker healthy、`check:data-sources`、公网搜索 |
 | RELEASE-UI-013 | PASS | 本地点位搜索优先命中目录、v1.0.13 版本记录、生产部署和公网搜索验收 | `main@14ad3a49cf1`；`npm run check` 53/306、Chromium E2E 112/34、live smoke/audit、生产 `/healthz`、公网搜索 |
 | RELEASE-UI-012 | PASS | 顶部控件统一、主页默认图层纠偏、火烧云/云海评分门槛滑块、v1.0.12 记录、生产部署和公网验收 | `main@1e550cdc5a15`；`npm run check` 52/304、Chromium E2E 110/34、live smoke/audit、生产 `/healthz`、公网 `check:data-sources` |
@@ -50,6 +51,7 @@
 | 工作包 | 状态 | 分支 | 已提交内容 | 完成条件 |
 | --- | --- | --- | --- | --- |
 | MODEL-RECOVERY-015 | 模型字段能力与配额恢复候选 | `codex/model-capability-recovery-20260915` / `4118887` | GFS 默认、显式模型隔离、13 项评分字段 fail-closed、健康能力拆分、Open-Meteo gate、429/日期/批量校验、worker helper 镜像路径 | 远端 CI、Docker/Nginx smoke、PR 评审；通过后再决定是否合并/部署 |
+| RESPONSIVE-016 | 移动端响应式布局计划 | `codex/mobile-responsive-layout-20260918` | 只完成只读现状检查与实施计划；不改变评分、数据源、缓存、地点目录、URL 或生产配置 | 获得代码授权后补 RED 回归；当前不提交、不推送、不合并、不部署 |
 
 ## 4. 已合并、可清理的远端分支
 
@@ -77,6 +79,14 @@ audit/module-data-aliyun-readiness-20260820 → 无独有提交，已被 main �
 | MODEL-RECOVERY-015-CI | 远端 CI 与 PR 评审 | IN_PROGRESS | P0 | 推送 `4118887` 后的完整 CI |
 | MODEL-RECOVERY-015-CONTAINER | Docker/Nginx/worker 镜像 smoke | BLOCKED | P0 | 本机或 CI Docker daemon；镜像内 helper 与 worker 启动检查 |
 | MODEL-RECOVERY-015-ACCURACY | 配额、现场云量和准确率校准 | DEFERRED | P0* | 账号额度、30–90 天样本、现场观测和多模型对照 |
+
+### 5.1 响应式布局计划门禁
+
+| ID | 项目 | 状态 | 优先级 | 依赖 |
+| --- | --- | --- | --- | --- |
+| RESPONSIVE-016-AUTH | 代码改动授权 | BLOCKED | P0 | Jovi 明确授权布局源码修改 |
+| RESPONSIVE-016-RED | 固定视口 RED 回归 | TODO | P0 | 授权、Node24、正确端口和 fixture 接管 |
+| RESPONSIVE-016-E2E | 多视口/跨浏览器截图 | TODO | P1 | RED 修复后；不能代替 iPhone/Android 真机 |
 
 ### 5.1 本轮需要用户环境补充
 

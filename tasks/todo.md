@@ -738,3 +738,17 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - 当前代码候选仍为本地已验收、未发布；Docker daemon、远端 CI、生产部署和科学准确率校准不因文档更新而改变状态。
 - Obsidian 项目记忆映射缺失，不能将镜像 DryRun 写成已同步；后续需先建立经授权的项目映射，再执行实际镜像。
 - 远端分支已核对为 `8e3ac9b980b131d7e8e8d63782cf48f7931eba41`；`main` 保持 `3334e0c08f9ab2e481277628ce4ee875e2f1039e`。
+
+# 2026-09-18 文档事实源与制作经验更新
+
+- [x] 以主线 v1.0.18、模型恢复候选和当前响应式计划为输入，复核 Docs/README/CHANGELOG/跟踪台账的状态边界。
+- [x] 把“云海第一阶段已完成”和“Beta/准确率未校准”分开记录，保留旧历史但标明其已被后续实现取代。
+- [x] 记录移动端响应式计划为 `PLAN_READY_WAITING_CODE_AUTHORIZATION`，不把只读浏览器观察或计划写成代码完成。
+- [x] 将数据完整性、模型身份、429 冷却、Docker 阻断和 Obsidian 映射缺失整理为可复用经验。
+- [ ] 获得代码授权后再执行响应式 RED 回归；本轮不修改应用源码、不升级版本、不部署。
+
+## Review
+
+- 本轮范围：仅项目文档、Changelog、工程变更记录、接力事实源和知识库状态记录。
+- 验证边界：文档链接/格式/敏感内容检查；不重新宣称候选代码测试、容器 smoke 或生产部署。
+- Obsidian：当前项目映射缺失，实际 checkpoint/mirror 保持 `MEMORY_SYNC_BLOCKED`，不得创建新 Vault 项目。

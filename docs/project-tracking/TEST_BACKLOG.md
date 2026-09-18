@@ -1,6 +1,6 @@
 # 逐星剩余测试任务卡
 
-> 状态日期：2026-09-16
+> 状态日期：2026-09-18
 > 对应总方案：[`../testing/TEST_PLAN_V1.md`](../testing/TEST_PLAN_V1.md)  
 > 已完成结果：[`../testing/TEST_STATUS.md`](../testing/TEST_STATUS.md)  
 > 说明：本文件是剩余测试的执行事实源；聊天中的简表不能替代本文件。
@@ -15,6 +15,11 @@
 
 - 当前已部署主线基线为 `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`（v1.0.18）；上一版本的数量和生产证据保留在历史记录中，不代表当前候选的验证结果。
 - 通用观星目录现有 282 个候选、31 个省级行政区；默认精选 17 个，视野候选上限 20 个。新增点位的开放、保护区、道路、海况、高反和防火仍保持 MANUAL 边界。
+
+## 当前响应式布局计划（RESPONSIVE-016）
+
+- 分支 `codex/mobile-responsive-layout-20260918` 当前只有 `tasks/plans/2026-09-18-mobile-responsive-layout.md`，状态为 `PLAN_READY_WAITING_CODE_AUTHORIZATION`。
+- 计划中的 RED 回归、共享壳层、主页参数区、专题详情抽屉和多视口截图均为 `NOT_RUN`；未授权前不改源码，不把计划或只读截图写成实现通过。
 
 ## v1.0.13 当前结论（历史）
 

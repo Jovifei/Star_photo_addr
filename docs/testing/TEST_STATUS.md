@@ -3,9 +3,9 @@
 > 对应方案：[`TEST_PLAN_V1.md`](./TEST_PLAN_V1.md)
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
-> 状态日期：2026-09-16
+> 状态日期：2026-09-18
 > 已部署 main 基线：`main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`（v1.0.18）
-> 当前测试工作分支：`codex/model-capability-recovery-20260915@4118887`（未合并/未部署）
+> 当前测试工作流：模型恢复候选 `codex/model-capability-recovery-20260915@4118887`（未合并/未部署）；响应式计划 `codex/mobile-responsive-layout-20260918`（未实现）
 
 ## 状态定义
 
@@ -32,6 +32,8 @@
 | Docker build / worker smoke | BLOCKED | Docker Desktop daemon 无法启动；仅 `docker compose config --quiet` 通过 |
 
 本候选尚未合并 main、未部署生产、未修改生产 `.env`。云海第一阶段与火烧云页面已实现；Beta/未校准是科学边界，不是开发状态。
+
+响应式计划的固定视口 RED 回归、布局修复、截图和真机验收均为 `NOT_RUN`；该计划不改变模型恢复候选的测试结果，也不改变当前生产版本。
 
 ## v1.0.14 发布门禁结果（历史）
 

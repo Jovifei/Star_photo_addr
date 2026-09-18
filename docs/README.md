@@ -21,12 +21,14 @@
 - 不在文档、日志或示例中写入 Token、API Key、私钥、数据库 URI、原始个人位置或完整生产日志。
 - `tasks/`、`superpowers/` 和阅读指南属于过程文件，不是项目知识结论；它们不替代本目录的工程记录。
 
-## 当前版本与产品状态（2026-09-16）
+## 当前版本与产品状态（2026-09-18）
 
 已部署主线基线为 `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`（v1.0.18）。今夜观测、暗夜选址、火烧云和高山云海四个入口均已实现并纳入正式导航；云海不是“尚在开发的页面”，而是已完成第一阶段的 surface + pressure 条件指数工作区。云海仍保留 Beta/未校准标签，表示模式推导和科学准确率边界，不表示页面或功能未完成。
 
-当前未合并候选分支 `codex/model-capability-recovery-20260915` 的本地提交为 `4118887`：恢复 GFS 默认模型、显式 ICON/AIFS 的字段隔离、评分字段 fail-closed、健康能力拆分、Open-Meteo 429 冷却和 worker 日期校验。该候选已完成本地 Node 24、浏览器和真实 GFS 验收，但尚未合并 main 或部署；Docker daemon 阻断了镜像 smoke。详情见 [`engineering-change-log/2026-09-15-model-capability-recovery-candidate.md`](./engineering-change-log/2026-09-15-model-capability-recovery-candidate.md)。
+当前未合并候选分支 `codex/model-capability-recovery-20260915` 的代码提交为 `411888764763d783b80f467641845b21b3d30e1f`，远端文档收口至 `cb5f0b6990d20cce9731d3c593861fc1468f983e`：恢复 GFS 默认模型、显式 ICON/AIFS 的字段隔离、评分字段 fail-closed、健康能力拆分、Open-Meteo 429 冷却和 worker 日期校验。该候选已完成本地 Node 24、浏览器和真实 GFS 验收，但尚未合并 main 或部署；Docker daemon 阻断了镜像 smoke。详情见 [`engineering-change-log/2026-09-15-model-capability-recovery-candidate.md`](./engineering-change-log/2026-09-15-model-capability-recovery-candidate.md)。
+
+当前另有 `codex/mobile-responsive-layout-20260918` 本地计划分支：只记录四入口响应式布局、移动端详情抽屉和参数显示的实施方案，状态为 `PLAN_READY_WAITING_CODE_AUTHORIZATION`，尚未改源码、推送、合并或部署。计划不能当作已实现功能，详见 [`engineering-change-log/2026-09-18-documentation-refresh.md`](./engineering-change-log/2026-09-18-documentation-refresh.md) 的边界说明。
 
 通用观星目录为 282 个点、覆盖 31 个省级行政区，首页搜索可返回太子尖、牵牛岗、九山顶、葛仙村和达瓦更扎等本地候选。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，主线与候选状态见 [`project-tracking/PROJECT_STATUS.md`](./project-tracking/PROJECT_STATUS.md)。
 
-知识库状态：2026-09-16 已对仓库文档执行 `codex-memory` 文档镜像 DryRun（识别 64 个文件、未写入）。当前 Vault 没有 `star_photo_addr` 项目映射，`load-memory`/`search-memory` 返回 `NO_PROJECT_MEMORY`；因此不能把镜像 DryRun 写成 Obsidian 已同步，也不会擅自创建项目目录。获得经授权的项目映射后，按本目录事实源重新执行实际镜像。
+知识库状态：2026-09-18 已再次运行 `codex-memory` 的加载、搜索和文档镜像 DryRun。当前 Vault 没有 `star_photo_addr` 项目映射，`load-memory`/`search-memory` 返回 `NO_PROJECT_MEMORY`；因此不能把镜像 DryRun 写成 Obsidian 已同步，也不会擅自创建项目目录。获得经授权的项目映射后，按本目录事实源重新执行实际镜像。

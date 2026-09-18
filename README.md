@@ -17,7 +17,7 @@
 
 生产站点：`https://photo.joviluma.com`
 
-> 当前状态（2026-09-16）：今夜观测、暗夜选址、火烧云和高山云海四个入口均已完成第一阶段实现并进入正式导航。云海页面的 Beta/未校准标签描述的是模式推导和科学准确率边界，不表示项目仍处于页面开发阶段。当前模型能力恢复候选 `codex/model-capability-recovery-20260915@4118887` 尚未合并或部署，详见 [`docs/engineering-change-log/2026-09-15-model-capability-recovery-candidate.md`](docs/engineering-change-log/2026-09-15-model-capability-recovery-candidate.md)。
+> 当前状态（2026-09-18）：今夜观测、暗夜选址、火烧云和高山云海四个入口均已完成第一阶段实现并进入正式导航。云海页面的 Beta/未校准标签描述的是模式推导和科学准确率边界，不表示项目仍处于页面开发阶段。模型能力恢复候选 `codex/model-capability-recovery-20260915` 尚未合并或部署；移动端响应式改进目前只有等待代码授权的计划，详见 [`docs/GUIDE.md`](docs/GUIDE.md)。
 
 ## 四个核心工作区
 
