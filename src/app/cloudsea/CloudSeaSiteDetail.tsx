@@ -188,6 +188,8 @@ export default function CloudSeaSiteDetail({
   return (
     <aside
       className="cloudsea-site-detail"
+      role="dialog"
+      aria-modal="true"
       aria-label={`${site.name}云海摄影详情`}
     >
       <div className="cs-detail-header">
@@ -208,6 +210,7 @@ export default function CloudSeaSiteDetail({
         <button
           type="button"
           className="cs-detail-close-btn"
+          data-detail-close="true"
           onClick={onClose}
           aria-label="关闭云海详情舱"
           title="关闭云海详情舱"

@@ -7,7 +7,7 @@
   display: none;
 }
 
-@media (max-width: 768px), (max-height: 520px) and (max-width: 1024px) {
+@media (max-width: 1199px), (max-height: 520px) and (max-width: 1199px) {
   .mobile-map-panel-dock {
     position: absolute;
     inset: 0;
@@ -355,5 +355,91 @@
 @media (prefers-reduced-motion: reduce) {
   .mobile-map-panel-drawer {
     transition: none;
+  }
+}
+
+/* Shared product header contract for phones and tablets. The old header rules
+   allowed the nav to shrink beside the brand; explicit grid areas keep all four
+   destinations reachable and give topic controls their own row. */
+@media (max-width: 1199px) {
+  .app-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand controls"
+      "nav nav";
+    align-items: center;
+    gap: 7px 10px;
+    padding: 8px 12px;
+  }
+
+  .app-header-brand {
+    grid-area: brand;
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .app-header-controls {
+    grid-area: controls;
+    justify-self: end;
+    min-width: 0;
+  }
+
+  .app-header .nav-tabs {
+    grid-area: nav;
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .app-header .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-header .nav-tabs .nav-tab {
+    flex: 1 0 auto;
+    min-width: max-content;
+  }
+
+  .app-header .nav-tab small {
+    display: none;
+  }
+
+  .app-header:has(.cloudsea-controls),
+  .app-header:has(.fireglow-controls) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "brand"
+      "controls"
+      "nav";
+  }
+
+  .app-header:has(.cloudsea-controls) .app-header-controls,
+  .app-header:has(.fireglow-controls) .app-header-controls {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-header {
+    padding-inline: 10px;
+  }
+
+  .app-header-mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  .app-header-title {
+    max-width: 62vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
   }
 }

@@ -227,17 +227,14 @@ test("统一页头导航保持横向且不产生溢出", async ({
   expect(overflow).toBe(true);
 });
 
-test("7 天候选日期切换可在各视口真实点击", async ({
+test("7 天候选日期切换在桌面可点击，平板切换到地图优先工具", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "候选输入栏在移动端隐藏；桌面项目已覆盖 375px 及横屏断点");
   const start = page.viewportSize() ?? { width: 1440, height: 1000 };
   const sizes =
     start.width >= 1000
-      ? [
-          { width: 1440, height: 1000 },
-          { width: 1024, height: 768 },
-        ]
+      ? [{ width: 1440, height: 1000 }, { width: 1024, height: 768 }]
       : [
           { width: 375, height: 812 },
           { width: 390, height: 844 },
@@ -251,6 +248,16 @@ test("7 天候选日期切换可在各视口真实点击", async ({
 
   for (const size of sizes) {
     await page.setViewportSize(size);
+    if (size.width < 1200) {
+      await expect(page.getByTestId("mobile-map-panel-dock")).toBeVisible();
+      await expect(page.locator(".workspace-input")).toBeHidden();
+      await expect(page.locator(".workspace-inspector")).toBeHidden();
+      const compactOverflow = await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      );
+      expect(compactOverflow).toBe(true);
+      continue;
+    }
     await expect(nightTabs).toBeVisible();
     const buttons = nightTabs.getByRole("tab");
     await expect(buttons).toHaveCount(7);

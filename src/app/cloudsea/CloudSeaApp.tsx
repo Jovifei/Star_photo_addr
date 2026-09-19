@@ -37,6 +37,7 @@ import { buildProbabilityOverlay } from "@/lib/cloudseaOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
+import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
 
@@ -579,7 +580,8 @@ export default function CloudSeaApp() {
                 );
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={site.id}
                     className={`cloudsea-card${isSelected ? " selected" : ""}`}
                     onClick={() => handleSelectSite(site.id)}
@@ -642,7 +644,7 @@ export default function CloudSeaApp() {
                     <p className="cloudsea-card-summary">
                       {windowScore.summary}
                     </p>
-                  </div>
+                  </button>
                 );
               })
             )}
@@ -650,13 +652,19 @@ export default function CloudSeaApp() {
         </aside>
 
         {selectedRanked ? (
-          <CloudSeaSiteDetail
-            site={selectedRanked.site}
-            window={selectedRanked.window}
-            phase={phase}
-            dateKey={selectedRanked.dateKey}
+          <ResponsiveTopicDetail
+            label={`${selectedRanked.site.name}云海摄影详情`}
+            className="cloudsea-detail-layer"
             onClose={() => setSelectedSiteId(null)}
-          />
+          >
+            <CloudSeaSiteDetail
+              site={selectedRanked.site}
+              window={selectedRanked.window}
+              phase={phase}
+              dateKey={selectedRanked.dateKey}
+              onClose={() => setSelectedSiteId(null)}
+            />
+          </ResponsiveTopicDetail>
         ) : null}
       </div>
     </div>

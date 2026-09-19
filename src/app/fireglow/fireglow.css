@@ -373,7 +373,41 @@
   color: #889;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1199px) {
+  .fireglow-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .fireglow-controls .segmented {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .fireglow-controls .segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fireglow-controls .segmented:nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .fireglow-controls .segmented:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .fireglow-controls .fireglow-refresh {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    white-space: nowrap;
+  }
+
   .fireglow-root {
     height: auto;
     min-height: calc(100vh - 58px);
@@ -389,11 +423,11 @@
   }
 
   .fireglow-list {
-    max-height: 44vh;
+    max-height: min(42dvh, 360px);
   }
 
   .fireglow-map {
-    height: 52vh;
+    height: clamp(300px, 48dvh, 420px);
   }
 }
 
@@ -619,6 +653,8 @@
   flex-direction: column;
   gap: 10px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .fg-card-header {
@@ -1140,16 +1176,13 @@
 }
 
 /* 移动端响应式 */
-@media (max-width: 960px) {
+@media (max-width: 1199px) {
   .fireglow-workspace[data-inspector-open="true"] {
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 10px 12px 14px;
   }
 
-  .fireglow-site-detail {
-    max-height: 65vh;
-  }
 }
 
 

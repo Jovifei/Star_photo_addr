@@ -258,6 +258,7 @@
 
 /* 点位卡片 */
 .cloudsea-card {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -266,6 +267,9 @@
   border-radius: 10px;
   background: rgba(3, 14, 23, 0.65);
   cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   transition: all 180ms ease;
 }
 
@@ -279,6 +283,11 @@
   border-color: #48b5b5;
   background: rgba(8, 28, 44, 0.95);
   box-shadow: 0 0 0 1px #48b5b5, 0 8px 24px rgba(72, 181, 181, 0.15);
+}
+
+.cloudsea-card:focus-visible {
+  outline: 2px solid #7ce3e3;
+  outline-offset: 2px;
 }
 
 .cloudsea-card-header {
@@ -544,6 +553,8 @@
   flex-direction: column;
   gap: 10px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .cs-card-header {
@@ -1180,8 +1191,42 @@
   line-height: 1.35;
 }
 
-/* 移动端响应式 */
-@media (max-width: 960px) {
+/* 手机/平板：地图优先，排行和详情通过紧凑内容区/底部抽屉呈现。 */
+@media (max-width: 1199px) {
+  .cloudsea-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .cloudsea-controls .segmented {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .cloudsea-controls .segmented::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cloudsea-controls .segmented:nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cloudsea-controls .segmented:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .cloudsea-controls .cloudsea-refresh {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    white-space: nowrap;
+  }
+
   .cloudsea-root {
     height: auto;
     min-height: calc(100vh - 58px);
@@ -1196,15 +1241,11 @@
   }
 
   .cloudsea-map-pane {
-    height: 52vh;
+    height: clamp(300px, 48dvh, 420px);
   }
 
   .cloudsea-sidebar {
-    max-height: 48vh;
-  }
-
-  .cloudsea-site-detail {
-    max-height: 65vh;
+    max-height: min(42dvh, 360px);
   }
 }
 

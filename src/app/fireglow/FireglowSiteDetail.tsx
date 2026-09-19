@@ -106,7 +106,12 @@ export default function FireglowSiteDetail({
         : "channel-blocked";
 
   return (
-    <aside className="fireglow-site-detail" aria-label={`${site.name}火烧云摄影详情`}>
+    <aside
+      className="fireglow-site-detail"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${site.name}火烧云摄影详情`}
+    >
       <div className="fg-detail-header">
         <div className="fg-detail-title-group">
           <div className="fg-detail-kicker-row">
@@ -123,6 +128,7 @@ export default function FireglowSiteDetail({
         <button
           type="button"
           className="fg-detail-close-btn"
+          data-detail-close="true"
           onClick={onClose}
           aria-label="关闭火烧云详情舱"
           title="关闭火烧云详情舱"

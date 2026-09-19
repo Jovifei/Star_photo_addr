@@ -9,7 +9,7 @@ export async function openMobileMapPanel(page, panel) {
   };
   const mobile = await page.evaluate(() =>
     window.matchMedia(
-      "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)",
+      "(max-width: 1199px), (max-height: 520px) and (max-width: 1199px)",
     ).matches,
   );
   if (!mobile) {

@@ -10,6 +10,7 @@ import "./viewport-recommendations.css";
 import "./viewport-recommendations-mobile.css";
 import "./ux-map-v2.css";
 import "./mobile-map-controls.css";
+import "./mobile-topic-detail.css";
 
 const PUBLIC_SITE_URL = "https://photo.joviluma.com";
 

@@ -21,6 +21,7 @@ import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
+import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import FireglowSiteDetail from "./FireglowSiteDetail";
 
 type Phase = "evening" | "morning";
@@ -456,12 +457,18 @@ export default function FireglowApp() {
         </aside>
 
         {selectedSite ? (
-          <FireglowSiteDetail
-            site={selectedSite}
-            phase={phase}
-            dateKey={selectedDateKey}
+          <ResponsiveTopicDetail
+            label={`${selectedSite.name}火烧云摄影详情`}
+            className="fireglow-detail-layer"
             onClose={() => setSelectedId(null)}
-          />
+          >
+            <FireglowSiteDetail
+              site={selectedSite}
+              phase={phase}
+              dateKey={selectedDateKey}
+              onClose={() => setSelectedId(null)}
+            />
+          </ResponsiveTopicDetail>
         ) : null}
       </main>
     </div>

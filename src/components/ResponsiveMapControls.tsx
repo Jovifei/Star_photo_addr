@@ -23,9 +23,9 @@ import MapViewActions from "@/components/MapViewActions";
 import ObservingMapControl from "@/components/ObservingMapControl";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 
-/** Portrait phones and short landscape phones use the same docked control UI. */
+/** Phones and tablets use the same map-first docked control UI. */
 export const MOBILE_MAP_PANEL_QUERY =
-  "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)";
+  "(max-width: 1199px), (max-height: 520px) and (max-width: 1199px)";
 
 const PANEL_ITEMS = [
   { id: "layers", label: "图层", title: "地图图层与视图", icon: Layers3 },
