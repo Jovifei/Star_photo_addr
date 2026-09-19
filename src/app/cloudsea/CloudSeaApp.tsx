@@ -87,7 +87,17 @@ function dateLabel(date: string): string {
   const weekday = ["日", "一", "二", "三", "四", "五", "六"][
     new Date(`${date}T12:00:00Z`).getUTCDay()
   ];
-  return `${month}/${day} 周${weekday}`;
+  return `${month}月${day}日 周${weekday}`;
+}
+
+function rangeOptionLabel(
+  option: (typeof RANGE_OPTIONS)[number],
+  baseDate: string,
+): string {
+  if (option.value === 3) {
+    return `${option.label} · ${dateLabel(baseDate)}—${dateLabel(shiftDate(baseDate, 2))}`;
+  }
+  return `${option.label} · ${dateLabel(shiftDate(baseDate, option.value))}`;
 }
 
 const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = [
@@ -141,30 +151,52 @@ export default function CloudSeaApp() {
       if (forceRefresh) setRefreshing(true);
       setLoading(true);
       try {
-        const results = await Promise.all(
-          activeDates.map(async (date): Promise<SnapshotLoadResult> => {
-            let lastError = "云海快照不可用";
-            for (let attempt = 0; attempt < 2; attempt += 1) {
-              try {
-                const url = `/api/cloudsea/snapshot?date=${date}&refresh=${forceRefresh ? "1" : "0"}`;
-                const response = await fetch(url, { cache: "no-store" });
-                const payload = (await response.json().catch(() => null)) as
-                  | (CloudSeaSnapshot & { error?: string })
-                  | null;
-                if (response.ok && payload?.sites) {
-                  return { date, snapshot: payload };
+        const results: SnapshotLoadResult[] = [];
+        // Do not fan out all three dates at once: each date already fans out
+        // surface plus pressure batches, and the provider may throttle the
+        // last date even though today/tomorrow succeeded.
+        for (const date of activeDates) {
+          let lastError = "云海快照不可用";
+          let degradedSnapshot: CloudSeaSnapshot | null = null;
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+              const url = `/api/cloudsea/snapshot?date=${date}&model=gfs&refresh=${forceRefresh ? "1" : "0"}`;
+              const response = await fetch(url, { cache: "no-store" });
+              const payload = (await response.json().catch(() => null)) as
+                | (CloudSeaSnapshot & { error?: string })
+                | null;
+              if (response.ok && payload?.sites) {
+                const pressureComplete =
+                  !payload.pressure || payload.pressure.status === "available";
+                if (pressureComplete || attempt === 1) {
+                  results.push({ date, snapshot: payload });
+                  lastError = "";
+                  break;
                 }
+                degradedSnapshot = payload;
+                lastError = `压力层仅 ${payload.pressure?.availableSites ?? 0}/${payload.pressure?.totalSites ?? 0} 地点可用`;
+              }
+              if (!response.ok || !payload?.sites) {
                 lastError =
                   payload?.error ??
                   `云海快照请求失败（HTTP ${response.status}）`;
-              } catch (error) {
-                lastError =
-                  error instanceof Error ? error.message : "云海快照请求失败";
               }
+            } catch (error) {
+              lastError =
+                error instanceof Error ? error.message : "云海快照请求失败";
             }
-            return { date, snapshot: null, error: lastError };
-          }),
-        );
+            if (attempt === 0) {
+              await new Promise((resolve) => setTimeout(resolve, 600));
+            }
+          }
+          if (lastError) {
+            results.push(
+              degradedSnapshot
+                ? { date, snapshot: degradedSnapshot, error: lastError }
+                : { date, snapshot: null, error: lastError },
+            );
+          }
+        }
 
         const validEntries = results.filter(
           (
@@ -184,6 +216,9 @@ export default function CloudSeaApp() {
               `${dateLabel(result.date)}：${result.error ?? "真实气象数据不可用"}`,
             );
             continue;
+          }
+          if (result.error) {
+            notices.push(`${dateLabel(result.date)}：${result.error}；已保留部分真实数据`);
           }
           if (result.snapshot.stale || result.snapshot.refreshError) {
             notices.push(
@@ -328,7 +363,7 @@ export default function CloudSeaApp() {
                 onClick={() => setRange(option.value)}
                 title={option.hint}
               >
-                <span>{option.label}</span>
+                <span>{rangeOptionLabel(option, baseDate)}</span>
               </button>
             ))}
           </div>
@@ -350,7 +385,7 @@ export default function CloudSeaApp() {
       </ProductHeader>
 
       <div className="cloudsea-beta-banner" role="note">
-        Beta · 条件指数综合 Open-Meteo surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
+        Beta · 条件指数综合 Open-Meteo GFS surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
       </div>
       {dataNotice ? (
         <div className="cloudsea-beta-banner" role="status">

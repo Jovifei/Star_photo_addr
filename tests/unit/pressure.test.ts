@@ -50,11 +50,89 @@ function rawPressure(
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 describe("pressure forecast batch", () => {
+  it("backs off before retrying a transient provider throttle", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls += 1;
+        if (calls === 1) {
+          return new Response(JSON.stringify({ reason: "rate limited" }), {
+            status: 429,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify([rawPressure()]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const pending = fetchPressureForecastBatch(
+      [{ id: "retry", latitude: 30.1, longitude: 119.2 }],
+      "2026-09-08",
+      undefined,
+      "icon",
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls).toBe(1);
+    await vi.advanceTimersByTimeAsync(299);
+    expect(calls).toBe(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(pending).resolves.toEqual(
+      expect.objectContaining({ data: expect.objectContaining({ retry: expect.any(Object) }) }),
+    );
+    expect(calls).toBe(2);
+  });
+
+  it("aborts a stuck provider attempt and retries with a fresh request signal", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+        calls += 1;
+        if (calls === 1) {
+          return await new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener(
+              "abort",
+              () => reject(init.signal?.reason ?? new DOMException("aborted", "AbortError")),
+              { once: true },
+            );
+          });
+        }
+        return new Response(JSON.stringify([rawPressure()]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+
+    const pending = fetchPressureForecastBatch(
+      [{ id: "timeout-retry", latitude: 30.1, longitude: 119.2 }],
+      "2026-09-08",
+      undefined,
+      "best_match",
+    );
+    await vi.advanceTimersByTimeAsync(11_999);
+    expect(calls).toBe(1);
+    await vi.advanceTimersByTimeAsync(301);
+    await expect(pending).resolves.toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({ "timeout-retry": expect.any(Object) }),
+      }),
+    );
+    expect(calls).toBe(2);
+  });
+
   it("builds a bounded multi-coordinate URL with only pressure-profile fields", () => {
     const url = new URL(
       buildPressureForecastBatchUrl(

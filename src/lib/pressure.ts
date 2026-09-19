@@ -43,6 +43,7 @@ export interface PressureForecastBatchResult {
 }
 
 const MIN_USABLE_PRESSURE_LEVELS = 6;
+const PRESSURE_REQUEST_TIMEOUT_MS = 12_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -124,15 +125,67 @@ async function providerError(response: Response): Promise<Error> {
   );
 }
 
+function waitForPressureRetry(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(
+      signal.reason instanceof Error
+        ? signal.reason
+        : new DOMException("The operation was aborted", "AbortError"),
+    );
+  }
+  return new Promise((resolve, reject) => {
+    const finish = () => {
+      signal?.removeEventListener("abort", abort);
+      resolve();
+    };
+    const abort = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+      reject(
+        signal?.reason instanceof Error
+          ? signal.reason
+          : new DOMException("The operation was aborted", "AbortError"),
+      );
+    };
+    const timer = setTimeout(finish, ms);
+    signal?.addEventListener("abort", abort, { once: true });
+  });
+}
+
+function pressureRequestSignal(parent?: AbortSignal): {
+  signal: AbortSignal;
+  cleanup: () => void;
+} {
+  const controller = new AbortController();
+  const abortFromParent = () => controller.abort(parent?.reason);
+  if (parent?.aborted) abortFromParent();
+  else parent?.addEventListener("abort", abortFromParent, { once: true });
+  const timeout = setTimeout(
+    () =>
+      controller.abort(
+        new DOMException("气压接口单次请求超时", "TimeoutError"),
+      ),
+    PRESSURE_REQUEST_TIMEOUT_MS,
+  );
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timeout);
+      parent?.removeEventListener("abort", abortFromParent);
+    },
+  };
+}
+
 async function requestPressureJson(
   url: string,
   signal?: AbortSignal,
 ): Promise<unknown> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
+    const request = pressureRequestSignal(signal);
     try {
       const response = await fetch(url, {
-        signal,
+        signal: request.signal,
         cache: "no-store",
         headers: { Accept: "application/json" },
       });
@@ -142,7 +195,10 @@ async function requestPressureJson(
     } catch (error) {
       if (signal?.aborted) throw error;
       lastError = error;
+    } finally {
+      request.cleanup();
     }
+    if (attempt === 0) await waitForPressureRetry(300, signal);
   }
   throw lastError instanceof Error
     ? lastError

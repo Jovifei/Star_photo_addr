@@ -27,14 +27,66 @@ function pressureAwareWindow(date: string) {
     pressureStatus: "available",
     pressureConfidence: "中",
     inversion: {
-      status: "detected",
-      lowerMsl: 500,
-      upperMsl: 750,
-      deltaTempC: 2,
-      strength: "moderate",
+      status: "not-detected",
+      lowerMsl: null,
+      upperMsl: null,
+      deltaTempC: null,
+      strength: null,
     },
     summary: "E2E 云海详情 fixture",
   };
+}
+
+async function expectCloudSeaDetailContentToFit(page: Page) {
+  const detail = page.locator(".cloudsea-site-detail");
+  const layout = await detail.evaluate((element) => {
+    const scroll = element.querySelector<HTMLElement>(".cs-detail-scroll-content");
+    const cards = Array.from(
+      element.querySelectorAll<HTMLElement>(".cs-detail-scroll-content > .cs-detail-card"),
+    );
+    const boundedItems = Array.from(
+      element.querySelectorAll<HTMLElement>(".cs-detail-card, .cs-bento-tile, .cs-gear-item"),
+    );
+
+    return {
+      scrollWidth: scroll?.scrollWidth ?? 0,
+      clientWidth: scroll?.clientWidth ?? 0,
+      cards: cards.map((card) => {
+        const rect = card.getBoundingClientRect();
+        return {
+          top: rect.top,
+          bottom: rect.bottom,
+          clientHeight: card.clientHeight,
+          scrollHeight: card.scrollHeight,
+        };
+      }),
+      boundedItems: boundedItems.map((item) => ({
+        className: item.className,
+        clientWidth: item.clientWidth,
+        scrollWidth: item.scrollWidth,
+        clientHeight: item.clientHeight,
+        scrollHeight: item.scrollHeight,
+      })),
+    };
+  });
+
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+  for (const item of layout.boundedItems) {
+    expect(
+      item.scrollWidth,
+      `${item.className} has horizontally clipped content`,
+    ).toBeLessThanOrEqual(item.clientWidth + 1);
+    expect(
+      item.scrollHeight,
+      `${item.className} has vertically clipped content`,
+    ).toBeLessThanOrEqual(item.clientHeight + 1);
+  }
+  for (let index = 1; index < layout.cards.length; index += 1) {
+    expect(
+      layout.cards[index].top,
+      `cloudsea detail card ${index} overlaps card ${index - 1}`,
+    ).toBeGreaterThanOrEqual(layout.cards[index - 1].bottom + 9);
+  }
 }
 
 async function mockMapTiles(page: Page) {
@@ -132,10 +184,22 @@ test.describe("responsive layout contract", () => {
       scrollHeight: element.scrollHeight,
     }));
     expect(detailScroll.scrollHeight).toBeGreaterThan(detailScroll.clientHeight);
-    const cards = await detail.locator(".cs-detail-card").evaluateAll((elements) =>
-      elements.map((element) => ({ height: element.getBoundingClientRect().height, scrollHeight: element.scrollHeight })),
-    );
-    expect(cards.every((card) => card.height >= Math.min(card.scrollHeight, 44))).toBe(true);
+
+    for (const viewport of [
+      { width: 320, height: 568 },
+      { width: 375, height: 812 },
+      { width: 390, height: 844 },
+      { width: 430, height: 932 },
+      { width: 577, height: 1231 },
+      { width: 768, height: 1024 },
+      { width: 844, height: 390 },
+      { width: 1280, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.waitForTimeout(50);
+      await expectCloudSeaDetailContentToFit(page);
+    }
+
     await detail.getByRole("button", { name: "关闭云海详情舱" }).click();
     await expect(card).toBeFocused();
   });
