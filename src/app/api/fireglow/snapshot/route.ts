@@ -208,7 +208,14 @@ export async function GET(request: NextRequest) {
         const weatherByDate = Object.fromEntries(
           Object.entries(weather).map(([night, response]) => [night, response.data]),
         );
-        return buildFireGlowSnapshot(date, model, weatherByDate);
+        const snapshot = buildFireGlowSnapshot(date, model, weatherByDate);
+        if (countValidScores(snapshot) === 0) {
+          const providerError = Object.values(weather[date]?.data ?? {})
+            .map((record) => record.error)
+            .find((message): message is string => Boolean(message));
+          throw new Error(providerError ?? "上游未返回有效火烧云评分");
+        }
+        return snapshot;
       } finally {
         clearTimeout(timeout);
       }
@@ -276,6 +283,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "火烧云上游请求失败";
     const fallback = cache.get(key)?.snapshot ?? diskCached;
     if (fallback) {
       const timedOut =
@@ -285,7 +293,9 @@ export async function GET(request: NextRequest) {
         {
           ...fallback,
           stale: true,
-          refreshError: timedOut ? "强制刷新超时，展示最近成功快照" : "强制刷新失败，展示最近成功快照",
+          refreshError: timedOut
+            ? "强制刷新超时，展示最近成功快照"
+            : `强制刷新失败：${message}；展示最近成功快照`,
         },
         {
           headers: {
