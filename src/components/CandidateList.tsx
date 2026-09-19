@@ -6,7 +6,7 @@ import { cachedForecast, useStore } from "@/lib/store";
 import { useCandidateForecasts } from "@/hooks/useCandidateForecasts";
 import { evaluateNight, statusMeta } from "@/lib/scoring";
 import { forecastTrustIssue } from "@/lib/forecastIntegrity";
-import { formatNightLabel } from "@/lib/nighttime";
+import { formatCalendarDate, formatNightLabel } from "@/lib/nighttime";
 import { DEFAULT_CANDIDATE_SEEDS } from "@/lib/constants";
 import type { CityCandidate, Location } from "@/lib/types";
 import type { CityCandidateStatus } from "@/data/cities";
@@ -20,12 +20,12 @@ interface CandidateNightData {
 function getDayShortLabel(dateKey: string, index: number): string {
   if (index === 0) return "今";
   if (index === 1) return "明";
+  if (index === 2) return "后";
   return ["日", "一", "二", "三", "四", "五", "六"][new Date(`${dateKey}T12:00:00Z`).getUTCDay()] ?? "夜";
 }
 function getDateTabLabel(dateKey: string, index: number): { title: string; sub: string } {
-  const [, m, d] = dateKey.split("-");
-  const title = index === 0 ? "今夜" : index === 1 ? "明夜" : ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][new Date(`${dateKey}T12:00:00Z`).getUTCDay()] ?? "夜间";
-  return { title, sub: `${Number(m)}/${Number(d)}` };
+  const title = index === 0 ? "今日" : index === 1 ? "明日" : index === 2 ? "后日" : ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][new Date(`${dateKey}T12:00:00Z`).getUTCDay()] ?? "夜间";
+  return { title, sub: formatCalendarDate(dateKey) };
 }
 export default function CandidateList({ candidates: propCandidates, activeId, onPick, onRemove }: {
   candidates?: CityCandidate[]; status?: CityCandidateStatus; activeId?: string;

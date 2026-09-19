@@ -48,7 +48,7 @@ test("CloudSea null scores use an unknown marker instead of p20", async ({ page 
     .toBeGreaterThan(0);
 });
 
-test("Fireglow null scores use an unknown marker instead of p20", async ({ page }, testInfo) => {
+test("Fireglow empty snapshots show an unavailable state instead of a fake zero-point ranking", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "unknown marker semantics are covered once on desktop");
   await page.route("**/api/fireglow/snapshot**", async (route) => {
     const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-08";
@@ -68,13 +68,8 @@ test("Fireglow null scores use an unknown marker instead of p20", async ({ page 
   await mockMapTiles(page);
 
   await page.goto("/fireglow");
-  await expect(page.locator(".fireglow-list").first()).toBeVisible();
+  await expect(page.locator(".fireglow-error")).toContainText("未返回有效火烧云评分");
   await expect(page.locator(".fireglow-list li")).toHaveCount(1);
-  await expect(page.locator(".fireglow-empty")).toContainText("暂无达到 ≥0 分");
+  await expect(page.locator(".fireglow-empty")).toContainText("暂无有效火烧云数据");
   await expect(page.locator(".fireglow-legend-unknown")).toBeAttached();
-  await expect
-    .poll(() => page.locator(".leaflet-overlay-pane path").evaluateAll((paths) =>
-      paths.filter((path) => Number.parseFloat(getComputedStyle(path).fillOpacity) < 0.5).length,
-    ))
-    .toBeGreaterThan(0);
 });

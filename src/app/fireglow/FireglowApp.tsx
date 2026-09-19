@@ -20,6 +20,7 @@ import { fireGlowBandLabel } from "@/lib/fireglow";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
+import { formatCalendarDate, formatRelativeDateLabel } from "@/lib/nighttime";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
 import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import FireglowSiteDetail from "./FireglowSiteDetail";
@@ -87,11 +88,23 @@ function shiftDate(date: string, days: number): string {
 }
 
 function dateLabel(date: string): string {
-  const [, month, day] = date.split("-").map(Number);
-  const weekday = ["日", "一", "二", "三", "四", "五", "六"][
-    new Date(`${date}T12:00:00Z`).getUTCDay()
-  ];
-  return `${month}/${day} 周${weekday}`;
+  return formatCalendarDate(date);
+}
+
+function rangeOptionLabel(
+  option: (typeof RANGE_OPTIONS)[number],
+  baseDate: string,
+): string {
+  if (option.value === 3) {
+    return `${option.label} · ${formatCalendarDate(baseDate)}—${formatCalendarDate(shiftDate(baseDate, 2))}`;
+  }
+  return `${option.label} · ${formatRelativeDateLabel(shiftDate(baseDate, option.value), baseDate)}`;
+}
+
+function hasUsableFireGlowScores(snapshot: FireGlowSnapshot): boolean {
+  return Object.values(snapshot.sites ?? {}).some(
+    (site) => site.evening?.score != null || site.morning?.score != null,
+  );
 }
 
 const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = [
@@ -152,6 +165,9 @@ export default function FireglowApp() {
               const payload = await response.json().catch(() => null);
               if (!response.ok || !payload?.sites) {
                 throw new Error(payload?.error ?? "火烧云快照不可用");
+              }
+              if (!hasUsableFireGlowScores(payload)) {
+                throw new Error("上游未返回有效火烧云评分，请点击刷新重试");
               }
               return payload as FireGlowSnapshot;
             }),
@@ -284,7 +300,7 @@ export default function FireglowApp() {
                 title={option.hint}
                 onClick={() => setRangeMode(option.value)}
               >
-                {option.label}
+                {rangeOptionLabel(option, baseDate)}
               </button>
             ))}
           </div>
@@ -392,7 +408,7 @@ export default function FireglowApp() {
         <aside className="fireglow-panel" aria-label="火烧云条件指数排行">
           <div className="fireglow-panel-head">
             <strong>{phase === "evening" ? "晚霞条件排行" : "朝霞条件排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
-            <span>符合 ≥{scoreThreshold}分 {filteredRanked.length} 个点位</span>
+            <span>{status === "error" ? "数据不可用" : `符合 ≥${scoreThreshold}分 ${filteredRanked.length} 个点位`}</span>
           </div>
           <ScoreThresholdControl
             value={scoreThreshold}
@@ -404,7 +420,9 @@ export default function FireglowApp() {
           {status === "error" && <p className="fireglow-error" role="status">{error}</p>}
           {error && status === "ready" && <p className="fireglow-note" role="status">{error}</p>}
           <ol className="fireglow-list">
-            {filteredRanked.length ? filteredRanked.map((site, index) => (
+            {status === "error" ? (
+              <li className="fireglow-empty fireglow-empty--error">暂无有效火烧云数据，请刷新重试</li>
+            ) : filteredRanked.length ? filteredRanked.map((site, index) => (
               <li key={site.id}>
                 <button
                   type="button"
@@ -428,7 +446,7 @@ export default function FireglowApp() {
                       <span className="fireglow-day-chips" aria-label="三日条件指数">
                         {site.days.map((day) => (
                           <i key={day.date} data-level={day.level ?? "none"}>
-                            {day.date.slice(5).replace("-", "/")} {day.score ?? "—"}
+                            {formatCalendarDate(day.date)} {day.score ?? "—"}
                           </i>
                         ))}
                       </span>
