@@ -298,8 +298,14 @@ export async function GET(request: NextRequest) {
     const timedOut =
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
+    const providerMessage =
+      error instanceof Error ? error.message : "火烧云上游请求失败";
     return NextResponse.json(
-      { error: timedOut ? "火烧云快照请求超时" : "火烧云快照暂时不可用" },
+      {
+        error: timedOut
+          ? "火烧云快照请求超时"
+          : `火烧云数据不可用：${providerMessage}`,
+      },
       { status: timedOut ? 504 : 502, headers: { "Cache-Control": "no-store" } },
     );
   }
