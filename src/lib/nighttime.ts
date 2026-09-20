@@ -202,6 +202,13 @@ export function formatCalendarDate(dateKey: string): string {
   return `${month}月${day}日 ${weekday}`;
 }
 
+export function formatCompactCalendarDate(dateKey: string): string {
+  const calendar = formatCalendarDate(dateKey);
+  if (calendar === dateKey) return dateKey;
+  const [, month, day] = dateKey.split("-").map(Number);
+  return `${month}.${day} ${calendar.slice(calendar.indexOf(" ") + 1)}`;
+}
+
 /** Relative selector label, retaining the actual calendar date for clarity. */
 export function formatRelativeDateLabel(dateKey: string, referenceDate: string): string {
   const target = Date.parse(`${dateKey}T12:00:00Z`);
@@ -210,7 +217,7 @@ export function formatRelativeDateLabel(dateKey: string, referenceDate: string):
     ? Math.round((target - reference) / 86_400_000)
     : null;
   const relative = offset === 0 ? "今日" : offset === 1 ? "明日" : offset === 2 ? "后日" : null;
-  return relative ? `${relative} · ${formatCalendarDate(dateKey)}` : formatCalendarDate(dateKey);
+  return relative ? `${relative} · ${formatCompactCalendarDate(dateKey)}` : formatCompactCalendarDate(dateKey);
 }
 
 /**

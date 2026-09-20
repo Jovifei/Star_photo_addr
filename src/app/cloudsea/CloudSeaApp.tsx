@@ -37,6 +37,7 @@ import { buildProbabilityOverlay } from "@/lib/cloudseaOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
+import { formatCompactCalendarDate, formatRelativeDateLabel } from "@/lib/nighttime";
 import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
@@ -95,9 +96,9 @@ function rangeOptionLabel(
   baseDate: string,
 ): string {
   if (option.value === 3) {
-    return `${option.label} · ${dateLabel(baseDate)}—${dateLabel(shiftDate(baseDate, 2))}`;
+    return `${option.label} · ${formatCompactCalendarDate(baseDate)}—${formatCompactCalendarDate(shiftDate(baseDate, 2))}`;
   }
-  return `${option.label} · ${dateLabel(shiftDate(baseDate, option.value))}`;
+  return formatRelativeDateLabel(shiftDate(baseDate, option.value), baseDate);
 }
 
 const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = [

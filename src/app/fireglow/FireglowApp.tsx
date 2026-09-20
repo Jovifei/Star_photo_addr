@@ -20,7 +20,7 @@ import { fireGlowBandLabel } from "@/lib/fireglow";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
-import { formatCalendarDate, formatRelativeDateLabel } from "@/lib/nighttime";
+import { formatCalendarDate, formatCompactCalendarDate, formatRelativeDateLabel } from "@/lib/nighttime";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
 import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import FireglowSiteDetail from "./FireglowSiteDetail";
@@ -96,9 +96,9 @@ function rangeOptionLabel(
   baseDate: string,
 ): string {
   if (option.value === 3) {
-    return `${option.label} · ${formatCalendarDate(baseDate)}—${formatCalendarDate(shiftDate(baseDate, 2))}`;
+    return `${option.label} · ${formatCompactCalendarDate(baseDate)}—${formatCompactCalendarDate(shiftDate(baseDate, 2))}`;
   }
-  return `${option.label} · ${formatRelativeDateLabel(shiftDate(baseDate, option.value), baseDate)}`;
+  return formatRelativeDateLabel(shiftDate(baseDate, option.value), baseDate);
 }
 
 function hasUsableFireGlowScores(snapshot: FireGlowSnapshot): boolean {
