@@ -78,6 +78,27 @@ describe("finder weather batch integrity", () => {
     expect(Object.values(response.data).every((record) => record.hourly === null)).toBe(true);
   });
 
+  it("allows an absent optional visibility series while preserving null visibility values", async () => {
+    vi.resetModules();
+    const date = getShanghaiDate();
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      const parsed = new URL(url);
+      const latitudes = parsed.searchParams.get("latitude")!.split(",").map(Number);
+      const longitudes = parsed.searchParams.get("longitude")!.split(",").map(Number);
+      return Response.json(latitudes.map((latitude, index) => rawForecast(
+        latitudes[index]!,
+        longitudes[index]!,
+        date,
+        "visibility",
+      )));
+    }));
+    const { fetchFinderWeatherRange } = await import("@/lib/stargazingFinderWeather");
+    const response = (await fetchFinderWeatherRange([date], new AbortController().signal, false, "icon"))[date]!;
+    const available = Object.values(response.data).filter((record) => record.status === "available");
+    expect(available).toHaveLength(FINDER_LOCATIONS.length);
+    expect(available.every((record) => record.hourly?.visibility.every((value) => value === null))).toBe(true);
+  });
+
   it("rejects a batch whose response order no longer maps to requested coordinates", async () => {
     vi.resetModules();
     const date = getShanghaiDate();
