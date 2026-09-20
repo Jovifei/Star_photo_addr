@@ -32,6 +32,10 @@ function dateLabel(date: string): string {
   return `${month}月${day}日 周${weekday}`;
 }
 
+function compactDateLabel(date: string): string {
+  return dateLabel(date).replace(/^(\d+)月(\d+)日/, "$1.$2");
+}
+
 function windowFor(date: string) {
   return {
     score: 88,
@@ -126,17 +130,25 @@ test("云海日期控件显示日期，并实际请求后日与三日总览的�
   );
 
   await expect(
-    page.getByRole("button", { name: new RegExp(`今日.*${dateLabel(dates[0])}`) }),
+    page.getByRole("button", {
+      name: new RegExp(`今日.*${compactDateLabel(dates[0])}`),
+    }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: new RegExp(`明日.*${dateLabel(dates[1])}`) }),
+    page.getByRole("button", {
+      name: new RegExp(`明日.*${compactDateLabel(dates[1])}`),
+    }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: new RegExp(`后日.*${dateLabel(dates[2])}`) }),
+    page.getByRole("button", {
+      name: new RegExp(`后日.*${compactDateLabel(dates[2])}`),
+    }),
   ).toBeVisible();
 
   await page
-    .getByRole("button", { name: new RegExp(`后日.*${dateLabel(dates[2])}`) })
+    .getByRole("button", {
+      name: new RegExp(`后日.*${compactDateLabel(dates[2])}`),
+    })
     .click();
   await expect.poll(() => requestedDates).toContain(dates[2]);
   await expect.poll(() => requestCounts.get(dates[2]) ?? 0).toBeGreaterThanOrEqual(2);

@@ -1,3 +1,19 @@
+# 2026-09-20 发布后四页面浏览器回归与线上数据复核
+
+- [x] 在已部署运行时代码上重新运行 ESLint、TypeScript、Vitest 与生产构建。
+- [x] 运行 Chromium 桌面/移动全量 E2E，并覆盖 375/768/1024/1440 宽度与手机横屏。
+- [x] 运行 Firefox 桌面与 WebKit 手机跨浏览器冒烟。
+- [x] 修正日期按钮紧凑格式与火烧云无有效评分错误态的过期 E2E 契约。
+- [x] 复核生产版本、容器健康、火烧云三日与云海三日有效业务数据。
+
+## Review
+
+- Static gates: 60 个测试文件 / 352 项 Vitest、ESLint、TypeScript、生产构建全部通过。
+- Browser gates: Chromium `126 passed / 42 skipped / 0 failed`；Firefox/WebKit `4/4`。
+- Layout coverage: 主工作台四档宽度无页面级横向溢出；手机横屏不恢复桌面浮窗；云海/火烧云详情使用不压缩卡片的底部对话框。
+- Production baseline: `buildRevision=822b85a`，app/worker 均 healthy；火烧云三天均有有效排行；云海三天压力层均 `54/54` 且存在有效评分。
+- Boundary: 浏览器设备模拟验证通过；真实 iPhone/Android 仍保持 `MANUAL/PENDING`，由 Jovi 最终验收。
+
 # 2026-09-19 云海后日数据恢复与日期可读性
 
 - [x] 复现后日压力层请求失败、降级缓存和三日总览请求覆盖。
@@ -5,7 +21,7 @@
 - [x] 将截图中的云海详情卡片重叠纳入 320–1280px 逐卡片几何回归，并确认长逆温文案不裁切。
 - [x] 修复 provider 并发与降级缓存边界，保持数据不足时 fail-closed。
 - [x] 运行云海专项测试、完整静态检查、完整 E2E 和真实上游接口验收。
-- [ ] 仅在上述证据通过后提交并重新部署 exact SHA。
+- [x] 仅在上述证据通过后提交并重新部署 exact SHA。
 
 ## Review
 
@@ -14,6 +30,7 @@
 - Verification: `npm run check` 59 文件 / 346 项通过；Chromium E2E `125 passed / 41 skipped / 0 failed`；Firefox/WebKit `4/4`；真实 GFS 2026-09-19、20、21 均 `54/54`、failed `0`。
 - Report: `docs/engineering-change-log/2026-09-19-cloudsea-day3-mobile-layout.md`。
 - Authorization: Jovi 已明确要求修复并逐项测试后再提供测试报告。
+- Publication: 运行时代码已部署为 `822b85a`，app/worker 健康，后续测试契约提交不改变运行时行为。
 
 # 2026-09-10 UI 统一与专题排行门槛
 

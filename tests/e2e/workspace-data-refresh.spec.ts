@@ -322,8 +322,10 @@ test("fireglow date and phase switch real data and stale snapshot forces refresh
 
   forceStale = true;
   await page.getByRole("button", { name: /强制刷新火烧云快照/ }).click();
-  await expect(list.locator(".fireglow-empty")).toContainText("暂无达到 ≥0 分的地点", {
-    timeout: 20000,
-  });
+  await expect(list.locator(".fireglow-empty")).toContainText(
+    "暂无有效火烧云数据，请刷新重试",
+    { timeout: 20000 },
+  );
+  await expect(page.locator(".fireglow-error")).toContainText("未返回有效火烧云评分");
   await expect(requests.some((entry) => entry.endsWith("|1"))).toBe(true);
 });
