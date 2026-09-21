@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { COMPACT_BROWSER_QUERY, lockCompactPageScroll } from "@/lib/pageScrollLock";
 
 const FOCUSABLE_SELECTOR = [
   "button:not([disabled])",
@@ -34,22 +35,21 @@ export default function ResponsiveTopicDetail({
     const active = document.activeElement;
     triggerRef.current = active instanceof HTMLElement ? active : null;
     const layer = layerRef.current;
-    const compact = window.matchMedia("(max-width: 1199px)").matches;
-    const previousOverflow = document.body.style.overflow;
-    if (compact) document.body.style.overflow = "hidden";
+    const query = window.matchMedia(COMPACT_BROWSER_QUERY);
+    const unlock = lockCompactPageScroll();
 
     const focusables = () =>
       Array.from(layer?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
         .filter((element) => !element.hidden && element.offsetParent !== null);
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!layer) return;
+      if (!layer || !layer.contains(document.activeElement)) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onCloseRef.current();
         return;
       }
-      if (event.key !== "Tab") return;
+      if (event.key !== "Tab" || !query.matches) return;
       const items = focusables();
       if (!items.length) return;
       const first = items[0];
@@ -66,16 +66,16 @@ export default function ResponsiveTopicDetail({
     document.addEventListener("keydown", onKeyDown);
     const frame = window.requestAnimationFrame(() => {
       const close = layer?.querySelector<HTMLElement>("[data-detail-close]");
-      (close ?? focusables()[0])?.focus();
+      (close ?? focusables()[0])?.focus({ preventScroll: true });
     });
 
     return () => {
       window.cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
+      unlock();
       const trigger = triggerRef.current;
       if (trigger && document.contains(trigger)) {
-        window.requestAnimationFrame(() => trigger.focus());
+        window.requestAnimationFrame(() => trigger.focus({ preventScroll: true }));
       }
     };
   }, []);

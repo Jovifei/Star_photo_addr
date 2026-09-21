@@ -1,0 +1,16 @@
+{
+  "scope": "isolated DOM/CSS contract + actual candidate DOM helpers; NOT Next app E2E, real Leaflet tiles, original screenshot audit or physical device",
+  "browser": "system Chromium",
+  "passed": 145,
+  "failed": 0,
+  "baseline": "349db7b5ba320593724f2a084f6b2228489b6fb7",
+  "candidateBranch": "codex/mobile-content-flow-audit-20260921",
+  "projectBuild": "NOT_RUN",
+  "projectE2E": "NOT_RUN",
+  "physicalDevice": "NOT_RUN",
+  "production": "NOT_TOUCHED",
+  "originalEightScreenshots": "NOT_PROVIDED",
+  "node": "22.16.0",
+  "requiredNode": ">=24",
+  "evidenceSha256": "9eafecfc0a46fdfa91c60fb896ae6e8b39dc9da85c0f47294151338c70c71b1d"
+}

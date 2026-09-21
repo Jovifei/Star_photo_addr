@@ -11,6 +11,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { lockCompactPageScroll } from "@/lib/pageScrollLock";
 import { useStore } from "@/lib/store";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import DetailRestore from "@/components/DetailRestore";
@@ -95,6 +96,13 @@ export default function ResponsiveMapControls({
     ? "summary"
     : requestedPanel;
 
+  const panelOpen = showMobileDock && activePanel !== null;
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    return lockCompactPageScroll();
+  }, [panelOpen]);
+
   const activeTitle = useMemo(() => {
     if (activePanel === "summary") return "今晚判断";
     return PANEL_ITEMS.find((item) => item.id === activePanel)?.title ?? "地图工具";
@@ -103,7 +111,7 @@ export default function ResponsiveMapControls({
   const closePanel = useCallback(() => {
     setRequestedPanel(null);
     setDetailOpen(false);
-    window.requestAnimationFrame(() => lastTriggerRef.current?.focus());
+    window.requestAnimationFrame(() => lastTriggerRef.current?.focus({ preventScroll: true }));
   }, [setDetailOpen]);
 
   const selectPanel = useCallback(
@@ -125,10 +133,10 @@ export default function ResponsiveMapControls({
 
   useEffect(() => {
     const drawer = drawerRef.current;
-    if (drawer) drawer.inert = activePanel === null;
-    if (!activePanel) return;
+    if (drawer) drawer.inert = !panelOpen;
+    if (!panelOpen) return;
 
-    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus({ preventScroll: true }));
     const onKeyDown = (event: KeyboardEvent) => {
       // Layered-modal rule: when focus lives in a topmost dialog (e.g. the
       // source popover) the drawer must not trap Tab or close on Escape.
@@ -159,8 +167,11 @@ export default function ResponsiveMapControls({
       }
     };
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [activePanel, closePanel]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [panelOpen, closePanel]);
 
   useEffect(() => {
     // The dynamic control shell can render one frame before matchMedia
@@ -239,7 +250,8 @@ export default function ResponsiveMapControls({
         id="mobile-map-panel-drawer"
         ref={drawerRef}
         className="mobile-map-panel-drawer"
-        role="complementary"
+        role="dialog"
+        aria-modal={panelOpen ? true : undefined}
         aria-hidden={!activePanel}
         aria-label={activeTitle}
         data-testid="mobile-map-panel-drawer"
