@@ -24,12 +24,12 @@ for (const width of [360, 390, 768, 1024]) {
     await expect(threshold).toBeVisible();
     await threshold.focus();
     await page.keyboard.press('ArrowRight');
-    await page.getByRole('button',{name:'收起筛选'}).click();
+    await page.getByRole('button',{name:'收起时间与地点筛选'}).click({force:true});
     const map=page.locator('.leaflet-container');
     await expect(map).toHaveClass(/map-page-scroll/);
-    await page.getByRole('button',{name:'移动地图',exact:true}).click();
+    await page.getByRole('button',{name:'移动地图，开启地图拖动',exact:true}).click();
     await expect(map).not.toHaveClass(/map-page-scroll/);
-    await page.getByRole('button',{name:'完成 · 恢复页面滑动'}).click();
+    await page.getByRole('button',{name:'完成移动地图，恢复页面滑动',exact:true}).click();
     await expect(map).toHaveClass(/map-page-scroll/);
     // Trusted touch events exercise browser scrolling; do not fake scrollTop.
     const cdp=await page.context().newCDPSession(page);
@@ -49,7 +49,7 @@ for (const route of ['/fireglow','/cloudsea']) {
   test(`${route} header scrolls away and map releases vertical gestures`,async({page},info)=>{
     test.skip(info.project.name !== 'mobile');
     await page.goto(route);
-    await expect(page.getByRole('button',{name:'移动地图',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'移动地图，开启地图拖动',exact:true})).toBeVisible();
     await expect(page.locator('.leaflet-container')).toHaveClass(/map-page-scroll/);
     await page.mouse.move(180,600);
     await page.mouse.wheel(0,450);

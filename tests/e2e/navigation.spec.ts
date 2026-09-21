@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { closeMobileMapPanel } from "./mobile-map-panel.js";
 
 function buildForecastResponse(requestUrl: string) {
   const url = new URL(requestUrl);
@@ -185,6 +186,9 @@ test("source disclosure keeps the current observation context when opening dark-
   );
   await expect(page.getByTestId("observation-reason-card")).toBeVisible();
 
+  if (await page.getByTestId("mobile-map-panel-drawer").count()) {
+    await closeMobileMapPanel(page);
+  }
   await page.getByRole("button", { name: "数据依据与局限" }).click();
   const dialog = page.getByRole("dialog", { name: "数据依据与局限" });
   const recommendationLink = dialog.getByRole("link", {
@@ -229,7 +233,7 @@ test.describe("mobile product header", () => {
 
     const sourceButton = page.getByRole("button", { name: "数据依据与局限" });
     await expect(sourceButton).toBeVisible();
-    await expect(sourceButton).toHaveCSS("width", "44px");
+    await expect(sourceButton).toHaveCSS("width", "48px");
 
     await sourceButton.click();
     await expect(

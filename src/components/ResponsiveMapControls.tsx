@@ -138,17 +138,21 @@ export default function ResponsiveMapControls({
 
     const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus({ preventScroll: true }));
     const onKeyDown = (event: KeyboardEvent) => {
-      // Layered-modal rule: when focus lives in a topmost dialog (e.g. the
-      // source popover) the drawer must not trap Tab or close on Escape.
+      if (event.key === "Escape") {
+        // A compact drawer is the top-level modal surface. Let a nested
+        // dialog keep Escape for itself, but do not require focus to remain
+        // inside the drawer after a pointer interaction.
+        const target = event.target instanceof Element ? event.target : null;
+        const nestedDialog = target?.closest('[role="dialog"]:not(#mobile-map-panel-drawer)');
+        if (nestedDialog) return;
+        event.preventDefault();
+        closePanel();
+        return;
+      }
       if (
         !drawerRef.current ||
         !drawerRef.current.contains(document.activeElement)
       ) {
-        return;
-      }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closePanel();
         return;
       }
       if (event.key !== "Tab" || !drawerRef.current) return;
@@ -166,10 +170,10 @@ export default function ResponsiveMapControls({
         first.focus();
       }
     };
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown, true);
     return () => {
       window.cancelAnimationFrame(frame);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown, true);
     };
   }, [panelOpen, closePanel]);
 

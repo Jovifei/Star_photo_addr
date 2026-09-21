@@ -80,7 +80,7 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
     ? drawer.getByRole("button", { name: "Bortle、SQM 与未安装说明" })
     : page.locator(".bortle-control:visible").getByRole("button", { name: "Bortle、SQM 与未安装说明" });
   await helpButton.click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog", { name: "Bortle、SQM 与夜光参考" });
   await expect(dialog).toContainText("有意的安全降级");
   await expect(dialog).toContainText("docs/DARK_SKY_DATA_SETUP.md");
 });
