@@ -121,6 +121,7 @@ test.describe("responsive layout contract", () => {
     }));
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
 
+    await page.getByRole("button", { name: "时间与地点筛选" }).click();
     await expect(page.getByRole("slider", { name: "观星评分时间滑窗" })).toBeVisible();
     await expect(page.getByRole("slider", { name: "推荐分数门槛" })).toBeVisible();
     await expect(page.getByRole("button", { name: /筛选目录参考 B1/ })).toBeVisible();

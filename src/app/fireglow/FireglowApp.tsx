@@ -1,4 +1,5 @@
 "use client";
+import MapScrollControl from "@/components/MapScrollControl";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sunrise, Sunset, Flame, RefreshCw } from "lucide-react";
@@ -386,6 +387,7 @@ export default function FireglowApp() {
                 </CircleMarker>
               );
             })}
+            <MapScrollControl />
           </MapContainer>
           <div className="fireglow-legend" aria-label="火烧云条件指数等级色阶">
             <span>火烧云条件指数</span>

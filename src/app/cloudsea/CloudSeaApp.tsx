@@ -1,4 +1,5 @@
 "use client";
+import MapScrollControl from "@/components/MapScrollControl";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -502,6 +503,7 @@ export default function CloudSeaApp() {
                 </CircleMarker>
               );
             })}
+            <MapScrollControl />
           </MapContainer>
 
           <div className="cloudsea-legend">

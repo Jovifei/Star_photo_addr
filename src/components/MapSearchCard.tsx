@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import type { GeocodeResult } from "@/lib/types";
@@ -10,6 +10,7 @@ import RecommendationQuickControls from "@/components/RecommendationQuickControl
 
 /** Search row + top-level location and recommendation controls. */
 export default function MapSearchCard() {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const { sampleAt } = useStore();
 
   const handlePick = useCallback(
@@ -54,7 +55,19 @@ export default function MapSearchCard() {
           <span aria-hidden="true">⌾</span>
           {loading ? "定位中" : "我的位置"}
         </button>
-        <RecommendationQuickControls />
+        <button
+          type="button"
+          className="mobile-filter-toggle"
+          aria-expanded={filtersOpen}
+          aria-controls="location-filter-controls"
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          {filtersOpen ? "收起筛选" : "时间与地点筛选"}
+          <span aria-hidden="true">{filtersOpen ? "−" : "+"}</span>
+        </button>
+        <div id="location-filter-controls" className="location-filter-controls" data-open={filtersOpen}>
+          <RecommendationQuickControls />
+        </div>
       </div>
       {error && (
         <div

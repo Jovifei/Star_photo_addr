@@ -1,5 +1,7 @@
 # Lessons
 
+- 2026-09-21: Width and overlap assertions alone miss unusable mobile scrolling. Verify an actual vertical gesture moves the document and header out of view, measure first-screen map area, and inspect screenshots. Avoid a locked 100vh app shell plus permanently expanded filters on phone/tablet. Record browser emulation separately from physical-device evidence.
+
 - 2026-09-20: 同一日期在导航按钮和详情标题可以有不同展示密度；日期格式调整后，E2E 必须分别断言紧凑按钮（如 `今日 · 9.20 周日`）与完整标题（如 `9月20日 周日`），不能用一个 helper 混用。空评分快照测试也必须跟随 fail-closed 语义，断言可恢复错误而不是正常阈值空排行。
 
 - 2026-09-20: 火烧云上游空快照不能只在 API 层 fail-closed；前端错误态也必须与“真实有数据但阈值过滤为空”分离，不能继续渲染 `暂无达到 ≥0 分`，否则用户仍会误以为评分为 0。

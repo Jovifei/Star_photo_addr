@@ -1,0 +1,78 @@
+/* Compact browsers use document scrolling, not a desktop viewport cage. */
+.mobile-filter-toggle { display: none; }
+.location-filter-controls { display: contents; }
+
+@media (max-width: 1199px) {
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+    width: 100%;
+    overflow: visible;
+  }
+  .workspace-shell { display: block; }
+  .app-shell > .app-header,
+  .workspace-commandbar { position: static; }
+  .workspace-commandbar .mobile-filter-toggle {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+  }
+  .workspace-commandbar .location-filter-controls { display: none; grid-column: 1 / -1; min-width: 0; }
+  .workspace-commandbar .location-filter-controls[data-open="true"] { display: block; }
+  .workspace-commandbar .recommendation-quick-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-commandbar .recommendation-quick-slider { grid-column: 1 / -1; }
+  .workspace-commandbar .recommendation-quick-slider strong { font-size: 12px; white-space: normal; }
+  .workspace-commandbar .recommendation-quick-slider input[type="range"],
+  .workspace-commandbar .bortle-filter-bar-command button,
+  .workspace-commandbar .locate-button { min-height: 48px; }
+  .workspace-canvas .map-stage { flex: none; }
+  .workspace-canvas .map-viewport { flex: none; height: clamp(360px, 62svh, 680px); min-height: 360px; }
+  .workspace-shell .cloud-timeline,
+  .workspace-shell .cloud-timeline.is-expanded { flex: none; max-height: none; }
+  .workspace-shell .cloud-timeline-body { max-height: none; overflow: visible; }
+  .workspace-shell .cloud-timeline-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr);
+    grid-template-areas: "title play toggle" "current current current" "speed range range" "track track track";
+    gap: 8px;
+  }
+  .workspace-shell .cloud-timeline-title { grid-area: title; }
+  .workspace-shell .cloud-timeline-play { grid-area: play; }
+  .workspace-shell .cloud-timeline-toggle { grid-area: toggle; min-height: 48px; }
+  .workspace-shell .cloud-timeline-speed { grid-area: speed; }
+  .workspace-shell .cloud-timeline-range { grid-area: range; display: flex; }
+  .workspace-shell .cloud-timeline-range button { flex: 1; min-height: 48px; white-space: nowrap; }
+  .workspace-shell .cloud-timeline-current { grid-area: current; max-width: none; white-space: normal; }
+  .workspace-shell .cloud-track { grid-area: track; min-width: 0; width: 100%; }
+  .workspace-shell .cloud-timeline-data-card small { white-space: normal; overflow-wrap: anywhere; }
+  .workspace-shell .cloud-night-tabs { flex-wrap: wrap; overflow: visible; }
+  .fireglow-root .fireglow-list,
+  .cloudsea-root .cloudsea-sidebar { max-height: none; overflow: visible; }
+  .app-header .nav-tabs { overflow: visible; }
+  .app-header .nav-tabs .nav-tab { min-width: 0; min-height: 48px; flex: 1 1 0; padding-inline: 4px; }
+  .app-header .segmented:nth-child(2) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
+    border-radius: 12px;
+  }
+  .app-header .segmented:nth-child(2) button { min-width: 0; min-height: 48px; padding: 6px; font-size: 12px; }
+  .app-header .segmented:nth-child(2) button:last-child { grid-column: 1 / -1; }
+  .mobile-map-panel-dock.is-open { position: fixed; inset: 0; z-index: 2800; }
+  .mobile-map-panel-drawer { top: auto; bottom: 0; height: min(82dvh, 800px); border-radius: 16px 16px 0 0; }
+  .mobile-map-panel-drawer-head { padding: 4px 12px; }
+  .mobile-map-panel-drawer-head span { display: none; }
+  .mobile-map-panel-body { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  .mobile-map-panel-dock:not(.is-open) > .detail-restore { position: absolute; bottom: 12px; }
+  .map-scroll-control { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; min-height: 48px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+  .leaflet-container.map-page-scroll { touch-action: pan-y pinch-zoom; }
+}

@@ -184,6 +184,8 @@ test("workspace command bar carries search and locate above the three columns", 
 
 test("command bar exposes recommendation-only filtering after locate", async ({ page }) => {
   await page.goto("/?overlay=forecast-cloud&view=combined");
+  const disclosure = page.getByRole("button", { name: "时间与地点筛选" });
+  if (await disclosure.isVisible()) await disclosure.click();
   const commandBar = page.getByTestId("workspace-commandbar");
   const locate = commandBar.locator(".locate-button");
   const toggle = commandBar.getByRole("checkbox", {
@@ -228,6 +230,8 @@ test("command bar exposes recommendation-only filtering after locate", async ({ 
 
 test("command bar exposes direct Bortle and score controls without an extra panel", async ({ page }, testInfo) => {
   await page.goto("/?overlay=forecast-cloud&view=combined");
+  const disclosure = page.getByRole("button", { name: "时间与地点筛选" });
+  if (await disclosure.isVisible()) await disclosure.click();
   const commandBar = page.getByTestId("workspace-commandbar");
   const quickControls = commandBar.getByTestId("recommendation-quick-controls");
   const bortle = quickControls.getByTestId("bortle-filter-bar");
