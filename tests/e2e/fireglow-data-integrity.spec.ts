@@ -23,6 +23,38 @@ function windowScore(score: number | null) {
   };
 }
 
+test("failed refresh preserves the same labelled snapshot in map, list and detail, then recovers", async ({ page }) => {
+  let fail = false;
+  let score = 72;
+  await page.route("**/api/fireglow/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date");
+    await route.fulfill({status: fail ? 503 : 200, contentType: "application/json", body: JSON.stringify(fail ? {error:"provider temporarily unavailable"} : {
+      date, model:"icon", generatedAt:new Date().toISOString(), source:"recovery test", stale:false,
+      sites:{"finder-001-location":{morning:windowScore(score),evening:windowScore(score)}},
+    })});
+  });
+  await page.goto('/fireglow');
+  await expect(page.locator('.fireglow-score b').first()).toHaveText('72/100');
+  const settings = page.getByRole('button',{name:'展开日期与时段设置'});
+  if(await settings.isVisible()) await settings.click();
+  fail = true;
+  await page.getByRole('button',{name:'强制刷新火烧云快照'}).click();
+  await expect(page.locator('.fireglow-map-status')).toContainText('数据已降级');
+  await expect(page.locator('.fireglow-panel-head')).toContainText('数据已降级');
+  await expect(page.locator('.fireglow-score b').first()).toHaveText('72/100');
+  await page.locator('.fireglow-list button').first().click();
+  await expect(page.locator('.fg-detail-data-status')).toContainText('数据已降级');
+  await page.getByRole('button',{name:'关闭火烧云详情舱'}).click();
+  fail = false; score = 81;
+  await page.getByRole('button',{name:'强制刷新火烧云快照'}).click();
+  await expect(page.locator('.fireglow-score b').first()).toHaveText('81/100');
+  await expect(page.locator('.fireglow-map-status')).toHaveCount(0);
+  await expect(page.locator('.fireglow-panel-head')).not.toContainText('数据已降级');
+  await page.locator('.fireglow-list button').first().click();
+  await expect(page.locator('.fg-detail-data-status')).toHaveCount(0);
+  await expect(page.locator('.fg-hero-score-number')).toHaveText('81/100');
+});
+
 test("does not render an HTTP 200 empty fireglow snapshot as a successful zero-point ranking", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "火烧云空快照防线在桌面 Chromium 验证一次");
 

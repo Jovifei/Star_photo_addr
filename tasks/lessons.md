@@ -1,5 +1,8 @@
 # Lessons
 
+- 2026-09-22: 不把“有错误提示”当成错误恢复已完成；必须验证成功→失败→恢复，按图层/瓦片隔离状态。Leaflet 内的重试按钮须阻止事件冒泡到选点逻辑。
+- 2026-09-22: 截图路径先重新测试可读性；本轮八张原图均可读，不能沿用旧“缺失截图”结论。字号验证必须测量倍数，快捷键执行成功不是200%证据；截图文件名须绑定当前实际视口。
+
 - 2026-09-21: Width and overlap assertions alone miss unusable mobile scrolling. Verify an actual vertical gesture moves the document and header out of view, measure first-screen map area, and inspect screenshots. Avoid a locked 100vh app shell plus permanently expanded filters on phone/tablet. Record browser emulation separately from physical-device evidence.
 
 - 2026-09-20: 同一日期在导航按钮和详情标题可以有不同展示密度；日期格式调整后，E2E 必须分别断言紧凑按钮（如 `今日 · 9.20 周日`）与完整标题（如 `9月20日 周日`），不能用一个 helper 混用。空评分快照测试也必须跟随 fail-closed 语义，断言可恢复错误而不是正常阈值空排行。

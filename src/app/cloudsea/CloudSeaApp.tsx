@@ -158,7 +158,8 @@ export default function CloudSeaApp() {
       snapshotControllerRef.current?.abort();
       const controller = new AbortController();
       snapshotControllerRef.current = controller;
-      if (forceRefresh) setRefreshing(true);
+      setRefreshing(forceRefresh);
+      setDataNotice("");
       setLoading(true);
       try {
         const results: SnapshotLoadResult[] = [];
@@ -166,9 +167,11 @@ export default function CloudSeaApp() {
         // surface plus pressure batches, and the provider may throttle the
         // last date even though today/tomorrow succeeded.
         for (const date of activeDates) {
+          if (controller.signal.aborted) return;
           let lastError = "云海快照不可用";
           let degradedSnapshot: CloudSeaSnapshot | null = null;
           for (let attempt = 0; attempt < 2; attempt += 1) {
+            if (controller.signal.aborted) return;
             try {
               const url = `/api/cloudsea/snapshot?date=${date}&model=gfs&refresh=${forceRefresh ? "1" : "0"}`;
               const response = await fetch(url, {
@@ -179,6 +182,9 @@ export default function CloudSeaApp() {
                 | (CloudSeaSnapshot & { error?: string })
                 | null;
               if (response.ok && payload?.sites) {
+                if (payload.date !== date || payload.model !== "gfs") {
+                  throw new Error("云海快照日期或模型与请求不一致");
+                }
                 const pressureComplete =
                   !payload.pressure || payload.pressure.status === "available";
                 if (pressureComplete || attempt === 1) {
@@ -195,6 +201,7 @@ export default function CloudSeaApp() {
                   `云海快照请求失败（HTTP ${response.status}）`;
               }
             } catch (error) {
+              if (controller.signal.aborted) return;
               lastError =
                 error instanceof Error ? error.message : "云海快照请求失败";
             }

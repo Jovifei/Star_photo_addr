@@ -745,3 +745,15 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 - [x] 静态、352 项测试、生产构建与相关桌面/移动回归。
 - [ ] 提交并部署后核对生产布局。
 - [ ] 真机滑动：ADB 打开网页被自动审批拒绝，保留 NOT_RUN。
+# 2026-09-22 数据恢复与交互收尾
+
+- [x] 核对本地候选 772487d 和 Owner 脏工作区；读取移动专项规范。
+- [x] 修复瓦片错误按图层/瓦片恢复，增加重试及恢复回归。
+- [x] 火烧云逐日请求结果独立处理，刷新失败旧数据在地图/排行/详情一致标记。
+- [x] 取消云海过时请求的后续重试，校验响应日期和模型。
+- [x] 添加不改变布局的点击反馈，尊重 reduced-motion。
+- [x] 当前候选 check、故障恢复 E2E、跨浏览器与截图审查；记录实际未完成项。
+
+Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium 全量最后一次149通过/61条件跳过/2条对齐测试失败，改成中心对齐断言后2项复跑通过。Firefox/WebKit 4通过。八张原图已读、ScoreRing未知值与城市标签避让补齐，详见 `docs/ui-audit/2026-09-22-recovery-and-original-screenshots.md`。
+
+边界：仅本地验证和提交，等待 Jovi 审核；不合并、不部署。评分公式保持原有科学口径。

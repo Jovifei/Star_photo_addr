@@ -40,6 +40,23 @@ test("云量通道展示为横向进度条", async ({ page }, testInfo) => {
   await expect(bars.first()).toHaveCSS("display", "grid");
 });
 
+test("data source label and degraded status remain on the same row", async ({page}) => {
+  await page.route('**/api/data-status**', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+    status:'degraded', checkedAt:new Date().toISOString(), sources:{weather:{id:'weather',label:'Open-Meteo 云量',status:'degraded',detail:'provider 429'}},
+  })}));
+  await page.goto('/');
+  await openMobileMapPanel(page,'cloud');
+  const row=page.locator('.source-status-row[data-status="degraded"]').first();
+  await expect(row).toContainText('Open-Meteo 云量');
+  await expect(row).toContainText('降级');
+  const delta=await row.evaluate(el=>{
+    const label=el.querySelector('span')!.getBoundingClientRect();
+    const status=el.querySelector('b')!.getBoundingClientRect();
+    return Math.abs((label.y + label.height / 2) - (status.y + status.height / 2));
+  });
+  expect(delta).toBeLessThan(2);
+});
+
 test("暗夜选址与今夜观测使用不同的任务说明", async ({ page }) => {
   await page.goto("/sites");
   await expect(page).toHaveURL(/panel=sites/);

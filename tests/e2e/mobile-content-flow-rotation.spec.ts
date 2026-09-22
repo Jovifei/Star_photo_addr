@@ -34,13 +34,26 @@ test("compact drawer survives rotation, restores scroll and focus", async ({ pag
   expect(await page.evaluate(() => document.body.style.position)).toBe("");
 });
 
-test("compact header remains operable at browser text scale", async ({ page }, info) => {
+test("compact header remains operable with measured 200% CSS text stress", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await page.keyboard.press("Control+=");
-  await page.keyboard.press("Control+=");
-  await page.keyboard.press("Control+=");
+  await expect(page.getByRole("button", { name: "时间与地点筛选" })).toBeVisible();
+  // Explicit text-only stress simulation. Browser shortcuts alone do not
+  // establish OS text scaling or a measured zoom level in headless Chromium.
+  const ratio = await page.evaluate(() => {
+    const button = document.querySelector<HTMLElement>('.mobile-filter-toggle')!;
+    const before = parseFloat(getComputedStyle(button).fontSize);
+    const targets = [...document.querySelectorAll<HTMLElement>('.app-header *, .workspace-commandbar *')]
+      .filter(el => el.namespaceURI === 'http://www.w3.org/1999/xhtml');
+    const sizes = targets.map(el => parseFloat(getComputedStyle(el).fontSize));
+    targets.forEach((el, index) => el.style.setProperty('font-size', `${sizes[index] * 2}px`, 'important'));
+    return parseFloat(getComputedStyle(button).fontSize) / before;
+  });
+  expect(ratio).toBeCloseTo(2, 2);
+  await page.getByRole('button', {name:'时间与地点筛选'}).click();
+  await expect(page.getByRole('slider',{name:'推荐分数门槛'})).toBeVisible();
+  await page.getByRole('button',{name:'收起时间与地点筛选'}).click();
   await expect(page.getByRole("button", { name: "时间与地点筛选" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 });

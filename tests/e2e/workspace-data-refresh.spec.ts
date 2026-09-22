@@ -322,10 +322,9 @@ test("fireglow date and phase switch real data and stale snapshot forces refresh
 
   forceStale = true;
   await page.getByRole("button", { name: /强制刷新火烧云快照/ }).click();
-  await expect(list.locator(".fireglow-empty")).toContainText(
-    "暂无有效火烧云数据，请刷新重试",
-    { timeout: 20000 },
-  );
+  await expect(list.locator("li").first()).toContainText("那曲暗夜公园");
+  await expect(page.locator('.fireglow-map-status')).toContainText('数据已降级');
+  await expect(page.locator('.fireglow-panel-head')).toContainText('禁止作为新鲜推荐');
   await expect(page.locator(".fireglow-error")).toContainText("未返回有效火烧云评分");
   await expect(requests.some((entry) => entry.endsWith("|1"))).toBe(true);
 });

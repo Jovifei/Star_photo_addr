@@ -18,7 +18,7 @@ test("完整应用手机/平板/横屏/桌面截图证据", async ({ page }, inf
   test.skip(info.project.name !== "mobile", "截图矩阵只执行一次");
   test.setTimeout(180_000);
   mkdirSync(output, { recursive: true });
-  const shot = async (name: string, fullPage = true) => {
+  const shot = async (name: string, fullPage = false) => {
     await page.screenshot({ path: `${output}/${name}.png`, fullPage });
   };
 
@@ -33,6 +33,7 @@ test("完整应用手机/平板/横屏/桌面截图证据", async ({ page }, inf
   await page.goto("/?overlay=forecast-cloud&view=combined");
   await shot("home-390-top");
   await page.mouse.wheel(0, 700);
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
   await shot("home-390-scrolled");
   await page.getByRole("button", { name: "时间与地点筛选" }).click();
   await shot("home-390-filters-expanded");
@@ -51,8 +52,10 @@ test("完整应用手机/平板/横屏/桌面截图证据", async ({ page }, inf
   }
 
   for (const path of ["/fireglow", "/cloudsea"]) {
+    await page.setViewportSize({ width: 390, height: 844 });
     const name = path.slice(1);
     await page.goto(path);
+    await expect(page.locator('.leaflet-container')).toBeVisible();
     await shot(`${name}-390-collapsed`);
     const adjust = page.getByRole("button", { name: "展开日期与时段设置" });
     await expect(adjust).toBeVisible();

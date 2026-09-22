@@ -46,9 +46,9 @@ function statusClass(source?: DataSourceProbe): string {
 
 function SourceStatusRow({ source }: { source?: DataSourceProbe }) {
   return (
-    <span title={source?.detail}>
+    <span className="source-status-row" data-status={source?.status ?? "loading"} title={source?.detail}>
       <i className={`source-dot ${statusClass(source)}`} />
-      {source?.label ?? "数据源"}
+      <span>{source?.label ?? "数据源"}</span>
       <b>{source ? dataSourceStatusLabel(source.status) : "检测中"}</b>
     </span>
   );
@@ -268,8 +268,8 @@ export default function CloudControl() {
         <SourceStatusRow source={sources?.["light-pollution"]} />
         <SourceStatusRow source={sources?.tianditu} />
         <SourceStatusRow source={sources?.["local-dark-sky"]} />
-        <span>
-          <i className="source-dot available" />构建
+        <span className="source-status-row">
+          <i className="source-dot available" /><span>构建</span>
           <b>
             {buildInfo
               ? `${buildInfo.version ?? "—"} · ${buildInfo.buildRevision ?? "local"}`
@@ -279,7 +279,7 @@ export default function CloudControl() {
       </div>
       {(sources?.["local-dark-sky"]?.status === "not-installed" || sources?.tianditu?.status === "unconfigured") && (
         <p className="source-status-note">
-          服务器和主天气/卫星服务已运行；Bortle/SQM 本地栅格与天地图令牌属于可选增强，未配置时不会伪造数值，也不影响云图和观星点基本功能。
+          Bortle/SQM 本地栅格与天地图令牌属于可选数据源，未配置时不提供对应数值；天气和卫星是否可用，以上方状态为准。
         </p>
       )}
 

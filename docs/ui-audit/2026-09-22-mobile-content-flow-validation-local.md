@@ -1,5 +1,7 @@
 # 手机/平板内容流候选本地接收报告
 
+> 证据修正：原快捷键测试不足以证明“200%浏览器文字缩放”；后续已改成实测两倍字号的 CSS 压力测试。原390专题截图存在视口复用错误，后续已修正采集器。八张原图现均可读取；详见 `2026-09-22-recovery-and-original-screenshots.md`，本报告的历史成绩不能替代后续候选验收。
+
 状态：`LOCAL_INTEGRATION_VALIDATED_PENDING_OWNER_REVIEW`
 
 ## 接收边界

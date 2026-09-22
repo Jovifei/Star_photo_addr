@@ -56,15 +56,24 @@ test("云海日期切换不会让旧请求覆盖当前日期", async ({ page }, 
   test.skip(info.project.name !== "desktop", "请求代次测试在桌面 Chromium 执行一次");
   const base = shanghaiDateKey();
   const tomorrow = shiftDate(base, 1);
+  let releaseOld!: () => void;
+  const oldGate = new Promise<void>((resolve) => { releaseOld = resolve; });
+  let oldStarted = false;
+  let oldFinished = false;
   await page.route(/https:\/\/(?:[^/]+\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org)\/.*/, (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64") }),
   );
   await page.route("**/api/cloudsea/snapshot**", async (route) => {
     const date = new URL(route.request().url()).searchParams.get("date") ?? base;
-    const delay = date === tomorrow ? 350 : 20;
-    const score = date === tomorrow ? 22 : 88;
-    await new Promise((resolve) => setTimeout(resolve, delay));
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot(date, score)) });
+    if (date === tomorrow) {
+      oldStarted = true;
+      await oldGate;
+      try {
+        await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({error:'OLD_DATE_FAILURE'}) });
+      } finally { oldFinished = true; }
+    } else {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot(date, 88)) });
+    }
   });
 
   await page.goto("/cloudsea");
@@ -74,6 +83,7 @@ test("云海日期切换不会让旧请求覆盖当前日期", async ({ page }, 
   await expect(todayButton).toBeVisible();
   await tomorrowButton.click();
   await expect(tomorrowButton).toHaveClass(/active/);
+  await expect.poll(() => oldStarted).toBe(true);
   await todayButton.click();
   await expect(todayButton).toHaveClass(/active/);
   await expect(page.locator(".cloudsea-sidebar-header")).toContainText(
@@ -82,4 +92,8 @@ test("云海日期切换不会让旧请求覆盖当前日期", async ({ page }, 
   );
   await expect(page.locator(".cloudsea-card-score").first()).toContainText("88/100", { timeout: 5000 });
   await expect(page.locator(".cloudsea-card-summary").first()).toContainText(base);
+  releaseOld();
+  await expect.poll(() => oldFinished).toBe(true);
+  await expect(page.locator('.cloudsea-root')).not.toContainText('OLD_DATE_FAILURE');
+  await expect(page.locator('.cloudsea-card-score').first()).toContainText('88/100');
 });

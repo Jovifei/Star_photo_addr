@@ -1,6 +1,8 @@
 "use client";
 
-import { CircleMarker, Pane, TileLayer, Tooltip } from "react-leaflet";
+import { CircleMarker, Pane, TileLayer, Tooltip, useMapEvents } from "react-leaflet";
+import { useReducer } from "react";
+import { spacedLabelIndices } from "@/lib/labelLayout";
 import {
   TIANDITU_CIA_W_URL,
   TIANDITU_ATTRIBUTION,
@@ -25,14 +27,22 @@ function boundaryUrl(token: string): string {
  * unverified national/provincial polygon.
  */
 export default function ChineseLabelLayer() {
+  const [, refresh] = useReducer((n: number) => n + 1, 0);
+  const map = useMapEvents({ moveend: refresh, resize: refresh });
   const tk = process.env.NEXT_PUBLIC_TIANDITU_TOKEN ?? "";
   if (!tk) {
+    const size = map.getSize();
+    const boxes = CHINESE_FALLBACK_LABELS.map(label => {
+      const point = map.latLngToContainerPoint([label.latitude, label.longitude]);
+      return { x: point.x, y: point.y, width: label.name.length * 16 + 24, height: 34 };
+    });
+    const visible = spacedLabelIndices(boxes, size.x, size.y);
     return (
       <Pane
         name="chinese-fallback-labels"
         style={{ zIndex: 450, pointerEvents: "none" }}
       >
-        {CHINESE_FALLBACK_LABELS.map((label) => (
+        {visible.map(index => CHINESE_FALLBACK_LABELS[index]).map((label) => (
           <CircleMarker
             key={label.name}
             center={[label.latitude, label.longitude]}

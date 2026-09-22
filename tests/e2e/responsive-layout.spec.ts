@@ -152,7 +152,7 @@ test.describe("responsive layout contract", () => {
         contentType: "application/json",
         body: JSON.stringify({
           date,
-          model: "icon",
+          model: "gfs",
           generatedAt: `${date}T00:30:00.000Z`,
           source: "E2E surface + pressure-level model profile",
           stale: false,

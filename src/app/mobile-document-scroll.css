@@ -284,6 +284,23 @@
   .mobile-map-panel-dock.is-open .mobile-map-panel-drawer { transform: translateX(0); }
 }
 
+/* Press feedback changes paint only, preserving target geometry and scroll. */
+.app-header button,
+.workspace-commandbar button,
+.mobile-map-panel-drawer button,
+.map-scroll-control {
+  transition: background-color 140ms ease-out, border-color 140ms ease-out, filter 100ms ease-out;
+  touch-action: manipulation;
+}
+.app-header button:active:not(:disabled),
+.workspace-commandbar button:active:not(:disabled),
+.mobile-map-panel-drawer button:active:not(:disabled),
+.map-scroll-control:active:not(:disabled) { filter: brightness(1.18); }
+
 @media (prefers-reduced-motion: reduce) {
+  .app-header button,
+  .workspace-commandbar button,
+  .mobile-map-panel-drawer button,
+  .map-scroll-control { transition: none; }
   .mobile-map-panel-drawer { transition: none; }
 }

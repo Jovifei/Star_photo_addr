@@ -137,13 +137,12 @@ export default function FireglowApp() {
   const [snapshots, setSnapshots] = useState<Record<string, FireGlowSnapshot | null>>({});
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
+  const [requestKey, setRequestKey] = useState("");
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scoreThreshold, setScoreThreshold] = useState(0);
   const loadTokenRef = useRef(0);
-  const loadRef = useRef<(dates: string[], options?: { force?: boolean }) => () => void>(
-    () => () => undefined,
-  );
+  const controllerRef = useRef<AbortController | null>(null);
 
   const baseDate = todayKey();
   const activeDates = useMemo(
@@ -155,10 +154,15 @@ export default function FireglowApp() {
     (dates: string[], { force = false }: { force?: boolean } = {}) => {
       const token = loadTokenRef.current + 1;
       loadTokenRef.current = token;
+      controllerRef.current?.abort();
       const controller = new AbortController();
+      controllerRef.current = controller;
       queueMicrotask(() => {
+        if (controller.signal.aborted || loadTokenRef.current !== token) return;
+        setRequestKey(dates.join("|"));
         setStatus("loading");
-        Promise.all(
+        setError("");
+        Promise.allSettled(
           dates.map((date) =>
             fetch(
               `/api/fireglow/snapshot?date=${date}${force ? "&refresh=1" : ""}`,
@@ -171,28 +175,32 @@ export default function FireglowApp() {
               if (!hasUsableFireGlowScores(payload)) {
                 throw new Error("上游未返回有效火烧云评分，请点击刷新重试");
               }
+              if (payload.date !== date) throw new Error("快照日期与请求不一致，请重试");
               return payload as FireGlowSnapshot;
             }),
           ),
         )
           .then((results) => {
-            if (loadTokenRef.current !== token) return;
+            if (controller.signal.aborted || loadTokenRef.current !== token) return;
             setSnapshots((current) => {
               const next = { ...current };
-              results.forEach((snapshot) => {
-                next[snapshot.date] = snapshot;
+              results.forEach((result, index) => {
+                const date = dates[index];
+                if (result.status === "fulfilled") next[date] = result.value;
+                else if (next[date]) next[date] = {
+                  ...next[date]!, stale: true,
+                  refreshError: result.reason instanceof Error ? result.reason.message : "刷新失败",
+                };
               });
               return next;
             });
-            setStatus("ready");
-            const degraded = results.filter((snapshot) => snapshot.stale || snapshot.refreshError);
-            setError(
-              degraded.length
-                ? degraded
-                    .map((snapshot) => snapshot.refreshError ?? "部分数据已降级，结果仅供参考。")
-                    .join(" ")
-                : "",
-            );
+            setStatus(results.some((result) => result.status === "rejected") ? "error" : "ready");
+            setError(results.flatMap((result, index) => {
+              const message = result.status === "rejected"
+                ? (result.reason instanceof Error ? result.reason.message : "快照请求失败")
+                : result.value.refreshError ?? (result.value.stale ? "正在使用较早快照" : "");
+              return message ? [`${dateLabel(dates[index])}：${message}`] : [];
+            }).join(" "));
           })
           .catch((requestError) => {
             if (requestError?.name === "AbortError" || loadTokenRef.current !== token) return;
@@ -206,21 +214,12 @@ export default function FireglowApp() {
   );
 
   useEffect(() => {
-    loadRef.current = load;
-  }, [load]);
-
-  useEffect(() => {
-    const missing = activeDates.filter((date) => !snapshots[date]);
-    if (!missing.length) return;
-    const cleanup = load(missing);
+    const cleanup = load(activeDates);
     return cleanup;
-    // snapshots intentionally not a dependency: only fetch what's missing on range change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDates, load]);
 
   const ranked = useMemo<RankedSite[]>(() => {
-    const primary = snapshots[activeDates[0]];
-    if (!primary) return [];
+    if (!activeDates.some((date) => snapshots[date])) return [];
     return OBSERVING_SITES.map((site) => {
       const windows = activeDates.map(
         (date) => snapshots[date]?.sites[site.id]?.[phase] ?? UNKNOWN_WINDOW,
@@ -281,6 +280,10 @@ export default function FireglowApp() {
     map?.flyTo([site.latitude, site.longitude], Math.max(6, map.getZoom()), { duration: 0.6 });
   }, [map]);
 
+  const visibleStatus = requestKey === activeDates.join("|") ? status : "loading";
+  const visibleError = requestKey === activeDates.join("|") ? error : "";
+  const hasUsableData = ranked.some((site) => site.window.score != null);
+
   return (
     <div className="fireglow-root app-shell">
       <ProductHeader
@@ -316,11 +319,11 @@ export default function FireglowApp() {
             type="button"
             className="fireglow-refresh"
             onClick={() => load(activeDates, { force: true })}
-            disabled={status === "loading"}
+            disabled={visibleStatus === "loading"}
             aria-label="强制刷新火烧云快照"
           >
             <RefreshCw size={14} className={status === "loading" ? "is-spinning" : ""} aria-hidden="true" />
-            {status === "loading" ? "读取中" : "刷新"}
+            {visibleStatus === "loading" ? "读取中" : "刷新"}
           </button>
         </div>
       </ProductHeader>
@@ -423,19 +426,18 @@ export default function FireglowApp() {
         <aside className="fireglow-panel" aria-label="火烧云条件指数排行">
           <div className="fireglow-panel-head">
             <strong>{phase === "evening" ? "晚霞条件排行" : "朝霞条件排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
-            <span>{status === "error" ? "数据不可用" : dataQualityNotice || `符合 ≥${scoreThreshold}分 ${filteredRanked.length} 个点位`}</span>
+            <span>{dataQualityNotice || (visibleStatus === "error" && !hasUsableData ? "数据不可用" : visibleStatus === "loading" ? "正在更新" : `符合 ≥${scoreThreshold}分 ${filteredRanked.length} 个点位`)}</span>
           </div>
           <ScoreThresholdControl
             value={scoreThreshold}
             count={filteredRanked.length}
-            label="晚霞推荐门槛"
+            label={phase === "evening" ? "晚霞参考门槛" : "朝霞参考门槛"}
             testId="fireglow-score-threshold"
             onChange={setScoreThreshold}
           />
-          {status === "error" && <p className="fireglow-error" role="status">{error}</p>}
-          {error && status === "ready" && <p className="fireglow-note" role="status">{error}</p>}
+          {visibleError && <p className="fireglow-error" role="status">{visibleError}</p>}
           <ol className="fireglow-list">
-            {status === "error" ? (
+            {visibleStatus === "error" && !hasUsableData ? (
               <li className="fireglow-empty fireglow-empty--error">暂无有效火烧云数据，请刷新重试</li>
             ) : filteredRanked.length ? filteredRanked.map((site, index) => (
               <li key={site.id}>
@@ -480,7 +482,7 @@ export default function FireglowApp() {
                 </button>
               </li>
             )) : (
-              <li className="fireglow-empty">暂无达到 ≥{scoreThreshold} 分的地点</li>
+              <li className="fireglow-empty">{visibleStatus === "loading" ? "正在读取所选日期的数据…" : `暂无达到 ≥${scoreThreshold} 分的地点`}</li>
             )}
           </ol>
           <p className="fireglow-footnote">

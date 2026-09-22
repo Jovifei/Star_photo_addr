@@ -26,7 +26,7 @@ test("CloudSea null scores use an unknown marker instead of p20", async ({ page 
       contentType: "application/json",
       body: JSON.stringify({
         date,
-        model: "icon",
+        model: "gfs",
         generatedAt: `${date}T00:00:00.000Z`,
         source: "E2E unknown CloudSea snapshot",
         stale: false,

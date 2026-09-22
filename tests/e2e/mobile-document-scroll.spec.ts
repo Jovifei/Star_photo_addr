@@ -24,7 +24,7 @@ for (const width of [360, 390, 768, 1024]) {
     await expect(threshold).toBeVisible();
     await threshold.focus();
     await page.keyboard.press('ArrowRight');
-    await page.getByRole('button',{name:'收起时间与地点筛选'}).click({force:true});
+    await page.getByRole('button',{name:'收起时间与地点筛选'}).click();
     const map=page.locator('.leaflet-container');
     await expect(map).toHaveClass(/map-page-scroll/);
     await page.getByRole('button',{name:'移动地图，开启地图拖动',exact:true}).click();
