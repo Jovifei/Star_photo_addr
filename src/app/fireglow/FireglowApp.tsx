@@ -1,5 +1,6 @@
 "use client";
 import MapScrollControl from "@/components/MapScrollControl";
+import MapTileStatus from "@/components/MapTileStatus";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sunrise, Sunset, Flame, RefreshCw } from "lucide-react";
@@ -268,6 +269,12 @@ export default function FireglowApp() {
       (date) => snapshots[date]?.sites[selectedSite.id]?.[phase] === selectedSite.window,
     ) ?? activeDates[0] ?? baseDate;
   }, [activeDates, baseDate, phase, selectedSite, snapshots]);
+  const activeDataDegraded = activeDates.some(
+    (date) => Boolean(snapshots[date]?.stale || snapshots[date]?.refreshError),
+  );
+  const dataQualityNotice = activeDataDegraded
+    ? "数据已降级：地图、排行与详情仅供参考，禁止作为新鲜推荐"
+    : "";
 
   const focusSite = useCallback((site: RankedSite) => {
     setSelectedId(site.id);
@@ -388,7 +395,13 @@ export default function FireglowApp() {
               );
             })}
             <MapScrollControl />
+            <MapTileStatus />
           </MapContainer>
+          {dataQualityNotice ? (
+            <div className="fireglow-map-status" role="status">
+              {dataQualityNotice}
+            </div>
+          ) : null}
           <div className="fireglow-legend" aria-label="火烧云条件指数等级色阶">
             <span>火烧云条件指数</span>
             {LEVEL_LABELS.map((entry) => (
@@ -410,7 +423,7 @@ export default function FireglowApp() {
         <aside className="fireglow-panel" aria-label="火烧云条件指数排行">
           <div className="fireglow-panel-head">
             <strong>{phase === "evening" ? "晚霞条件排行" : "朝霞条件排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
-            <span>{status === "error" ? "数据不可用" : `符合 ≥${scoreThreshold}分 ${filteredRanked.length} 个点位`}</span>
+            <span>{status === "error" ? "数据不可用" : dataQualityNotice || `符合 ≥${scoreThreshold}分 ${filteredRanked.length} 个点位`}</span>
           </div>
           <ScoreThresholdControl
             value={scoreThreshold}
@@ -486,6 +499,7 @@ export default function FireglowApp() {
               site={selectedSite}
               phase={phase}
               dateKey={selectedDateKey}
+              dataQualityNotice={dataQualityNotice}
               onClose={() => setSelectedId(null)}
             />
           </ResponsiveTopicDetail>

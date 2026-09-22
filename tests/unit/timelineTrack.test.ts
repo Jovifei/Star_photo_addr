@@ -1,11 +1,33 @@
 import { describe, expect, it } from "vitest";
 import { buildTrackSegments, forecastQualityLabel, nightKeyOfTime } from "@/components/CloudTimeline";
+import type { HourWeather } from "@/lib/types";
+
+const completeHour: HourWeather = {
+  time: "2026-09-21T20:00",
+  temperature: 20,
+  humidity: 70,
+  dewPoint: 14,
+  precipitationProbability: 0,
+  precipitation: 0,
+  cloudCover: 20,
+  cloudLow: 10,
+  cloudMid: 20,
+  cloudHigh: 30,
+  visibility: 20_000,
+  windSpeed: 2,
+  windGust: 4,
+  windDirection: 180,
+  weatherCode: 0,
+};
 
 describe("forecastQualityLabel", () => {
   it("does not call a missing forecast available", () => {
     expect(forecastQualityLabel("暂无有效预报", false)).toBe("数据不足");
-    expect(forecastQualityLabel("取样点", false)).toBe("可用");
+    expect(forecastQualityLabel("取样点", false, completeHour)).toBe("评分字段完整，可用");
     expect(forecastQualityLabel("取样点", true)).toBe("过期/降级，禁止推荐");
+    expect(
+      forecastQualityLabel("取样点", false, { ...completeHour, visibility: null }),
+    ).toContain("评分字段缺失：能见度");
   });
 });
 

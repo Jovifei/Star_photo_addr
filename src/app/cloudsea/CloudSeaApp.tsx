@@ -1,5 +1,6 @@
 "use client";
 import MapScrollControl from "@/components/MapScrollControl";
+import MapTileStatus from "@/components/MapTileStatus";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -137,6 +138,8 @@ export default function CloudSeaApp() {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [scoreThreshold, setScoreThreshold] = useState(0);
   const mapRef = useRef<LeafletMap | null>(null);
+  const snapshotRequestIdRef = useRef(0);
+  const snapshotControllerRef = useRef<AbortController | null>(null);
 
   const baseDate = useMemo(() => todayKey(), []);
   const activeDates = useMemo<string[]>(() => {
@@ -150,6 +153,11 @@ export default function CloudSeaApp() {
 
   const fetchSnapshots = useCallback(
     async (forceRefresh = false) => {
+      const requestId = snapshotRequestIdRef.current + 1;
+      snapshotRequestIdRef.current = requestId;
+      snapshotControllerRef.current?.abort();
+      const controller = new AbortController();
+      snapshotControllerRef.current = controller;
       if (forceRefresh) setRefreshing(true);
       setLoading(true);
       try {
@@ -163,7 +171,10 @@ export default function CloudSeaApp() {
           for (let attempt = 0; attempt < 2; attempt += 1) {
             try {
               const url = `/api/cloudsea/snapshot?date=${date}&model=gfs&refresh=${forceRefresh ? "1" : "0"}`;
-              const response = await fetch(url, { cache: "no-store" });
+              const response = await fetch(url, {
+                cache: "no-store",
+                signal: controller.signal,
+              });
               const payload = (await response.json().catch(() => null)) as
                 | (CloudSeaSnapshot & { error?: string })
                 | null;
@@ -198,6 +209,13 @@ export default function CloudSeaApp() {
                 : { date, snapshot: null, error: lastError },
             );
           }
+        }
+
+        if (
+          controller.signal.aborted ||
+          snapshotRequestIdRef.current !== requestId
+        ) {
+          return;
         }
 
         const validEntries = results.filter(
@@ -236,13 +254,25 @@ export default function CloudSeaApp() {
         }
         setDataNotice([...new Set(notices)].join(" "));
       } catch (error) {
+        if (
+          controller.signal.aborted ||
+          snapshotRequestIdRef.current !== requestId
+        ) {
+          return;
+        }
         const message =
           error instanceof Error ? error.message : "云海快照不可用";
         setDataNotice(message);
         console.error("Failed to load cloudsea snapshot", error);
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (
+          snapshotControllerRef.current === controller &&
+          snapshotRequestIdRef.current === requestId
+        ) {
+          snapshotControllerRef.current = null;
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [activeDates],
@@ -255,6 +285,9 @@ export default function CloudSeaApp() {
     });
     return () => {
       cancelled = true;
+      snapshotRequestIdRef.current += 1;
+      snapshotControllerRef.current?.abort();
+      snapshotControllerRef.current = null;
     };
   }, [fetchSnapshots]);
 
@@ -504,6 +537,7 @@ export default function CloudSeaApp() {
               );
             })}
             <MapScrollControl />
+            <MapTileStatus />
           </MapContainer>
 
           <div className="cloudsea-legend">

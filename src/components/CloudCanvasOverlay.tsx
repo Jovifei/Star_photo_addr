@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMap } from "react-leaflet";
 import type { CloudDisplayMode, CloudGridData } from "@/lib/types";
 import {
@@ -38,6 +38,18 @@ export default function CloudCanvasOverlay({
   const map = useMap();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rafRef = useRef<number | null>(null);
+  const statusFrameRef = useRef<number | null>(null);
+  const renderStatusRef = useRef<"waiting" | "unavailable" | null>(null);
+  const [renderStatus, setRenderStatus] = useState<"waiting" | "unavailable" | null>(null);
+  const updateRenderStatus = (next: "waiting" | "unavailable" | null) => {
+    if (renderStatusRef.current === next) return;
+    renderStatusRef.current = next;
+    if (statusFrameRef.current != null) cancelAnimationFrame(statusFrameRef.current);
+    statusFrameRef.current = requestAnimationFrame(() => {
+      statusFrameRef.current = null;
+      setRenderStatus(next);
+    });
+  };
   const propsRef = useRef({ gridData, timeIndex, activeForecastTime, displayMode, showPrecipitation, showWind });
 
   useEffect(() => {
@@ -50,7 +62,10 @@ export default function CloudCanvasOverlay({
     if (!map || !data || !canvas) return;
 
     const size = map.getSize();
-    if (size.x === 0 || size.y === 0) return;
+    if (size.x === 0 || size.y === 0) {
+      updateRenderStatus("waiting");
+      return;
+    }
 
     // Render at half resolution and let the browser smooth the display-sized
     // canvas. This keeps map panning responsive without blocky 5px squares.
@@ -83,7 +98,11 @@ export default function CloudCanvasOverlay({
       : layerValues[mode];
 
     const validSamples = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
-    if (validSamples.length < 2 || maxX <= minX || maxY <= minY) return;
+    if (validSamples.length < 2 || maxX <= minX || maxY <= minY) {
+      updateRenderStatus("unavailable");
+      return;
+    }
+    updateRenderStatus(null);
 
     const pixels = ctx.createImageData(canvas.width, canvas.height);
     for (let py = 0; py < canvas.height; py += 1) {
@@ -179,6 +198,8 @@ export default function CloudCanvasOverlay({
       map.off("resize", schedule);
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
+      if (statusFrameRef.current != null) cancelAnimationFrame(statusFrameRef.current);
+      statusFrameRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
@@ -186,21 +207,30 @@ export default function CloudCanvasOverlay({
   if (!gridData) return null;
 
   return (
-    <div
-      className="cloud-canvas-overlay"
-      data-time-iso={activeForecastTime ?? ""}
-      data-cloud-mode={displayMode}
-      data-precipitation={showPrecipitation ? "on" : "off"}
-      data-wind={showWind ? "on" : "off"}
-      aria-hidden="true"
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        zIndex: 450,
-      }}
-    >
-      <canvas ref={canvasRef} style={{ display: "block" }} />
-    </div>
+    <>
+      <div
+        className="cloud-canvas-overlay"
+        data-time-iso={activeForecastTime ?? ""}
+        data-cloud-mode={displayMode}
+        data-precipitation={showPrecipitation ? "on" : "off"}
+        data-wind={showWind ? "on" : "off"}
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 450,
+        }}
+      >
+        <canvas ref={canvasRef} style={{ display: "block" }} />
+      </div>
+      {renderStatus ? (
+        <div className="cloud-canvas-status" role="status">
+          {renderStatus === "waiting"
+            ? "地图尺寸尚未就绪，正在等待重绘…"
+            : "当前时次没有足够的云量数值可绘制；请切换时次或重试。"}
+        </div>
+      ) : null}
+    </>
   );
 }

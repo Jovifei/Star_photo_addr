@@ -28,6 +28,7 @@ interface FireglowSiteDetailProps {
   };
   phase: "morning" | "evening";
   dateKey: string;
+  dataQualityNotice?: string;
   onClose: () => void;
 }
 
@@ -61,6 +62,7 @@ export default function FireglowSiteDetail({
   site,
   phase,
   dateKey,
+  dataQualityNotice,
   onClose,
 }: FireglowSiteDetailProps) {
   const win = site.window;
@@ -136,6 +138,10 @@ export default function FireglowSiteDetail({
           <X size={18} />
         </button>
       </div>
+
+      {dataQualityNotice ? (
+        <p className="fg-detail-data-status" role="status">{dataQualityNotice}</p>
+      ) : null}
 
       <div className="fg-detail-scroll-content">
         <section className="fg-detail-card fg-hero-card">

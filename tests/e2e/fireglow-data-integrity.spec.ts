@@ -56,3 +56,32 @@ test("does not render an HTTP 200 empty fireglow snapshot as a successful zero-p
   await expect(page.locator(".fireglow-score b").first()).toContainText("72/100");
   expect(calls).toBeGreaterThanOrEqual(2);
 });
+
+test("stale fireglow state is explicit on map, ranking and detail", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "stale consistency在桌面 Chromium 验证一次");
+  const scoreWindow = windowScore(72);
+  await page.route("**/api/fireglow/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-21";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "icon",
+        generatedAt: `${date}T00:30:00.000Z`,
+        source: "E2E stale consistency",
+        stale: true,
+        refreshError: "上游限流，保留最近成功快照",
+        sites: {
+          "finder-001-location": { evening: scoreWindow, morning: scoreWindow },
+        },
+      }),
+    });
+  });
+
+  await page.goto("/fireglow");
+  await expect(page.locator(".fireglow-map-status")).toContainText("数据已降级");
+  await expect(page.locator(".fireglow-panel-head")).toContainText("数据已降级");
+  await page.locator(".fireglow-list li button").first().click();
+  await expect(page.getByRole("dialog", { name: /火烧云摄影详情/ })).toContainText("数据已降级");
+});

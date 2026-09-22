@@ -30,7 +30,7 @@
 | 独立 `npm ci` | PASS |
 | `npm run check` | PASS：lint、typecheck、60 files / 352 tests、Next build |
 | 候选移动流程 + 旧移动面板 | PASS：10 passed / 10 skipped |
-| 完整 Chromium E2E | PASS：139 passed / 55 skipped / 0 failed |
+| 完整 Chromium E2E | PASS：145 passed / 61 skipped / 0 failed，已包含 D02–D04 专项故障注入 |
 | Firefox/WebKit 冒烟 | PASS：4 passed |
 | 真实 provider `npm run test:live` | PASS：Open-Meteo 四模型、pressure、geocode、AQI、NASA GIBS、NOAA Kp、VIIRS tile |
 | 应用数据源 `check:data-sources` | 初次 satellite 瞬时 degraded；重试 PASS，weather/satellite/light-pollution available |
@@ -51,12 +51,9 @@
 
 截图使用完整 Next 应用与项目现有稳定 API mock；不是离线 HTML 夹具，也不是实时 provider 恢复证据。
 
-## 单列未修复的数据/画布问题
+## 数据问题跟进状态
 
-- D01：`CloudTimeline.forecastQualityLabel` 仍不能证明评分字段完整；天气可展示与评分可用的语义仍需拆开。
-- D02：CloudSea 日期切换仍需做延迟乱序、429、部分 pressure 注入，确认旧请求不会覆盖新日期。
-- D03：火烧云 stale 地图、排行、详情的一致性仍需按日期/时段回放；条件指数不能称校准概率。
-- D04：黑/白画布仍需区分容器尺寸、瓦片请求、图层覆盖和真实上游无数据；本轮只验证尺寸和错误状态，不宣称瓦片恢复。
-- D05：此前八张原始截图本轮仍未提供，旧截图中的每一个具体标签、单位、遮挡位置不能声称已逐项修复。
+- D01–D04 已在后续本地提交中修复并通过专项回归，详见 `2026-09-22-data-issues-fix.md`。
+- D05 仍阻塞：此前八张原始截图本轮仍未提供，旧截图中的每一个具体标签、单位、遮挡位置不能声称已逐项修复。
 
 这些数据项未通过布局候选掩盖、放宽门槛或改变 API/评分/缓存契约。
