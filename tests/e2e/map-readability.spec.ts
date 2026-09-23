@@ -69,6 +69,16 @@ test("暗夜选址与今夜观测使用不同的任务说明", async ({ page }) 
   );
 });
 
+test("当前位置没有设备海拔时显示待核验，不借用邻近点位高程", async ({ page, context }) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 30.4012, longitude: 119.2554 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "使用我的当前位置" }).click();
+  const coordinates = page.locator(".panel-coords").first();
+  await expect(coordinates).toContainText("海拔待核验");
+  await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
+});
+
 test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据", async ({ page }, testInfo) => {
   await page.goto(
     "/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",

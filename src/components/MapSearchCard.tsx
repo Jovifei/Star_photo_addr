@@ -18,8 +18,6 @@ export default function MapSearchCard() {
   const handlePick = useCallback(
     (result: GeocodeResult) => {
       const elevation = resolveElevation(
-        result.latitude,
-        result.longitude,
         result.name,
         result.elevation,
       );
@@ -36,7 +34,7 @@ export default function MapSearchCard() {
 
   const onLocated = useCallback(
     (latitude: number, longitude: number) => {
-      void sampleAt(latitude, longitude, 0, "我的位置");
+      void sampleAt(latitude, longitude, undefined, "我的位置");
     },
     [sampleAt],
   );

@@ -347,7 +347,7 @@ interface StoreContextValue {
   sampleAt: (
     latitude: number,
     longitude: number,
-    elevation?: number,
+    elevation?: number | null,
     name?: string,
     model?: CloudState["model"],
     forceRefresh?: boolean,
@@ -626,7 +626,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     async (
       latitude: number,
       longitude: number,
-      elevation = 0,
+      elevation?: number | null,
       name?: string,
       model?: CloudState["model"],
       forceRefresh = false,
@@ -637,10 +637,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const locationId = stableSampleLocationId(latitude, longitude);
       const requestStartedAt = Date.now();
       const lastAttempt = lastForecastAttemptRef.current;
-      const resolvedElevation =
-        elevation > 0
-          ? elevation
-          : resolveElevation(latitude, longitude, name, elevation);
+      const resolvedElevation = resolveElevation(name, elevation);
       const location: Location = {
         id: locationId,
         name: name ?? "取样点",
@@ -922,7 +919,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         name: selectedName ?? "取样点",
         latitude: selectedLatitude ?? 0,
         longitude: selectedLongitude ?? 0,
-        elevation: selectedElevation ?? 0,
+        elevation: selectedElevation ?? null,
         source: "自定义",
       };
       void fetchForecastFor(location, model)

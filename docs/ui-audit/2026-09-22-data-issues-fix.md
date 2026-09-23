@@ -1,8 +1,8 @@
 # D01–D05 数据展示问题跟进
 
-> 后续复核修正：D05 原图现已成功读取全部八张；瓦片恢复、火烧云失败后的旧数据一致性仍需后续补丁，本轮已继续完善。原文记录的是该提交时的状态，最新事实见 `2026-09-22-recovery-and-original-screenshots.md`。
+> 历史记录：以下内容记录 772487d 当时的检查状态。八张原图后来均成功读取；瓦片/火烧云恢复、页面核验和未知海拔处理已在后续提交继续完成。当前状态见 `2026-09-22-recovery-and-original-screenshots.md`。
 
-状态：`D01–D04 FIXED_AND_TESTED / D05 EVIDENCE_BLOCKED`
+当时状态（非当前状态）：`D01–D04 FIXED_AND_TESTED / D05 EVIDENCE_BLOCKED`
 
 ## D01：评分字段完整性
 

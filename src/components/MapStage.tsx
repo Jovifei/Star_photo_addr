@@ -52,7 +52,7 @@ export default function MapStage({
             void sampleAt(
               latitude,
               longitude,
-              0,
+              undefined,
               describeSamplePoint(latitude, longitude),
             )
           }

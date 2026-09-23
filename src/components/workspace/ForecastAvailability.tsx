@@ -85,7 +85,7 @@ export default function ForecastAvailability() {
               void sampleAt(
                 location.latitude,
                 location.longitude,
-                location.elevation ?? 0,
+                location.elevation ?? undefined,
                 location.name,
                 undefined,
                 true,

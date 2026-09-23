@@ -24,6 +24,7 @@ describe("location presentation and nearby ranking", () => {
     expect(normalizeElevationMeters(1499.4)).toBe(1499);
     expect(normalizeElevationMeters(2_000_000)).toBeNull();
     expect(formatElevationMeters(null)).toBe("海拔待核验");
+    expect(formatElevationMeters(0)).toBe("海拔 0 m");
   });
 
   it("gives a map sample a regional label instead of an ambiguous bare name", () => {

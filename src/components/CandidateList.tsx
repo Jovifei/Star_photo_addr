@@ -103,7 +103,7 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
             <div className="candidate-card-top">
               <div className="candidate-card-identity">
                 <span className={`candidate-rank-badge ${rankClass}`}>{currentNight.score === null ? "—" : `#${rank}`}</span>
-                <div className="candidate-name-box"><span className="candidate-name">{candidate.name}</span><span className="candidate-meta">{candidate.province || "未知"}{candidate.elevation ? ` · ${candidate.elevation}m` : ""}</span></div>
+                <div className="candidate-name-box"><span className="candidate-name">{candidate.name}</span><span className="candidate-meta">{candidate.province || "未知"}{candidate.elevation != null ? ` · ${candidate.elevation}m` : ""}</span></div>
               </div>
               <div className="candidate-card-score-box" title={currentNight.windowLabel}>
                 <div className="candidate-score-number"><strong>{currentNight.score ?? "—"}</strong>{currentNight.score !== null && <small>分</small>}</div>

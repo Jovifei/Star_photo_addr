@@ -434,7 +434,7 @@ export async function fetchForecastByCoords(
     name: "",
     latitude,
     longitude: longitudes[index],
-    elevation: 0,
+    elevation: null,
     source: "搜索",
   }));
   const locationsData = await fetchSurfaceForecasts(
