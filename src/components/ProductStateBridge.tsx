@@ -188,13 +188,21 @@ export default function ProductStateBridge() {
       longitude >= -180 &&
       longitude <= 180
     ) {
+      const elevationParam = searchParams.get("elevation");
+      const parsedElevation =
+        elevationParam === null || elevationParam.trim() === ""
+          ? null
+          : Number(elevationParam);
       void selectLocation(
         {
           id: `planner-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
           name,
           latitude,
           longitude,
-          elevation: Number(searchParams.get("elevation")) || 0,
+          elevation:
+            parsedElevation !== null && Number.isFinite(parsedElevation)
+              ? parsedElevation
+              : null,
           source: "搜索",
         },
         selectedModel,

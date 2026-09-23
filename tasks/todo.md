@@ -1,3 +1,70 @@
+# 2026-09-23 再审、发布与生产验收
+
+- [x] 用户授权再次审核、测试后推送、合并、部署；全程不改写 Owner 的脏 main 工作树。
+- [x] 核实 `origin/main@3334e0c`、祖先关系及 Owner 脏工作区；全程在独立 worktree 操作。
+- [x] 独立审查发现并修复云海覆盖、火烧云日期/阶段、海拔空值、modal 语义、摘要计数与版本记录问题。
+- [x] 为前五项添加红测并确认当前实现失败；开始按根因逐项修复。
+- [x] 修复并验证 5 项产品/可访问性问题及复审新增覆盖边界。
+- [x] `npm run check`：63 files / 368 tests，lint、typecheck、build PASS。
+- [x] Chromium 全量：230 total / 163 passed / 67 project-device skips / 0 failed；Firefox/WebKit：4 passed。
+- [x] 真实 provider smoke：Open-Meteo 四模型、压力层、geocode、AQI、NASA GIBS、NOAA Kp、VIIRS 全 PASS；生产依赖审计 0 vulnerabilities。
+- [x] 按 bugfix 发布假设更新为 v1.0.19；同步 package/lock、root/docs changelog、应用内历史与 README 版本语义。
+- [x] 独立最终复审确认指定缺陷均已关闭。
+- [x] 推送 release 分支并创建 PR #33；当前 head 为 `09d6e940`。
+- [ ] 等待 GitHub CI 全绿后合并。首轮全量 E2E 在 35 分钟 job timeout 被取消（不是断言失败）；已将 E2E job 上限提高到 45 分钟，需推送后重跑并检查完整结果。
+- [ ] 在隔离 worktree 验证合并后 main，按 ECS 手动流程部署并核验 app/worker、healthz、data-status、数据源与四个页面。
+
+边界：不在 `E:\project\Star_photo_addr` 覆盖现有未提交修改；不强推；不删快照卷；公网部署仅在主线和 CI 门禁通过后执行。
+
+# 2026-09-23 定位海拔来源与缺失值修复
+
+- [x] 复核用户原始八图并确认“我的位置 0m”未证明是实测海拔。
+- [x] 用单元测试复现缺失值伪装 0m、海平面真实 0m 被覆盖、描述性地名误借山峰海拔三个缺陷。
+- [x] 修正海拔解析为来源优先、精确目录名称匹配；未知保持 null，并移除坐标近邻代填。
+- [x] 将当前位置、地图取样、候选点、天气重试路径的 0 sentinel 改为 unknown；0m 本身仍可显示。
+- [x] 海拔解析/格式化单元测试：11 项通过。
+- [x] 重建 standalone 后复跑桌面和手机海拔 E2E（2/2）。第一次旧产物的失败未计入当前源码验收。
+- [x] 全量静态门禁：62 files / 365 tests、lint、typecheck、build。
+- [x] 完整 Chromium：153 passed / 61 project skips / 0 failed；Firefox/WebKit：4 passed。
+- [x] 更正此前八图证据阻塞和过期测试结论，写入审计追记与 bug 根因/防重犯 lesson。
+- [x] 提交到隔离本地分支；不推送、不合并、不部署，等待 Owner 审核。
+
+Review：未提供设备海拔时 UI 显示“海拔待核验”；明确海平面来源 0m 不丢失；地图取样不借用附近目录海拔。静态、全量 Chromium 与跨浏览器门禁通过。真实手机/平板验收与发布仍需 Owner 后续审核。
+
+# 2026-09-20 发布后四页面浏览器回归与线上数据复核
+
+- [x] 在已部署运行时代码上重新运行 ESLint、TypeScript、Vitest 与生产构建。
+- [x] 运行 Chromium 桌面/移动全量 E2E，并覆盖 375/768/1024/1440 宽度与手机横屏。
+- [x] 运行 Firefox 桌面与 WebKit 手机跨浏览器冒烟。
+- [x] 修正日期按钮紧凑格式与火烧云无有效评分错误态的过期 E2E 契约。
+- [x] 复核生产版本、容器健康、火烧云三日与云海三日有效业务数据。
+
+## Review
+
+- Static gates: 60 个测试文件 / 352 项 Vitest、ESLint、TypeScript、生产构建全部通过。
+- Browser gates: Chromium `126 passed / 42 skipped / 0 failed`；Firefox/WebKit `4/4`。
+- Layout coverage: 主工作台四档宽度无页面级横向溢出；手机横屏不恢复桌面浮窗；云海/火烧云详情使用不压缩卡片的底部对话框。
+- Production baseline: `buildRevision=822b85a`，app/worker 均 healthy；火烧云三天均有有效排行；云海三天压力层均 `54/54` 且存在有效评分。
+- Boundary: 浏览器设备模拟验证通过；真实 iPhone/Android 仍保持 `MANUAL/PENDING`，由 Jovi 最终验收。
+
+# 2026-09-19 云海后日数据恢复与日期可读性
+
+- [x] 复现后日压力层请求失败、降级缓存和三日总览请求覆盖。
+- [x] 补充后日/三日/日期标签及每个云海字段的回归测试并先观察 RED。
+- [x] 将截图中的云海详情卡片重叠纳入 320–1280px 逐卡片几何回归，并确认长逆温文案不裁切。
+- [x] 修复 provider 并发与降级缓存边界，保持数据不足时 fail-closed。
+- [x] 运行云海专项测试、完整静态检查、完整 E2E 和真实上游接口验收。
+- [x] 仅在上述证据通过后提交并重新部署 exact SHA。
+
+## Review
+
+- Root cause: 生产基线允许详情 Flex 卡片收缩，弱断言未发现内容裁切；云海客户端又并发请求三天并隐式使用 `icon`，其后日压力层为 `0/54`，降级响应还会进入 30 分钟缓存。
+- Repair: 部署将包含 `flex: 0 0 auto` 的详情卡片布局；日期请求串行、单日期压力批次最多并发 2、单次 12 秒超时并退避重试；降级快照不进入新鲜缓存，客户端对部分结果重试并保留可用部分；云海明确使用三天均为 `54/54` 的 GFS。
+- Verification: `npm run check` 59 文件 / 346 项通过；Chromium E2E `125 passed / 41 skipped / 0 failed`；Firefox/WebKit `4/4`；真实 GFS 2026-09-19、20、21 均 `54/54`、failed `0`。
+- Report: `docs/engineering-change-log/2026-09-19-cloudsea-day3-mobile-layout.md`。
+- Authorization: Jovi 已明确要求修复并逐项测试后再提供测试报告。
+- Publication: 运行时代码已部署为 `822b85a`，app/worker 健康，后续测试契约提交不改变运行时行为。
+
 # 2026-09-10 UI 统一与专题排行门槛
 
 - [x] 将主页默认图层改为云量预报 + 光污染参考，实况时间轴只在用户主动选择时出现并保持收起。
@@ -704,3 +771,22 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 
 - 根因：上海时间凌晨仍属于前一晚观测夜，静态按当天 00:00 起始会漏掉 20:00–23:00。
 - 变更边界：仅测试夹具和版本记录；生产评分、天气 Provider、完整性门槛保持不变。
+# 2026-09-21 手机/平板纵向滚动与顶部精简
+
+- [x] 读取 UI 规范，实际查看手机/平板布局并定位 viewport 锁定和筛选过高。
+- [x] 默认折叠筛选，页头随文档滚动，地图触摸模式可切换，时间轴分行。
+- [x] 静态、352 项测试、生产构建与相关桌面/移动回归。
+- [ ] 提交并部署后核对生产布局。
+- [ ] 真机滑动：ADB 打开网页被自动审批拒绝，保留 NOT_RUN。
+# 2026-09-22 数据恢复与交互收尾
+
+- [x] 核对本地候选 772487d 和 Owner 脏工作区；读取移动专项规范。
+- [x] 修复瓦片错误按图层/瓦片恢复，增加重试及恢复回归。
+- [x] 火烧云逐日请求结果独立处理，刷新失败旧数据在地图/排行/详情一致标记。
+- [x] 取消云海过时请求的后续重试，校验响应日期和模型。
+- [x] 添加不改变布局的点击反馈，尊重 reduced-motion。
+- [x] 当前候选 check、故障恢复 E2E、跨浏览器与截图审查；记录实际未完成项。
+
+Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium 全量最后一次149通过/61条件跳过/2条对齐测试失败，改成中心对齐断言后2项复跑通过。Firefox/WebKit 4通过。八张原图已读、ScoreRing未知值与城市标签避让补齐，详见 `docs/ui-audit/2026-09-22-recovery-and-original-screenshots.md`。
+
+边界：仅本地验证和提交，等待 Jovi 审核；不合并、不部署。评分公式保持原有科学口径。

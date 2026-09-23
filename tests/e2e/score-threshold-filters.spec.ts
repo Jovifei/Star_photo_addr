@@ -91,7 +91,7 @@ test("火烧云分数滑块只保留达到门槛的排行地点", async ({ page 
 
   await page.goto("/fireglow");
   const control = page.getByTestId("fireglow-score-threshold");
-  const slider = control.getByRole("slider", { name: /晚霞推荐门槛/ });
+  const slider = control.getByRole("slider", { name: /晚霞参考门槛/ });
   const list = page.locator(".fireglow-list");
   await expect(slider).toBeVisible();
   await expect(list.locator("li")).toHaveCount(3);
@@ -117,11 +117,12 @@ test("云海分数滑块只保留达到门槛的排行地点", async ({ page }) 
       contentType: "application/json",
       body: JSON.stringify({
         date,
-        model: "icon",
+        model: "gfs",
         generatedAt: `${date}T00:00:00.000Z`,
         source: "E2E score threshold",
         stale: false,
-        pressure: { status: "available", availableSites: 3, totalSites: 3, failedSites: 0 },
+        surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+        pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         sites: {
           "cs-taizijian": { morning: cloudSeaWindow(100), evening: cloudSeaWindow(40) },
           "cs-qianniugang": { morning: cloudSeaWindow(60), evening: cloudSeaWindow(40) },

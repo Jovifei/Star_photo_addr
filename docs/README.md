@@ -22,4 +22,4 @@
 
 ## 当前版本索引
 
-v1.0.14 已合并并部署，生产 `/healthz` 为 v1.0.14 / `39338495db0d`；通用观星目录为 282 个点、覆盖 31 个省级行政区，首页搜索可返回太子尖、牵牛岗、九山顶、葛仙村和达瓦更扎等本地候选。版本记录见 [`CHANGELOG.md`](./CHANGELOG.md)，本轮工程记录见 [`engineering-change-log/2026-09-10-provincial-location-expansion-v1.0.14.md`](./engineering-change-log/2026-09-10-provincial-location-expansion-v1.0.14.md)。
+代码版本与用户可见更新以根目录 `package.json` 和 [`CHANGELOG.md`](../CHANGELOG.md) 为准；生产部署状态必须用 `/healthz` 的 `version` 与 `buildRevision` 实测确认，不能从源码版本推断。v1.0.19 更新移动端内容流与数据覆盖 fail-closed；每次生产验收应记录实际运行版本、build revision 和数据源状态。

@@ -1,4 +1,6 @@
 "use client";
+import MapScrollControl from "@/components/MapScrollControl";
+import MapTileStatus from "@/components/MapTileStatus";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -28,6 +30,8 @@ import {
 import { CLOUD_SEA_SITES, type CloudSeaSite } from "@/lib/cloudseaSites";
 import {
   CLOUD_SEA_EMPTY_WINDOW,
+  hasCompleteCloudSeaCoverage,
+  hasValidCloudSeaCoverageCounts,
   positionBadgeTone,
   type CloudSeaConditionLevel,
   type CloudSeaSnapshot,
@@ -37,6 +41,8 @@ import { buildProbabilityOverlay } from "@/lib/cloudseaOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
+import { formatCompactCalendarDate, formatRelativeDateLabel } from "@/lib/nighttime";
+import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
 
@@ -86,7 +92,17 @@ function dateLabel(date: string): string {
   const weekday = ["日", "一", "二", "三", "四", "五", "六"][
     new Date(`${date}T12:00:00Z`).getUTCDay()
   ];
-  return `${month}/${day} 周${weekday}`;
+  return `${month}月${day}日 周${weekday}`;
+}
+
+function rangeOptionLabel(
+  option: (typeof RANGE_OPTIONS)[number],
+  baseDate: string,
+): string {
+  if (option.value === 3) {
+    return `${option.label} · ${formatCompactCalendarDate(baseDate)}—${formatCompactCalendarDate(shiftDate(baseDate, 2))}`;
+  }
+  return formatRelativeDateLabel(shiftDate(baseDate, option.value), baseDate);
 }
 
 const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = [
@@ -124,6 +140,8 @@ export default function CloudSeaApp() {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [scoreThreshold, setScoreThreshold] = useState(0);
   const mapRef = useRef<LeafletMap | null>(null);
+  const snapshotRequestIdRef = useRef(0);
+  const snapshotControllerRef = useRef<AbortController | null>(null);
 
   const baseDate = useMemo(() => todayKey(), []);
   const activeDates = useMemo<string[]>(() => {
@@ -137,33 +155,99 @@ export default function CloudSeaApp() {
 
   const fetchSnapshots = useCallback(
     async (forceRefresh = false) => {
-      if (forceRefresh) setRefreshing(true);
+      const requestId = snapshotRequestIdRef.current + 1;
+      snapshotRequestIdRef.current = requestId;
+      snapshotControllerRef.current?.abort();
+      const controller = new AbortController();
+      snapshotControllerRef.current = controller;
+      setRefreshing(forceRefresh);
+      setDataNotice("");
       setLoading(true);
       try {
-        const results = await Promise.all(
-          activeDates.map(async (date): Promise<SnapshotLoadResult> => {
-            let lastError = "云海快照不可用";
-            for (let attempt = 0; attempt < 2; attempt += 1) {
-              try {
-                const url = `/api/cloudsea/snapshot?date=${date}&refresh=${forceRefresh ? "1" : "0"}`;
-                const response = await fetch(url, { cache: "no-store" });
-                const payload = (await response.json().catch(() => null)) as
-                  | (CloudSeaSnapshot & { error?: string })
-                  | null;
-                if (response.ok && payload?.sites) {
-                  return { date, snapshot: payload };
+        const results: SnapshotLoadResult[] = [];
+        // Do not fan out all three dates at once: each date already fans out
+        // surface plus pressure batches, and the provider may throttle the
+        // last date even though today/tomorrow succeeded.
+        for (const date of activeDates) {
+          if (controller.signal.aborted) return;
+          let lastError = "云海快照不可用";
+          let degradedSnapshot: CloudSeaSnapshot | null = null;
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            if (controller.signal.aborted) return;
+            try {
+              const url = `/api/cloudsea/snapshot?date=${date}&model=gfs&refresh=${forceRefresh ? "1" : "0"}`;
+              const response = await fetch(url, {
+                cache: "no-store",
+                signal: controller.signal,
+              });
+              const payload = (await response.json().catch(() => null)) as
+                | (CloudSeaSnapshot & { error?: string })
+                | null;
+              if (response.ok && payload?.sites) {
+                if (payload.date !== date || payload.model !== "gfs") {
+                  throw new Error("云海快照日期或模型与请求不一致");
                 }
+                const pressureComplete = hasCompleteCloudSeaCoverage(
+                  payload.pressure,
+                  CLOUD_SEA_SITES.length,
+                );
+                const surface = payload.surface;
+                const surfaceCountsValid = hasValidCloudSeaCoverageCounts(
+                  surface,
+                  CLOUD_SEA_SITES.length,
+                );
+                const surfaceComplete = hasCompleteCloudSeaCoverage(
+                  surface,
+                  CLOUD_SEA_SITES.length,
+                );
+                if (pressureComplete && surfaceComplete) {
+                  results.push({ date, snapshot: payload });
+                  lastError = "";
+                  break;
+                }
+                degradedSnapshot = payload;
+                lastError = !surfaceComplete
+                  ? !surfaceCountsValid || !surface
+                    ? "地面天气覆盖摘要不完整，快照完整性无法验证"
+                    : `地面天气仅 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`
+                  : !hasValidCloudSeaCoverageCounts(payload.pressure, CLOUD_SEA_SITES.length)
+                    ? "压力层覆盖摘要不完整，快照完整性无法验证"
+                    : `压力层仅 ${payload.pressure!.availableSites}/${payload.pressure!.totalSites} 地点可用`;
+                if (attempt === 1) {
+                  results.push({ date, snapshot: payload, error: lastError });
+                  lastError = "";
+                  break;
+                }
+              }
+              if (!response.ok || !payload?.sites) {
                 lastError =
                   payload?.error ??
                   `云海快照请求失败（HTTP ${response.status}）`;
-              } catch (error) {
-                lastError =
-                  error instanceof Error ? error.message : "云海快照请求失败";
               }
+            } catch (error) {
+              if (controller.signal.aborted) return;
+              lastError =
+                error instanceof Error ? error.message : "云海快照请求失败";
             }
-            return { date, snapshot: null, error: lastError };
-          }),
-        );
+            if (attempt === 0) {
+              await new Promise((resolve) => setTimeout(resolve, 600));
+            }
+          }
+          if (lastError) {
+            results.push(
+              degradedSnapshot
+                ? { date, snapshot: degradedSnapshot, error: lastError }
+                : { date, snapshot: null, error: lastError },
+            );
+          }
+        }
+
+        if (
+          controller.signal.aborted ||
+          snapshotRequestIdRef.current !== requestId
+        ) {
+          return;
+        }
 
         const validEntries = results.filter(
           (
@@ -184,6 +268,9 @@ export default function CloudSeaApp() {
             );
             continue;
           }
+          if (result.error) {
+            notices.push(`${dateLabel(result.date)}：${result.error}；已保留部分真实数据`);
+          }
           if (result.snapshot.stale || result.snapshot.refreshError) {
             notices.push(
               `${dateLabel(result.date)}：${result.snapshot.refreshError ?? "正在使用较早的成功快照"}`,
@@ -195,16 +282,34 @@ export default function CloudSeaApp() {
               `${dateLabel(result.date)}：压力层 ${pressure.availableSites}/${pressure.totalSites} 地点可用；缺失地点不推断云层层位`,
             );
           }
+          const surface = result.snapshot.surface;
+          if (surface && surface.status !== "available" && !result.error) {
+            notices.push(
+              `${dateLabel(result.date)}：地面天气仅 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`,
+            );
+          }
         }
         setDataNotice([...new Set(notices)].join(" "));
       } catch (error) {
+        if (
+          controller.signal.aborted ||
+          snapshotRequestIdRef.current !== requestId
+        ) {
+          return;
+        }
         const message =
           error instanceof Error ? error.message : "云海快照不可用";
         setDataNotice(message);
         console.error("Failed to load cloudsea snapshot", error);
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (
+          snapshotControllerRef.current === controller &&
+          snapshotRequestIdRef.current === requestId
+        ) {
+          snapshotControllerRef.current = null;
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [activeDates],
@@ -217,6 +322,9 @@ export default function CloudSeaApp() {
     });
     return () => {
       cancelled = true;
+      snapshotRequestIdRef.current += 1;
+      snapshotControllerRef.current?.abort();
+      snapshotControllerRef.current = null;
     };
   }, [fetchSnapshots]);
 
@@ -327,7 +435,7 @@ export default function CloudSeaApp() {
                 onClick={() => setRange(option.value)}
                 title={option.hint}
               >
-                <span>{option.label}</span>
+                <span>{rangeOptionLabel(option, baseDate)}</span>
               </button>
             ))}
           </div>
@@ -349,7 +457,7 @@ export default function CloudSeaApp() {
       </ProductHeader>
 
       <div className="cloudsea-beta-banner" role="note">
-        Beta · 条件指数综合 Open-Meteo surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
+        Beta · 条件指数综合 Open-Meteo GFS surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
       </div>
       {dataNotice ? (
         <div className="cloudsea-beta-banner" role="status">
@@ -465,6 +573,8 @@ export default function CloudSeaApp() {
                 </CircleMarker>
               );
             })}
+            <MapScrollControl />
+            <MapTileStatus />
           </MapContainer>
 
           <div className="cloudsea-legend">
@@ -579,7 +689,8 @@ export default function CloudSeaApp() {
                 );
 
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={site.id}
                     className={`cloudsea-card${isSelected ? " selected" : ""}`}
                     onClick={() => handleSelectSite(site.id)}
@@ -642,7 +753,7 @@ export default function CloudSeaApp() {
                     <p className="cloudsea-card-summary">
                       {windowScore.summary}
                     </p>
-                  </div>
+                  </button>
                 );
               })
             )}
@@ -650,13 +761,19 @@ export default function CloudSeaApp() {
         </aside>
 
         {selectedRanked ? (
-          <CloudSeaSiteDetail
-            site={selectedRanked.site}
-            window={selectedRanked.window}
-            phase={phase}
-            dateKey={selectedRanked.dateKey}
+          <ResponsiveTopicDetail
+            label={`${selectedRanked.site.name}云海摄影详情`}
+            className="cloudsea-detail-layer"
             onClose={() => setSelectedSiteId(null)}
-          />
+          >
+            <CloudSeaSiteDetail
+              site={selectedRanked.site}
+              window={selectedRanked.window}
+              phase={phase}
+              dateKey={selectedRanked.dateKey}
+              onClose={() => setSelectedSiteId(null)}
+            />
+          </ResponsiveTopicDetail>
         ) : null}
       </div>
     </div>

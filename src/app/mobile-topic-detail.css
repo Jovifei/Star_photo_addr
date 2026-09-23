@@ -1,0 +1,84 @@
+.topic-detail-layer,
+.topic-detail-dialog-host {
+  display: contents;
+}
+
+.topic-detail-backdrop {
+  display: none;
+}
+
+@keyframes topic-detail-sheet-in {
+  from {
+    opacity: 0.82;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1199px) {
+  .topic-detail-layer {
+    position: fixed;
+    z-index: 2800;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .topic-detail-backdrop {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(0, 5, 9, 0.66);
+    backdrop-filter: blur(3px);
+    pointer-events: auto;
+  }
+
+  .topic-detail-dialog-host {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    height: min(72dvh, 680px);
+    max-height: min(72dvh, 680px);
+    pointer-events: auto;
+  }
+
+  .topic-detail-dialog-host > .cloudsea-site-detail,
+  .topic-detail-dialog-host > .fireglow-site-detail {
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 16px 16px 0 0;
+    animation: topic-detail-sheet-in 180ms ease-out;
+  }
+
+  .topic-detail-dialog-host .cs-detail-card,
+  .topic-detail-dialog-host .fg-detail-card {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .topic-detail-dialog-host .cs-detail-close-btn,
+  .topic-detail-dialog-host .fg-detail-close-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-detail-backdrop {
+    backdrop-filter: none;
+  }
+}

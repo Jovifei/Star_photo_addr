@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import MapScrollControl from "@/components/MapScrollControl";
+import MapTileStatus from "@/components/MapTileStatus";
 import {
   CircleMarker,
   MapContainer,
@@ -175,6 +177,8 @@ export default function MapCanvas({
       {showCloud && <ObservingSitesLayer />}
       <ClickHandler onSample={onSample} />
       <SampleMarker />
+      <MapScrollControl />
+      <MapTileStatus />
       <RecenterOnSelected enabled={recenterOnSelect} />
       {children}
     </MapContainer>

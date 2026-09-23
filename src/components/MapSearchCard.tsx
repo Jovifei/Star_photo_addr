@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import type { GeocodeResult } from "@/lib/types";
@@ -10,13 +10,14 @@ import RecommendationQuickControls from "@/components/RecommendationQuickControl
 
 /** Search row + top-level location and recommendation controls. */
 export default function MapSearchCard() {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersId = useId();
+  const filtersButton = useRef<HTMLButtonElement>(null);
   const { sampleAt } = useStore();
 
   const handlePick = useCallback(
     (result: GeocodeResult) => {
       const elevation = resolveElevation(
-        result.latitude,
-        result.longitude,
         result.name,
         result.elevation,
       );
@@ -33,7 +34,7 @@ export default function MapSearchCard() {
 
   const onLocated = useCallback(
     (latitude: number, longitude: number) => {
-      void sampleAt(latitude, longitude, 0, "我的位置");
+      void sampleAt(latitude, longitude, undefined, "我的位置");
     },
     [sampleAt],
   );
@@ -52,9 +53,32 @@ export default function MapSearchCard() {
           disabled={loading}
         >
           <span aria-hidden="true">⌾</span>
-          {loading ? "定位中" : "我的位置"}
+          {loading ? "定位中" : <>
+            <span className="locate-label-full">我的位置</span>
+            <span className="locate-label-compact">定位</span>
+          </>}
         </button>
-        <RecommendationQuickControls />
+        <button
+          type="button"
+          ref={filtersButton}
+          className="mobile-filter-toggle"
+          aria-label={filtersOpen ? "收起时间与地点筛选" : "时间与地点筛选"}
+          aria-expanded={filtersOpen}
+          aria-controls={filtersId}
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          {filtersOpen ? "收起" : "筛选"}
+          <span aria-hidden="true">{filtersOpen ? "−" : "+"}</span>
+        </button>
+        <div id={filtersId} className="location-filter-controls" data-open={filtersOpen}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            event.stopPropagation();
+            setFiltersOpen(false);
+            filtersButton.current?.focus({ preventScroll: true });
+          }}>
+          <RecommendationQuickControls />
+        </div>
       </div>
       {error && (
         <div

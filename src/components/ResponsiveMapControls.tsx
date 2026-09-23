@@ -11,6 +11,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { lockCompactPageScroll } from "@/lib/pageScrollLock";
 import { useStore } from "@/lib/store";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import DetailRestore from "@/components/DetailRestore";
@@ -23,9 +24,9 @@ import MapViewActions from "@/components/MapViewActions";
 import ObservingMapControl from "@/components/ObservingMapControl";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 
-/** Portrait phones and short landscape phones use the same docked control UI. */
+/** Phones and tablets use the same map-first docked control UI. */
 export const MOBILE_MAP_PANEL_QUERY =
-  "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)";
+  "(max-width: 1199px), (max-height: 520px) and (max-width: 1199px)";
 
 const PANEL_ITEMS = [
   { id: "layers", label: "图层", title: "地图图层与视图", icon: Layers3 },
@@ -95,6 +96,13 @@ export default function ResponsiveMapControls({
     ? "summary"
     : requestedPanel;
 
+  const panelOpen = showMobileDock && activePanel !== null;
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    return lockCompactPageScroll();
+  }, [panelOpen]);
+
   const activeTitle = useMemo(() => {
     if (activePanel === "summary") return "今晚判断";
     return PANEL_ITEMS.find((item) => item.id === activePanel)?.title ?? "地图工具";
@@ -103,7 +111,7 @@ export default function ResponsiveMapControls({
   const closePanel = useCallback(() => {
     setRequestedPanel(null);
     setDetailOpen(false);
-    window.requestAnimationFrame(() => lastTriggerRef.current?.focus());
+    window.requestAnimationFrame(() => lastTriggerRef.current?.focus({ preventScroll: true }));
   }, [setDetailOpen]);
 
   const selectPanel = useCallback(
@@ -125,22 +133,26 @@ export default function ResponsiveMapControls({
 
   useEffect(() => {
     const drawer = drawerRef.current;
-    if (drawer) drawer.inert = activePanel === null;
-    if (!activePanel) return;
+    if (drawer) drawer.inert = !panelOpen;
+    if (!panelOpen) return;
 
-    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus({ preventScroll: true }));
     const onKeyDown = (event: KeyboardEvent) => {
-      // Layered-modal rule: when focus lives in a topmost dialog (e.g. the
-      // source popover) the drawer must not trap Tab or close on Escape.
+      if (event.key === "Escape") {
+        // A compact drawer is the top-level modal surface. Let a nested
+        // dialog keep Escape for itself, but do not require focus to remain
+        // inside the drawer after a pointer interaction.
+        const target = event.target instanceof Element ? event.target : null;
+        const nestedDialog = target?.closest('[role="dialog"]:not(#mobile-map-panel-drawer)');
+        if (nestedDialog) return;
+        event.preventDefault();
+        closePanel();
+        return;
+      }
       if (
         !drawerRef.current ||
         !drawerRef.current.contains(document.activeElement)
       ) {
-        return;
-      }
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closePanel();
         return;
       }
       if (event.key !== "Tab" || !drawerRef.current) return;
@@ -158,9 +170,12 @@ export default function ResponsiveMapControls({
         first.focus();
       }
     };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [activePanel, closePanel]);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [panelOpen, closePanel]);
 
   useEffect(() => {
     // The dynamic control shell can render one frame before matchMedia
@@ -239,7 +254,8 @@ export default function ResponsiveMapControls({
         id="mobile-map-panel-drawer"
         ref={drawerRef}
         className="mobile-map-panel-drawer"
-        role="complementary"
+        role="dialog"
+        aria-modal={panelOpen ? true : undefined}
         aria-hidden={!activePanel}
         aria-label={activeTitle}
         data-testid="mobile-map-panel-drawer"

@@ -185,7 +185,7 @@ export default function ObservingMapControl({
     const date = time.slice(0, 10);
     const startDate = scoreWindowStart.slice(0, 10);
     const dayOffset = Math.round((Date.parse(`${date}T12:00:00Z`) - Date.parse(`${startDate}T12:00:00Z`)) / 86_400_000);
-    const dayLabel = dayOffset === 0 ? "现在" : dayOffset === 1 ? "明天" : dayOffset === 2 ? "后天" : `第 ${dayOffset + 1} 天`;
+    const dayLabel = dayOffset === 0 ? "今日" : dayOffset === 1 ? "明日" : dayOffset === 2 ? "后日" : `第 ${dayOffset + 1} 天`;
     return `${dayLabel} · ${formatNightLabel(date, true)} ${time.slice(11, 16)}`;
   }
 

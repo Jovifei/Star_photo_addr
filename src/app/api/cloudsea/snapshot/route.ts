@@ -3,6 +3,8 @@ import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
 import {
   buildCloudSeaSnapshot,
+  hasCompleteCloudSeaCoverage,
+  hasValidCloudSeaCoverageCounts,
   type CloudSeaSnapshot,
   type RawSiteHourly,
 } from "@/lib/cloudsea";
@@ -28,11 +30,14 @@ const VALID_MODELS = new Set<ForecastModel>([
 ]);
 const TTL_MS = 30 * 60_000;
 const STALE_TTL_MS = 6 * 60 * 60_000;
-const TIMEOUT_MS = 40_000;
+const TIMEOUT_MS = 60_000;
 const FORCE_REFRESH_COOLDOWN_MS = 60_000;
 const CACHE_MAX_ENTRIES = 32;
 const FORCE_TRACK_MAX_ENTRIES = 128;
 const PRESSURE_BATCH_SIZE = 18;
+// The client serializes dates. Keep a small amount of concurrency within one
+// date so the third pressure batch finishes before the route-wide timeout,
+// without restoring the previous multi-date fan-out that triggered throttling.
 const PRESSURE_WORKERS = 2;
 
 interface CachedSnapshot {
@@ -70,9 +75,39 @@ function cacheAgeMs(entry: CachedSnapshot): number {
   return Math.max(0, Date.now() - entry.at);
 }
 
+function isCacheableSnapshot(snapshot: CloudSeaSnapshot): boolean {
+  return (
+    hasCompleteCloudSeaCoverage(snapshot.surface, CLOUD_SEA_SITES.length) &&
+    hasCompleteCloudSeaCoverage(snapshot.pressure, CLOUD_SEA_SITES.length)
+  );
+}
+
+function degradationMessage(snapshot: CloudSeaSnapshot): string {
+  const issues: string[] = [];
+  const surface = snapshot.surface;
+  if (!hasCompleteCloudSeaCoverage(surface, CLOUD_SEA_SITES.length)) {
+    issues.push(
+      hasValidCloudSeaCoverageCounts(surface, CLOUD_SEA_SITES.length)
+        ? `地面天气仅 ${surface!.availableSites}/${surface!.totalSites} 地点窗口完整`
+        : `地面天气覆盖摘要不完整（期望 ${CLOUD_SEA_SITES.length} 地点）`,
+    );
+  }
+  const pressure = snapshot.pressure;
+  if (!hasCompleteCloudSeaCoverage(pressure, CLOUD_SEA_SITES.length)) {
+    issues.push(
+      hasValidCloudSeaCoverageCounts(pressure, CLOUD_SEA_SITES.length)
+        ? `压力层仅 ${pressure!.availableSites}/${pressure!.totalSites} 地点可用`
+        : `压力层覆盖摘要不完整（期望 ${CLOUD_SEA_SITES.length} 地点）`,
+    );
+  }
+  return issues.length ? issues.join("；") : "云海数据不完整";
+}
+
 function usableStaleCache(key: string): CachedSnapshot | null {
   const entry = cache.get(key);
-  return entry && cacheAgeMs(entry) <= STALE_TTL_MS ? entry : null;
+  return entry && isCacheableSnapshot(entry.snapshot) && cacheAgeMs(entry) <= STALE_TTL_MS
+    ? entry
+    : null;
 }
 
 function withCacheFreshness(
@@ -277,7 +312,7 @@ function isTimeoutError(error: unknown): boolean {
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const date = params.get("date") ?? getShanghaiDate();
-  const model = (params.get("model") ?? "icon") as ForecastModel;
+  const model = (params.get("model") ?? "gfs") as ForecastModel;
   const forceRefresh = params.get("refresh") === "1";
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -331,7 +366,12 @@ export async function GET(request: NextRequest) {
   }
 
   const cached = cache.get(key);
-  if (cached && cacheAgeMs(cached) < TTL_MS && !forceRefresh) {
+  if (
+    cached &&
+    isCacheableSnapshot(cached.snapshot) &&
+    cacheAgeMs(cached) < TTL_MS &&
+    !forceRefresh
+  ) {
     return NextResponse.json(cached.snapshot, {
       headers: {
         "Cache-Control":
@@ -381,14 +421,40 @@ export async function GET(request: NextRequest) {
 
   try {
     const snapshot = await activeTask;
-    rememberSnapshot(key, snapshot);
-    return NextResponse.json(snapshot, {
-      headers: {
-        "Cache-Control":
-          "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
-        "X-Cloudsea-Cache": forceRefresh ? "forced-fresh" : "fresh",
+    // Partial surface or pressure coverage remains useful only as an explicit
+    // degraded result and must not block a retry for the normal TTL.
+    const cacheable = isCacheableSnapshot(snapshot);
+    if (cacheable) rememberSnapshot(key, snapshot);
+    if (!cacheable) {
+      const reason = degradationMessage(snapshot);
+      const fallback = usableStaleCache(key);
+      if (fallback) {
+        return NextResponse.json(
+          withCacheFreshness(fallback, `本次${reason}，正在使用较早的成功快照`),
+          {
+            headers: {
+              "Cache-Control": "no-store",
+              "X-Cloudsea-Cache": "degraded-fallback",
+            },
+          },
+        );
+      }
+    }
+    return NextResponse.json(
+      cacheable ? snapshot : { ...snapshot, refreshError: degradationMessage(snapshot) },
+      {
+        headers: {
+          "Cache-Control": cacheable
+            ? "public, max-age=0, s-maxage=300, stale-while-revalidate=600"
+            : "no-store",
+          "X-Cloudsea-Cache": cacheable
+            ? forceRefresh
+              ? "forced-fresh"
+              : "fresh"
+            : "degraded",
+        },
       },
-    });
+    );
   } catch (error) {
     const fallback = usableStaleCache(key);
     const message =

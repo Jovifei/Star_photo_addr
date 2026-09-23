@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { closeMobileMapPanel } from "./mobile-map-panel.js";
 
 function buildForecastResponse(requestUrl: string) {
   const url = new URL(requestUrl);
@@ -71,6 +72,24 @@ function buildForecastResponse(requestUrl: string) {
     },
   };
 }
+
+test("version history shows v1.0.19 and preserves v1.0.18", async ({ page }) => {
+  await page.addInitScript(() => localStorage.clear());
+  await page.route("**/api/forecast?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(buildForecastResponse(route.request().url())),
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /查看版本更新记录 v1\.0\.19/ }).click();
+  const dialog = page.getByRole("dialog", { name: "版本更新记录" });
+  const releases = dialog.locator(".changelog-release");
+  await expect(releases.first()).toContainText("v1.0.19");
+  await expect(releases.first()).toContainText("当前版本");
+  await expect(releases.nth(1)).toContainText("v1.0.18");
+});
 
 test("sites compatibility route preserves context and opens the dark-sky site panel", async ({
   page,
@@ -185,6 +204,9 @@ test("source disclosure keeps the current observation context when opening dark-
   );
   await expect(page.getByTestId("observation-reason-card")).toBeVisible();
 
+  if (await page.getByTestId("mobile-map-panel-drawer").count()) {
+    await closeMobileMapPanel(page);
+  }
   await page.getByRole("button", { name: "数据依据与局限" }).click();
   const dialog = page.getByRole("dialog", { name: "数据依据与局限" });
   const recommendationLink = dialog.getByRole("link", {
@@ -229,7 +251,7 @@ test.describe("mobile product header", () => {
 
     const sourceButton = page.getByRole("button", { name: "数据依据与局限" });
     await expect(sourceButton).toBeVisible();
-    await expect(sourceButton).toHaveCSS("width", "44px");
+    await expect(sourceButton).toHaveCSS("width", "48px");
 
     await sourceButton.click();
     await expect(

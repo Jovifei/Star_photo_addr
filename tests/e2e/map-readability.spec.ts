@@ -40,6 +40,23 @@ test("云量通道展示为横向进度条", async ({ page }, testInfo) => {
   await expect(bars.first()).toHaveCSS("display", "grid");
 });
 
+test("data source label and degraded status remain on the same row", async ({page}) => {
+  await page.route('**/api/data-status**', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+    status:'degraded', checkedAt:new Date().toISOString(), sources:{weather:{id:'weather',label:'Open-Meteo 云量',status:'degraded',detail:'provider 429'}},
+  })}));
+  await page.goto('/');
+  await openMobileMapPanel(page,'cloud');
+  const row=page.locator('.source-status-row[data-status="degraded"]').first();
+  await expect(row).toContainText('Open-Meteo 云量');
+  await expect(row).toContainText('降级');
+  const delta=await row.evaluate(el=>{
+    const label=el.querySelector('span')!.getBoundingClientRect();
+    const status=el.querySelector('b')!.getBoundingClientRect();
+    return Math.abs((label.y + label.height / 2) - (status.y + status.height / 2));
+  });
+  expect(delta).toBeLessThan(2);
+});
+
 test("暗夜选址与今夜观测使用不同的任务说明", async ({ page }) => {
   await page.goto("/sites");
   await expect(page).toHaveURL(/panel=sites/);
@@ -50,6 +67,30 @@ test("暗夜选址与今夜观测使用不同的任务说明", async ({ page }) 
     "aria-current",
     "page",
   );
+});
+
+test("当前位置没有设备海拔时显示待核验，不借用邻近点位高程", async ({ page, context }) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 30.4012, longitude: 119.2554 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "使用我的当前位置" }).click();
+  const coordinates = page.locator(".panel-coords").first();
+  await expect(coordinates).toContainText("海拔待核验");
+  await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
+});
+
+test("共享地点深链区分未提供海拔和明确的海平面 0m", async ({ page }) => {
+  await page.goto("/?lat=30.1234&lng=120.5678&name=%E6%9C%AA%E7%9F%A5%E6%9C%BA%E4%BD%8D");
+  const coordinates = page.locator(".panel-coords").first();
+  await expect(coordinates).toContainText("海拔待核验");
+  await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
+
+  await page.goto("/?lat=30.1235&lng=120.5679&name=%E7%A9%BA%E6%B5%B7%E6%8B%94%E5%8F%82%E6%95%B0&elevation=");
+  await expect(coordinates).toContainText("海拔待核验");
+  await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
+
+  await page.goto("/?lat=31.1234&lng=121.5678&name=%E6%B5%B7%E5%B9%B3%E9%9D%A2%E7%82%B9&elevation=0");
+  await expect(coordinates).toContainText("海拔 0 m");
 });
 
 test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据", async ({ page }, testInfo) => {
@@ -80,7 +121,7 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
     ? drawer.getByRole("button", { name: "Bortle、SQM 与未安装说明" })
     : page.locator(".bortle-control:visible").getByRole("button", { name: "Bortle、SQM 与未安装说明" });
   await helpButton.click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog", { name: "Bortle、SQM 与夜光参考" });
   await expect(dialog).toContainText("有意的安全降级");
   await expect(dialog).toContainText("docs/DARK_SKY_DATA_SETUP.md");
 });

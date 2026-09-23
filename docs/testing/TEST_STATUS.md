@@ -3,9 +3,9 @@
 > 对应方案：[`TEST_PLAN_V1.md`](./TEST_PLAN_V1.md)
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
-> 状态日期：2026-09-10
-> 当前 main：`main@39338495db0d22c9ec5afe15763a023c4ba3a06b`（v1.0.14）
-> 当前测试工作分支：无（`codex/provincial-stargazing-locations-20260910` 已合并）
+> 状态日期：2026-09-23
+> 当前 release candidate：`v1.0.19`，分支 `codex/mobile-data-integrity-v1.0.19-20260923`
+> 当前 main 基线：`main@3334e0c`（v1.0.18）；发布前公网运行基线：v1.0.18 / `349db7b`。候选本地 PASS 不代表已部署。
 
 ## 状态定义
 
@@ -17,6 +17,20 @@
 | MANUAL | 需要人工/真机，自动化不能完全替代 |
 | BLOCKED | 缺少 ECS、域名、证书、授权数据或现场设备 |
 | DEFERRED | 已安排在后续阶段；旧文档中的 SKIP 均视为此状态，不是取消 |
+
+## v1.0.19 本地发布候选门禁（2026-09-23）
+
+| 门禁 | 结果 | 说明 |
+| --- | --- | --- |
+| `npm run check` | PASS | ESLint、TypeScript、63 个 Vitest 文件 / 368 项测试、Next.js production build |
+| `npm run test:e2e` | PASS | Chromium 230 项：163 passed / 67 个项目/设备适用性 skip / 0 failed |
+| `npm run test:e2e:cross-browser` | PASS | Firefox desktop 与 WebKit mobile，4/4 passed |
+| `npm run test:live` | PASS | Open-Meteo 四模型/压力层/地理编码/AQI、NASA GIBS、NOAA Kp、VIIRS smoke |
+| `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
+| 生产 `/healthz`、`/api/data-status` 预检 | PASS（旧版本基线） | v1.0.18 / `349db7b`；weather/satellite/light-pollution available；v1.0.19 尚未部署 |
+| 真机 iPhone/Android、软键盘与真实浏览器底栏 | MANUAL | 仍需 Jovi 部署后现场确认 |
+
+本节为 v1.0.19 本地发布候选证据；GitHub CI、main 合并、ECS 新版本部署与生产 `/healthz` 仍需单独验收。
 
 ## v1.0.14 发布门禁结果
 

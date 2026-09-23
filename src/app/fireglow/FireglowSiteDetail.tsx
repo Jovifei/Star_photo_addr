@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 import {
   X,
   Flame,
@@ -15,6 +15,7 @@ import {
 import type { FireGlowWindowScore } from "@/lib/fireglow";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
 import { markerLevelFor } from "@/lib/markerStatus";
+import { ResponsiveTopicDetailModalContext } from "@/components/ResponsiveTopicDetail";
 
 interface FireglowSiteDetailProps {
   site: {
@@ -28,6 +29,7 @@ interface FireglowSiteDetailProps {
   };
   phase: "morning" | "evening";
   dateKey: string;
+  dataQualityNotice?: string;
   onClose: () => void;
 }
 
@@ -61,8 +63,10 @@ export default function FireglowSiteDetail({
   site,
   phase,
   dateKey,
+  dataQualityNotice,
   onClose,
 }: FireglowSiteDetailProps) {
+  const isModal = useContext(ResponsiveTopicDetailModalContext);
   const win = site.window;
   const pLevel = markerLevelFor(win.score, win.probabilityLevel);
 
@@ -106,7 +110,12 @@ export default function FireglowSiteDetail({
         : "channel-blocked";
 
   return (
-    <aside className="fireglow-site-detail" aria-label={`${site.name}火烧云摄影详情`}>
+    <aside
+      className="fireglow-site-detail"
+      role="dialog"
+      aria-modal={isModal ? true : undefined}
+      aria-label={`${site.name}火烧云摄影详情`}
+    >
       <div className="fg-detail-header">
         <div className="fg-detail-title-group">
           <div className="fg-detail-kicker-row">
@@ -123,6 +132,7 @@ export default function FireglowSiteDetail({
         <button
           type="button"
           className="fg-detail-close-btn"
+          data-detail-close="true"
           onClick={onClose}
           aria-label="关闭火烧云详情舱"
           title="关闭火烧云详情舱"
@@ -130,6 +140,10 @@ export default function FireglowSiteDetail({
           <X size={18} />
         </button>
       </div>
+
+      {dataQualityNotice ? (
+        <p className="fg-detail-data-status" role="status">{dataQualityNotice}</p>
+      ) : null}
 
       <div className="fg-detail-scroll-content">
         <section className="fg-detail-card fg-hero-card">

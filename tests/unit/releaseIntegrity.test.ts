@@ -2,6 +2,24 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 
 describe("release integrity invariants", () => {
+  it("keeps the package, lockfile, changelog and current release index in sync", () => {
+    const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8")) as { version: string };
+    const packageLock = JSON.parse(fs.readFileSync("package-lock.json", "utf8")) as {
+      version: string;
+      packages: { "": { version: string } };
+    };
+    const changelog = fs.readFileSync("CHANGELOG.md", "utf8");
+    const inApp = fs.readFileSync("src/components/ChangelogModal.tsx", "utf8");
+    const docsIndex = fs.readFileSync("docs/README.md", "utf8");
+
+    expect(packageLock.version).toBe(packageJson.version);
+    expect(packageLock.packages[""].version).toBe(packageJson.version);
+    expect(changelog).toContain(`## [v${packageJson.version}]`);
+    expect(inApp).toContain("version: APP_VERSION_LABEL");
+    expect(inApp).toContain("current: true");
+    expect(docsIndex).not.toContain("v1.0.14 已合并并部署");
+  });
+
   it("does not ship synthetic cloudsea weather or nearby-disk forecast relabelling", () => {
     const cloudseaRoute = fs.readFileSync("src/app/api/cloudsea/snapshot/route.ts", "utf8");
     const forecastRoute = fs.readFileSync("src/app/api/forecast/route.ts", "utf8");

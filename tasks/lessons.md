@@ -1,5 +1,19 @@
 # Lessons
 
+- 2026-09-23: Playwright 全量矩阵 230 项在 CI 单 worker 串行跑时，job 的 `timeout-minutes` 必须按完整 E2E 耗时预留余量；平台的 `The operation was canceled`/`conclusion=cancelled` 不等同断言失败。先核对 job 超时、测试启动/结束时间和已完成用例数，再调 E2E job budget；不能缩小测试范围或把取消报告为 PASS。
+- 2026-09-23: 海拔未知不能用数字 `0` 充当 sentinel；它会把未知显示成海平面，也会覆盖真实 0m。仅保留上游明确值或无歧义的精确目录名称，不能从描述标签的子串或邻近坐标借用另一个点位海拔；UI 保持“海拔待核验”。Playwright 使用 standalone 时先重建当前源码，旧 `.next/standalone` 测试结果不能代表工作树。
+- 2026-09-23: 多日/多阶段预测不能只用“至少一天/一个时段有评分”判定整个视图可用；每个活动日期的缺失、地面与压力覆盖，以及当前所选晨/昏阶段都要分别审计并把降级贯穿地图、排行、详情。URL 数值参数需区分缺失、空白与显式 0；surface 覆盖摘要缺失按未知降级，不能按完整数据处理。`aria-modal=true` 只在背景确实不可操作、焦点受限的紧凑模态态设置，宽屏非模态详情不得伪报。
+- 2026-09-22: 不把“有错误提示”当成错误恢复已完成；必须验证成功→失败→恢复，按图层/瓦片隔离状态。Leaflet 内的重试按钮须阻止事件冒泡到选点逻辑。
+- 2026-09-22: 截图路径先重新测试可读性；本轮八张原图均可读，不能沿用旧“缺失截图”结论。字号验证必须测量倍数，快捷键执行成功不是200%证据；截图文件名须绑定当前实际视口。
+
+- 2026-09-21: Width and overlap assertions alone miss unusable mobile scrolling. Verify an actual vertical gesture moves the document and header out of view, measure first-screen map area, and inspect screenshots. Avoid a locked 100vh app shell plus permanently expanded filters on phone/tablet. Record browser emulation separately from physical-device evidence.
+
+- 2026-09-20: 同一日期在导航按钮和详情标题可以有不同展示密度；日期格式调整后，E2E 必须分别断言紧凑按钮（如 `今日 · 9.20 周日`）与完整标题（如 `9月20日 周日`），不能用一个 helper 混用。空评分快照测试也必须跟随 fail-closed 语义，断言可恢复错误而不是正常阈值空排行。
+
+- 2026-09-20: 火烧云上游空快照不能只在 API 层 fail-closed；前端错误态也必须与“真实有数据但阈值过滤为空”分离，不能继续渲染 `暂无达到 ≥0 分`，否则用户仍会误以为评分为 0。
+
+- 2026-09-19: 云海按日期并发请求时，不能把 pressure 不可用的 200 响应当作完整 fresh snapshot；否则后日会长期显示“数据不足”，即使上游稍后恢复也不会自动重试。日期选择必须同时验证真实请求覆盖、降级缓存 TTL 和页面日期标签。
+
 - 2026-09-13: 数据质量标签必须由“实际可用且身份匹配的输入”决定；“暂无有效预报/缺少抓取时间”不能因为 stale=false 就显示可用，来源、时间和质量需要同一条 fail-closed 判定。
 - 2026-09-13: Worker 不能把 HTTP 200 当作 fresh；必须核验快照 stale、完整性版本和非空 sourceFetchedAt，stale 时跳过专题预热并退避。ECS 低内存发布先用本地 standalone + 旧镜像轻量复制，避免远端 Next 编译触发全局 OOM。
 - 2026-09-13: 观星分不能只证明上游 HTTP 200；必须同时绑定当前时次、模型、实际网格坐标、分层云字段、provider/应用时间和 stale 状态。页面评分、候选排行、详情和地图必须共用同一条评分链；上游限流或超龄 fallback 时要 fail-closed，不能继续显示高分。
@@ -67,3 +81,4 @@
 - 2026-08-13: 评分门槛的数量不能只绑定整晚快照；地图时间滑窗必须传递完整 ISO 时次，使用独立缓存键和 focusScores，并在请求切换期间拒绝沿用上一时次的颜色与数量。
 - 2026-08-13: 多个组件同时请求同一时次时，AbortError 或旧请求失败可能晚于新请求返回；加载/降级状态必须绑定请求代次（时次、模型、夜晚），不能只看最后一次响应是否曾失败。
 - 2026-09-14: 跨午夜 E2E 天气夹具必须按 `currentNightKey` 锚定，而不是按公历当天 00:00；上海时间 00:00–05:00 仍属于前一晚 20:00–05:00，遗漏前四小时会把完整分层云样本误判为“数据不足”。
+- 2026-09-19: 详情抽屉“能滚动”和卡片高度大于 44px不能证明数据完整可见；受限高度的 Flex 列会默认收缩子卡片，配合 `overflow: hidden` 造成内容裁切和后续区块视觉叠压。验收必须逐卡片断言 `scrollHeight <= clientHeight`、水平无溢出及相邻边界不相交，并覆盖用户截图对应宽度和长文案。

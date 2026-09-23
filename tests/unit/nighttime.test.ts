@@ -14,6 +14,9 @@ import {
   formatHour,
   formatHourWithDate,
   formatNightLabel,
+  formatCalendarDate,
+  formatCompactCalendarDate,
+  formatRelativeDateLabel,
   currentNightKey,
   initialForecastTime,
   isInNight,
@@ -124,18 +127,36 @@ describe("formatNightLabel — 完整形态 (AC-1)", () => {
 });
 
 describe("formatNightLabel — 紧凑形态 (AC-2)", () => {
-  it("2026-08-07 渲染为「8/7 周五夜」", () => {
-    expect(formatNightLabel("2026-08-07", true)).toBe("8/7 周五夜");
+  it("2026-08-07 渲染为带月份和星期的日期", () => {
+    expect(formatNightLabel("2026-08-07", true)).toBe("8月7日 周五");
   });
 
-  it("双位日期 2026-08-12 渲染为「8/12 周三夜」", () => {
-    expect(formatNightLabel("2026-08-12", true)).toBe("8/12 周三夜");
+  it("双位日期 2026-08-12 也保留月份和星期", () => {
+    expect(formatNightLabel("2026-08-12", true)).toBe("8月12日 周三");
   });
 
   it("紧凑形态保留星期，但不重复完整窗口区间", () => {
     const label = formatNightLabel("2026-08-07", true);
-    expect(label).toContain("周五");
+    expect(label).toContain("8月7日 周五");
     expect(label).not.toContain("次日");
+  });
+});
+
+describe("formatRelativeDateLabel — relative selector labels", () => {
+  it("adds 今日/明日/后日 while retaining the calendar date", () => {
+    expect(formatRelativeDateLabel("2026-08-07", "2026-08-07")).toBe("今日 · 8.7 周五");
+    expect(formatRelativeDateLabel("2026-08-08", "2026-08-07")).toBe("明日 · 8.8 周六");
+    expect(formatRelativeDateLabel("2026-08-09", "2026-08-07")).toBe("后日 · 8.9 周日");
+  });
+
+  it("uses the date alone outside the first three days", () => {
+    expect(formatRelativeDateLabel("2026-08-10", "2026-08-07")).toBe("8.10 周一");
+  });
+});
+
+describe("formatCompactCalendarDate", () => {
+  it("renders the selector form requested by the product", () => {
+    expect(formatCompactCalendarDate("2026-09-20")).toBe("9.20 周日");
   });
 });
 

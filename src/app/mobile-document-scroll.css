@@ -1,0 +1,306 @@
+/* Compact browser contract: one document scroll, primary content before settings.
+   This is the final compact-layout layer; desktop styles remain unchanged. */
+.mobile-filter-toggle,
+.topic-controls-toggle,
+.locate-label-compact { display: none; }
+.location-filter-controls,
+.app-header-controls-content { display: contents; }
+
+@media (max-width: 1199px) {
+  .app-shell:is(.workspace-shell, .fireglow-root, .cloudsea-root) {
+    height: auto;
+    min-height: 100dvh;
+    width: 100%;
+    overflow: visible;
+  }
+  .workspace-shell { display: block; }
+  .app-shell > .app-header,
+  .workspace-commandbar { position: static; }
+  .app-header {
+    padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left));
+    gap: 4px 8px;
+  }
+  .app-header-brand-copy { min-width: 0; }
+  .app-header-title { font-size: 16px; line-height: 1.35; letter-spacing: 0; }
+  .app-header .nav-tabs { overflow: visible; }
+  .app-header .nav-tabs .nav-tab {
+    min-width: 0;
+    min-height: 48px;
+    flex: 1 1 0;
+    padding: 6px 4px;
+    white-space: normal;
+    text-align: center;
+    font-size: 13px;
+  }
+  .app-header .nav-tab small { display: none; }
+  .app-header .source-button { min-width: 48px; min-height: 48px; }
+
+  /* Compact search actions still have 48 CSS px targets; only decoration shrinks. */
+  .workspace-commandbar { padding: 6px max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left)); }
+  .workspace-commandbar .search-only-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 56px 56px;
+    gap: 8px;
+  }
+  .workspace-commandbar .search-combobox { min-width: 0; grid-column: 1; }
+  .workspace-commandbar .search-box { height: auto; min-height: 48px; padding-block: 0; }
+  .workspace-commandbar .search-box input { min-height: 48px; min-width: 0; width: 100%; font-size: 16px; }
+  .locate-label-full { display: none; }
+  .locate-label-compact { display: inline; }
+  .workspace-commandbar .locate-button { grid-column: 2; min-height: 48px; padding: 6px 2px; font-size: 13px; }
+  .workspace-commandbar .mobile-filter-toggle {
+    grid-column: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 48px;
+    padding: 6px 2px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .workspace-commandbar .location-filter-controls { display: none; grid-column: 1 / -1; min-width: 0; }
+  .workspace-commandbar .location-filter-controls[data-open="true"] { display: block; }
+  .workspace-commandbar .recommendation-quick-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-commandbar .recommendation-quick-slider,
+  .workspace-commandbar .recommendation-quick-toggle { grid-column: 1 / -1; }
+  .workspace-commandbar .recommendation-quick-slider strong { font-size: 13px; white-space: normal; }
+  .workspace-commandbar .recommendation-quick-slider input[type="range"],
+  .workspace-commandbar .bortle-filter-bar-command button { min-height: 48px; }
+  .workspace-commandbar .bortle-filter-bar-command button em { display: inline; font-size: 12px; white-space: normal; }
+
+  /* Preserve the real active date/phase. The disclosure never invents summary data. */
+  .app-header:has(.fireglow-controls),
+  .app-header:has(.cloudsea-controls) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "brand" "nav" "controls";
+  }
+  .app-header:has(.fireglow-controls) .app-header-controls,
+  .app-header:has(.cloudsea-controls) .app-header-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 56px;
+    align-items: start;
+    gap: 8px;
+    width: 100%;
+  }
+  .app-header:has(.fireglow-controls) .topic-controls-toggle,
+  .app-header:has(.cloudsea-controls) .topic-controls-toggle {
+    display: block;
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 48px;
+    padding: 6px 2px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .app-header .fireglow-controls,
+  .app-header .cloudsea-controls {
+    display: grid;
+    grid-column: 1;
+    grid-row: 1;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: stretch;
+    gap: 8px;
+    min-width: 0;
+  }
+  .app-shell .app-header .segmented { min-width: 0; display: flex; flex-wrap: wrap; border-radius: 8px; overflow: visible; }
+  .app-shell .app-header .segmented button { min-width: 0; min-height: 48px; padding: 6px; font-size: 13px; white-space: normal; line-height: 1.4; }
+  .app-header[data-controls-expanded="false"] :is(.fireglow-controls, .cloudsea-controls) .segmented button:not(.active),
+  .app-header[data-controls-expanded="false"] :is(.fireglow-refresh, .cloudsea-refresh) { display: none; }
+  .app-header[data-controls-expanded="false"] .segmented button.active { width: 100%; }
+  .app-header[data-controls-expanded="true"] :is(.fireglow-controls, .cloudsea-controls) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-header[data-controls-expanded="true"] .segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-header[data-controls-expanded="true"] :is(.fireglow-refresh, .cloudsea-refresh) { min-height: 48px; }
+
+  /* Stable map dimensions, with legends in flow instead of covering pixels/attribution. */
+  .workspace-canvas .map-stage { flex: none; }
+  .workspace-canvas .map-viewport { flex: none; height: clamp(300px, 58svh, 640px); min-height: 300px; }
+  .fireglow-root .fireglow-workspace,
+  .cloudsea-root .cloudsea-body { display: flex; flex-direction: column; height: auto; overflow: visible; }
+  .fireglow-root .fireglow-map,
+  .cloudsea-root .cloudsea-map-pane {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .fireglow-root .fireglow-map > .leaflet-container,
+  .cloudsea-root .cloudsea-map-pane > .leaflet-container {
+    flex: none;
+    width: 100%;
+    height: clamp(300px, 58svh, 640px) !important;
+    min-height: 300px;
+  }
+  .fireglow-root .fireglow-legend,
+  .cloudsea-root .cloudsea-legend {
+    position: static;
+    inset: auto;
+    transform: none;
+    display: flex;
+    flex-wrap: wrap;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 8px max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+    gap: 8px;
+    border-radius: 0;
+    font-size: 12px;
+  }
+  .cloudsea-root .cloudsea-legend-title { white-space: normal; }
+  .cloudsea-root .cloudsea-legend-bar { display: flex; flex-wrap: wrap; gap: 4px; }
+  .fireglow-root .fireglow-panel,
+  .cloudsea-root .cloudsea-sidebar,
+  .fireglow-root .fireglow-list,
+  .cloudsea-root .cloudsea-site-list { width: 100%; min-width: 0; max-height: none; height: auto; overflow: visible; }
+  .fireglow-root .fireglow-model-note,
+  .cloudsea-root .cloudsea-beta-banner { padding: 8px 12px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .fireglow-root .fireglow-error,
+  .fireglow-root .fireglow-note,
+  .forecast-availability { position: static; max-width: 100%; overflow-wrap: anywhere; }
+
+  .workspace-shell .cloud-timeline,
+  .workspace-shell .cloud-timeline.is-expanded { flex: none; max-height: none; }
+  .workspace-shell .cloud-timeline-body { max-height: none; overflow: visible; }
+  .workspace-shell .cloud-timeline-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px minmax(80px, 1fr);
+    grid-template-areas: "title play toggle" "current current current" "speed range range" "track track track";
+    gap: 8px;
+  }
+  .workspace-shell .cloud-timeline-title { grid-area: title; min-width: 0; }
+  .workspace-shell .cloud-timeline-play { grid-area: play; min-width: 48px; min-height: 48px; }
+  .workspace-shell .cloud-timeline-toggle {
+    grid-area: toggle;
+    position: static;
+    inset: auto;
+    transform: none;
+    min-width: 0;
+    min-height: 48px;
+    white-space: normal;
+    box-shadow: none;
+  }
+  .workspace-shell .cloud-timeline-speed { grid-area: speed; }
+  .workspace-shell .cloud-timeline-range { grid-area: range; display: flex; }
+  .workspace-shell .cloud-timeline-range button { flex: 1; min-width: 0; min-height: 48px; white-space: nowrap; }
+  .workspace-shell .cloud-timeline-current { grid-area: current; max-width: none; white-space: normal; }
+  .workspace-shell .cloud-track { grid-area: track; min-width: 0; width: 100%; }
+  .workspace-shell .cloud-timeline-data-card small { white-space: normal; overflow-wrap: anywhere; font-size: 12px; }
+  .workspace-shell .cloud-night-tabs { flex-wrap: wrap; overflow: visible; }
+  .workspace-shell .cloud-night-tabs button { min-height: 48px; }
+
+  /* Sheets scroll internally; the document is locked only while a sheet is open. */
+  .mobile-map-panel-dock:not(.is-open) { overflow: clip; }
+  .mobile-map-panel-dock.is-open { position: fixed; inset: 0; z-index: 2800; }
+  .mobile-map-panel-drawer {
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    height: min(86dvh, 840px);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(102%);
+    visibility: hidden;
+    transition: transform 180ms ease-out, visibility 180ms;
+  }
+  .mobile-map-panel-dock.is-open .mobile-map-panel-drawer { transform: translateY(0); visibility: visible; }
+  .mobile-map-panel-drawer-head { padding: 4px max(12px, env(safe-area-inset-right)) 4px max(12px, env(safe-area-inset-left)); }
+  .mobile-map-panel-drawer-head span { display: none; }
+  .mobile-map-panel-tabs button { font-size: 12px; }
+  .mobile-map-panel-body { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  .mobile-map-panel-rail {
+    position: absolute;
+    top: auto;
+    right: auto;
+    bottom: 36px;
+    left: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 48px);
+    gap: 4px;
+    width: max-content;
+    max-width: calc(100% - 88px);
+    padding: 4px;
+    transform: none;
+    backdrop-filter: none;
+  }
+  .mobile-map-panel-rail button { min-width: 48px; font-size: 12px; }
+  .mobile-map-panel-dock:not(.is-open) > .detail-restore {
+    position: absolute;
+    top: auto;
+    right: 8px;
+    bottom: 40px;
+    left: auto;
+    min-width: 64px;
+    height: 48px;
+    min-height: 48px;
+    transform: none;
+  }
+  .map-scroll-control {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    min-height: 48px;
+    max-width: calc(100vw - 100px);
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .leaflet-container.map-page-scroll { touch-action: pan-y pinch-zoom; }
+  .mobile-filter-toggle:focus-visible,
+  .topic-controls-toggle:focus-visible,
+  .map-scroll-control:focus-visible { outline: 2px solid var(--green-soft); outline-offset: 2px; }
+}
+
+@media (max-width: 1199px) and (max-height: 520px) {
+  .workspace-canvas .map-viewport,
+  .fireglow-root .fireglow-map > .leaflet-container,
+  .cloudsea-root .cloudsea-map-pane > .leaflet-container { height: 64svh !important; min-height: 200px; }
+  .mobile-map-panel-drawer {
+    top: 0;
+    height: 100dvh;
+    width: min(75vw, 600px);
+    max-width: 100%;
+    border-radius: 0;
+    transform: translateX(102%);
+  }
+  .mobile-map-panel-dock.is-open .mobile-map-panel-drawer { transform: translateX(0); }
+}
+
+/* Press feedback changes paint only, preserving target geometry and scroll. */
+.app-header button,
+.workspace-commandbar button,
+.mobile-map-panel-drawer button,
+.map-scroll-control {
+  transition: background-color 140ms ease-out, border-color 140ms ease-out, filter 100ms ease-out;
+  touch-action: manipulation;
+}
+.app-header button:active:not(:disabled),
+.workspace-commandbar button:active:not(:disabled),
+.mobile-map-panel-drawer button:active:not(:disabled),
+.map-scroll-control:active:not(:disabled) { filter: brightness(1.18); }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header button,
+  .workspace-commandbar button,
+  .mobile-map-panel-drawer button,
+  .map-scroll-control { transition: none; }
+  .mobile-map-panel-drawer { transition: none; }
+}

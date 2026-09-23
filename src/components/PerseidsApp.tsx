@@ -131,7 +131,7 @@ export default function PerseidsApp() {
       void sampleAt(
         candidate.latitude,
         candidate.longitude,
-        candidate.elevation ?? 0,
+        candidate.elevation ?? undefined,
         candidate.name,
       );
     },
@@ -152,7 +152,7 @@ export default function PerseidsApp() {
           status={state.candidates.length ? "ok" : "empty"}
           activeId={state.selectedLocation?.id}
           onPick={(candidate) =>
-            void sampleAt(candidate.latitude, candidate.longitude, candidate.elevation ?? 0, candidate.name)
+            void sampleAt(candidate.latitude, candidate.longitude, candidate.elevation ?? undefined, candidate.name)
           }
 
           onRemove={removeCandidate}

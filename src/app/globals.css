@@ -291,6 +291,39 @@
   background: #04101a;
   font-family: var(--font-sans);
 }
+.map-tile-error,
+.cloud-canvas-status {
+  position: absolute;
+  z-index: 800;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(220, 120, 100, 0.48);
+  border-radius: 8px;
+  color: #ffd2c6;
+  background: rgba(44, 20, 35, 0.92);
+  font-size: 11px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+.map-tile-error {
+  left: auto;
+  right: 12px;
+  top: 12px;
+  bottom: auto;
+  max-width: min(260px, calc(100% - 90px));
+  pointer-events: auto;
+}
+.map-tile-error button {
+  display: block;
+  min-height: 48px;
+  padding: 8px;
+  margin-top: 6px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  cursor: pointer;
+}
 .leaflet-control-attribution {
   background: #06111899 !important;
   color: var(--muted) !important;
@@ -2951,6 +2984,15 @@
 .cloud-timeline-labels span:last-child {
   text-align: right;
 }
+.cloud-control .source-status-panel > .source-status-row {
+  grid-template-columns: 6px minmax(0, 1fr) auto;
+  align-items: center;
+}
+.cloud-control .source-status-row > span { overflow-wrap: anywhere; }
+.cloud-control .source-status-row[data-status="degraded"] b,
+.cloud-control .source-status-row[data-status="unavailable"] b { color: var(--red); }
+.cloud-control .source-status-row[data-status="unconfigured"] b,
+.cloud-control .source-status-row[data-status="not-installed"] b { color: var(--muted); }
 .cloud-timeline-play:disabled {
   opacity: .48;
   cursor: not-allowed;

@@ -583,3 +583,184 @@
     font-size: 8px;
   }
 }
+
+/* Map-first phone/tablet shell. Desktop keeps the resizable three-column
+   workspace; compact viewports use the same tool drawer as the mobile map. */
+@media (max-width: 1199px) {
+  .workspace-shell-body {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-input-frame,
+  .workspace-input,
+  .workspace-inspector,
+  .workspace-inspector-frame {
+    display: none;
+  }
+
+  .workspace-commandbar {
+    min-width: 0;
+    padding: 8px 12px;
+  }
+
+  .workspace-commandbar .search-only-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .workspace-commandbar .search-combobox {
+    grid-column: 1;
+    min-width: 0;
+    flex: none;
+  }
+
+  .workspace-commandbar .locate-button {
+    grid-column: 2;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+
+  .workspace-commandbar .recommendation-quick-controls {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex: none;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .workspace-commandbar .recommendation-quick-slider {
+    min-height: 58px;
+  }
+
+  .workspace-commandbar .recommendation-quick-bortle,
+  .workspace-commandbar .recommendation-quick-toggle {
+    grid-column: 1 / -1;
+  }
+
+  .workspace-commandbar .bortle-filter-bar-command {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .workspace-commandbar .recommendation-quick-toggle {
+    min-height: 44px;
+  }
+
+  .workspace-canvas {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .workspace-canvas .map-viewport {
+    min-height: 280px;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 600px) {
+  .workspace-commandbar {
+    padding: 5px 10px;
+  }
+
+  .workspace-commandbar .recommendation-quick-controls {
+    gap: 6px;
+  }
+
+  .workspace-commandbar .recommendation-quick-slider,
+  .workspace-commandbar .recommendation-quick-bortle {
+    min-height: 50px;
+    gap: 2px;
+    padding: 4px 8px;
+  }
+
+  .workspace-commandbar .recommendation-quick-slider > span > span,
+  .workspace-commandbar .recommendation-quick-label {
+    white-space: nowrap;
+  }
+
+  .workspace-commandbar .recommendation-quick-slider strong {
+    font-size: 9px;
+  }
+
+  .workspace-commandbar .recommendation-quick-slider input[type="range"] {
+    min-height: 20px;
+  }
+
+  .workspace-commandbar .bortle-filter-bar-command {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace-commandbar .bortle-filter-bar-command button {
+    min-height: 30px;
+    padding-block: 2px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 1199px) {
+  .workspace-commandbar .bortle-filter-bar-command {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Short landscape phones have very little vertical room. Keep all direct
+   filters in one compact row so the map rail remains reachable. */
+@media (max-height: 520px) and (max-width: 1199px) {
+  .workspace-commandbar {
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .workspace-commandbar .search-only-row {
+    gap: 6px;
+  }
+
+  .workspace-commandbar .search-box {
+    height: 36px;
+  }
+
+  .workspace-commandbar .locate-button {
+    min-height: 36px;
+    padding-inline: 10px;
+  }
+
+  .workspace-commandbar .recommendation-quick-controls {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .workspace-commandbar .recommendation-quick-slider,
+  .workspace-commandbar .recommendation-quick-bortle,
+  .workspace-commandbar .recommendation-quick-toggle {
+    grid-column: auto;
+    min-height: 42px;
+    padding: 4px 6px;
+  }
+
+  .workspace-commandbar .recommendation-quick-toggle {
+    font-size: 9px;
+    white-space: normal;
+  }
+
+  .workspace-commandbar .bortle-filter-bar-command {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+  }
+
+  .workspace-commandbar .bortle-filter-bar-command button {
+    min-height: 28px;
+    padding: 2px;
+    font-size: 9px;
+  }
+
+  .workspace-commandbar .bortle-filter-bar-command button em {
+    display: none;
+  }
+
+  .workspace-canvas .map-viewport {
+    min-height: 160px;
+  }
+}

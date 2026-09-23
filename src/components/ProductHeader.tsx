@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, type ReactNode } from "react";
+import { Suspense, useId, useRef, useState, type ReactNode } from "react";
 import NavTabs, { NavTabsFallback } from "@/components/NavTabs";
 import ChangelogModal from "@/components/ChangelogModal";
 import { APP_VERSION_LABEL } from "@/lib/appVersion";
@@ -10,7 +10,8 @@ import { APP_VERSION_LABEL } from "@/lib/appVersion";
  * only here: brand block end-justified in column 1, the four product tabs
  * exactly centred in column 2, page-specific controls pinned right in
  * column 3. Pages inject their own controls through `children`; they cannot
- * drift the shared geometry anymore.
+ * drift the shared geometry anymore. Compact topic headers progressively disclose
+ * date/phase controls while retaining their original active values and handlers.
  */
 export default function ProductHeader({
   mark,
@@ -26,9 +27,13 @@ export default function ProductHeader({
   children?: ReactNode;
 }) {
   const [changelogOpen, setChangelogOpen] = useState(false);
+  const [controlsExpanded, setControlsExpanded] = useState(false);
+  const controlsId = useId();
+  const controlsButton = useRef<HTMLButtonElement>(null);
+  const topicControls = markClassName === "fireglow-mark" || markClassName === "cloudsea-mark";
 
   return (
-    <header className="app-header">
+    <header className="app-header" data-controls-expanded={controlsExpanded}>
       <div className="app-header-brand">
         <span className={`app-header-mark${markClassName ? ` ${markClassName}` : ""}`} aria-hidden="true">
           {mark}
@@ -53,7 +58,30 @@ export default function ProductHeader({
         <NavTabs />
       </Suspense>
       {children != null && children !== false ? (
-        <div className="app-header-controls">{children}</div>
+        <div className="app-header-controls">
+          {topicControls ? <>
+          <button
+            ref={controlsButton}
+            type="button"
+            className="topic-controls-toggle"
+            aria-label={controlsExpanded ? "收起日期与时段设置" : "展开日期与时段设置"}
+            aria-expanded={controlsExpanded}
+            aria-controls={controlsId}
+            onClick={() => setControlsExpanded((value) => !value)}
+          >
+            {controlsExpanded ? "收起" : "调整"}
+          </button>
+          <div id={controlsId} className="app-header-controls-content"
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.stopPropagation();
+              setControlsExpanded(false);
+              controlsButton.current?.focus({ preventScroll: true });
+            }}>
+            {children}
+          </div>
+          </> : children}
+        </div>
       ) : (
         <div className="app-header-controls app-header-controls-empty" aria-hidden="true" />
       )}

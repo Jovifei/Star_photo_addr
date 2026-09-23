@@ -75,7 +75,6 @@ const REQUIRED_SERIES = [
   ["cloud_cover_mid", "中云"],
   ["cloud_cover_high", "高云"],
   ["precipitation", "降水"],
-  ["visibility", "能见度"],
   ["wind_speed_10m", "风速"],
   ["wind_gusts_10m", "阵风"],
   ["temperature_2m", "温度"],
