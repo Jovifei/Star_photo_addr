@@ -108,7 +108,10 @@ test.describe("responsive layout contract", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
 
-    const nav = await page.locator(".app-header .nav-tabs").boundingBox();
+    const navLocator = page.locator(".app-header .nav-tabs");
+    await expect(navLocator).toBeVisible();
+    await expect(navLocator.locator(".nav-tab")).toHaveCount(4);
+    const nav = await navLocator.boundingBox();
     const commandBar = await page.locator(".workspace-commandbar").boundingBox();
     const map = await page.locator(".map-viewport").boundingBox();
     expect(nav?.width ?? 0).toBeGreaterThanOrEqual(350);
