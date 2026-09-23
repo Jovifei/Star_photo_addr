@@ -55,6 +55,22 @@ for (const path of ["/fireglow", "/cloudsea"]) {
     await page.goto(path);
     const groups = page.locator(".app-header .segmented");
     await expect(groups).toHaveCount(2);
+    // Touch targets may be large; visual hierarchy and the document budget
+    // must still give the forecast/map priority over navigation and settings.
+    for (const [width, height] of [[320, 760], [384, 760], [430, 932], [768, 1024], [1024, 768], [812, 375]]) {
+      await page.setViewportSize({ width, height });
+      await expect.poll(async () => (await page.locator('.app-header').boundingBox())!.height).toBeLessThanOrEqual(176);
+      const phaseBox = await groups.first().boundingBox();
+      const dateBox = await groups.last().boundingBox();
+      expect(Math.abs(phaseBox!.y - dateBox!.y)).toBeLessThanOrEqual(1);
+      await expectNoOverflow(page);
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    const methodNote = page.locator('.forecast-method-note');
+    await expect(methodNote).not.toHaveAttribute('open', '');
+    await methodNote.locator('summary').click();
+    await expect(methodNote.locator('p')).toBeVisible();
+    await methodNote.locator('summary').click();
     const selected = await groups.last().locator("button.active").innerText();
     await expect(groups.last().locator("button.active")).toBeVisible();
     await expect(groups.last().locator("button:not(.active)").first()).toBeHidden();

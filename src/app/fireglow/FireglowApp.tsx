@@ -324,7 +324,7 @@ export default function FireglowApp() {
         title="火烧云条件地图"
       >
         <div className="fireglow-controls">
-          <div className="segmented" role="group" aria-label="晨昏窗口">
+          <div className="segmented" role="group" aria-label="晨昏窗口" data-mode="phase">
             <button type="button" aria-pressed={phase === "evening"} className={phase === "evening" ? "active" : ""} onClick={() => setPhase("evening")}>
               <Sunset size={14} aria-hidden="true" /> 晚霞
             </button>
@@ -359,9 +359,12 @@ export default function FireglowApp() {
         </div>
       </ProductHeader>
 
-      <div className="fireglow-model-note" role="note">
+      <details className="fireglow-model-note forecast-method-note">
+        <summary>预报条件指数 · 非实测概率</summary>
+        <p>
         条件指数由云层结构、能见度与太阳高度启发式映射，尚未完成长期实拍事件概率校准；地图色面为点位条件指数的 IDW 插值，不是卫星或雷达像素场。
-      </div>
+        </p>
+      </details>
 
       <main
         className="fireglow-workspace"

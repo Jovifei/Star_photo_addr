@@ -405,7 +405,7 @@ export default function CloudSeaApp() {
         title="云海条件地图"
       >
         <div className="cloudsea-controls">
-          <div className="segmented" role="group" aria-label="云海时段选择">
+          <div className="segmented" role="group" aria-label="云海时段选择" data-mode="phase">
             <button
               type="button"
               className={phase === "morning" ? "active" : ""}
@@ -426,7 +426,7 @@ export default function CloudSeaApp() {
             </button>
           </div>
 
-          <div className="segmented" role="group" aria-label="预报日期选择">
+          <div className="segmented" role="group" aria-label="预报日期选择" data-mode="range">
             {RANGE_OPTIONS.map((option) => (
               <button
                 key={option.value}
@@ -456,9 +456,12 @@ export default function CloudSeaApp() {
         </div>
       </ProductHeader>
 
-      <div className="cloudsea-beta-banner" role="note">
+      <details className="cloudsea-beta-banner forecast-method-note">
+        <summary>GFS 模型 · 条件指数，非实测概率</summary>
+        <p>
         Beta · 条件指数综合 Open-Meteo GFS surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
-      </div>
+        </p>
+      </details>
       {dataNotice ? (
         <div className="cloudsea-beta-banner" role="status">
           数据状态 · {dataNotice}

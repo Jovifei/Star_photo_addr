@@ -6,6 +6,10 @@
 .location-filter-controls,
 .app-header-controls-content { display: contents; }
 
+.forecast-method-note > summary { cursor: pointer; }
+.forecast-method-note > p { margin: 0 0 8px; line-height: 1.6; }
+.forecast-method-note > summary:focus-visible { outline: 2px solid var(--green-soft); outline-offset: 2px; }
+
 @media (max-width: 1199px) {
   .app-shell:is(.workspace-shell, .fireglow-root, .cloudsea-root) {
     height: auto;
@@ -20,9 +24,14 @@
     padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 6px max(10px, env(safe-area-inset-left));
     gap: 4px 8px;
   }
-  .app-header-brand-copy { min-width: 0; }
+  .app-header-brand-copy { min-width: 0; display: flex; align-items: center; gap: 8px; }
+  .app-header .app-header-mark { width: 24px; height: 24px; background: none; box-shadow: none; }
+  .app-header .app-header-brand { gap: 6px; }
+  .app-header .app-header-eyebrow-row { order: 2; margin: 0; }
+  .app-header .app-header-eyebrow { display: none; }
+  .app-header .app-header-version-badge { min-height: 48px; min-width: 48px; padding: 0 2px; border: 0; background: none; color: var(--muted); font-size: 11px; box-shadow: none; transform: none; }
   .app-header-title { font-size: 16px; line-height: 1.35; letter-spacing: 0; }
-  .app-header .nav-tabs { overflow: visible; }
+  .app-header .nav-tabs { overflow: visible; padding: 0; border: 0; border-radius: 0; background: none; gap: 4px; }
   .app-header .nav-tabs .nav-tab {
     min-width: 0;
     min-height: 48px;
@@ -31,7 +40,14 @@
     white-space: normal;
     text-align: center;
     font-size: 13px;
+    font-weight: 500;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
   }
+  .app-header .nav-tabs .nav-tab.active { color: var(--text); border-bottom-color: var(--green-soft); background: none; box-shadow: none; }
   .app-header .nav-tab small { display: none; }
   .app-header .source-button { min-width: 48px; min-height: 48px; }
 
@@ -119,17 +135,32 @@
   .app-header[data-controls-expanded="false"] :is(.fireglow-controls, .cloudsea-controls) .segmented button:not(.active),
   .app-header[data-controls-expanded="false"] :is(.fireglow-refresh, .cloudsea-refresh) { display: none; }
   .app-header[data-controls-expanded="false"] .segmented button.active { width: 100%; }
+  /* Explicit placement wins even when a topic stylesheet arrives after navigation. */
+  .app-shell .app-header .segmented[data-mode="phase"],
+  .app-shell .app-header .segmented[data-mode="range"] { grid-column: auto; grid-row: auto; }
+  .app-header[data-controls-expanded="false"] .segmented { padding: 0; border: 0; background: none; }
+  .app-shell .app-header[data-controls-expanded="false"] .segmented button.active {
+    justify-content: flex-start;
+    padding: 4px 2px;
+    color: var(--text);
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    font-weight: 500;
+  }
+  .app-header[data-controls-expanded="false"] .segmented[data-mode="phase"] button svg { width: 14px; height: 14px; flex-shrink: 0; }
   .app-header[data-controls-expanded="true"] :is(.fireglow-controls, .cloudsea-controls) {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    grid-template-columns: minmax(0, 1fr);
+    display: contents;
   }
   .app-header[data-controls-expanded="true"] .segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .app-header[data-controls-expanded="true"] :is(.fireglow-refresh, .cloudsea-refresh) { min-height: 48px; }
+  .app-shell .app-header[data-controls-expanded="true"] .segmented[data-mode="phase"] { grid-column: 1; grid-row: 1; }
+  .app-shell .app-header[data-controls-expanded="true"] .segmented[data-mode="range"] { grid-column: 1 / -1; grid-row: 2; }
+  .app-header[data-controls-expanded="true"] :is(.fireglow-refresh, .cloudsea-refresh) { min-height: 48px; min-width: 96px; grid-column: 1 / -1; grid-row: 3; justify-self: end; }
 
   /* Stable map dimensions, with legends in flow instead of covering pixels/attribution. */
   .workspace-canvas .map-stage { flex: none; }
-  .workspace-canvas .map-viewport { flex: none; height: clamp(300px, 58svh, 640px); min-height: 300px; }
+  .workspace-canvas .map-viewport { flex: none; height: clamp(300px, 52svh, 560px); min-height: 300px; }
   .fireglow-root .fireglow-workspace,
   .cloudsea-root .cloudsea-body { display: flex; flex-direction: column; height: auto; overflow: visible; }
   .fireglow-root .fireglow-map,
@@ -146,7 +177,7 @@
   .cloudsea-root .cloudsea-map-pane > .leaflet-container {
     flex: none;
     width: 100%;
-    height: clamp(300px, 58svh, 640px) !important;
+    height: clamp(300px, 52svh, 560px) !important;
     min-height: 300px;
   }
   .fireglow-root .fireglow-legend,
@@ -172,6 +203,8 @@
   .cloudsea-root .cloudsea-site-list { width: 100%; min-width: 0; max-height: none; height: auto; overflow: visible; }
   .fireglow-root .fireglow-model-note,
   .cloudsea-root .cloudsea-beta-banner { padding: 8px 12px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .app-shell .forecast-method-note { padding: 0 10px; margin: 4px 12px 0; border: 0; border-radius: 0; background: none; }
+  .app-shell .forecast-method-note > summary { min-height: 48px; align-content: center; color: var(--muted); }
   .fireglow-root .fireglow-error,
   .fireglow-root .fireglow-note,
   .forecast-availability { position: static; max-width: 100%; overflow-wrap: anywhere; }
@@ -291,6 +324,26 @@
 .map-scroll-control {
   transition: background-color 140ms ease-out, border-color 140ms ease-out, filter 100ms ease-out;
   touch-action: manipulation;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .app-shell > .app-header,
+  .app-shell > .app-header:has(.fireglow-controls),
+  .app-shell > .app-header:has(.cloudsea-controls) {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr);
+    grid-template-areas: "brand nav" "controls controls";
+    padding-inline: 16px;
+  }
+  .app-header-controls-empty { display: none; }
+  .app-header .fireglow-controls,
+  .app-header .cloudsea-controls { grid-template-columns: auto minmax(0, 1fr); }
+  .app-header[data-controls-expanded="true"] .segmented[data-mode="range"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) and (min-height: 521px) {
+  .workspace-canvas .map-viewport,
+  .fireglow-root .fireglow-map > .leaflet-container,
+  .cloudsea-root .cloudsea-map-pane > .leaflet-container { height: clamp(300px, 46svh, 480px) !important; }
 }
 .app-header button:active:not(:disabled),
 .workspace-commandbar button:active:not(:disabled),

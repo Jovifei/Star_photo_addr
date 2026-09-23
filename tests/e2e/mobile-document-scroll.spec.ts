@@ -33,13 +33,19 @@ for (const width of [360, 390, 768, 1024]) {
     await expect(map).toHaveClass(/map-page-scroll/);
     // Trusted touch events exercise browser scrolling; do not fake scrollTop.
     const cdp=await page.context().newCDPSession(page);
+    // A compact tablet page may have less than 80px of content below the fold.
+    // Require the real gesture to consume the available scroll, not an
+    // impossible fixed distance beyond the end of the document.
+    const availableScroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+    expect(availableScroll).toBeGreaterThan(0);
+    const expectedTravel = Math.min(80, availableScroll);
     const box=(await map.boundingBox())!;
     const start=Math.min(730,box.y+box.height-30);
     await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:width/2,y:start}]});
     for(let step=1;step<=10;step++) await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:width/2,y:start-step*25}]});
     await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(80);
-    await expect.poll(()=>page.locator('.app-header').evaluate(el=>el.getBoundingClientRect().top)).toBeLessThan(-80);
+    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThanOrEqual(expectedTravel - 1);
+    await expect.poll(()=>page.locator('.app-header').evaluate(el=>el.getBoundingClientRect().top)).toBeLessThanOrEqual(1 - expectedTravel);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
     await page.screenshot({path:`tmp/scroll-${width}.png`});
   });
