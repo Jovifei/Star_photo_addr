@@ -71,6 +71,43 @@ export interface CloudSeaPressureSummary {
   failedSites: number;
 }
 
+export interface CloudSeaSurfaceSummary {
+  status: PressureEvidenceStatus;
+  availableSites: number;
+  totalSites: number;
+  failedSites: number;
+}
+
+export function hasValidCloudSeaCoverageCounts(
+  summary: CloudSeaSurfaceSummary | CloudSeaPressureSummary | null | undefined,
+  expectedSiteCount: number,
+): boolean {
+  return Boolean(
+    summary &&
+    Number.isInteger(expectedSiteCount) &&
+    expectedSiteCount >= 0 &&
+    Number.isInteger(summary.availableSites) &&
+    Number.isInteger(summary.totalSites) &&
+    Number.isInteger(summary.failedSites) &&
+    summary.totalSites === expectedSiteCount &&
+    summary.availableSites >= 0 &&
+    summary.availableSites <= summary.totalSites &&
+    summary.failedSites === summary.totalSites - summary.availableSites,
+  );
+}
+
+export function hasCompleteCloudSeaCoverage(
+  summary: CloudSeaSurfaceSummary | CloudSeaPressureSummary | null | undefined,
+  expectedSiteCount: number,
+): boolean {
+  return Boolean(
+    hasValidCloudSeaCoverageCounts(summary, expectedSiteCount) &&
+    summary?.status === "available" &&
+    summary.availableSites === expectedSiteCount &&
+    summary.failedSites === 0,
+  );
+}
+
 export interface CloudSeaSnapshot {
   date: string;
   model: ForecastModel;
@@ -78,6 +115,7 @@ export interface CloudSeaSnapshot {
   source: string;
   stale: boolean;
   refreshError?: string;
+  surface?: CloudSeaSurfaceSummary;
   pressure?: CloudSeaPressureSummary;
   sites: Record<string, CloudSeaSiteScore>;
 }
@@ -601,10 +639,26 @@ export function buildCloudSeaSnapshot(
     };
   }
 
+  const hasSurfaceWindow = (window: CloudSeaWindowScore) =>
+    window.lowCloud !== null &&
+    window.midCloud !== null &&
+    window.highCloud !== null &&
+    window.humidity !== null &&
+    window.windSpeed !== null;
+  const totalSites = CLOUD_SEA_SITES.length;
+  const surfaceAvailableSites = CLOUD_SEA_SITES.filter((site) => {
+    const windows = sitesRecord[site.id];
+    return Boolean(
+      windows &&
+      hasSurfaceWindow(windows.morning) &&
+      hasSurfaceWindow(windows.evening),
+    );
+  }).length;
+  const surfaceFailedSites = totalSites - surfaceAvailableSites;
+
   const availableSites = CLOUD_SEA_SITES.filter(
     (site) => pressureBySite[site.id],
   ).length;
-  const totalSites = CLOUD_SEA_SITES.length;
   const failedSites = Math.max(
     totalSites - availableSites,
     Object.keys(pressureErrors).length,
@@ -619,6 +673,12 @@ export function buildCloudSeaSnapshot(
         ? "Open-Meteo surface weather + pressure-level model profile (Beta)"
         : "Open-Meteo surface weather; pressure-level model profile unavailable (Beta)",
     stale: false,
+    surface: {
+      status: pressureStatusFor(surfaceAvailableSites, totalSites),
+      availableSites: surfaceAvailableSites,
+      totalSites,
+      failedSites: surfaceFailedSites,
+    },
     pressure: {
       status: pressureStatusFor(availableSites, totalSites),
       availableSites,

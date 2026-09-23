@@ -30,7 +30,8 @@ test("CloudSea null scores use an unknown marker instead of p20", async ({ page 
         generatedAt: `${date}T00:00:00.000Z`,
         source: "E2E unknown CloudSea snapshot",
         stale: false,
-        pressure: { status: "available", availableSites: 0, totalSites: 0, failedSites: 0 },
+        surface: { status: "unavailable", availableSites: 0, totalSites: 54, failedSites: 54 },
+        pressure: { status: "unavailable", availableSites: 0, totalSites: 54, failedSites: 54 },
         sites: {},
       }),
     });

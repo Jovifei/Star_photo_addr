@@ -182,6 +182,7 @@ test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo)
   await page.locator(".fireglow-list button").first().click();
   const inspector = page.locator(".fireglow-site-detail").first();
   await expect(inspector).toBeVisible();
+  await expect(inspector).not.toHaveAttribute("aria-modal", "true");
   await expect(page.locator(".fireglow-panel .fireglow-site-detail")).toHaveCount(0);
   const panelBox = await page.locator(".fireglow-panel").boundingBox();
   const mapBox = await page.locator(".fireglow-map").boundingBox();

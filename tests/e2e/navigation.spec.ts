@@ -73,6 +73,24 @@ function buildForecastResponse(requestUrl: string) {
   };
 }
 
+test("version history shows v1.0.19 and preserves v1.0.18", async ({ page }) => {
+  await page.addInitScript(() => localStorage.clear());
+  await page.route("**/api/forecast?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(buildForecastResponse(route.request().url())),
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: /查看版本更新记录 v1\.0\.19/ }).click();
+  const dialog = page.getByRole("dialog", { name: "版本更新记录" });
+  const releases = dialog.locator(".changelog-release");
+  await expect(releases.first()).toContainText("v1.0.19");
+  await expect(releases.first()).toContainText("当前版本");
+  await expect(releases.nth(1)).toContainText("v1.0.18");
+});
+
 test("sites compatibility route preserves context and opens the dark-sky site panel", async ({
   page,
   request,

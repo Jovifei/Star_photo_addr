@@ -3,6 +3,8 @@ import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
 import {
   buildCloudSeaSnapshot,
+  hasCompleteCloudSeaCoverage,
+  hasValidCloudSeaCoverageCounts,
   type CloudSeaSnapshot,
   type RawSiteHourly,
 } from "@/lib/cloudsea";
@@ -75,10 +77,30 @@ function cacheAgeMs(entry: CachedSnapshot): number {
 
 function isCacheableSnapshot(snapshot: CloudSeaSnapshot): boolean {
   return (
-    snapshot.pressure?.status === "available" &&
-    snapshot.pressure.availableSites === snapshot.pressure.totalSites &&
-    snapshot.pressure.failedSites === 0
+    hasCompleteCloudSeaCoverage(snapshot.surface, CLOUD_SEA_SITES.length) &&
+    hasCompleteCloudSeaCoverage(snapshot.pressure, CLOUD_SEA_SITES.length)
   );
+}
+
+function degradationMessage(snapshot: CloudSeaSnapshot): string {
+  const issues: string[] = [];
+  const surface = snapshot.surface;
+  if (!hasCompleteCloudSeaCoverage(surface, CLOUD_SEA_SITES.length)) {
+    issues.push(
+      hasValidCloudSeaCoverageCounts(surface, CLOUD_SEA_SITES.length)
+        ? `地面天气仅 ${surface!.availableSites}/${surface!.totalSites} 地点窗口完整`
+        : `地面天气覆盖摘要不完整（期望 ${CLOUD_SEA_SITES.length} 地点）`,
+    );
+  }
+  const pressure = snapshot.pressure;
+  if (!hasCompleteCloudSeaCoverage(pressure, CLOUD_SEA_SITES.length)) {
+    issues.push(
+      hasValidCloudSeaCoverageCounts(pressure, CLOUD_SEA_SITES.length)
+        ? `压力层仅 ${pressure!.availableSites}/${pressure!.totalSites} 地点可用`
+        : `压力层覆盖摘要不完整（期望 ${CLOUD_SEA_SITES.length} 地点）`,
+    );
+  }
+  return issues.length ? issues.join("；") : "云海数据不完整";
 }
 
 function usableStaleCache(key: string): CachedSnapshot | null {
@@ -399,16 +421,16 @@ export async function GET(request: NextRequest) {
 
   try {
     const snapshot = await activeTask;
-    // A surface-success/pressure-failure response is useful as an explicit
-    // degraded result, but it must not block the next request for the whole
-    // normal TTL. Only complete pressure evidence is a fresh cache entry.
+    // Partial surface or pressure coverage remains useful only as an explicit
+    // degraded result and must not block a retry for the normal TTL.
     const cacheable = isCacheableSnapshot(snapshot);
     if (cacheable) rememberSnapshot(key, snapshot);
     if (!cacheable) {
+      const reason = degradationMessage(snapshot);
       const fallback = usableStaleCache(key);
       if (fallback) {
         return NextResponse.json(
-          withCacheFreshness(fallback, "本次压力层数据不完整，正在使用较早的成功快照"),
+          withCacheFreshness(fallback, `本次${reason}，正在使用较早的成功快照`),
           {
             headers: {
               "Cache-Control": "no-store",
@@ -418,18 +440,21 @@ export async function GET(request: NextRequest) {
         );
       }
     }
-    return NextResponse.json(snapshot, {
-      headers: {
-        "Cache-Control": cacheable
-          ? "public, max-age=0, s-maxage=300, stale-while-revalidate=600"
-          : "no-store",
-        "X-Cloudsea-Cache": cacheable
-          ? forceRefresh
-            ? "forced-fresh"
-            : "fresh"
-          : "degraded",
+    return NextResponse.json(
+      cacheable ? snapshot : { ...snapshot, refreshError: degradationMessage(snapshot) },
+      {
+        headers: {
+          "Cache-Control": cacheable
+            ? "public, max-age=0, s-maxage=300, stale-while-revalidate=600"
+            : "no-store",
+          "X-Cloudsea-Cache": cacheable
+            ? forceRefresh
+              ? "forced-fresh"
+              : "fresh"
+            : "degraded",
+        },
       },
-    });
+    );
   } catch (error) {
     const fallback = usableStaleCache(key);
     const message =

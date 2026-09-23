@@ -1,8 +1,14 @@
 # 逐星提交与变更台账
 
-> 状态日期：2026-09-10
+> 状态日期：2026-09-23
 > 记录范围：影响产品、数据、部署、测试体系或项目跟踪的主干提交。
 > 规则：PR 合并后记录最终主干 SHA；未完成验证的直接提交必须明确标记，不得用旧绿灯代替。
+
+## 0.1 v1.0.19 发布前候选快照（2026-09-23）
+
+| 日期 | 工作包 | PR / Commit | 候选交付 | 发布前验证与边界 |
+| --- | --- | --- | --- | --- |
+| 2026-09-23 | RELEASE-MOBILE-DATA-019 | PR pending；`codex/mobile-data-integrity-v1.0.19-20260923` | 修复移动内容流、云海 surface/pressure 覆盖、火烧云逐日/晨昏质量、未知海拔与桌面 modal 语义；更新 v1.0.19 用户记录 | `npm run check` 63/368；Chromium 230/163/67/0；Firefox/WebKit 4/4；live smoke 与依赖审计 PASS；公网 v1.0.18 / `349db7b` 为部署前基线；main merge/ECS 部署尚待执行 |
 
 ## 0. 本轮已合并并部署
 
@@ -29,11 +35,11 @@
 | 2026-08-22 | UX-MAP-002B | Direct / [`4c6349cb`](https://github.com/Jovifei/Star_photo_addr/commit/4c6349cb8b0457f3cd2f6be24b27d2e7ccaa23bf) | localStorage/请求状态需要避免 SSR 与旧结果污染 | 面板管理器改为纯客户端动态边界；附近排行按请求键隔离；E2E 日期动态化 | 静态代码复核完成；完整 main push CI 需由 Actions 页面或本地命令确认 |
 | 2026-08-22 | UX-MAP-002C | Direct / [`3fc11fcb`](https://github.com/Jovifei/Star_photo_addr/commit/3fc11fcb00151b3ab8e80239137728132f51407e) | “无数据”含义不清、三级边界层次弱、两个地图工作区同质化 | 侧栏未安装/无覆盖状态、海拔统一显示、国家/省/市虚线层级、暗夜选址独立标题、星空/云海/晚霞规划 | 代码和回归测试已提交；直接推送的 Actions Check Run 当前连接器不可见，工作包暂不标 PASS |
 
-## 2. 当前进行中
+## 2. 2026-09-23 当前发布候选（合并前快照）
 
 | 工作包 | 目标 | 已完成 | 剩余门禁 |
 | --- | --- | --- | --- |
-| — | 无活动代码工作包 | v1.0.14 已合并、部署并在公网验证 | 真机、性能、授权暗夜栅格/边界和科学校准仍保持原状态，继续按 `TEST_BACKLOG.md` 管理 |
+| RELEASE-MOBILE-DATA-019 | 交付 v1.0.19 修复并验证移动端内容流与数据覆盖完整性 | 本地 check/E2E/cross-browser/live smoke、版本记录和独立复审均通过 | 推送 `codex/mobile-data-integrity-v1.0.19-20260923`、GitHub CI、main 合并、ECS 部署；真机/软键盘仍需人工验收 |
 
 ## 3. 以后每条台账必须回答的问题
 

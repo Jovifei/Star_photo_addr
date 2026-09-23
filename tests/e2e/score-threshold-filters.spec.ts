@@ -121,7 +121,8 @@ test("云海分数滑块只保留达到门槛的排行地点", async ({ page }) 
         generatedAt: `${date}T00:00:00.000Z`,
         source: "E2E score threshold",
         stale: false,
-        pressure: { status: "available", availableSites: 3, totalSites: 3, failedSites: 0 },
+        surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+        pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         sites: {
           "cs-taizijian": { morning: cloudSeaWindow(100), evening: cloudSeaWindow(40) },
           "cs-qianniugang": { morning: cloudSeaWindow(60), evening: cloudSeaWindow(40) },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 import {
   X,
   Mountain,
@@ -21,6 +21,7 @@ import type { CloudSeaWindowScore } from "@/lib/cloudsea";
 import { positionBadgeTone } from "@/lib/cloudsea";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
+import { ResponsiveTopicDetailModalContext } from "@/components/ResponsiveTopicDetail";
 
 interface CloudSeaSiteDetailProps {
   site: CloudSeaSite;
@@ -98,6 +99,7 @@ export default function CloudSeaSiteDetail({
   dateKey,
   onClose,
 }: CloudSeaSiteDetailProps) {
+  const isModal = useContext(ResponsiveTopicDetailModalContext);
   const pLevel = markerLevelFor(win.score, win.conditionLevel);
   const badgeTone = positionBadgeTone(win.cloudPosition);
 
@@ -189,7 +191,7 @@ export default function CloudSeaSiteDetail({
     <aside
       className="cloudsea-site-detail"
       role="dialog"
-      aria-modal="true"
+      aria-modal={isModal ? true : undefined}
       aria-label={`${site.name}云海摄影详情`}
     >
       <div className="cs-detail-header">

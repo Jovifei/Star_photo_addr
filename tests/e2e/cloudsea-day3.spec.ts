@@ -112,10 +112,11 @@ test("云海日期控件显示日期，并实际请求后日与三日总览的�
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E surface + pressure-level model profile",
         stale: false,
+        surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         pressure:
           date === dates[2] && requestCount === 1
-            ? { status: "partial", availableSites: 0, totalSites: 1, failedSites: 1 }
-            : { status: "available", availableSites: 1, totalSites: 1, failedSites: 0 },
+            ? { status: "partial", availableSites: 0, totalSites: 54, failedSites: 54 }
+            : { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         sites: { "cs-taizijian": { morning: window, evening: window } },
       }),
     });

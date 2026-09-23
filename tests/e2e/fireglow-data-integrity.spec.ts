@@ -23,6 +23,12 @@ function windowScore(score: number | null) {
   };
 }
 
+function shiftDate(date: string, days: number): string {
+  const value = new Date(`${date}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
 test("failed refresh preserves the same labelled snapshot in map, list and detail, then recovers", async ({ page }) => {
   let fail = false;
   let score = 72;
@@ -116,4 +122,106 @@ test("stale fireglow state is explicit on map, ranking and detail", async ({ pag
   await expect(page.locator(".fireglow-panel-head")).toContainText("数据已降级");
   await page.locator(".fireglow-list li button").first().click();
   await expect(page.getByRole("dialog", { name: /火烧云摄影详情/ })).toContainText("数据已降级");
+});
+
+test("three-day view labels a cold failed date as incomplete across map, ranking and detail", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "三日失败日期一致性仅在桌面 Chromium 验证一次");
+  const requestedDates = new Set<string>();
+  let missingDate: string | null = null;
+  await page.route("**/api/fireglow/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-23";
+    requestedDates.add(date);
+    if (date === missingDate) {
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "fixture HTTP 503" }) });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "icon",
+        generatedAt: `${date}T00:30:00.000Z`,
+        source: "E2E partial three-day coverage",
+        stale: false,
+        sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(72) } },
+      }),
+    });
+  });
+
+  await page.goto("/fireglow");
+  await expect(page.locator(".fireglow-score b").first()).toHaveText("72/100");
+  const baseDate = [...requestedDates][0]!;
+  missingDate = shiftDate(baseDate, 2);
+  await page.locator('.segmented[data-mode="range"] button').nth(3).click();
+
+  await expect(page.locator(".fireglow-map-status")).toContainText("数据已降级");
+  await expect(page.locator(".fireglow-panel-head")).toContainText("数据已降级");
+  await expect(page.locator(".fireglow-error:not(.fireglow-phase-unavailable)")).toContainText("fixture HTTP 503");
+  await page.locator(".fireglow-list button").first().click();
+  await expect(page.locator(".fg-detail-data-status")).toContainText("数据已降级");
+});
+
+test("reports when the selected fireglow phase has no scores even if the other phase does", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "晨昏评分覆盖差异只需桌面 Chromium 验证一次");
+  await page.route("**/api/fireglow/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-23";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "icon",
+        generatedAt: `${date}T00:30:00.000Z`,
+        source: "E2E single-phase coverage",
+        stale: false,
+        sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(null) } },
+      }),
+    });
+  });
+
+  await page.goto("/fireglow");
+  await expect(page.locator(".fireglow-phase-unavailable")).toContainText("晚霞");
+  await expect(page.locator(".fireglow-panel-head")).toContainText("数据不足");
+  await expect(page.locator(".fireglow-empty")).toContainText("当前晚霞时段暂无有效评分");
+  await expect(page.locator(".fireglow-empty")).not.toContainText("暂无达到 ≥0 分");
+
+  await page.locator('.segmented[aria-label="晨昏窗口"] button').nth(1).click();
+  await expect(page.locator(".fireglow-score b").first()).toHaveText("72/100");
+  await expect(page.locator(".fireglow-phase-unavailable")).toHaveCount(0);
+});
+
+test("retains the selected-phase warning when another date in the range fails", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "晨昏评分与日期降级组合只需桌面 Chromium 验证一次");
+  const requestedDates = new Set<string>();
+  let missingDate: string | null = null;
+  await page.route("**/api/fireglow/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-23";
+    requestedDates.add(date);
+    if (date === missingDate) {
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "fixture HTTP 503" }) });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "icon",
+        generatedAt: `${date}T00:30:00.000Z`,
+        source: "E2E partial phase and date coverage",
+        stale: false,
+        sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(null) } },
+      }),
+    });
+  });
+
+  await page.goto("/fireglow");
+  await expect.poll(() => requestedDates.size).toBeGreaterThan(0);
+  const baseDate = [...requestedDates][0]!;
+  missingDate = shiftDate(baseDate, 2);
+  await page.locator('.segmented[data-mode="range"] button').nth(3).click();
+  await expect(page.locator(".fireglow-map-status")).toContainText("数据已降级");
+  await expect(page.locator(".fireglow-phase-unavailable")).toContainText("晚霞");
+  await expect(page.locator(".fireglow-error:not(.fireglow-phase-unavailable)")).toContainText("fixture HTTP 503");
 });

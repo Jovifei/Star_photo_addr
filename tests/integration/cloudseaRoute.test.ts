@@ -254,6 +254,52 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(secondBody.pressure.availableSites).toBe(CLOUD_SEA_SITES.length);
   });
 
+  it("marks partial surface coverage degraded and does not cache it as fresh", async () => {
+    let surfaceRecovered = false;
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      const count = coordinateCount(url);
+      const hourly = url.searchParams.get("hourly") ?? "";
+      if (hourly.includes("geopotential_height_")) {
+        return new Response(
+          JSON.stringify(Array.from({ length: count }, () => pressureEntry())),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      const rows = Array.from({ length: count }, () => ({
+        hourly: { ...hourlyEntry().hourly },
+      }));
+      if (!surfaceRecovered && rows[0]) {
+        rows[0].hourly.wind_speed_10m = Array(TIME.length).fill(null);
+      }
+      return new Response(JSON.stringify(rows), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const first = await GET(request("date=2026-09-21&model=icon"));
+    const firstBody = await first.json();
+    expect(first.status).toBe(200);
+    expect(firstBody.surface.status).toBe("partial");
+    expect(firstBody.surface.availableSites).toBe(CLOUD_SEA_SITES.length - 1);
+    expect(firstBody.refreshError).toContain("地面天气");
+    expect(first.headers.get("X-Cloudsea-Cache")).toBe("degraded");
+    expect(first.headers.get("Cache-Control")).toBe("no-store");
+
+    const callsAfterPartial = fetchMock.mock.calls.length;
+    surfaceRecovered = true;
+    const second = await GET(request("date=2026-09-21&model=icon"));
+    const secondBody = await second.json();
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterPartial);
+    expect(secondBody.surface.status).toBe("available");
+    expect(secondBody.surface.availableSites).toBe(CLOUD_SEA_SITES.length);
+    expect(second.headers.get("X-Cloudsea-Cache")).toBe("fresh");
+  });
+
   it("returns every declared cloudsea field for both windows at every catalog site", async () => {
     vi.stubGlobal("fetch", successfulFetch());
     const { GET } = await import("@/app/api/cloudsea/snapshot/route");

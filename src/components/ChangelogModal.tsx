@@ -12,9 +12,32 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
+    date: "2026-09-23",
+    tag: "移动端与数据完整性",
+    current: true,
+    highlights: [
+      {
+        icon: Layers,
+        title: "手机与平板内容流更清晰",
+        desc: "详情与地图手势按设备视口工作；纵向滚动、地图重试和抽屉焦点行为分别验证。",
+      },
+      {
+        icon: CloudSun,
+        title: "预测数据缺失会明确降级",
+        desc: "云海地面/压力覆盖、火烧云日期与晨昏时段分别检查；未知数据不再伪装成完整排行。",
+      },
+      {
+        icon: Mountain,
+        title: "海拔未知不再显示 0m",
+        desc: "缺失或空白海拔保持待核验；有明确来源的海平面 0m 仍会如实保留。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.18",
     date: "2026-09-14",
     tag: "跨午夜验证稳定性",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: ShieldCheck,
@@ -25,11 +48,6 @@ const VERSIONS = [
         icon: CloudSun,
         title: "验证夹具不改生产口径",
         desc: "本次只修正 E2E 合成数据的日期边界，生产评分、天气来源和完整性门槛保持不变。",
-      },
-      {
-        icon: Layers,
-        title: "跨日期边界回归",
-        desc: "低云分层门禁在凌晨、桌面和移动视口均有覆盖，避免测试时间漂移掩盖真实回归。",
       },
     ],
   },

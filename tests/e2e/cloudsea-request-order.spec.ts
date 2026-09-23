@@ -47,7 +47,8 @@ function snapshot(date: string, score: number) {
     generatedAt: `${date}T00:30:00.000Z`,
     source: "E2E request ordering",
     stale: false,
-    pressure: { status: "available", availableSites: 1, totalSites: 1, failedSites: 0 },
+    surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+    pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
     sites: { "cs-taizijian": { morning: window, evening: window } },
   };
 }

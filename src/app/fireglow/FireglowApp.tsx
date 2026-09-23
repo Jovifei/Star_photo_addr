@@ -135,6 +135,7 @@ export default function FireglowApp() {
   const [rangeMode, setRangeMode] = useState<RangeMode>(0);
   const [phase, setPhase] = useState<Phase>("evening");
   const [snapshots, setSnapshots] = useState<Record<string, FireGlowSnapshot | null>>({});
+  const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [requestKey, setRequestKey] = useState("");
@@ -162,6 +163,11 @@ export default function FireglowApp() {
         setRequestKey(dates.join("|"));
         setStatus("loading");
         setError("");
+        setDateErrors((current) => {
+          const next = { ...current };
+          dates.forEach((date) => delete next[date]);
+          return next;
+        });
         Promise.allSettled(
           dates.map((date) =>
             fetch(
@@ -182,6 +188,21 @@ export default function FireglowApp() {
         )
           .then((results) => {
             if (controller.signal.aborted || loadTokenRef.current !== token) return;
+            setDateErrors((current) => {
+              const next = { ...current };
+              results.forEach((result, index) => {
+                const date = dates[index];
+                if (!date) return;
+                if (result.status === "fulfilled") {
+                  delete next[date];
+                } else {
+                  next[date] = result.reason instanceof Error
+                    ? result.reason.message
+                    : "快照请求失败";
+                }
+              });
+              return next;
+            });
             setSnapshots((current) => {
               const next = { ...current };
               results.forEach((result, index) => {
@@ -269,7 +290,7 @@ export default function FireglowApp() {
     ) ?? activeDates[0] ?? baseDate;
   }, [activeDates, baseDate, phase, selectedSite, snapshots]);
   const activeDataDegraded = activeDates.some(
-    (date) => Boolean(snapshots[date]?.stale || snapshots[date]?.refreshError),
+    (date) => Boolean(dateErrors[date] || snapshots[date]?.stale || snapshots[date]?.refreshError),
   );
   const dataQualityNotice = activeDataDegraded
     ? "数据已降级：地图、排行与详情仅供参考，禁止作为新鲜推荐"
@@ -283,6 +304,16 @@ export default function FireglowApp() {
   const visibleStatus = requestKey === activeDates.join("|") ? status : "loading";
   const visibleError = requestKey === activeDates.join("|") ? error : "";
   const hasUsableData = ranked.some((site) => site.window.score != null);
+  const hasUsablePhaseData = activeDates.some((date) =>
+    Object.values(snapshots[date]?.sites ?? {}).some(
+      (site) => site[phase]?.score != null,
+    ),
+  );
+  const hasActiveSnapshot = activeDates.some((date) => Boolean(snapshots[date]));
+  const phaseUnavailableNotice =
+    visibleStatus !== "loading" && hasActiveSnapshot && !hasUsablePhaseData
+      ? `当前${phase === "evening" ? "晚霞" : "朝霞"}时段暂无有效评分；请切换晨昏时段或刷新数据。`
+      : "";
 
   return (
     <div className="fireglow-root app-shell">
@@ -426,7 +457,7 @@ export default function FireglowApp() {
         <aside className="fireglow-panel" aria-label="火烧云条件指数排行">
           <div className="fireglow-panel-head">
             <strong>{phase === "evening" ? "晚霞条件排行" : "朝霞条件排行"}{rangeMode === 3 ? " · 三日最佳" : ` · ${dateLabel(activeDates[0])}`}</strong>
-            <span>{dataQualityNotice || (visibleStatus === "error" && !hasUsableData ? "数据不可用" : visibleStatus === "loading" ? "正在更新" : `符合 ≥${scoreThreshold}分 ${filteredRanked.length} 个点位`)}</span>
+            <span>{dataQualityNotice || (phaseUnavailableNotice ? "数据不足" : visibleStatus === "error" && !hasUsableData ? "数据不可用" : visibleStatus === "loading" ? "正在更新" : `符合 ≥${scoreThreshold}分 ${filteredRanked.length} 个点位`)}</span>
           </div>
           <ScoreThresholdControl
             value={scoreThreshold}
@@ -436,9 +467,12 @@ export default function FireglowApp() {
             onChange={setScoreThreshold}
           />
           {visibleError && <p className="fireglow-error" role="status">{visibleError}</p>}
+          {phaseUnavailableNotice && <p className="fireglow-error fireglow-phase-unavailable" role="status">{phaseUnavailableNotice}</p>}
           <ol className="fireglow-list">
             {visibleStatus === "error" && !hasUsableData ? (
               <li className="fireglow-empty fireglow-empty--error">暂无有效火烧云数据，请刷新重试</li>
+            ) : phaseUnavailableNotice ? (
+              <li className="fireglow-empty fireglow-empty--error">{phaseUnavailableNotice}</li>
             ) : filteredRanked.length ? filteredRanked.map((site, index) => (
               <li key={site.id}>
                 <button

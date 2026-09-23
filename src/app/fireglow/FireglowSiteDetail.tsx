@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 import {
   X,
   Flame,
@@ -15,6 +15,7 @@ import {
 import type { FireGlowWindowScore } from "@/lib/fireglow";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
 import { markerLevelFor } from "@/lib/markerStatus";
+import { ResponsiveTopicDetailModalContext } from "@/components/ResponsiveTopicDetail";
 
 interface FireglowSiteDetailProps {
   site: {
@@ -65,6 +66,7 @@ export default function FireglowSiteDetail({
   dataQualityNotice,
   onClose,
 }: FireglowSiteDetailProps) {
+  const isModal = useContext(ResponsiveTopicDetailModalContext);
   const win = site.window;
   const pLevel = markerLevelFor(win.score, win.probabilityLevel);
 
@@ -111,7 +113,7 @@ export default function FireglowSiteDetail({
     <aside
       className="fireglow-site-detail"
       role="dialog"
-      aria-modal="true"
+      aria-modal={isModal ? true : undefined}
       aria-label={`${site.name}火烧云摄影详情`}
     >
       <div className="fg-detail-header">

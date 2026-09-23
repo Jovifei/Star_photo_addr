@@ -18,12 +18,15 @@ const changelogSource = readFileSync(
 );
 
 describe("release version consistency", () => {
-  it("publishes v1.0.18 from the package and lockfile", () => {
-    expect(packageJson.version).toBe("1.0.18");
+  it("publishes the package version consistently through the lockfile and app", () => {
+    expect(packageJson.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(APP_VERSION).toBe(packageJson.version);
     expect(APP_VERSION_LABEL).toBe(`v${packageJson.version}`);
     expect(packageLock.version).toBe(packageJson.version);
     expect(packageLock.packages[""].version).toBe(packageJson.version);
+    expect(readFileSync(new URL("../../CHANGELOG.md", import.meta.url), "utf8"))
+      .toContain(`## [v${packageJson.version}]`);
+    expect(changelogSource).toContain('version: "v1.0.18"');
   });
 
   it("does not keep a hand-written product header version", () => {

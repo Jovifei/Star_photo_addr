@@ -1,3 +1,20 @@
+# 2026-09-23 再审、发布与生产验收
+
+- [x] 用户授权再次审核、测试后推送、合并、部署；全程不改写 Owner 的脏 main 工作树。
+- [x] 核实 `origin/main@3334e0c`、祖先关系及 Owner 脏工作区；全程在独立 worktree 操作。
+- [x] 独立审查发现并修复云海覆盖、火烧云日期/阶段、海拔空值、modal 语义、摘要计数与版本记录问题。
+- [x] 为前五项添加红测并确认当前实现失败；开始按根因逐项修复。
+- [x] 修复并验证 5 项产品/可访问性问题及复审新增覆盖边界。
+- [x] `npm run check`：63 files / 368 tests，lint、typecheck、build PASS。
+- [x] Chromium 全量：230 total / 163 passed / 67 project-device skips / 0 failed；Firefox/WebKit：4 passed。
+- [x] 真实 provider smoke：Open-Meteo 四模型、压力层、geocode、AQI、NASA GIBS、NOAA Kp、VIIRS 全 PASS；生产依赖审计 0 vulnerabilities。
+- [x] 按 bugfix 发布假设更新为 v1.0.19；同步 package/lock、root/docs changelog、应用内历史与 README 版本语义。
+- [x] 独立最终复审确认指定缺陷均已关闭。
+- [ ] 推送 release 分支、创建 PR、等待 GitHub CI 绿灯，再合并到 main。
+- [ ] 在隔离 worktree 验证合并后 main，按 ECS 手动流程部署并核验 app/worker、healthz、data-status、数据源与四个页面。
+
+边界：不在 `E:\project\Star_photo_addr` 覆盖现有未提交修改；不强推；不删快照卷；公网部署仅在主线和 CI 门禁通过后执行。
+
 # 2026-09-23 定位海拔来源与缺失值修复
 
 - [x] 复核用户原始八图并确认“我的位置 0m”未证明是实测海拔。

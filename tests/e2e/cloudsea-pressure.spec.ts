@@ -56,6 +56,7 @@ test("cloudsea renders pressure-derived evidence and opens the evidence inspecto
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E surface + pressure-level model profile",
         stale: false,
+        surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         pressure: {
           status: "available",
           availableSites: 1,
@@ -100,10 +101,97 @@ test("cloudsea renders pressure-derived evidence and opens the evidence inspecto
 
   const inspector = page.locator(".cloudsea-site-detail");
   await expect(inspector).toBeVisible();
+  await expect(inspector).not.toHaveAttribute("aria-modal", "true");
   await expect(inspector).toContainText("数值模式垂直云层证据");
   await expect(inspector).toContainText("逆温证据");
   await expect(inspector).toContainText("中等逆温 · +2°C");
   await expect(inspector).toContainText("压力层云顶 (MSL)");
   await expect(inspector).toContainText("1000 m");
   await expect(inspector).not.toContainText("估算云顶层位");
+});
+
+test("cloudsea labels partial ground-weather coverage as degraded", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "地面天气覆盖降级只需桌面 Chromium 验证一次");
+  await page.route("**/api/cloudsea/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-23";
+    const window = pressureAwareWindow(date);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "gfs",
+        generatedAt: `${date}T00:30:00.000Z`,
+        source: "E2E partial surface coverage",
+        stale: false,
+        surface: { status: "partial", availableSites: 1, totalSites: 54, failedSites: 53 },
+        pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+        sites: { "cs-taizijian": { morning: window, evening: window } },
+      }),
+    });
+  });
+  await page.route(
+    /https:\/\/(?:[^/]+\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org)\/.*/,
+    (route) => route.fulfill({ status: 200, contentType: "image/png", body: onePixelPng }),
+  );
+
+  await page.goto("/cloudsea");
+  await expect(page.locator('.cloudsea-beta-banner[role="status"]')).toContainText("地面天气仅 1/54 地点窗口完整");
+});
+
+test("cloudsea fails closed when a snapshot has no surface coverage summary", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "旧快照缺少地面覆盖摘要只需桌面 Chromium 验证一次");
+  await page.route("**/api/cloudsea/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-23";
+    const window = pressureAwareWindow(date);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "gfs",
+        generatedAt: `${date}T00:30:00.000Z`,
+        source: "E2E legacy snapshot without surface coverage",
+        stale: false,
+        pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+        sites: { "cs-taizijian": { morning: window, evening: window } },
+      }),
+    });
+  });
+  await page.route(
+    /https:\/\/(?:[^/]+\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org)\/.*/,
+    (route) => route.fulfill({ status: 200, contentType: "image/png", body: onePixelPng }),
+  );
+
+  await page.goto("/cloudsea");
+  await expect(page.locator('.cloudsea-beta-banner[role="status"]')).toContainText("地面天气覆盖摘要不完整");
+});
+
+test("cloudsea fails closed when an available surface summary omits coverage counts", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "云海覆盖计数契约只需桌面 Chromium 验证一次");
+  await page.route("**/api/cloudsea/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-23";
+    const window = pressureAwareWindow(date);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        date,
+        model: "gfs",
+        generatedAt: `${date}T00:30:00.000Z`,
+        source: "E2E malformed surface summary",
+        stale: false,
+        surface: { status: "available", failedSites: 0 },
+        pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+        sites: { "cs-taizijian": { morning: window, evening: window } },
+      }),
+    });
+  });
+  await page.route(
+    /https:\/\/(?:[^/]+\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org)\/.*/,
+    (route) => route.fulfill({ status: 200, contentType: "image/png", body: onePixelPng }),
+  );
+
+  await page.goto("/cloudsea");
+  await expect(page.locator('.cloudsea-beta-banner[role="status"]')).toContainText("地面天气覆盖摘要不完整");
 });

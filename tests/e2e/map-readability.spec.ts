@@ -79,6 +79,20 @@ test("当前位置没有设备海拔时显示待核验，不借用邻近点位�
   await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
 });
 
+test("共享地点深链区分未提供海拔和明确的海平面 0m", async ({ page }) => {
+  await page.goto("/?lat=30.1234&lng=120.5678&name=%E6%9C%AA%E7%9F%A5%E6%9C%BA%E4%BD%8D");
+  const coordinates = page.locator(".panel-coords").first();
+  await expect(coordinates).toContainText("海拔待核验");
+  await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
+
+  await page.goto("/?lat=30.1235&lng=120.5679&name=%E7%A9%BA%E6%B5%B7%E6%8B%94%E5%8F%82%E6%95%B0&elevation=");
+  await expect(coordinates).toContainText("海拔待核验");
+  await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
+
+  await page.goto("/?lat=31.1234&lng=121.5678&name=%E6%B5%B7%E5%B9%B3%E9%9D%A2%E7%82%B9&elevation=0");
+  await expect(coordinates).toContainText("海拔 0 m");
+});
+
 test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据", async ({ page }, testInfo) => {
   await page.goto(
     "/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",

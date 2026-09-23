@@ -30,6 +30,8 @@ import {
 import { CLOUD_SEA_SITES, type CloudSeaSite } from "@/lib/cloudseaSites";
 import {
   CLOUD_SEA_EMPTY_WINDOW,
+  hasCompleteCloudSeaCoverage,
+  hasValidCloudSeaCoverageCounts,
   positionBadgeTone,
   type CloudSeaConditionLevel,
   type CloudSeaSnapshot,
@@ -185,15 +187,37 @@ export default function CloudSeaApp() {
                 if (payload.date !== date || payload.model !== "gfs") {
                   throw new Error("云海快照日期或模型与请求不一致");
                 }
-                const pressureComplete =
-                  !payload.pressure || payload.pressure.status === "available";
-                if (pressureComplete || attempt === 1) {
+                const pressureComplete = hasCompleteCloudSeaCoverage(
+                  payload.pressure,
+                  CLOUD_SEA_SITES.length,
+                );
+                const surface = payload.surface;
+                const surfaceCountsValid = hasValidCloudSeaCoverageCounts(
+                  surface,
+                  CLOUD_SEA_SITES.length,
+                );
+                const surfaceComplete = hasCompleteCloudSeaCoverage(
+                  surface,
+                  CLOUD_SEA_SITES.length,
+                );
+                if (pressureComplete && surfaceComplete) {
                   results.push({ date, snapshot: payload });
                   lastError = "";
                   break;
                 }
                 degradedSnapshot = payload;
-                lastError = `压力层仅 ${payload.pressure?.availableSites ?? 0}/${payload.pressure?.totalSites ?? 0} 地点可用`;
+                lastError = !surfaceComplete
+                  ? !surfaceCountsValid || !surface
+                    ? "地面天气覆盖摘要不完整，快照完整性无法验证"
+                    : `地面天气仅 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`
+                  : !hasValidCloudSeaCoverageCounts(payload.pressure, CLOUD_SEA_SITES.length)
+                    ? "压力层覆盖摘要不完整，快照完整性无法验证"
+                    : `压力层仅 ${payload.pressure!.availableSites}/${payload.pressure!.totalSites} 地点可用`;
+                if (attempt === 1) {
+                  results.push({ date, snapshot: payload, error: lastError });
+                  lastError = "";
+                  break;
+                }
               }
               if (!response.ok || !payload?.sites) {
                 lastError =
@@ -256,6 +280,12 @@ export default function CloudSeaApp() {
           if (pressure && pressure.status !== "available") {
             notices.push(
               `${dateLabel(result.date)}：压力层 ${pressure.availableSites}/${pressure.totalSites} 地点可用；缺失地点不推断云层层位`,
+            );
+          }
+          const surface = result.snapshot.surface;
+          if (surface && surface.status !== "available" && !result.error) {
+            notices.push(
+              `${dateLabel(result.date)}：地面天气仅 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`,
             );
           }
         }

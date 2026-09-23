@@ -1,7 +1,23 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { createContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import { COMPACT_BROWSER_QUERY, lockCompactPageScroll } from "@/lib/pageScrollLock";
+
+export const ResponsiveTopicDetailModalContext = createContext(false);
+
+function subscribeToCompactBrowser(onChange: () => void) {
+  const query = window.matchMedia(COMPACT_BROWSER_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function getCompactBrowserSnapshot() {
+  return window.matchMedia(COMPACT_BROWSER_QUERY).matches;
+}
+
+function getServerCompactBrowserSnapshot() {
+  return false;
+}
 
 const FOCUSABLE_SELECTOR = [
   "button:not([disabled])",
@@ -23,6 +39,11 @@ export default function ResponsiveTopicDetail({
   children: ReactNode;
   className?: string;
 }) {
+  const isCompact = useSyncExternalStore(
+    subscribeToCompactBrowser,
+    getCompactBrowserSnapshot,
+    getServerCompactBrowserSnapshot,
+  );
   const layerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
@@ -81,18 +102,20 @@ export default function ResponsiveTopicDetail({
   }, []);
 
   return (
-    <div
-      ref={layerRef}
-      className={`topic-detail-layer ${className}`.trim()}
-      data-testid="topic-detail-layer"
-    >
-      <button
-        type="button"
-        className="topic-detail-backdrop"
-        aria-label={`关闭${label}`}
-        onClick={onClose}
-      />
-      <div className="topic-detail-dialog-host">{children}</div>
-    </div>
+    <ResponsiveTopicDetailModalContext.Provider value={isCompact}>
+      <div
+        ref={layerRef}
+        className={`topic-detail-layer ${className}`.trim()}
+        data-testid="topic-detail-layer"
+      >
+        <button
+          type="button"
+          className="topic-detail-backdrop"
+          aria-label={`关闭${label}`}
+          onClick={onClose}
+        />
+        <div className="topic-detail-dialog-host">{children}</div>
+      </div>
+    </ResponsiveTopicDetailModalContext.Provider>
   );
 }
