@@ -214,6 +214,11 @@
     gap: 12px;
   }
 
+  .mobile-map-panel-pane > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .mobile-map-panel-pane[hidden] {
     display: none !important;
   }

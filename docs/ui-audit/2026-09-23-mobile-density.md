@@ -26,7 +26,7 @@
 ## 验证状态
 
 - 最终源码 `npm run check`：63文件/368项PASS，lint、TypeScript、生产build PASS。
-- 抽屉溢出新增断言：旧样式RED（382px），最终内容列GREEN（1/1）。首次CI报12px；确认是Linux纵向滚动条缩小scroll-body.clientWidth，旧断言混量。改测实际内容列scrollWidth及右边界，Windows回归通过，完整CI等待重跑。
+- 抽屉溢出新增断言：旧样式RED（382px）。第一次CI暴露旧滚动体指标将Linux滚动条算成12px；改测内容pane后又真实抓到22px内部溢出，追加对直接grid子项的 `min-width:0; max-width:100%`。同一目标回归在Windows通过；最终Linux完整CI仍待重新确认。
 - 完整Chromium首轮：161 PASS / 67设备适用性SKIP / 2 FAIL。失败为768/1024平板手势测试固定要求>80px；实测最大可滚动距离分别57px（901−844）、50px（894−844），两项手势均已到达文档底部。改为以真实文档剩余距离（上限80px）验证手势位移和页头位置。
 - 测试流程适配后的三个手机专项文件：15 PASS / 1设备适用性SKIP，包含原两项失败用例。应用源码未再改变；未把这次专项复测宣称为重新跑完整230项全绿。
 - 最终测试文件改动后的lint、typecheck：PASS。

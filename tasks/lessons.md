@@ -2,7 +2,7 @@
 
 - 2026-09-23: 页面变紧凑后，平板完整文档可能只比视口高50–57px。手势测试先量scrollHeight−innerHeight，再验证实际可滚动距离与页头位移；不要硬要求80px或为了测试人为增加页面留白。保留真实touch事件，不用scrollTo代替手势验证。
 
-- 2026-09-23: 抽屉外框不溢出不等于内部参数可读。`.mobile-map-panel-pane` 隐式 auto 列被长摘要/表格撑到约747px，手机正文横向溢出382px。显式 `grid-template-columns: minmax(0, 1fr)` 后修复；回归需测实际内容 pane 与边界。Linux 有纵向滚动条时，不要只用 scrollWidth-clientWidth 测整个滚动 body，以免将原生滚动条宽度误计成横向溢出。
+- 2026-09-23: 抽屉外框不溢出不等于内部参数可读。`.mobile-map-panel-pane` 隐式 auto 列被长摘要/表格撑到约747px，手机正文横向溢出382px。Linux上测 pane 曾剩22px溢出，说明还须约束 pane 的 grid 子项 `min-width:0; max-width:100%`；回归需测内容 pane 与边界，滚动 body 本身的 clientWidth 还会受纵向 scrollbar 影响。
 
 - 2026-09-23: 手机页面“可滚动且不溢出”不代表信息层级合理。必须记录首屏 header 高度和地图起点，检查路由 CSS 的 nth-child/grid-row 是否覆盖共享收起态；48px 触控区域不要求巨大实心胶囊和大字。长期模型说明可折叠，实时数据错误必须保持可见。
 
