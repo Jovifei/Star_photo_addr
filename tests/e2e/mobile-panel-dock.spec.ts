@@ -34,6 +34,7 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
   const initialLayout = await drawer.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const body = element.querySelector<HTMLElement>(".mobile-map-panel-body");
+    const pane = body?.querySelector<HTMLElement>(".mobile-map-panel-pane:not([hidden])");
     const close = element.querySelector<HTMLButtonElement>(
       'button[aria-label="关闭地图工具侧边栏"]',
     );
@@ -47,7 +48,12 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
       width: rect.width,
       viewportWidth: window.innerWidth,
       bodyOverflowY: body ? getComputedStyle(body).overflowY : "",
-      bodyOverflowX: body ? body.scrollWidth - body.clientWidth : 0,
+      // Test the actual pane, not the scroll body's clientWidth: on Linux a
+      // classic vertical scrollbar reduces clientWidth by its own thickness.
+      paneOverflowX: pane ? pane.scrollWidth - pane.clientWidth : 0,
+      paneOutsideBody: body && pane
+        ? Math.max(0, pane.getBoundingClientRect().right - (body.getBoundingClientRect().left + body.clientLeft + body.clientWidth - parseFloat(getComputedStyle(body).paddingRight)))
+        : 0,
       restoreVisible: Boolean(
         restore &&
           restoreStyle?.display !== "none" &&
@@ -60,7 +66,8 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
   expect(initialLayout.x).toBeGreaterThanOrEqual(-0.5);
   expect(initialLayout.width).toBeCloseTo(initialLayout.viewportWidth, 0);
   expect(initialLayout.bodyOverflowY).toMatch(/auto|scroll/);
-  expect(initialLayout.bodyOverflowX).toBeLessThanOrEqual(1);
+  expect(initialLayout.paneOverflowX).toBeLessThanOrEqual(1);
+  expect(initialLayout.paneOutsideBody).toBeLessThanOrEqual(1);
   expect(initialLayout.restoreVisible).toBe(false);
   expect(initialLayout.closeWidth).toBeGreaterThanOrEqual(48);
   expect(initialLayout.closeHeight).toBeGreaterThanOrEqual(48);
