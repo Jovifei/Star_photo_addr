@@ -47,6 +47,7 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
       width: rect.width,
       viewportWidth: window.innerWidth,
       bodyOverflowY: body ? getComputedStyle(body).overflowY : "",
+      bodyOverflowX: body ? body.scrollWidth - body.clientWidth : 0,
       restoreVisible: Boolean(
         restore &&
           restoreStyle?.display !== "none" &&
@@ -59,6 +60,7 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
   expect(initialLayout.x).toBeGreaterThanOrEqual(-0.5);
   expect(initialLayout.width).toBeCloseTo(initialLayout.viewportWidth, 0);
   expect(initialLayout.bodyOverflowY).toMatch(/auto|scroll/);
+  expect(initialLayout.bodyOverflowX).toBeLessThanOrEqual(1);
   expect(initialLayout.restoreVisible).toBe(false);
   expect(initialLayout.closeWidth).toBeGreaterThanOrEqual(48);
   expect(initialLayout.closeHeight).toBeGreaterThanOrEqual(48);

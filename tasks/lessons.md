@@ -1,5 +1,11 @@
 # Lessons
 
+- 2026-09-23: 页面变紧凑后，平板完整文档可能只比视口高50–57px。手势测试先量scrollHeight−innerHeight，再验证实际可滚动距离与页头位移；不要硬要求80px或为了测试人为增加页面留白。保留真实touch事件，不用scrollTo代替手势验证。
+
+- 2026-09-23: 抽屉外框不溢出不等于内部参数可读。`.mobile-map-panel-pane` 隐式 auto 列被长摘要/表格撑到约747px，手机正文横向溢出382px。显式 `grid-template-columns: minmax(0, 1fr)` 后正文溢出为0；必须测 drawer body.scrollWidth，而非只测 document.scrollWidth。
+
+- 2026-09-23: 手机页面“可滚动且不溢出”不代表信息层级合理。必须记录首屏 header 高度和地图起点，检查路由 CSS 的 nth-child/grid-row 是否覆盖共享收起态；48px 触控区域不要求巨大实心胶囊和大字。长期模型说明可折叠，实时数据错误必须保持可见。
+
 - 2026-09-23: Playwright 全量矩阵 230 项在 CI 单 worker 串行跑时，job 的 `timeout-minutes` 必须按完整 E2E 耗时预留余量；平台的 `The operation was canceled`/`conclusion=cancelled` 不等同断言失败。先核对 job 超时、测试启动/结束时间和已完成用例数，再调 E2E job budget；不能缩小测试范围或把取消报告为 PASS。
 - 2026-09-23: 海拔未知不能用数字 `0` 充当 sentinel；它会把未知显示成海平面，也会覆盖真实 0m。仅保留上游明确值或无歧义的精确目录名称，不能从描述标签的子串或邻近坐标借用另一个点位海拔；UI 保持“海拔待核验”。Playwright 使用 standalone 时先重建当前源码，旧 `.next/standalone` 测试结果不能代表工作树。
 - 2026-09-23: 多日/多阶段预测不能只用“至少一天/一个时段有评分”判定整个视图可用；每个活动日期的缺失、地面与压力覆盖，以及当前所选晨/昏阶段都要分别审计并把降级贯穿地图、排行、详情。URL 数值参数需区分缺失、空白与显式 0；surface 覆盖摘要缺失按未知降级，不能按完整数据处理。`aria-modal=true` 只在背景确实不可操作、焦点受限的紧凑模态态设置，宽屏非模态详情不得伪报。
