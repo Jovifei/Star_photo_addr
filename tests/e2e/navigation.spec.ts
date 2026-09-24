@@ -1,5 +1,10 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { closeMobileMapPanel } from "./mobile-map-panel.js";
+
+const currentVersion = `v${(JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+) as { version: string }).version}`;
 
 function buildForecastResponse(requestUrl: string) {
   const url = new URL(requestUrl);
@@ -73,7 +78,7 @@ function buildForecastResponse(requestUrl: string) {
   };
 }
 
-test("version history shows v1.0.19 and preserves v1.0.18", async ({ page }) => {
+test(`version history shows ${currentVersion} and keeps recent releases`, async ({ page }) => {
   await page.addInitScript(() => localStorage.clear());
   await page.route("**/api/forecast?**", async (route) => {
     await route.fulfill({
@@ -83,12 +88,13 @@ test("version history shows v1.0.19 and preserves v1.0.18", async ({ page }) => 
     });
   });
   await page.goto("/");
-  await page.getByRole("button", { name: /查看版本更新记录 v1\.0\.19/ }).click();
+  await page.getByRole("button", { name: `查看版本更新记录 ${currentVersion}` }).click();
   const dialog = page.getByRole("dialog", { name: "版本更新记录" });
   const releases = dialog.locator(".changelog-release");
-  await expect(releases.first()).toContainText("v1.0.19");
+  await expect(releases.first()).toContainText(currentVersion);
   await expect(releases.first()).toContainText("当前版本");
-  await expect(releases.nth(1)).toContainText("v1.0.18");
+  await expect(releases.nth(1)).toContainText("v1.0.19");
+  await expect(releases.nth(2)).toContainText("v1.0.18");
 });
 
 test("sites compatibility route preserves context and opens the dark-sky site panel", async ({
