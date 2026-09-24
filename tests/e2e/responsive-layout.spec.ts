@@ -143,6 +143,98 @@ test.describe("responsive layout contract", () => {
     expect(map?.width ?? 0).toBeGreaterThanOrEqual(600);
   });
 
+  test("wide short cloud and fireglow pages keep controls in one compact row", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "短高宽屏布局在桌面项目覆盖");
+    await mockMapTiles(page);
+    await page.route("**/api/cloudsea/snapshot**", async (route) => {
+      const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-24";
+      const window = pressureAwareWindow(date);
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          date, model: "gfs", generatedAt: `${date}T00:30:00.000Z`, source: "E2E GFS fixture", stale: false,
+          surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+          pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+          sites: { "cs-taizijian": { morning: window, evening: window } },
+        }),
+      });
+    });
+    await page.route("**/api/fireglow/snapshot**", async (route) => {
+      const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-24";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          date, model: "icon", generatedAt: `${date}T00:30:00.000Z`, source: "E2E ICON fixture", stale: false,
+          sites: { "test-site": { morning: { score: 72, reason: "fixture" }, evening: { score: 68, reason: "fixture" } } },
+        }),
+      });
+    });
+    await page.setViewportSize({ width: 1653, height: 413 });
+
+    for (const path of ["/cloudsea", "/fireglow"]) {
+      await page.goto(path);
+      const header = page.locator(".app-header");
+      await expect(header.locator(".nav-tab")).toHaveCount(4);
+      const phase = header.locator('.segmented[data-mode="phase"]');
+      const dates = header.locator('.segmented[data-mode="range"]');
+      const refresh = header.locator(".cloudsea-refresh, .fireglow-refresh");
+      await expect(phase).toBeVisible();
+      await expect(dates).toBeVisible();
+      await expect(refresh).toHaveCount(1);
+      const phaseBox = await phase.boundingBox();
+      const dateBox = await dates.boundingBox();
+      const refreshBox = await refresh.boundingBox();
+      expect(Math.abs(phaseBox!.y - dateBox!.y)).toBeLessThanOrEqual(1);
+      expect(Math.abs(phaseBox!.y - refreshBox!.y)).toBeLessThanOrEqual(5);
+      expect(dateBox!.x - (phaseBox!.x + phaseBox!.width)).toBeLessThanOrEqual(24);
+      expect(refreshBox!.x - (dateBox!.x + dateBox!.width)).toBeLessThanOrEqual(24);
+      expect(phaseBox!.height).toBeLessThanOrEqual(56);
+      const activeDate = dates.locator("button.active");
+      const dateFill = await activeDate.evaluate((element) => getComputedStyle(element).backgroundColor);
+      expect(dateFill).toBe("rgba(0, 0, 0, 0)");
+      const activeDateStyle = await activeDate.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { color: style.color, borderBottom: style.borderBottomColor, width: element.getBoundingClientRect().width };
+      });
+      expect(activeDateStyle.color).not.toBe("rgb(2, 14, 23)");
+      expect(activeDateStyle.borderBottom).toBe(activeDateStyle.color === "rgb(234, 244, 247)" ? "rgb(52, 152, 219)" : "rgb(232, 101, 79)");
+      expect(activeDateStyle.width).toBeLessThanOrEqual(160);
+      const headerBox = await header.boundingBox();
+      expect(headerBox!.height).toBeLessThanOrEqual(140);
+      const dateText = (await dates.innerText()).replace(/\s+/g, " ");
+      expect(dateText).toMatch(/今日.*\d{1,2}\.\d{1,2}.*周/);
+      expect(dateText).toMatch(/明日.*\d{1,2}\.\d{1,2}.*周/);
+      expect(dateText).toMatch(/后日.*\d{1,2}\.\d{1,2}.*周/);
+      const compactControls = header.locator(".nav-tab, .cloudsea-controls button, .fireglow-controls button");
+      for (const control of await compactControls.all()) {
+        const controlBox = await control.boundingBox();
+        const fontSize = await control.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+        expect(controlBox!.height, await control.innerText()).toBeGreaterThanOrEqual(48);
+        expect(fontSize, await control.innerText()).toBeGreaterThanOrEqual(13);
+      }
+      const map = await page.locator(".leaflet-container").first().boundingBox();
+      expect(map!.y).toBeLessThanOrEqual(200);
+      expect(map!.height).toBeGreaterThanOrEqual(120);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+
+      const explanation = page.locator(".forecast-method-note");
+      await expect(explanation).toBeVisible();
+      await expect(explanation).not.toHaveAttribute("open", "");
+      await page.screenshot({ path: `node_modules/.cache/dashboard-density-${path.slice(1)}-1653x413.png` });
+      await activeDate.focus();
+      await page.keyboard.press("Tab");
+      const focusState = await header.locator(":focus-visible").evaluate((element) => {
+        const style = getComputedStyle(element);
+        return style.outlineStyle !== "none" || style.boxShadow !== "none";
+      });
+      expect(focusState).toBe(true);
+      await explanation.locator("summary").click();
+      await expect(explanation.locator("p")).toBeVisible();
+    }
+  });
+
   test("mobile cloudsea detail opens as a bottom dialog without shrinking its cards", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile", "手机详情抽屉只在移动项目验证");
 
