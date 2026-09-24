@@ -12,9 +12,32 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
+    date: "2026-09-24",
+    tag: "短高宽屏仪表盘密度",
+    current: true,
+    highlights: [
+      {
+        icon: Layers,
+        title: "短高屏控制区更紧凑",
+        desc: "云海和火烧云的导航、日期与阶段控制为地图留出更多首屏高度。",
+      },
+      {
+        icon: CloudSun,
+        title: "日期与选中状态更清楚",
+        desc: "今日、明日、后日和三日范围保留日期/周几，当前选项用紧凑下划线强调。",
+      },
+      {
+        icon: Mountain,
+        title: "紧凑但保留可操作性",
+        desc: "控制点击目标保持 48px、文字不低于 13px，并覆盖键盘焦点与页面溢出回归。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.19",
     date: "2026-09-23",
     tag: "移动端与数据完整性",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: Layers,

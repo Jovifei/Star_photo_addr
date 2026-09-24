@@ -803,3 +803,24 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium 全量最后一次149通过/61条件跳过/2条对齐测试失败，改成中心对齐断言后2项复跑通过。Firefox/WebKit 4通过。八张原图已读、ScoreRing未知值与城市标签避让补齐，详见 `docs/ui-audit/2026-09-22-recovery-and-original-screenshots.md`。
 
 边界：仅本地验证和提交，等待 Jovi 审核；不合并、不部署。评分公式保持原有科学口径。
+
+## 2026-09-24 短高宽屏仪表盘密度
+
+- [x] 以已发布 `main@b2517427`（v1.0.19）为基线，隔离在 `codex/widescreen-dashboard-density-20260924`；不碰 Owner 主工作区。
+- [x] 为 1200px 以上、520px 以下短高视口压缩云海/火烧云页头与选择控件，保留日期、阶段、导航语义。
+- [x] 添加 1653×413 云海/火烧云响应式回归，覆盖页头占高、地图可视高度、横向溢出、阶段/日期/刷新间距、日期选中态和说明折叠。
+- [x] 重建后检查两页实际截图；复核焦点、按钮尺寸和完整日期文案。
+- [x] 完成代码门禁与短高/手机/平板回归，记录 PASS / NOT_RUN。
+- [x] 生成供 Jovi 检视的候选与结果；物理手机验收只在浏览器能实际打开时报告，不以模拟视口代替。
+
+### Review
+
+- 本轮开始时仅有 `src/app/mobile-document-scroll.css` 与 `tests/e2e/responsive-layout.spec.ts` 两项源码差异；`git diff --check` 通过。
+- `npm run check`：PASS — ESLint、TypeScript、63 个 Vitest 文件 / 368 项测试、Next.js 16.3.4 生产构建。
+- `responsive-layout.spec.ts`：PASS — 5 passed / 5 按项目条件跳过；1653×413 桌面短高屏覆盖云海、火烧云日期完整性、阶段/日期/刷新间距、地图区域、横向溢出、键盘焦点、13px 控件文字及 48px 点击目标；手机主页与两类详情抽屉回归通过。
+- 两页浏览器截图已逐张目视核验，天气/瓦片使用 E2E 合成 fixture，不是实时数据验收。
+- 真机手机浏览：NOT_RUN — 当前桌面连接设备的浏览器启动受策略阻止；未声称真机通过。
+- PR #35 已创建，远端分支内容 SHA 经逐 blob 对齐；CI run #312 首轮 quality/live-data/cross-browser/container 均 PASS。
+- 首轮 Chromium 全量 162 passed / 68 skipped / 2 failed；两项都复现同一版本历史测试回归（v1.0.19 写死、且未保留为历史条目）。本地改为读取当前 package version、补回 v1.0.19 历史卡后，专项桌面/手机测试 2/2 PASS；完整 PR CI 重跑待完成。
+- 生产 `https://photo.joviluma.com/healthz` 实测仍为 v1.0.19 / `b25174276f997dd3a3c16eddf7c10600857fa35a`；PR 未合并、候选未部署。
+- 独立复核子任务未在等待窗口内返回；已完成人工逐文件复核，不记为独立审查通过。
