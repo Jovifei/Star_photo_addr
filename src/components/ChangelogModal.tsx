@@ -12,24 +12,24 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
-    date: "2026-09-23",
-    tag: "移动端与数据完整性",
+    date: "2026-09-24",
+    tag: "短高宽屏仪表盘密度",
     current: true,
     highlights: [
       {
         icon: Layers,
-        title: "手机与平板内容流更清晰",
-        desc: "详情与地图手势按设备视口工作；纵向滚动、地图重试和抽屉焦点行为分别验证。",
+        title: "短高屏控制区更紧凑",
+        desc: "云海和火烧云的导航、日期与阶段控制为地图留出更多首屏高度。",
       },
       {
         icon: CloudSun,
-        title: "预测数据缺失会明确降级",
-        desc: "云海地面/压力覆盖、火烧云日期与晨昏时段分别检查；未知数据不再伪装成完整排行。",
+        title: "日期与选中状态更清楚",
+        desc: "今日、明日、后日和三日范围保留日期/周几，当前选项用紧凑下划线强调。",
       },
       {
         icon: Mountain,
-        title: "海拔未知不再显示 0m",
-        desc: "缺失或空白海拔保持待核验；有明确来源的海平面 0m 仍会如实保留。",
+        title: "紧凑但保留可操作性",
+        desc: "控制点击目标保持 48px、文字不低于 13px，并覆盖键盘焦点与页面溢出回归。",
       },
     ],
   },
