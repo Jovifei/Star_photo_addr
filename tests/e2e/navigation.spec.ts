@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { closeMobileMapPanel } from "./mobile-map-panel.js";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 const currentVersion = `v${(JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
@@ -88,13 +89,17 @@ test(`version history shows ${currentVersion} and keeps recent releases`, async 
     });
   });
   await page.goto("/");
+  if (await page.evaluate(() => window.matchMedia("(max-width: 1199px)").matches)) {
+    await expandMobileDataSheet(page);
+  }
   await page.getByRole("button", { name: `查看版本更新记录 ${currentVersion}` }).click();
   const dialog = page.getByRole("dialog", { name: "版本更新记录" });
   const releases = dialog.locator(".changelog-release");
   await expect(releases.first()).toContainText(currentVersion);
   await expect(releases.first()).toContainText("当前版本");
-  await expect(releases.nth(1)).toContainText("v1.0.19");
-  await expect(releases.nth(2)).toContainText("v1.0.18");
+  await expect(releases.nth(1)).toContainText("v1.0.20");
+  await expect(releases.nth(2)).toContainText("v1.0.19");
+  await expect(releases.nth(3)).toContainText("v1.0.18");
 });
 
 test("sites compatibility route preserves context and opens the dark-sky site panel", async ({
@@ -210,10 +215,15 @@ test("source disclosure keeps the current observation context when opening dark-
   );
   await expect(page.getByTestId("observation-reason-card")).toBeVisible();
 
-  if (await page.getByTestId("mobile-map-panel-drawer").count()) {
+  const mobile = await page.evaluate(() => window.matchMedia("(max-width: 1199px)").matches);
+  if (mobile) {
+    await expandMobileDataSheet(page);
+  }
+  if (await page.getByTestId("mobile-map-panel-drawer").count() &&
+      await page.getByTestId("mobile-map-panel-drawer").getAttribute("aria-hidden") === "false") {
     await closeMobileMapPanel(page);
   }
-  await page.getByRole("button", { name: "数据依据与局限" }).click();
+  await page.getByRole("button", { name: "数据依据与局限" }).last().click();
   const dialog = page.getByRole("dialog", { name: "数据依据与局限" });
   const recommendationLink = dialog.getByRole("link", {
     name: "暗夜选址",
@@ -254,10 +264,10 @@ test.describe("mobile product header", () => {
     page,
   }) => {
     await page.goto("/");
-
+    await expandMobileDataSheet(page);
     const sourceButton = page.getByRole("button", { name: "数据依据与局限" });
     await expect(sourceButton).toBeVisible();
-    await expect(sourceButton).toHaveCSS("width", "48px");
+    await expect(page.getByRole("navigation", { name: "页面导航" })).toBeVisible();
 
     await sourceButton.click();
     await expect(

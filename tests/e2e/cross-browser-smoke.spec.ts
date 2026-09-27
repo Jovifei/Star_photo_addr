@@ -5,7 +5,8 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
-import { openMobileMapPanel } from "./mobile-map-panel.js";
+import { closeMobileMapPanel, openMobileMapPanel } from "./mobile-map-panel.js";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -44,7 +45,11 @@ test("product navigation and source dialog remain keyboard operable", async ({
 
   // WebKit runs with an iPhone viewport, where low-frequency map controls are
   // intentionally docked in the mobile sidebar. Desktop returns false/no-op.
-  await openMobileMapPanel(page, "layers");
+  const compact = await openMobileMapPanel(page, "layers");
+  if (compact) {
+    await closeMobileMapPanel(page);
+    await expandMobileDataSheet(page);
+  }
   const trigger = page.getByRole("button", { name: "数据依据与局限" });
   await trigger.focus();
   await trigger.press("Enter");
@@ -85,4 +90,30 @@ test("dark-sky compatibility route preserves a shared observation context", asyn
     "aria-current",
     "page",
   );
+});
+
+test("Firefox/WebKit map keeps direct zoom and drag enabled by default", async ({ page }, info) => {
+  await page.goto("/");
+  const map = page.locator(".leaflet-container").first();
+  await expect(map).toHaveAttribute("data-map-zoom", /\d+/);
+  const initialZoom = Number(await map.getAttribute("data-map-zoom"));
+  await page.locator(".leaflet-control-zoom-in").first().click();
+  await expect(map).toHaveAttribute("data-map-zoom", String(initialZoom + 1));
+
+  const center = await map.getAttribute("data-map-center");
+  const box = (await map.boundingBox())!;
+  const x = box.x + box.width * .35;
+  const y = box.y + box.height * .42;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 70, y + 35, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(() => map.getAttribute("data-map-center")).not.toBe(center);
+
+  if (info.project.name === "webkit-mobile") {
+    const sheet = page.getByTestId("mobile-data-sheet");
+    await page.touchscreen.tap(box.x + box.width * .24, box.y + box.height * .22);
+    await expect(sheet).toHaveAttribute("data-level", "half");
+    await expect(sheet.locator(".mobile-data-sheet-location")).not.toHaveText("今夜观测");
+  }
 });

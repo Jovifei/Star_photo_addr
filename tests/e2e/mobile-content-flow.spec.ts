@@ -22,7 +22,7 @@ async function openTopicSettings(page: Page) {
 }
 
 for (const width of [320, 390, 768, 1024]) {
-  test(`compact ${width}: search targets and timeline stay in normal flow`, async ({ page }, info) => {
+  test(`compact ${width}: search targets, map and detail hierarchy`, async ({ page }, info) => {
     test.skip(info.project.name !== "mobile", "compact viewport matrix runs once, in mobile project");
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/?overlay=forecast-cloud&view=combined");
@@ -41,15 +41,16 @@ for (const width of [320, 390, 768, 1024]) {
     await filter.click();
     await expect(page.locator(".location-filter-controls")).toBeVisible();
     await page.getByRole("button", { name: "收起时间与地点筛选" }).click();
-    const toggle = page.locator(".cloud-timeline-toggle");
-    await expect(toggle).toBeVisible();
-    expect(await toggle.evaluate((el) => getComputedStyle(el).position)).toBe("static");
+    await expect(page.locator(".map-stage > .cloud-timeline")).toBeHidden();
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+    await expect(page.getByTestId("mobile-data-sheet-body").locator(".cloud-timeline")).toBeVisible();
     await expectNoOverflow(page);
   });
 }
 
 for (const path of ["/fireglow", "/cloudsea"]) {
-  test(`${path}: current context retained, options disclosed, legend outside map`, async ({ page }, info) => {
+  test(`${path}: current context retained with compact settings and data sheet`, async ({ page }, info) => {
     test.skip(info.project.name !== "mobile", "compact topic disclosure");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(path);
@@ -59,18 +60,14 @@ for (const path of ["/fireglow", "/cloudsea"]) {
     // must still give the forecast/map priority over navigation and settings.
     for (const [width, height] of [[320, 760], [384, 760], [430, 932], [768, 1024], [1024, 768], [812, 375]]) {
       await page.setViewportSize({ width, height });
-      await expect.poll(async () => (await page.locator('.app-header').boundingBox())!.height).toBeLessThanOrEqual(176);
+      await expect.poll(async () => (await page.locator('.app-header').boundingBox())!.height).toBeLessThanOrEqual(48);
       const phaseBox = await groups.first().boundingBox();
       const dateBox = await groups.last().boundingBox();
       expect(Math.abs(phaseBox!.y - dateBox!.y)).toBeLessThanOrEqual(1);
       await expectNoOverflow(page);
     }
     await page.setViewportSize({ width: 390, height: 844 });
-    const methodNote = page.locator('.forecast-method-note');
-    await expect(methodNote).not.toHaveAttribute('open', '');
-    await methodNote.locator('summary').click();
-    await expect(methodNote.locator('p')).toBeVisible();
-    await methodNote.locator('summary').click();
+    await expect(page.locator('.forecast-method-note')).toBeHidden();
     const selected = await groups.last().locator("button.active").innerText();
     await expect(groups.last().locator("button.active")).toBeVisible();
     await expect(groups.last().locator("button:not(.active)").first()).toBeHidden();
@@ -84,29 +81,28 @@ for (const path of ["/fireglow", "/cloudsea"]) {
     await expect(requested).toBeVisible();
     const prefix = path.slice(1);
     await expect(page.locator(".leaflet-container").first()).toBeVisible();
-    const legend = await page.locator(`.${prefix}-legend`).boundingBox();
+    await expect(page.locator(`.${prefix}-legend`)).toBeHidden();
     const map = await page.locator(".leaflet-container").first().boundingBox();
-    expect(legend!.y).toBeGreaterThanOrEqual(map!.y + map!.height - 1);
+    expect(map!.height).toBeGreaterThan(400);
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+    await expect(page.getByText("数据口径与地图色阶")).toBeVisible();
     await expectNoOverflow(page);
   });
 }
 
-test("mobile sheet preserves document position and Escape exits map mode", async ({ page }, info) => {
-  test.skip(info.project.name !== "mobile", "compact modal and map interaction");
+test("tool drawer Escape restores focus while map sheet remains available", async ({ page }, info) => {
+  test.skip(info.project.name !== "mobile", "compact tool interaction");
   await page.goto("/?overlay=forecast-cloud&view=combined");
   const map = page.locator(".leaflet-container").first();
-  await expect(map).toHaveAttribute("data-gesture-mode", "page");
-  await page.getByRole("button", { name: "移动地图，开启地图拖动" }).click();
-  await expect(map).toHaveAttribute("data-gesture-mode", "map");
-  await page.keyboard.press("Escape");
-  await expect(map).toHaveAttribute("data-gesture-mode", "page");
-  const trigger = page.getByRole("button", { name: /展开观测详情/ });
-  await trigger.scrollIntoViewIfNeeded();
+  await expect(map).toHaveAttribute("data-map-zoom", /\d+/);
+  const trigger = page.getByTestId("mobile-map-panel-open-tools");
   const before = await page.evaluate(() => scrollY);
   await trigger.click();
   await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-modal", "true");
-  expect(await page.evaluate(() => document.body.style.position)).toBe("fixed");
-  await page.getByTestId("mobile-map-panel-drawer").getByRole("button", { name: "关闭地图工具侧边栏" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "true");
   await expect.poll(() => page.evaluate(() => scrollY)).toBeCloseTo(before, 0);
   await expect(trigger).toBeFocused();
+  await expect(page.getByTestId("mobile-data-sheet")).toBeVisible();
 });

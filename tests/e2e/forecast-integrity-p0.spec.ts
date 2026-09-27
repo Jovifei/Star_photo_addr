@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 import { readFileSync } from "node:fs";
 import {
   buildNormalizedForecasts,
@@ -183,7 +184,14 @@ test("无有效天气预报时，时间轴质量显示为数据不足", async ({
     await route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ error: "天气上游不可用" }) });
   });
   await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&model=icon&overlay=forecast-cloud");
-  const quality = page.locator(".cloud-timeline-data-card small");
+  if (await page.evaluate(() => window.matchMedia("(max-width: 1199px)").matches)) {
+    await expandMobileDataSheet(page);
+    const timeline = page.locator(".mobile-data-sheet-body .cloud-timeline");
+    if (await timeline.locator(".cloud-timeline-toggle").getAttribute("aria-expanded") === "false") {
+      await timeline.locator(".cloud-timeline-toggle").click();
+    }
+  }
+  const quality = page.locator(".cloud-timeline:visible .cloud-timeline-data-card small");
   await expect(quality).toBeVisible({ timeout: 20_000 });
   await expect(quality).toContainText("暂无有效预报");
   await expect(quality).toContainText("数据质量：数据不足");

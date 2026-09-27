@@ -99,7 +99,7 @@ export default function WorkspaceShell({
                 }}
               />
             ) : null}
-            {input}
+            {!mobile ? input : null}
           </aside>
           {!mobile ? (
             <div

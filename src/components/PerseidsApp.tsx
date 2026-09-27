@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { Map as LeafletMap } from "leaflet";
 import TopBar from "@/components/TopBar";
 import MapStage from "@/components/MapStage";
+import HomeDataSheet from "@/components/HomeDataSheet";
 import MapSearchCard from "@/components/MapSearchCard";
 import ObservingMapControl from "@/components/ObservingMapControl";
 import CandidateList from "@/components/CandidateList";
@@ -31,8 +32,10 @@ import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 
 function TonightEvidence({
   onJumpToEvidence,
+  compact = false,
 }: {
   onJumpToEvidence?: (tab: InspectorTabId) => void;
+  compact?: boolean;
 }) {
   const { state, addCandidate, removeCandidate, setCloud } = useStore();
   const leadIndex = Math.max(0, state.nightKeys.indexOf(state.selectedNight));
@@ -53,29 +56,33 @@ function TonightEvidence({
   const isCandidate = state.selectedLocation
     ? state.candidates.some((candidate) =>
         sameLocationIdentity(candidate, state.selectedLocation),
-      )
+    )
     : false;
+
+  const observationDetails = state.selectedLocation ? (
+    <ObservationDetails
+      sample={state.sample}
+      evaluation={evaluation}
+      location={state.selectedLocation}
+      forecast={state.forecast?.metadata?.model === state.cloudState.model ? state.forecast : null}
+      isCandidate={isCandidate}
+      onAddCandidate={() => addCandidate(state.selectedLocation!)}
+      onRemoveCandidate={() => {
+        const match = state.candidates.find((c) =>
+          sameLocationIdentity(c, state.selectedLocation),
+        );
+        if (match) removeCandidate(match.id);
+      }}
+    />
+  ) : null;
+
+  if (compact) return <><DecisionSummary /><ForecastAvailability />{observationDetails}</>;
 
   return (
     <>
       <DecisionSummary onJumpToEvidence={onJumpToEvidence} />
       <ForecastAvailability />
-      {state.selectedLocation ? (
-        <ObservationDetails
-          sample={state.sample}
-          evaluation={evaluation}
-          location={state.selectedLocation}
-          forecast={state.forecast?.metadata?.model === state.cloudState.model ? state.forecast : null}
-          isCandidate={isCandidate}
-          onAddCandidate={() => addCandidate(state.selectedLocation!)}
-          onRemoveCandidate={() => {
-            const match = state.candidates.find((c) =>
-              sameLocationIdentity(c, state.selectedLocation),
-            );
-            if (match) removeCandidate(match.id);
-          }}
-        />
-      ) : null}
+      {observationDetails}
       {evaluation && evaluation.hours && evaluation.hours.length > 0 && state.selectedLocation ? (
         <LocationDetailCharts
           evaluation={evaluation}
@@ -139,6 +146,17 @@ export default function PerseidsApp() {
   );
 
   const evidence = <TonightEvidence onJumpToEvidence={setTab} />;
+  const compactEvidence = <TonightEvidence compact />;
+  const candidatePane = <CandidateList
+    candidates={state.candidates}
+    status={state.candidates.length ? "ok" : "empty"}
+    activeId={state.selectedLocation?.id}
+    onPick={(candidate) =>
+      void sampleAt(candidate.latitude, candidate.longitude, candidate.elevation ?? undefined, candidate.name)
+    }
+    onRemove={removeCandidate}
+    onTrack={handleTrack}
+  />;
 
   return (
     <WorkspaceShell
@@ -146,19 +164,7 @@ export default function PerseidsApp() {
       commandBar={<MapSearchCard />}
       activeTab={tab}
       onTabChange={setTab}
-      input={
-        <CandidateList
-          candidates={state.candidates}
-          status={state.candidates.length ? "ok" : "empty"}
-          activeId={state.selectedLocation?.id}
-          onPick={(candidate) =>
-            void sampleAt(candidate.latitude, candidate.longitude, candidate.elevation ?? undefined, candidate.name)
-          }
-
-          onRemove={removeCandidate}
-          onTrack={handleTrack}
-        />
-      }
+      input={candidatePane}
       canvas={
         <>
           <MapHeadline />
@@ -170,6 +176,7 @@ export default function PerseidsApp() {
             onRecommendationsChange={setViewportRecommendations}
             summaryPane={evidence}
           />
+          <HomeDataSheet candidatePane={candidatePane} compactContent={compactEvidence}>{evidence}</HomeDataSheet>
         </>
       }
       inspectorPanes={{

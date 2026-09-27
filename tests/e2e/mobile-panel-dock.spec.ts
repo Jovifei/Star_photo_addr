@@ -28,7 +28,7 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
   await expect(dock).toBeVisible();
   await expect(drawer).toHaveAttribute("aria-hidden", "true");
 
-  await page.getByRole("button", { name: /展开观测详情/ }).click();
+  await page.getByTestId("mobile-map-panel-open-tools").click();
   await expect(drawer).toHaveAttribute("aria-hidden", "false");
 
   const initialLayout = await drawer.evaluate((element) => {
@@ -82,7 +82,8 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
   await drawer.getByRole("button", { name: "关闭地图工具侧边栏" }).click();
   await expect(drawer).toHaveAttribute("aria-hidden", "true");
 
-  await page.getByTestId("mobile-map-panel-open-cloud").click();
+  await page.getByTestId("mobile-map-panel-open-tools").click();
+  await drawer.getByRole("tab", { name: "云量" }).click();
   await expect(drawer).toHaveAttribute("aria-hidden", "false");
   await expect(drawer.locator(".cloud-control")).toBeVisible();
   await expect(drawer.locator(".observing-map-control")).toBeHidden();
@@ -102,7 +103,7 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
 
   await page.keyboard.press("Escape");
   await expect(drawer).toHaveAttribute("aria-hidden", "true");
-  await expect(page.getByTestId("mobile-map-panel-open-cloud")).toBeFocused();
+  await expect(page.getByTestId("mobile-map-panel-open-tools")).toBeFocused();
 
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
@@ -118,9 +119,10 @@ test("手机横屏仍使用侧边栏而不是恢复重叠的桌面浮窗", async
   await page.goto("/?overlay=forecast-cloud&view=combined");
 
   await expect(page.getByTestId("mobile-map-panel-dock")).toBeVisible();
-  await page.getByTestId("mobile-map-panel-open-layers").click();
+  await page.getByTestId("mobile-map-panel-open-tools").click();
   const drawer = page.getByTestId("mobile-map-panel-drawer");
   await expect(drawer.locator(".map-layer-bar")).toBeVisible();
+  await expect.poll(() => drawer.evaluate((element) => getComputedStyle(element).transform)).toBe("matrix(1, 0, 0, 1, 0, 0)");
   await expect(drawer.locator(".map-view-actions")).toBeVisible();
   await expect(drawer.locator(".map-legend")).toBeVisible();
 

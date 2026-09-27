@@ -370,19 +370,24 @@ test("left input column is adjustable by pointer, keyboard, presets and reset", 
   expect(Math.abs(reset!.width - before!.width)).toBeLessThanOrEqual(2);
 });
 
-test("mobile forecast lift remains fully above the timeline instead of behind the drawer", async ({
+test("mobile full data sheet contains the hourly timeline without covering map controls", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "手机把手几何只测移动端");
   await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA");
-  const lift = page.getByRole("button", { name: /逐小时预报/ });
-  const timeline = page.locator(".cloud-timeline");
-  await expect(lift).toHaveAttribute("aria-expanded", "true");
-  const liftBox = await lift.boundingBox();
+  const sheet = page.getByTestId("mobile-data-sheet");
+  for (let n = 0; n < 2 && await sheet.getAttribute("data-level") !== "full"; n++) {
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+  }
+  await expect(sheet).toHaveAttribute("data-level", "full");
+  const timeline = sheet.locator(".cloud-timeline");
+  await expect(timeline).toBeVisible();
+  const sheetBox = await sheet.boundingBox();
   const timelineBox = await timeline.boundingBox();
-  expect(liftBox).not.toBeNull();
+  expect(sheetBox).not.toBeNull();
   expect(timelineBox).not.toBeNull();
-  expect(liftBox!.y).toBeGreaterThanOrEqual(timelineBox!.y);
+  expect(timelineBox!.y).toBeGreaterThanOrEqual(sheetBox!.y);
+  expect(timelineBox!.x).toBeGreaterThanOrEqual(sheetBox!.x);
 });
 
 test("static night-light reference does not masquerade as an expanded hourly forecast", async ({
@@ -416,16 +421,17 @@ test("planner compatibility link keeps the unified map clipped", async ({
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("mobile still uses one drawer and can open summary from the map dock", async ({
+test("mobile keeps one tool drawer beside the persistent data sheet", async ({
   page,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "手机单抽屉");
   await page.goto("/?overlay=forecast-cloud&view=combined");
   await expect(page.getByTestId("mobile-map-panel-dock")).toBeVisible();
   await expect(page.locator(".cloud-control")).toHaveCount(0);
-  await page.getByTestId("mobile-map-panel-open-cloud").click();
+  await page.getByTestId("mobile-map-panel-open-tools").click();
   const drawer = page.getByTestId("mobile-map-panel-drawer");
   await expect(drawer).toHaveAttribute("aria-hidden", "false");
+  await drawer.getByRole("tab", { name: "云量" }).click();
   await expect(drawer.locator(".cloud-control")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(drawer).toHaveAttribute("aria-hidden", "true");

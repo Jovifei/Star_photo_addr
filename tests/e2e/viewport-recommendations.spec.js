@@ -39,12 +39,7 @@ test("放大地图后生成编号推荐并可打开现有地点详情", async ({
   await expect(page.getByTestId("observation-reason-card")).toContainText("杭州");
 
   if (testInfo.project.name === "mobile") {
-    const drawer = page.getByTestId("mobile-map-panel-drawer");
-    await expect(drawer).toHaveAttribute("aria-hidden", "false");
-    await drawer
-      .getByRole("button", { name: "关闭地图工具侧边栏" })
-      .click();
-    await expect(drawer).toHaveAttribute("aria-hidden", "true");
+    await expect(page.getByTestId("mobile-data-sheet")).toHaveAttribute("data-level", "half");
   }
 
   const docked = await openMobileMapPanel(page, "recommendations");

@@ -1,6 +1,11 @@
 "use client";
-import MapScrollControl from "@/components/MapScrollControl";
+import MapViewportObserver from "@/components/MapViewportObserver";
 import MapTileStatus from "@/components/MapTileStatus";
+import BlankMapPicker from "@/components/BlankMapPicker";
+import MobileDataSheet from "@/components/MobileDataSheet";
+import TopicMapSearch from "@/components/TopicMapSearch";
+import { useMobilePanelViewport } from "@/components/ResponsiveMapControls";
+import { nearbyDirectorySites, type Coordinate } from "@/lib/nearbyDirectorySites";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -138,6 +143,8 @@ export default function CloudSeaApp() {
   const [refreshing, setRefreshing] = useState(false);
   const [dataNotice, setDataNotice] = useState("");
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [pickedPoint, setPickedPoint] = useState<Coordinate | null>(null);
+  const mobile = useMobilePanelViewport();
   const [scoreThreshold, setScoreThreshold] = useState(0);
   const mapRef = useRef<LeafletMap | null>(null);
   const snapshotRequestIdRef = useRef(0);
@@ -385,8 +392,13 @@ export default function CloudSeaApp() {
       rankedSites.find((ranked) => ranked.site.id === selectedSiteId) ?? null
     );
   }, [rankedSites, selectedSiteId]);
+  const nearby = useMemo(
+    () => pickedPoint ? nearbyDirectorySites(pickedPoint, CLOUD_SEA_SITES) : [],
+    [pickedPoint],
+  );
 
   const handleSelectSite = (siteId: string) => {
+    setPickedPoint(null);
     setSelectedSiteId(siteId);
     const target = CLOUD_SEA_SITES.find((site) => site.id === siteId);
     if (target && mapRef.current) {
@@ -398,6 +410,13 @@ export default function CloudSeaApp() {
 
   return (
     <div className="cloudsea-root app-shell">
+      <TopicMapSearch sites={CLOUD_SEA_SITES}
+        onSite={(site) => {
+          const forecast = rankedSites.find((entry) => entry.site.id === site.id);
+          if (forecast) handleSelectSite(site.id);
+          else { setPickedPoint({ latitude: site.latitude, longitude: site.longitude }); mapRef.current?.flyTo([site.latitude, site.longitude], 8); }
+        }}
+        onCoordinate={(point) => { setSelectedSiteId(null); setPickedPoint(point); mapRef.current?.flyTo([point.latitude, point.longitude], 8); }} />
       <ProductHeader
         mark={<Mountains size={18} aria-hidden="true" />}
         markClassName="cloudsea-mark"
@@ -479,6 +498,9 @@ export default function CloudSeaApp() {
             minZoom={3}
             maxZoom={12}
             scrollWheelZoom={true}
+            dragging
+            touchZoom
+            doubleClickZoom
             ref={mapRef}
           >
             <TileLayer
@@ -514,14 +536,16 @@ export default function CloudSeaApp() {
                   center={[site.latitude, site.longitude]}
                   radius={isSelected ? 10 : isUnknown ? 6 : 7}
                   pathOptions={{
+                    className: "topic-site-marker",
                     color: isSelected ? "#ffffff" : color,
                     weight: isSelected ? 3 : 1.5,
                     fillColor: color,
                     fillOpacity: isUnknown ? 0.38 : 0.88,
+                    bubblingMouseEvents: false,
                     dashArray: isUnknown ? "3 3" : undefined,
                   }}
                   eventHandlers={{
-                    click: () => setSelectedSiteId(site.id),
+                    click: () => { setPickedPoint(null); setSelectedSiteId(site.id); },
                   }}
                 >
                   <Popup className="cloudsea-popup">
@@ -576,7 +600,8 @@ export default function CloudSeaApp() {
                 </CircleMarker>
               );
             })}
-            <MapScrollControl />
+            <BlankMapPicker point={pickedPoint} onPick={(point) => { setSelectedSiteId(null); setPickedPoint(point); }} />
+            <MapViewportObserver />
             <MapTileStatus />
           </MapContainer>
 
@@ -763,7 +788,46 @@ export default function CloudSeaApp() {
           </div>
         </aside>
 
-        {selectedRanked ? (
+        <MobileDataSheet
+          title={selectedRanked?.site.name ?? (pickedPoint ? `所点坐标 ${pickedPoint.latitude.toFixed(3)}, ${pickedPoint.longitude.toFixed(3)}` : "云海 · 选择山峰")}
+          conclusion={dataNotice ? "数据降级 · 仅供参考" : selectedRanked ? (selectedRanked.window.conditionLabel ? `条件指数 ${selectedRanked.window.conditionLabel}` : "条件数据不足") : pickedPoint ? "查看附近目录山峰" : "点地图查看山峰"}
+          bestTime={selectedRanked?.window.peakTime ? `最佳 ${selectedRanked.window.peakTime} · ${dateLabel(selectedRanked.dateKey)}` : `${phase === "morning" ? "晨间" : "傍晚"} · ${range === 3 ? "三日" : dateLabel(primaryDate)}`}
+          status={dataNotice || (loading ? "正在读取云海条件数据…" : "")}
+          selectionKey={selectedSiteId ?? (pickedPoint ? `${pickedPoint.latitude.toFixed(4)},${pickedPoint.longitude.toFixed(4)}` : null)}
+        >{(level) => <>
+          {pickedPoint ? <section className="mobile-nearby-sites" aria-label="附近云海目录山峰">
+            <p>所点坐标只用于找附近山峰；下列指数属于目录点位，不代表该坐标的预测。</p>
+            {nearby.map(({ site, distanceKm }) => {
+              const forecast = rankedSites.find((entry) => entry.site.id === site.id);
+              return <button key={site.id} type="button" onClick={() => forecast ? handleSelectSite(site.id) : mapRef.current?.flyTo([site.latitude, site.longitude], 8)}>
+                <strong>{site.name}</strong><span>距所点约 {distanceKm.toFixed(0)} km · {forecast?.window.conditionLabel ?? "数据不足"}</span>
+              </button>;
+            })}
+          </section> : null}
+          {selectedRanked ? <div className="mobile-key-metrics">
+            <span>山顶与云层 <strong>{selectedRanked.window.positionLabel}</strong></span>
+            <span>最佳时刻 <strong>{selectedRanked.window.peakTime ?? "—"}</strong></span>
+            <span>湿度 <strong>{selectedRanked.window.humidity != null ? `${selectedRanked.window.humidity}%` : "—"}</strong></span>
+            <span>近地风 <strong>{selectedRanked.window.windSpeed != null ? `${selectedRanked.window.windSpeed}m/s` : "—"}</strong></span>
+          </div> : null}
+          {level === "full" && selectedRanked ? <CloudSeaSiteDetail site={selectedRanked.site} window={selectedRanked.window} phase={phase} dateKey={selectedRanked.dateKey} onClose={() => setSelectedSiteId(null)} /> : null}
+          {level === "full" ? <details className="mobile-sheet-explainer">
+            <summary>数据口径与地图色阶</summary>
+            <p>条件指数综合 GFS 地面天气与压力层模式剖面；云底、云顶和逆温为模式推导，不是现场实测。地图色面是目录点位指数插值，缺失数据不推断分数。</p>
+            <p>{LEVEL_LABELS.map((entry) => entry.range).join(" · ")} · 数据不足</p>
+          </details> : null}
+          {!pickedPoint ? <div className="mobile-sheet-ranking" aria-label="云海山峰排行">
+            <h3>{phase === "morning" ? "晨间" : "傍晚"}云海 · {range === 3 ? `三日最优 ${dateLabel(primaryDate)}—${dateLabel(activeDates[2])}` : dateLabel(primaryDate)}</h3>
+            <ScoreThresholdControl value={scoreThreshold} count={filteredRankedSites.length}
+              label="云海推荐门槛" testId="cloudsea-score-threshold" onChange={setScoreThreshold} />
+            {(level === "full" ? filteredRankedSites : filteredRankedSites.slice(0, 5)).map(({ site, window, dateKey }) => <button key={site.id} type="button" onClick={() => handleSelectSite(site.id)}>
+              <span>{site.name}</span><strong>{range === 3 ? `${dateLabel(dateKey)} · ` : ""}{window.conditionLabel ?? "数据不足"}</strong>
+            </button>)}
+            {!filteredRankedSites.length ? <p>{loading ? "正在读取所选日期的数据…" : dataNotice || "当前无可显示的山峰评分"}</p> : null}
+          </div> : null}
+        </>}</MobileDataSheet>
+
+        {selectedRanked && !mobile ? (
           <ResponsiveTopicDetail
             label={`${selectedRanked.site.name}云海摄影详情`}
             className="cloudsea-detail-layer"

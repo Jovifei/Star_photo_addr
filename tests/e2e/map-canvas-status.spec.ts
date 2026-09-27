@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 import { installGeocodingMock, installNextApiMock, installOpenMeteoMock } from "./mock-open-meteo.js";
 import { readFileSync } from "node:fs";
 
@@ -45,5 +46,6 @@ test("地图底图 tile 失败和天气网格失败分别显示原因", async ({
   await expect(page.locator(".cloud-overlay-error")).toContainText("云图加载失败", { timeout: 15000 });
   await expect(page.locator(".cloud-overlay-error")).toContainText("强制重试");
   await page.goto('/?lat=30.2741&lng=120.1551&name=Hangzhou');
+  if (info.project.name === "mobile") await expandMobileDataSheet(page);
   await expect(page.getByRole('img',{name:'星空分：暂无评分'})).toBeVisible();
 });

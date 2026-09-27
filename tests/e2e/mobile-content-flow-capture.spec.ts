@@ -21,20 +21,38 @@ test("完整应用手机/平板/横屏/桌面截图证据", async ({ page }, inf
   const shot = async (name: string, fullPage = false) => {
     await page.screenshot({ path: `${output}/${name}.png`, fullPage });
   };
+  const waitForMapPaint = async () => {
+    // Screenshot evidence should show the painted basemap when reachable, but
+    // external tile outages must not masquerade as a product assertion failure.
+    await page.waitForFunction(() => {
+      const tiles = [...document.querySelectorAll<HTMLImageElement>(".base-map-tile img")];
+      return tiles.length > 0 && tiles.every((tile) => tile.complete);
+    }, null, { timeout: 6000 }).catch(() => undefined);
+  };
 
-  for (const [width, height] of [[320, 844], [390, 844], [768, 1024], [1024, 768], [812, 375], [1440, 1000]]) {
+  for (const [width, height] of [[320, 844], [375, 812], [390, 844], [430, 932], [768, 1024], [1024, 768], [812, 375], [1440, 1000]]) {
     await page.setViewportSize({ width, height });
     await page.goto("/?overlay=forecast-cloud&view=combined");
-    await expect(page.locator(".map-viewport")).toBeVisible();
+    await expect(page.locator(".leaflet-container")).toHaveAttribute("data-map-zoom", /\d+/, { timeout: 15_000 });
+    await expect(page.locator(".map-setup")).toHaveClass(/hidden/, { timeout: 15_000 });
+    await waitForMapPaint();
+    await expect.poll(() => page.locator(".map-setup").evaluate((node) => Number(getComputedStyle(node).opacity))).toBeLessThan(0.01);
     await shot(`home-${width}x${height}`);
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?overlay=forecast-cloud&view=combined");
+  await expect(page.locator(".leaflet-container")).toHaveAttribute("data-map-zoom", /\d+/, { timeout: 15_000 });
+  await expect(page.locator(".map-setup")).toHaveClass(/hidden/, { timeout: 15_000 });
+  await waitForMapPaint();
+  await expect.poll(() => page.locator(".map-setup").evaluate((node) => Number(getComputedStyle(node).opacity))).toBeLessThan(0.01);
   await shot("home-390-top");
-  await page.mouse.wheel(0, 700);
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(0);
-  await shot("home-390-scrolled");
+  await page.getByRole("button", { name: "展开数据面板" }).click();
+  await shot("home-390-half");
+  await page.getByRole("button", { name: "展开数据面板" }).click();
+  await shot("home-390-full");
+  await page.getByRole("button", { name: "收起数据面板" }).click();
+  await page.getByRole("button", { name: "收起数据面板" }).click();
   await page.getByRole("button", { name: "时间与地点筛选" }).click();
   await shot("home-390-filters-expanded");
   await page.getByRole("button", { name: "收起时间与地点筛选" }).click({ force: true });
@@ -44,19 +62,24 @@ test("完整应用手机/平板/横屏/桌面截图证据", async ({ page }, inf
     await shot(`home-390-panel-${panel}`);
     await closeMobileMapPanel(page);
   }
-  const summary = page.getByRole("button", { name: /展开观测详情/ });
-  if (await summary.count()) {
-    await summary.click();
-    await shot("home-390-tonight-summary");
-    await closeMobileMapPanel(page);
-  }
 
   for (const path of ["/fireglow", "/cloudsea"]) {
     await page.setViewportSize({ width: 390, height: 844 });
     const name = path.slice(1);
     await page.goto(path);
-    await expect(page.locator('.leaflet-container')).toBeVisible();
+    await expect(page.locator('.leaflet-container')).toHaveAttribute("data-map-zoom", /\d+/, { timeout: 15_000 });
+    await waitForMapPaint();
     await shot(`${name}-390-collapsed`);
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+    await shot(`${name}-390-half`);
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+    await shot(`${name}-390-full`);
+    await page.getByRole("button", { name: "收起数据面板" }).click();
+    await page.getByRole("button", { name: "收起数据面板" }).click();
+    const mapBox = (await page.locator(".leaflet-container").boundingBox())!;
+    await page.touchscreen.tap(mapBox.x + mapBox.width * .28, mapBox.y + mapBox.height * .25);
+    await expect(page.getByTestId("mobile-data-sheet")).toHaveAttribute("data-level", "half");
+    await shot(`${name}-390-nearby`);
     const adjust = page.getByRole("button", { name: "展开日期与时段设置" });
     await expect(adjust).toBeVisible();
     await adjust.click();

@@ -7,6 +7,7 @@ import type { GeocodeResult } from "@/lib/types";
 import SearchCombobox from "@/components/SearchCombobox";
 import { resolveElevation } from "@/lib/elevationLookup";
 import RecommendationQuickControls from "@/components/RecommendationQuickControls";
+import { LocateFixed, SlidersHorizontal } from "lucide-react";
 
 /** Search row + top-level location and recommendation controls. */
 export default function MapSearchCard() {
@@ -52,7 +53,7 @@ export default function MapSearchCard() {
           onClick={locate}
           disabled={loading}
         >
-          <span aria-hidden="true">⌾</span>
+          <LocateFixed size={18} aria-hidden="true" />
           {loading ? "定位中" : <>
             <span className="locate-label-full">我的位置</span>
             <span className="locate-label-compact">定位</span>
@@ -67,8 +68,8 @@ export default function MapSearchCard() {
           aria-controls={filtersId}
           onClick={() => setFiltersOpen((open) => !open)}
         >
-          {filtersOpen ? "收起" : "筛选"}
-          <span aria-hidden="true">{filtersOpen ? "−" : "+"}</span>
+          <SlidersHorizontal size={18} aria-hidden="true" />
+          <span className="mobile-filter-label">{filtersOpen ? "收起" : "筛选"}</span>
         </button>
         <div id={filtersId} className="location-filter-controls" data-open={filtersOpen}
           onKeyDown={(event) => {

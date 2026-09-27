@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 function windowScore(score: number | null) {
   return {
@@ -29,7 +30,8 @@ function shiftDate(date: string, days: number): string {
   return value.toISOString().slice(0, 10);
 }
 
-test("failed refresh preserves the same labelled snapshot in map, list and detail, then recovers", async ({ page }) => {
+test("failed refresh preserves the same labelled snapshot in map, list and detail, then recovers", async ({ page }, testInfo) => {
+  const mobile = testInfo.project.name === "mobile";
   let fail = false;
   let score = 72;
   await page.route("**/api/fireglow/snapshot**", async (route) => {
@@ -40,23 +42,36 @@ test("failed refresh preserves the same labelled snapshot in map, list and detai
     })});
   });
   await page.goto('/fireglow');
-  await expect(page.locator('.fireglow-score b').first()).toHaveText('72/100');
+  if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
+  const scoreLabel = mobile
+    ? page.locator(".mobile-sheet-ranking button").first().locator("strong")
+    : page.locator('.fireglow-score b').first();
+  await expect(scoreLabel).toHaveText('72/100');
   const settings = page.getByRole('button',{name:'展开日期与时段设置'});
   if(await settings.isVisible()) await settings.click();
   fail = true;
   await page.getByRole('button',{name:'强制刷新火烧云快照'}).click();
-  await expect(page.locator('.fireglow-map-status')).toContainText('数据已降级');
-  await expect(page.locator('.fireglow-panel-head')).toContainText('数据已降级');
-  await expect(page.locator('.fireglow-score b').first()).toHaveText('72/100');
-  await page.locator('.fireglow-list button').first().click();
+  if (mobile) {
+    await expect(page.locator('.mobile-data-sheet-copy strong')).toHaveText('旧数据 · 不作推荐');
+    await expect(page.locator('.mobile-data-sheet-status')).toContainText('provider temporarily unavailable');
+  } else {
+    await expect(page.locator('.fireglow-map-status')).toContainText('数据已降级');
+  }
+  if (!mobile) await expect(page.locator('.fireglow-panel-head')).toContainText('数据已降级');
+  await expect(scoreLabel).toHaveText('72/100');
+  await (mobile ? page.locator('.mobile-sheet-ranking button').first() : page.locator('.fireglow-list button').first()).click();
+  if (mobile) await expandMobileDataSheet(page);
   await expect(page.locator('.fg-detail-data-status')).toContainText('数据已降级');
   await page.getByRole('button',{name:'关闭火烧云详情舱'}).click();
   fail = false; score = 81;
   await page.getByRole('button',{name:'强制刷新火烧云快照'}).click();
-  await expect(page.locator('.fireglow-score b').first()).toHaveText('81/100');
-  await expect(page.locator('.fireglow-map-status')).toHaveCount(0);
-  await expect(page.locator('.fireglow-panel-head')).not.toContainText('数据已降级');
-  await page.locator('.fireglow-list button').first().click();
+  await expect(scoreLabel).toHaveText('81/100');
+  if (!mobile) {
+    await expect(page.locator('.fireglow-map-status')).toHaveCount(0);
+    await expect(page.locator('.fireglow-panel-head')).not.toContainText('数据已降级');
+  }
+  await (mobile ? page.locator('.mobile-sheet-ranking button').first() : page.locator('.fireglow-list button').first()).click();
+  if (mobile) await expandMobileDataSheet(page);
   await expect(page.locator('.fg-detail-data-status')).toHaveCount(0);
   await expect(page.locator('.fg-hero-score-number')).toHaveText('81/100');
 });
