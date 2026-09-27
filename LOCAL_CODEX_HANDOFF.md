@@ -5,8 +5,9 @@
 - Repository: `Jovifei/Star_photo_addr`
 - Source branch: `codex/mobile-browser-ia-v2-20260927`
 - Source HEAD: `1a0a746ba6c38770e615a1f4f052eb4af8b60334`
-- Implementation branch: `codex/mobile-home-priority-v2-20260927`
-- Final local HEAD: `6a1bf4439fa76ef4c8e6385f8ee1679fa75a2ed1`
+- Product implementation commit: `ac6b425c75fe0d6131fb1d8be23e51fef6999dbe`
+- Remote branch: `codex/mobile-home-priority-v2-20260927`
+- Remote reviewed tip: `3fa6446c1a9957e5b67958bec6224916694070ae` (resolve the branch tip again before receiving work)
 - Base: `origin/main@5a054fd31bda0f743bdc68345ebb3916d0199294`
 - Owner workspace: `E:\project\Star_photo_addr` (dirty; preserve it)
 
@@ -41,5 +42,14 @@ PR: not created because local `gh` is not authenticated. The implementation bran
 
 ## Next remote review
 
-After local execution, record commands and outputs with C2C, send `EXECUTED`, and ask remote ChatGPT to inspect branch `codex/mobile-home-priority-v2-20260927` at `ac6b425`. Do not merge `main` or deploy from this handoff.
+LOCAL_CODEX_NEXT:
+
+1. Fetch `origin` and resolve `origin/codex/mobile-home-priority-v2-20260927` again.
+2. Do not modify, reset, clean, stash, or overwrite Owner dirty `main`.
+3. Use a new isolated worktree from the resolved remote tip.
+4. Rerun the focused tests and `npm run check`; run full Chromium/cross-browser only for merge review.
+5. Keep physical-device validation manual and separate from Playwright.
+6. Record execution output and send `EXECUTED` to remote ChatGPT for review.
+
+Do not merge `main` or deploy from this handoff.
 
