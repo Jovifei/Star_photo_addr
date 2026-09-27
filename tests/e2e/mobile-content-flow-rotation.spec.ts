@@ -10,13 +10,12 @@ test.beforeEach(async ({ page }) => {
   await installNextApiMock(page, fixture);
 });
 
-test("compact drawer survives rotation, restores scroll and focus", async ({ page }, info) => {
+test("compact tools survive rotation and restore focus", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?overlay=forecast-cloud&view=combined");
-  await page.mouse.wheel(0, 420);
   const before = await page.evaluate(() => scrollY);
-  const trigger = page.getByRole("button", { name: /展开观测详情/ });
+  const trigger = page.getByTestId("mobile-map-panel-open-tools");
   await trigger.click();
   const drawer = page.getByTestId("mobile-map-panel-drawer");
   await expect(drawer).toHaveAttribute("aria-modal", "true");

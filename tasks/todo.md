@@ -824,3 +824,26 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - 首轮 Chromium 全量 162 passed / 68 skipped / 2 failed；两项都复现同一版本历史测试回归（v1.0.19 写死、且未保留为历史条目）。本地改为读取当前 package version、补回 v1.0.19 历史卡后，专项桌面/手机测试 2/2 PASS；完整 PR CI 重跑待完成。
 - 生产 `https://photo.joviluma.com/healthz` 实测仍为 v1.0.19 / `b25174276f997dd3a3c16eddf7c10600857fa35a`；PR 未合并、候选未部署。
 - 独立复核子任务未在等待窗口内返回；已完成人工逐文件复核，不记为独立审查通过。
+
+## 2026-09-26 手机地图主页与底部数据面板
+
+- [x] 对齐生产 `main@1db11f3` 的文件树，在隔离分支实施并保留 Owner 脏工作区。
+- [x] 复现四入口手机截图与默认地图手势被禁用、顶部占高和工具栏遮挡。
+- [x] 恢复地图默认拖动、双指/双击与按钮缩放、点选；移除旧“移动地图”模式，按面板避让控件。
+- [x] 四入口共用地图主页、紧凑搜索日期栏/底部导航/三态面板；短横屏和横向平板适配侧栏。
+- [x] 专题空白处显示坐标和附近目录地点，明确目录指数不代表任意坐标；三日排行逐行标记高分所属日期。
+- [x] 覆盖真实触摸/面板手势、键盘焦点、旋转、200%文字模拟、完整应用截图、数据缺失状态和旧流程测试。
+- [x] Node 24 全仓门禁、Chromium 248 项与 Firefox/WebKit 6 项本地验证通过；live smoke 与生产依赖 audit 通过。
+- [ ] 推送 PR 并等待 GitHub CI；绿灯后合并 `main`，按 ECS 低内存步骤部署并核对公网身份/数据源/页面。
+- [x] 物理手机浏览器启动被执行策略拦截，记录 `NOT_RUN`；设备端验证留给发布后 Jovi 检查。
+
+### Review
+
+- 基线 390×844：品牌、导航和筛选叠占多行；三个共享地图禁用手机地图手势；专题排行排在画布后方。原截图为 fixture 证据，云海当时数据/瓦片未能由首屏截图确认。
+- 最终 `npm run check`：PASS — 64 个 Vitest 文件 / 370 项测试、lint、TypeScript、Next production build。
+- Chromium E2E：PASS — 248 项，172 passed / 76 项适用性 skipped / 0 failed；Firefox/WebKit：PASS — 6/6。
+- `npm run test:live`：PASS — 9 个 required 数据源与 1 个 optional VIIRS 瓦片；生产依赖 audit：0 vulnerabilities。
+- 手势验证：四入口 +/- 改 zoom、单指改中心、双指 pinch 改 zoom；专题空白点列附近目录点，面板拖动后首击不丢失。地图平移没有新增评分请求。
+- 截图：`tmp/mobile-content-flow-capture/` 覆盖手机、平板、横屏与桌面；瓦片等待绘制，天气/专题数据使用 fixture。已目视检查 390×844 与 812×375 首屏和附近点面板。
+- 真机：NOT_RUN — 当前桌面策略拒绝启动 Android 浏览器访问本地候选；临时 `adb reverse` 已撤销。公网部署后的实体设备验收仍由 Jovi 执行。
+- 剩余门禁：GitHub PR CI、main 合并、ECS 发布和公网 `/healthz`/`api/data-status`/浏览器验收。

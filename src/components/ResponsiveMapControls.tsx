@@ -14,7 +14,6 @@ import {
 import { lockCompactPageScroll } from "@/lib/pageScrollLock";
 import { useStore } from "@/lib/store";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
-import DetailRestore from "@/components/DetailRestore";
 import BortleControl from "@/components/BortleControl";
 import CloudControl from "@/components/CloudControl";
 import MapBoundaryStatus from "@/components/MapBoundaryStatus";
@@ -86,15 +85,13 @@ export default function ResponsiveMapControls({
   summaryPane?: ReactNode;
 }) {
   const mobile = useMobilePanelViewport();
-  const { state, setDetailOpen } = useStore();
+  const { setDetailOpen } = useStore();
   const [requestedPanel, setRequestedPanel] = useState<MobilePanelKey | null>(null);
   const drawerRef = useRef<HTMLElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastTriggerRef = useRef<HTMLElement | null>(null);
   const showMobileDock = variant === "mobile" || (variant === "canvas" && mobile);
-  const activePanel = showMobileDock && state.detailOpen
-    ? "summary"
-    : requestedPanel;
+  const activePanel = requestedPanel;
 
   const panelOpen = showMobileDock && activePanel !== null;
 
@@ -208,39 +205,12 @@ export default function ResponsiveMapControls({
       aria-label="移动端地图工具侧边栏"
     >
       <nav className="mobile-map-panel-rail" aria-label="地图工具快捷入口">
-        {PANEL_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active = activePanel === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              className={active ? "active" : ""}
-              aria-pressed={active}
-              aria-expanded={active}
-              aria-controls="mobile-map-panel-drawer"
-              onClick={() => (active ? closePanel() : openPanel(item.id))}
-              data-testid={`mobile-map-panel-open-${item.id}`}
-            >
-              <Icon size={18} aria-hidden="true" />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
+        <button type="button" aria-label="打开地图工具" aria-expanded={panelOpen}
+          aria-controls="mobile-map-panel-drawer" data-testid="mobile-map-panel-open-tools"
+          onClick={() => (panelOpen ? closePanel() : openPanel("layers"))}>
+          <Layers3 size={18} aria-hidden="true" /><span>图层</span>
+        </button>
       </nav>
-
-      <DetailRestore
-        open={activePanel === "summary"}
-        label={state.selectedLocation?.name ?? "未选"}
-        onToggle={() => {
-          if (activePanel === "summary") {
-            closePanel();
-            return;
-          }
-          setDetailOpen(true);
-          openPanel("summary");
-        }}
-      />
 
       <button
         type="button"

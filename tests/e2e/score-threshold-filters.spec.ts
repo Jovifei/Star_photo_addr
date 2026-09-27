@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 const onePixelPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -67,7 +68,7 @@ async function mockMapTiles(page: Page) {
   );
 }
 
-test("火烧云分数滑块只保留达到门槛的排行地点", async ({ page }) => {
+test("火烧云分数滑块只保留达到门槛的排行地点", async ({ page }, testInfo) => {
   await mockMapTiles(page);
   await page.route("**/api/fireglow/snapshot**", async (route) => {
     const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-10";
@@ -90,25 +91,28 @@ test("火烧云分数滑块只保留达到门槛的排行地点", async ({ page 
   });
 
   await page.goto("/fireglow");
-  const control = page.getByTestId("fireglow-score-threshold");
+  const mobile = testInfo.project.name === "mobile";
+  if (mobile) await expandMobileDataSheet(page);
+  const control = page.locator(mobile ? '.mobile-sheet-ranking [data-testid="fireglow-score-threshold"]' : '[data-testid="fireglow-score-threshold"]');
   const slider = control.getByRole("slider", { name: /晚霞参考门槛/ });
-  const list = page.locator(".fireglow-list");
+  const list = page.locator(mobile ? ".mobile-sheet-ranking" : ".fireglow-list");
+  const rows = mobile ? list.locator(":scope > button") : list.locator("li");
   await expect(slider).toBeVisible();
-  await expect(list.locator("li")).toHaveCount(3);
+  await expect(rows).toHaveCount(3);
 
   await slider.press("Home");
   for (let index = 0; index < 12; index += 1) await slider.press("ArrowRight");
   await expect(slider).toHaveValue("60");
-  await expect(list.locator("li")).toHaveCount(2);
+  await expect(rows).toHaveCount(2);
   await expect(control).toContainText("≥60分");
 
   await slider.press("End");
   await expect(slider).toHaveValue("100");
-  await expect(list.locator("li")).toHaveCount(1);
+  await expect(rows).toHaveCount(1);
   await expect(list).toContainText("阿里暗夜公园");
 });
 
-test("云海分数滑块只保留达到门槛的排行地点", async ({ page }) => {
+test("云海分数滑块只保留达到门槛的排行地点", async ({ page }, testInfo) => {
   await mockMapTiles(page);
   await page.route("**/api/cloudsea/snapshot**", async (route) => {
     const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-10";
@@ -133,20 +137,23 @@ test("云海分数滑块只保留达到门槛的排行地点", async ({ page }) 
   });
 
   await page.goto("/cloudsea");
-  const control = page.getByTestId("cloudsea-score-threshold");
+  const mobile = testInfo.project.name === "mobile";
+  if (mobile) await expandMobileDataSheet(page);
+  const control = page.locator(mobile ? '.mobile-sheet-ranking [data-testid="cloudsea-score-threshold"]' : '[data-testid="cloudsea-score-threshold"]');
   const slider = control.getByRole("slider", { name: /云海推荐门槛/ });
-  const list = page.locator(".cloudsea-site-list");
+  const list = page.locator(mobile ? ".mobile-sheet-ranking" : ".cloudsea-site-list");
+  const rows = mobile ? list.locator(":scope > button") : list.locator(".cloudsea-card");
   await expect(slider).toBeVisible();
-  await expect(list.locator(".cloudsea-card")).toHaveCount(3);
+  await expect(rows).toHaveCount(3);
 
   await slider.press("Home");
   for (let index = 0; index < 12; index += 1) await slider.press("ArrowRight");
   await expect(slider).toHaveValue("60");
-  await expect(list.locator(".cloudsea-card")).toHaveCount(2);
+  await expect(rows).toHaveCount(2);
   await expect(control).toContainText("≥60分");
 
   await slider.press("End");
   await expect(slider).toHaveValue("100");
-  await expect(list.locator(".cloudsea-card")).toHaveCount(1);
+  await expect(rows).toHaveCount(1);
   await expect(list).toContainText("临安太子尖");
 });

@@ -20,17 +20,28 @@ export async function openMobileMapPanel(page, panel) {
   }
   await page.getByTestId("mobile-map-panel-dock").waitFor({ state: "visible", timeout: 15000 });
   const drawer = page.getByTestId("mobile-map-panel-drawer");
+  const waitForDrawerMotion = async () => expect.poll(
+    () => drawer.evaluate((element) => getComputedStyle(element).transform),
+    { timeout: 5000 },
+  ).toBe("matrix(1, 0, 0, 1, 0, 0)");
   if ((await drawer.count()) > 0 && (await drawer.getAttribute("aria-hidden")) === "false") {
-    await drawer.getByRole("tab", { name: mobileLabels[panel] }).click({ force: true });
+    await waitForDrawerMotion();
+    const tab = drawer.locator(".mobile-map-panel-tabs").getByRole("tab", { name: mobileLabels[panel] });
+    await tab.click({ force: true });
+    await expect(tab).toHaveAttribute("aria-selected", "true");
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
     return true;
   }
-  const trigger = page.getByTestId(`mobile-map-panel-open-${panel}`);
+  const trigger = page.getByTestId("mobile-map-panel-open-tools");
   if ((await trigger.count()) === 0) return false;
   if ((await trigger.getAttribute("aria-expanded")) !== "true") {
     await trigger.click({ force: true });
   }
   await expect(drawer).toHaveAttribute("aria-hidden", "false", { timeout: 5000 });
+  await waitForDrawerMotion();
+  const tab = drawer.locator(".mobile-map-panel-tabs").getByRole("tab", { name: mobileLabels[panel] });
+  await tab.click({ force: true });
+  await expect(tab).toHaveAttribute("aria-selected", "true");
   return true;
 }
 

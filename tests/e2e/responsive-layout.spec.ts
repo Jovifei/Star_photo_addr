@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 const onePixelPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -235,7 +236,7 @@ test.describe("responsive layout contract", () => {
     }
   });
 
-  test("mobile cloudsea detail opens as a bottom dialog without shrinking its cards", async ({ page }, testInfo) => {
+  test("mobile cloudsea detail lives in the shared sheet without nested scrolling", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile", "手机详情抽屉只在移动项目验证");
 
     await mockMapTiles(page);
@@ -260,27 +261,44 @@ test.describe("responsive layout contract", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/cloudsea");
-    const card = page.locator(".cloudsea-card").first();
+    const mobile = testInfo.project.name === "mobile";
+    if (mobile) await expandMobileDataSheet(page);
+    const card = page.locator(mobile ? ".mobile-sheet-ranking button" : ".cloudsea-card").first();
     await expect(card).toBeVisible({ timeout: 15_000 });
     await card.click();
+    if (mobile) await expandMobileDataSheet(page);
 
-    const detail = page.locator(".cloudsea-site-detail");
-    await expect(detail).toHaveAttribute("role", "dialog");
-    await expect(detail).toHaveAttribute("aria-modal", "true");
+    const detail = page.locator(".cloudsea-site-detail:visible");
+    if (mobile) {
+      await expect(detail).not.toHaveAttribute("aria-modal");
+      await expect(page.getByTestId("mobile-data-sheet-body")).toHaveCSS("overflow-y", "auto");
+      await expect(detail.locator(".cs-detail-scroll-content")).toHaveCSS("overflow-y", "visible");
+    } else {
+      await expect(detail).toHaveAttribute("role", "dialog");
+      await expect(detail).toHaveAttribute("aria-modal", "true");
+    }
     await page.waitForTimeout(250);
     const box = await detail.boundingBox();
     const viewportWidth = await page.evaluate(() => window.innerWidth);
     expect(box).not.toBeNull();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth + 1);
-    expect(box!.y + box!.height).toBeLessThanOrEqual(844);
-    expect(box!.y).toBeGreaterThanOrEqual(844 * 0.2);
 
     const detailScroll = await detail.locator(".cs-detail-scroll-content").evaluate((element) => ({
       clientHeight: element.clientHeight,
       scrollHeight: element.scrollHeight,
+      overflowY: getComputedStyle(element).overflowY,
     }));
-    expect(detailScroll.scrollHeight).toBeGreaterThan(detailScroll.clientHeight);
+    if (mobile) {
+      expect(detailScroll.overflowY).toBe("visible");
+      const sheetScroll = await page.getByTestId("mobile-data-sheet-body").evaluate((element) => ({
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+      }));
+      expect(sheetScroll.scrollHeight).toBeGreaterThan(sheetScroll.clientHeight);
+    } else {
+      expect(detailScroll.scrollHeight).toBeGreaterThan(detailScroll.clientHeight);
+    }
 
     for (const viewport of [
       { width: 320, height: 568 },
@@ -298,10 +316,10 @@ test.describe("responsive layout contract", () => {
     }
 
     await detail.getByRole("button", { name: "关闭云海详情舱" }).click();
-    await expect(card).toBeFocused();
+    if (!mobile) await expect(card).toBeFocused();
   });
 
-  test("mobile fireglow detail opens as the same bottom dialog contract", async ({ page }, testInfo) => {
+  test("mobile fireglow detail lives in the shared sheet", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile", "手机详情抽屉只在移动项目验证");
 
     await mockMapTiles(page);
@@ -343,21 +361,29 @@ test.describe("responsive layout contract", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/fireglow");
-    const card = page.locator(".fireglow-list button").first();
+    const mobile = testInfo.project.name === "mobile";
+    if (mobile) await expandMobileDataSheet(page);
+    const card = page.locator(mobile ? ".mobile-sheet-ranking button" : ".fireglow-list button").first();
     await expect(card).toBeVisible({ timeout: 15_000 });
     await card.click();
+    if (mobile) await expandMobileDataSheet(page);
 
-    const detail = page.locator(".fireglow-site-detail");
-    await expect(detail).toHaveAttribute("role", "dialog");
-    await expect(detail).toHaveAttribute("aria-modal", "true");
+    const detail = page.locator(".fireglow-site-detail:visible");
+    if (mobile) {
+      await expect(detail).not.toHaveAttribute("aria-modal");
+      await expect(page.getByTestId("mobile-data-sheet-body")).toHaveCSS("overflow-y", "auto");
+      await expect(detail.locator(".fg-detail-scroll-content")).toHaveCSS("overflow-y", "visible");
+    } else {
+      await expect(detail).toHaveAttribute("role", "dialog");
+      await expect(detail).toHaveAttribute("aria-modal", "true");
+    }
     await page.waitForTimeout(250);
     const box = await detail.boundingBox();
     const viewportWidth = await page.evaluate(() => window.innerWidth);
     expect(box).not.toBeNull();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth + 1);
-    expect(box!.y + box!.height).toBeLessThanOrEqual(844);
     await detail.getByRole("button", { name: "关闭火烧云详情舱" }).click();
-    await expect(card).toBeFocused();
+    if (!mobile) await expect(card).toBeFocused();
   });
 });

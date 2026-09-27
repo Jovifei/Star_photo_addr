@@ -1,5 +1,5 @@
 # Release Rules
-<!-- last-analyzed: 2026-09-06T16:00:00+08:00 -->
+<!-- last-analyzed: 2026-09-27T13:06:36+08:00 -->
 
 ## Version Sources
 
@@ -15,7 +15,7 @@ Manual versioned commit on a `codex/` branch, followed by fast-forward merge to 
 
 ## Test Gate
 
-`npm run check` and `npm run test:e2e` on an isolated local port. Live data and deployment gates use `npm run test:live` and `npm run check:data-sources -- <base-url>`.
+`npm run check` and `npm run test:e2e` on an isolated local port; CI also runs production dependency audit, `npm run test:live`, Chromium, Firefox/WebKit, and Docker/Nginx smoke jobs. Deployment gates use `npm run check:data-sources -- <base-url>`.
 
 ## Registry / Distribution
 

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { StoreProvider } from "@/lib/store";
 import ProductStateBridge from "@/components/ProductStateBridge";
+import VisualViewportSize from "@/components/VisualViewportSize";
 import "./globals.css";
 import "./theme-unified.css";
 import "@/components/workspace/workspace-shell.css";
@@ -12,6 +13,7 @@ import "./ux-map-v2.css";
 import "./mobile-map-controls.css";
 import "./mobile-topic-detail.css";
 import "./mobile-document-scroll.css";
+import "./mobile-map-first.css";
 
 const PUBLIC_SITE_URL = "https://photo.joviluma.com";
 
@@ -65,6 +67,7 @@ export default function RootLayout({
     <html lang="zh-CN" className="h-full">
       <body className="min-h-full antialiased">
         <StoreProvider>
+          <VisualViewportSize />
           <Suspense fallback={null}>
             <ProductStateBridge />
           </Suspense>

@@ -69,28 +69,28 @@ test("暗夜选址与今夜观测使用不同的任务说明", async ({ page }) 
   );
 });
 
-test("当前位置没有设备海拔时显示待核验，不借用邻近点位高程", async ({ page, context }) => {
+test("当前位置没有设备海拔时显示待核验，不借用邻近点位高程", async ({ page, context }, testInfo) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ latitude: 30.4012, longitude: 119.2554 });
   await page.goto("/");
   await page.getByRole("button", { name: "使用我的当前位置" }).click();
-  const coordinates = page.locator(".panel-coords").first();
+  const coordinates = page.locator(testInfo.project.name === "mobile" ? ".mobile-data-sheet .panel-coords" : ".panel-coords").first();
   await expect(coordinates).toContainText("海拔待核验");
   await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
 });
 
-test("共享地点深链区分未提供海拔和明确的海平面 0m", async ({ page }) => {
+test("共享地点深链区分未提供海拔和明确的海平面 0m", async ({ page }, testInfo) => {
+  const coordinates = () => page.locator(testInfo.project.name === "mobile" ? ".mobile-data-sheet .panel-coords" : ".panel-coords").first();
   await page.goto("/?lat=30.1234&lng=120.5678&name=%E6%9C%AA%E7%9F%A5%E6%9C%BA%E4%BD%8D");
-  const coordinates = page.locator(".panel-coords").first();
-  await expect(coordinates).toContainText("海拔待核验");
-  await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
+  await expect(coordinates()).toContainText("海拔待核验");
+  await expect(coordinates()).not.toContainText(/海拔\s*0\s*m/);
 
   await page.goto("/?lat=30.1235&lng=120.5679&name=%E7%A9%BA%E6%B5%B7%E6%8B%94%E5%8F%82%E6%95%B0&elevation=");
-  await expect(coordinates).toContainText("海拔待核验");
-  await expect(coordinates).not.toContainText(/海拔\s*0\s*m/);
+  await expect(coordinates()).toContainText("海拔待核验");
+  await expect(coordinates()).not.toContainText(/海拔\s*0\s*m/);
 
   await page.goto("/?lat=31.1234&lng=121.5678&name=%E6%B5%B7%E5%B9%B3%E9%9D%A2%E7%82%B9&elevation=0");
-  await expect(coordinates).toContainText("海拔 0 m");
+  await expect(coordinates()).toContainText("海拔 0 m");
 });
 
 test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据", async ({ page }, testInfo) => {
@@ -99,6 +99,7 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
   );
   const drawer = page.getByTestId("mobile-map-panel-drawer");
   if (testInfo.project.name === "mobile") {
+    await openMobileMapPanel(page, "layers");
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
   }
   const darkSkyNote = page.locator(".dark-sky-unavailable-note");

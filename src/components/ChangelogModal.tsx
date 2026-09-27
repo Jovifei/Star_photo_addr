@@ -12,25 +12,36 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
-    date: "2026-09-24",
-    tag: "短高宽屏仪表盘密度",
+    date: "2026-09-27",
+    tag: "手机地图主页与底部数据面板",
     current: true,
     highlights: [
       {
         icon: Layers,
-        title: "短高屏控制区更紧凑",
-        desc: "云海和火烧云的导航、日期与阶段控制为地图留出更多首屏高度。",
+        title: "地图手势默认可用",
+        desc: "手机上单指拖动地图、双指缩放、点空白位置选择坐标；缩放按钮仍可使用。",
       },
       {
         icon: CloudSun,
-        title: "日期与选中状态更清楚",
-        desc: "今日、明日、后日和三日范围保留日期/周几，当前选项用紧凑下划线强调。",
+        title: "四个入口共享三态数据面板",
+        desc: "收起时保留地点与条件结论，展开后阅读关键参数和逐小时证据，完整态列出详情与来源。",
       },
       {
         icon: Mountain,
-        title: "紧凑但保留可操作性",
-        desc: "控制点击目标保持 48px、文字不低于 13px，并覆盖键盘焦点与页面溢出回归。",
+        title: "手机和平板布局分开适配",
+        desc: "竖屏用底部面板，短横屏和平板横向屏用地图加侧栏；火烧云与云海空白点位会标出附近目录地点。",
       },
+    ],
+  },
+  {
+    version: "v1.0.20",
+    date: "2026-09-24",
+    tag: "短高宽屏仪表盘密度",
+    current: false,
+    highlights: [
+      { icon: Layers, title: "短高屏控制区更紧凑", desc: "云海和火烧云的导航、日期与阶段控制为地图留出更多首屏高度。" },
+      { icon: CloudSun, title: "日期与选中状态更清楚", desc: "今日、明日、后日和三日范围保留日期/周几，当前选项用紧凑下划线强调。" },
+      { icon: Mountain, title: "紧凑但保留可操作性", desc: "控制点击目标保持 48px、文字不低于 13px，并覆盖键盘焦点与页面溢出回归。" },
     ],
   },
   {

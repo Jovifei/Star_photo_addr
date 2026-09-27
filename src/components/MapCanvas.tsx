@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import MapScrollControl from "@/components/MapScrollControl";
+import MapViewportObserver from "@/components/MapViewportObserver";
 import MapTileStatus from "@/components/MapTileStatus";
 import {
   CircleMarker,
@@ -9,7 +9,6 @@ import {
   TileLayer,
   Tooltip,
   useMap,
-  useMapEvents,
 } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -27,17 +26,17 @@ import SatelliteLayer from "@/components/SatelliteLayer";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 import ObservingViirsLayer from "@/components/ObservingViirsLayer";
 import ObservingSitesLayer from "@/components/ObservingSitesLayer";
+import { useMapBlankTap } from "@/hooks/useMapBlankTap";
 
 function ClickHandler({
   onSample,
 }: {
   onSample: (latitude: number, longitude: number) => void;
 }) {
-  useMapEvents({
-    click(event) {
-      onSample(event.latlng.lat, event.latlng.lng);
-    },
-  });
+  useMapBlankTap(
+    onSample,
+    ".observing-site-marker, .viewport-rank-marker, .selected-sample-marker, .leaflet-control, .leaflet-popup, .leaflet-tooltip",
+  );
   return null;
 }
 
@@ -50,6 +49,7 @@ function SampleMarker() {
       center={[location.latitude, location.longitude]}
       radius={8}
       pathOptions={{
+        className: "selected-sample-marker",
         color: "#79cfe2",
         fillColor: "#79cfe2",
         fillOpacity: 0.65,
@@ -148,6 +148,10 @@ export default function MapCanvas({
       minZoom={2}
       maxZoom={12}
       zoomControl
+      dragging
+      touchZoom
+      doubleClickZoom
+      scrollWheelZoom
       worldCopyJump={false}
       // Keep the view within one world so cloud sampling longitudes stay valid
       // (the grid clamps too, but this prevents panning into empty oceans).
@@ -177,7 +181,7 @@ export default function MapCanvas({
       {showCloud && <ObservingSitesLayer />}
       <ClickHandler onSample={onSample} />
       <SampleMarker />
-      <MapScrollControl />
+      <MapViewportObserver />
       <MapTileStatus />
       <RecenterOnSelected enabled={recenterOnSelect} />
       {children}

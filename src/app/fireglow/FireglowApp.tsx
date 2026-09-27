@@ -1,6 +1,11 @@
 "use client";
-import MapScrollControl from "@/components/MapScrollControl";
+import MapViewportObserver from "@/components/MapViewportObserver";
 import MapTileStatus from "@/components/MapTileStatus";
+import BlankMapPicker from "@/components/BlankMapPicker";
+import MobileDataSheet from "@/components/MobileDataSheet";
+import TopicMapSearch from "@/components/TopicMapSearch";
+import { useMobilePanelViewport } from "@/components/ResponsiveMapControls";
+import { nearbyDirectorySites, type Coordinate } from "@/lib/nearbyDirectorySites";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sunrise, Sunset, Flame, RefreshCw } from "lucide-react";
@@ -141,6 +146,8 @@ export default function FireglowApp() {
   const [requestKey, setRequestKey] = useState("");
   const [map, setMap] = useState<LeafletMap | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pickedPoint, setPickedPoint] = useState<Coordinate | null>(null);
+  const mobile = useMobilePanelViewport();
   const [scoreThreshold, setScoreThreshold] = useState(0);
   const loadTokenRef = useRef(0);
   const controllerRef = useRef<AbortController | null>(null);
@@ -283,6 +290,10 @@ export default function FireglowApp() {
     [ranked, scoreThreshold],
   );
   const selectedSite = ranked.find((site) => site.id === selectedId) ?? null;
+  const nearby = useMemo(
+    () => pickedPoint ? nearbyDirectorySites(pickedPoint, OBSERVING_SITES) : [],
+    [pickedPoint],
+  );
   const selectedDateKey = useMemo(() => {
     if (!selectedSite) return activeDates[0] ?? baseDate;
     return activeDates.find(
@@ -297,6 +308,7 @@ export default function FireglowApp() {
     : "";
 
   const focusSite = useCallback((site: RankedSite) => {
+    setPickedPoint(null);
     setSelectedId(site.id);
     map?.flyTo([site.latitude, site.longitude], Math.max(6, map.getZoom()), { duration: 0.6 });
   }, [map]);
@@ -317,6 +329,13 @@ export default function FireglowApp() {
 
   return (
     <div className="fireglow-root app-shell">
+      <TopicMapSearch sites={OBSERVING_SITES}
+        onSite={(site) => {
+          const forecast = ranked.find((entry) => entry.id === site.id);
+          if (forecast) focusSite(forecast);
+          else { setPickedPoint({ latitude: site.latitude, longitude: site.longitude }); map?.flyTo([site.latitude, site.longitude], 8); }
+        }}
+        onCoordinate={(point) => { setSelectedId(null); setPickedPoint(point); map?.flyTo([point.latitude, point.longitude], 8); }} />
       <ProductHeader
         mark={<Flame size={18} aria-hidden="true" />}
         markClassName="fireglow-mark"
@@ -378,6 +397,10 @@ export default function FireglowApp() {
             minZoom={3}
             maxZoom={12}
             zoomControl
+            dragging
+            touchZoom
+            doubleClickZoom
+            scrollWheelZoom
             attributionControl
             style={{ width: "100%", height: "100%" }}
           >
@@ -413,13 +436,15 @@ export default function FireglowApp() {
                   center={[site.latitude, site.longitude]}
                   radius={isUnknown ? 3 : 3 + (site.window.score! / 100) * 3.5}
                   pathOptions={{
+                    className: "topic-site-marker",
                     color: site.id === selectedId ? "#ffffff" : color,
                     fillColor: color,
                     fillOpacity: isUnknown ? 0.38 : 0.82,
+                    bubblingMouseEvents: false,
                     dashArray: isUnknown ? "3 3" : undefined,
                     weight: site.id === selectedId ? 3 : 1.5,
                   }}
-                  eventHandlers={{ click: () => setSelectedId(site.id) }}
+                  eventHandlers={{ click: () => { setPickedPoint(null); setSelectedId(site.id); } }}
                 >
                   <Popup>
                     <div className="fireglow-popup">
@@ -431,7 +456,8 @@ export default function FireglowApp() {
                 </CircleMarker>
               );
             })}
-            <MapScrollControl />
+            <BlankMapPicker point={pickedPoint} onPick={(point) => { setSelectedId(null); setPickedPoint(point); }} />
+            <MapViewportObserver />
             <MapTileStatus />
           </MapContainer>
           {dataQualityNotice ? (
@@ -528,7 +554,47 @@ export default function FireglowApp() {
           </p>
         </aside>
 
-        {selectedSite ? (
+        <MobileDataSheet
+          title={selectedSite?.name ?? (pickedPoint ? `所点坐标 ${pickedPoint.latitude.toFixed(3)}, ${pickedPoint.longitude.toFixed(3)}` : "火烧云 · 选择点位")}
+          conclusion={dataQualityNotice ? "旧数据 · 不作推荐" : selectedSite ? (selectedSite.window.probabilityLabel ? `条件指数 ${selectedSite.window.probabilityLabel}` : "条件数据不足") : pickedPoint ? "查看附近目录点位" : "点地图查看点位"}
+          bestTime={selectedSite?.window.peakTime ? `最佳 ${selectedSite.window.peakTime} · ${dateLabel(selectedDateKey)}` : `${phase === "evening" ? "晚霞" : "朝霞"} · ${rangeMode === 3 ? "三日" : dateLabel(activeDates[0])}`}
+          status={visibleError || dataQualityNotice || phaseUnavailableNotice || (visibleStatus === "loading" ? "正在读取所选日期的火烧云数据…" : "")}
+          selectionKey={selectedId ?? (pickedPoint ? `${pickedPoint.latitude.toFixed(4)},${pickedPoint.longitude.toFixed(4)}` : null)}
+        >{(level) => <>
+          {pickedPoint ? <section className="mobile-nearby-sites" aria-label="附近火烧云目录点位">
+            <p>所点坐标只用于找附近地点；下列指数属于目录点位，不代表该坐标的预测。</p>
+            {nearby.map(({ site, distanceKm }) => {
+              const forecast = ranked.find((entry) => entry.id === site.id);
+              return <button key={site.id} type="button" onClick={() => forecast ? focusSite(forecast) : map?.flyTo([site.latitude, site.longitude], Math.max(6, map.getZoom()))}>
+                <strong>{site.name}</strong><span>距所点约 {distanceKm.toFixed(0)} km · {forecast?.window.probabilityLabel ?? "数据不足"}</span>
+              </button>;
+            })}
+          </section> : null}
+          {selectedSite ? <div className="mobile-key-metrics">
+            <span>条件指数 <strong>{selectedSite.window.score ?? "—"}</strong></span>
+            <span>最佳时刻 <strong>{selectedSite.window.peakTime ?? "—"}</strong></span>
+            <span>低云遮挡 <strong>{selectedSite.window.lowCloud != null ? `${selectedSite.window.lowCloud}%` : "—"}</strong></span>
+            <span>中高云 <strong>{selectedSite.window.midCloud != null && selectedSite.window.highCloud != null ? `${selectedSite.window.midCloud}% / ${selectedSite.window.highCloud}%` : "—"}</strong></span>
+          </div> : null}
+          {level === "full" && selectedSite ? <FireglowSiteDetail site={selectedSite} phase={phase} dateKey={selectedDateKey} dataQualityNotice={dataQualityNotice} onClose={() => setSelectedId(null)} /> : null}
+          {level === "full" ? <details className="mobile-sheet-explainer">
+            <summary>数据口径与地图色阶</summary>
+            <p>条件指数由云层结构、能见度与太阳高度启发式映射；地图色面为目录点位指数的 IDW 插值，不是卫星或雷达像素，也不是实拍校准概率。</p>
+            <p>{LEVEL_LABELS.map((entry) => entry.range).join(" · ")} · 数据不足</p>
+          </details> : null}
+          {!pickedPoint ? <div className="mobile-sheet-ranking" aria-label="火烧云点位排行">
+            <h3>{phase === "evening" ? "晚霞" : "朝霞"}点位 · {rangeMode === 3 ? `三日最佳 ${dateLabel(activeDates[0])}—${dateLabel(activeDates[2])}` : dateLabel(activeDates[0])}</h3>
+            <ScoreThresholdControl value={scoreThreshold} count={filteredRanked.length}
+              label={phase === "evening" ? "晚霞参考门槛" : "朝霞参考门槛"}
+              testId="fireglow-score-threshold" onChange={setScoreThreshold} />
+            {(level === "full" ? filteredRanked : filteredRanked.slice(0, 5)).map((site) => <button key={site.id} type="button" onClick={() => focusSite(site)}>
+              <span>{site.name}</span><strong>{rangeMode === 3 ? `${dateLabel(activeDates.find((date) => snapshots[date]?.sites[site.id]?.[phase] === site.window) ?? activeDates[0])} · ` : ""}{site.window.probabilityLabel ?? "数据不足"}</strong>
+            </button>)}
+            {!filteredRanked.length ? <p>{visibleStatus === "loading" ? "正在读取所选日期的数据…" : visibleError || "当前无可显示的点位评分"}</p> : null}
+          </div> : null}
+        </>}</MobileDataSheet>
+
+        {selectedSite && !mobile ? (
           <ResponsiveTopicDetail
             label={`${selectedSite.name}火烧云摄影详情`}
             className="fireglow-detail-layer"

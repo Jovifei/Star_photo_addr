@@ -3,9 +3,9 @@
 > 对应方案：[`TEST_PLAN_V1.md`](./TEST_PLAN_V1.md)
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
-> 状态日期：2026-09-23
-> 当前 release candidate：`v1.0.19`，分支 `codex/mobile-data-integrity-v1.0.19-20260923`
-> 当前 main 基线：`main@3334e0c`（v1.0.18）；发布前公网运行基线：v1.0.18 / `349db7b`。候选本地 PASS 不代表已部署。
+> 状态日期：2026-09-27
+> 当前 release candidate：`v1.0.21`，分支 `codex/mobile-map-first-20260926`
+> 候选基线：`origin/main@1db11f3`（v1.0.20）；发布前公网基线实测：v1.0.20 / `1db11f3174da6d70ed44de9ce5816b3e0edb3012`。候选本地 PASS 不代表已部署。
 
 ## 状态定义
 
@@ -31,6 +31,21 @@
 | 真机 iPhone/Android、软键盘与真实浏览器底栏 | MANUAL | 仍需 Jovi 部署后现场确认 |
 
 本节为 v1.0.19 本地发布候选证据；GitHub CI、main 合并、ECS 新版本部署与生产 `/healthz` 仍需单独验收。
+
+## v1.0.21 本地发布候选门禁（2026-09-27）
+
+| 门禁 | 结果 | 说明 |
+| --- | --- | --- |
+| `npm run check` | PASS | ESLint、TypeScript、64 个 Vitest 文件 / 370 项测试、Next.js production build |
+| `npm exec -- playwright test` | PASS | Chromium 桌面/手机 248 项：172 passed / 76 项目适用性 skip / 0 failed |
+| `npm run test:e2e:cross-browser` | PASS | Firefox desktop 与 WebKit mobile，6/6 passed，包含缩放、拖动、手机空白点选与键盘来源弹窗 |
+| `npm run test:live` | PASS | Open-Meteo best_match、ICON、GFS、AIFS、pressure profile、geocoding、AQI、NASA GIBS、NOAA Kp；VIIRS optional tile 均 OK |
+| `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
+| 物理手机浏览器 | NOT_RUN | Android 已连接；启动浏览器访问本地候选命令被桌面执行策略拒绝，临时端口映射已撤销 |
+| GitHub PR CI / main | PENDING | 本地候选已通过，尚待推送后跑远端 CI 与合并 |
+| 生产健康/数据源/页面 | PENDING | 当前生产基线 v1.0.20 / `1db11f3174da6d70ed44de9ce5816b3e0edb3012`；候选尚未部署 |
+
+本地 E2E 的瓦片/专题排行以 fixture 验证布局与交互，live smoke 单独验证外部数据源可达；二者不互相替代。真机与公网结果只在实际执行后回填。
 
 ## v1.0.14 发布门禁结果
 

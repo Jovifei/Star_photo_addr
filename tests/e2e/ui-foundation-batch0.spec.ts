@@ -5,6 +5,7 @@ import {
   installNextApiMock,
   installOpenMeteoMock,
 } from "./mock-open-meteo.js";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"),
@@ -85,7 +86,7 @@ test("四个地图入口默认请求 OSM 且不请求 CARTO 匿名瓦片", async
 
 test("同坐标候选只保留先出现的一条，深链点位不会静默新增收藏", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.addInitScript((candidates) => {
     localStorage.setItem(
       "perseids-custom-candidates-v1",
@@ -95,7 +96,10 @@ test("同坐标候选只保留先出现的一条，深链点位不会静默新�
   await page.goto(
     "/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4",
   );
-  await expect(page.locator(".candidate-card")).toHaveCount(1, { timeout: 20000 });
+  const mobile = testInfo.project.name === "mobile";
+  if (mobile) await expandMobileDataSheet(page);
+  const cards = page.locator(mobile ? ".mobile-sheet-candidates .candidate-card" : ".candidate-card");
+  await expect(cards).toHaveCount(1, { timeout: 20000 });
   await expect(page.locator(".detail-drawer")).toHaveCount(0);
   await expect
     .poll(async () =>
@@ -108,7 +112,8 @@ test("同坐标候选只保留先出现的一条，深链点位不会静默新�
       expect.objectContaining({ id: "duplicate-a", name: "同一机位 A" }),
     ]);
   await page.reload();
-  await expect(page.locator(".candidate-card")).toHaveCount(1, { timeout: 20000 });
+  if (mobile) await expandMobileDataSheet(page);
+  await expect(cards).toHaveCount(1, { timeout: 20000 });
   const afterReload = await page.evaluate(() => {
     const raw = localStorage.getItem("perseids-custom-candidates-v1");
     return raw ? JSON.parse(raw) : [];
@@ -117,7 +122,7 @@ test("同坐标候选只保留先出现的一条，深链点位不会静默新�
   expect(afterReload[0]?.id).toBe("duplicate-a");
 });
 
-test("相距较远的两个地点不会被坐标去重误删", async ({ page }) => {
+test("相距较远的两个地点不会被坐标去重误删", async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     localStorage.setItem(
       "perseids-custom-candidates-v1",
@@ -153,7 +158,9 @@ test("相距较远的两个地点不会被坐标去重误删", async ({ page }) 
   });
   await page.goto("/planner");
   await expect.poll(() => new URL(page.url()).pathname).toBe("/");
-  await expect(page.locator(".candidate-card")).toHaveCount(2, { timeout: 20000 });
+  const mobile = testInfo.project.name === "mobile";
+  if (mobile) await expandMobileDataSheet(page);
+  await expect(page.locator(mobile ? ".mobile-sheet-candidates .candidate-card" : ".candidate-card")).toHaveCount(2, { timeout: 20000 });
   await expect
     .poll(async () =>
       page.evaluate(() => {

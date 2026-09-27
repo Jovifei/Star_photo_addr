@@ -1,10 +1,18 @@
 # 逐星项目状态总览
 
-> 快照日期：2026-09-23（发布前）
-> 当前代码包版本：`v1.0.19`；当前生产版本与 build revision 需在部署后从 `/healthz` 实测，不按源码版本推断。
-> 发布前公网基线实测：`v1.0.18 / 349db7b`；本次候选待 GitHub CI、main 合并和 ECS 发布门禁。
+> 快照日期：2026-09-27（本地发布候选）
+> 候选代码包版本：`v1.0.21`；生产公网基线实测：`v1.0.20 / 1db11f3174da6d70ed44de9ce5816b3e0edb3012`。
+> 本地 check、Chromium、Firefox/WebKit、live smoke 和依赖审计已通过；PR CI、main 合并、ECS 部署和公网验收待完成。
 
-## 0. 历史发布快照（v1.0.14，截至 2026-09-10）
+## 0.1 v1.0.21 当前候选
+
+- 四个入口手机/平板共享地图主页、紧凑搜索日期栏、底部导航和三态数据面板；横向平板使用地图加侧栏。
+- 手机地图默认可拖动、双指/双击缩放与点选；火烧云/云海空白坐标显示附近目录点，不为任意坐标造预测分数；三日排行逐行注明日期。
+- `npm run check`：64 个 Vitest 文件 / 370 项测试、ESLint、TypeScript、production build 均通过。
+- Chromium：248 项，172 passed / 76 适用性跳过 / 0 failed；Firefox/WebKit 6/6；live smoke required/optional 源均通过；production dependency audit 0 vulnerabilities。
+- 真机手机浏览器：`NOT_RUN`（桌面策略拒绝启动 Android 浏览器）；GitHub CI、main 合并、ECS 部署与公网复核尚未完成。
+
+## 0.2 历史发布快照（v1.0.14，截至 2026-09-10）
 
 - 顶部命令栏按“评分时间 → B1–B4 暗空参考 → 推荐门槛 → 仅显示推荐地点”排列；搜索、定位和四组参数保持紧凑同排，窄屏才堆叠。
 - B1–B4 文案和分数预设明确为：B1 极暗 ≥85、B2 自然暗夜 ≥70、B3 乡村夜空 ≥55、B4 乡村/郊区过渡 ≥50；命令栏档位单选并同步推荐门槛，目录参考不进入实时天气评分。
@@ -29,6 +37,7 @@
 
 | 工作包 | 状态 | 交付 | 关键证据 |
 | --- | --- | --- | --- |
+| RELEASE-MAP-FIRST-021 | 本地验证通过，等待 CI/集成 | 手机地图主页、底部数据面板、默认地图手势、专题附近目录点、三日高分日期标识 | `codex/mobile-map-first-20260926`；`npm run check` 64/370；Chromium 248/172/76/0；Firefox/WebKit 6/6；live smoke/audit PASS；PR/main/ECS 尚待完成；真机 NOT_RUN |
 | RELEASE-DATA-014 | PASS | 按省级公开资料扩充 282 点目录、默认 17 个精选、天津补点、版本记录、生产部署和公网验收 | `main@39338495db0d`；`npm run check` 53/308、Chromium E2E 112/34、live smoke/audit、app/worker healthy、`check:data-sources`、公网搜索 |
 | RELEASE-UI-013 | PASS | 本地点位搜索优先命中目录、v1.0.13 版本记录、生产部署和公网搜索验收 | `main@14ad3a49cf1`；`npm run check` 53/306、Chromium E2E 112/34、live smoke/audit、生产 `/healthz`、公网搜索 |
 | RELEASE-UI-012 | PASS | 顶部控件统一、主页默认图层纠偏、火烧云/云海评分门槛滑块、v1.0.12 记录、生产部署和公网验收 | `main@1e550cdc5a15`；`npm run check` 52/304、Chromium E2E 110/34、live smoke/audit、生产 `/healthz`、公网 `check:data-sources` |

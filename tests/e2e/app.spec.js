@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { installGeocodingMock, installNextApiMock, installOpenMeteoMock } from "./mock-open-meteo.js";
 import { closeMobileMapPanel, openMobileMapPanel } from "./mobile-map-panel.js";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/open-meteo.json", import.meta.url), "utf8"));
 
@@ -37,7 +38,7 @@ test("首屏导航不会因当前小时变化触发 hydration 警告", async ({ 
 });
 
 test("主页默认云量预报与光污染参考，卫星实况需主动选择", async ({ page }, testInfo) => {
-  await page.goto("/");
+  await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA");
   await expect(page.locator(".map-stage")).toBeVisible();
   await expect(page.locator(".map-viewport")).toBeVisible();
   if (testInfo.project.name === "desktop") {
@@ -53,21 +54,28 @@ test("主页默认云量预报与光污染参考，卫星实况需主动选择",
   await expect(forecastLayer).toHaveAttribute("aria-pressed", "true");
   await expect(liveLayer).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".satellite-frame-badge")).toHaveCount(0);
-  await expect(page.locator('.cloud-timeline[data-time-domain="forecast"]')).toHaveClass(/is-collapsed/);
-  await expect(page.locator('.cloud-track[aria-label*="预报轨道"]')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.map-stage > .cloud-timeline')).toHaveAttribute("data-time-domain", "forecast");
+  if (testInfo.project.name === "desktop") {
+    await expect(page.locator('.cloud-track[aria-label*="预报轨道"]')).toBeVisible({ timeout: 30_000 });
+  }
 
   await liveLayer.click();
   await expect(liveLayer).toHaveAttribute("aria-pressed", "true");
   await openMobileMapPanel(page, "cloud");
   await expect(page.locator(".satellite-frame-badge")).toContainText("卫星云观测", { timeout: 30_000 });
   await closeMobileMapPanel(page);
-  const timelineToggle = page.locator(".cloud-timeline-toggle:visible");
-  await expect(timelineToggle).toHaveAttribute("aria-expanded", "false");
-  await timelineToggle.click();
-  await expect(page.locator(".cloud-observation-note")).toBeVisible();
-  await expect(page.locator('.cloud-track[aria-label*="卫星观测时次轨道"]')).toBeVisible();
-  await expect(page.locator('.cloud-track[aria-label*="卫星观测时次轨道"] .cloud-tick')).toHaveCount(3);
   if (testInfo.project.name === "mobile") {
+    await expandMobileDataSheet(page);
+  }
+  const timelineToggle = page.locator(".cloud-timeline-toggle:visible");
+  if (await timelineToggle.getAttribute("aria-expanded") === "false") await timelineToggle.click();
+  await expect(timelineToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(".cloud-observation-note:visible")).toBeVisible();
+  await expect(page.locator('.cloud-track[aria-label*="卫星观测时次轨道"]:visible')).toBeVisible();
+  await expect(page.locator('.cloud-track[aria-label*="卫星观测时次轨道"]:visible .cloud-tick')).toHaveCount(3);
+  if (testInfo.project.name === "mobile") {
+    await page.getByRole("button", { name: "收起数据面板" }).click();
+    await page.getByRole("button", { name: "收起数据面板" }).click();
     await openMobileMapPanel(page, "layers");
     await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "false");
   }
@@ -75,25 +83,31 @@ test("主页默认云量预报与光污染参考，卫星实况需主动选择",
   await forecastLayer.click();
   await expect(forecastLayer).toHaveAttribute("aria-pressed", "true");
   await closeMobileMapPanel(page);
-  const matrix = page.locator(".hourly-matrix").first();
+  if (testInfo.project.name === "mobile") {
+    await expandMobileDataSheet(page);
+  }
+  const matrix = page.locator(".hourly-matrix:visible").first();
   await expect(matrix).toBeVisible({ timeout: 15000 });
   await expect(matrix.locator("tbody tr")).toHaveCount(12);
   await expect(matrix.locator("thead tr th")).toHaveCount(11);
-  const forecastTrack = page.locator('.cloud-track[aria-label*="预报轨道"]');
+  const forecastTrack = page.locator('.cloud-track[aria-label*="预报轨道"]:visible');
   await expect(forecastTrack).toBeVisible();
   await expect(forecastTrack.locator(".cloud-tick")).not.toHaveCount(0);
-  await expect(page.locator(".cloud-timeline")).toContainText("云");
+  await expect(page.locator(".cloud-timeline:visible")).toContainText("云");
 
   const mapBounds = await page.locator(".map-viewport").boundingBox();
-  const timelineBounds = await page.locator(".cloud-timeline").boundingBox();
+  const timelineBounds = await page.locator(".cloud-timeline:visible").boundingBox();
   expect(mapBounds).not.toBeNull();
   expect(timelineBounds).not.toBeNull();
   await expect.poll(async () => {
     const currentMap = await page.locator(".map-viewport").boundingBox();
-    const currentTimeline = await page.locator(".cloud-timeline").boundingBox();
+    const currentTimeline = await page.locator(".cloud-timeline:visible").boundingBox();
     return currentMap && currentTimeline ? currentTimeline.y - (currentMap.y + currentMap.height) : -Infinity;
   }, { timeout: 2000 }).toBeGreaterThanOrEqual(-1);
-  const bodyScroll = await page.locator(".cloud-timeline-body").evaluate((element) => ({
+  const visibleTimeline = page.locator(".cloud-timeline:visible");
+  const visibleToggle = visibleTimeline.locator(".cloud-timeline-toggle");
+  if (await visibleToggle.getAttribute("aria-expanded") === "false") await visibleToggle.click();
+  const bodyScroll = await visibleTimeline.locator(".cloud-timeline-body").evaluate((element) => ({
     scrollHeight: element.scrollHeight,
     clientHeight: element.clientHeight,
   }));
@@ -118,7 +132,7 @@ test("主页默认云量预报与光污染参考，卫星实况需主动选择",
     await targetCell.press("Enter");
   }
   await expect(targetCell).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".cloud-timeline-current")).toBeVisible();
+  await expect(page.locator(".cloud-timeline-current:visible")).toBeVisible();
   await expect(page.locator(".cloud-canvas-overlay canvas")).toBeVisible({ timeout: 30_000 });
 
   if (testInfo.project.name === "desktop") {
@@ -137,7 +151,7 @@ test("取样点数据跟随指定模型刷新并说明数据语义", async ({ pa
   await expect(page.locator(".cloud-legend-ticks:visible")).toContainText("100%");
 });
 
-test("规划器兼容链接转入统一观测台并保留地点上下文", async ({ page }) => {
+test("规划器兼容链接转入统一观测台并保留地点上下文", async ({ page }, testInfo) => {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   await page.goto(`/planner?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&elevation=958.4&night=${today}&model=icon`);
   await expect.poll(() => new URL(page.url()).pathname).toBe("/");
@@ -149,7 +163,10 @@ test("规划器兼容链接转入统一观测台并保留地点上下文", async
   expect(target.searchParams.get("model")).toBe("icon");
   await expect(page.locator(".map-stage")).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.get("night")).toBeNull();
-  await expect(page.locator(".hourly-matrix").first()).toBeVisible({ timeout: 15000 });
+  if (testInfo.project.name === "mobile") {
+    await expandMobileDataSheet(page);
+  }
+  await expect(page.locator(".hourly-matrix:visible").first()).toBeVisible({ timeout: 15000 });
 });
 
 test("暗夜选址 B1 预设门槛同步筛选点位，不生成密集永久文字气泡", async ({ page }, testInfo) => {
@@ -200,7 +217,7 @@ test("暗夜选址 B1-B4 预设可切换并同步推荐门槛", async ({ page },
   await expect(markers).toHaveCount(b2Count);
 });
 
-test("地图加入候选后观星计划保留同一地点", async ({ page }) => {
+test("地图加入候选后观星计划保留同一地点", async ({ page }, testInfo) => {
   await page.goto("/");
   const markers = page.locator(".leaflet-marker-icon.observing-site-marker");
   const visibleMarkerIndex = () => markers.evaluateAll((elements) => elements.findIndex((element) => {
@@ -217,7 +234,11 @@ test("地图加入候选后观星计划保留同一地点", async ({ page }) => 
   const marker = markers.nth(markerIndex);
   await expect(marker).toBeVisible({ timeout: 30_000 });
   await marker.click();
-  const selectedName = (await page.locator(".panel-location-name").textContent())?.trim();
+  if (testInfo.project.name === "mobile") {
+    await expect(page.getByTestId("mobile-data-sheet")).toHaveAttribute("data-level", "half");
+    await expandMobileDataSheet(page);
+  }
+  const selectedName = (await page.locator(testInfo.project.name === "mobile" ? ".mobile-data-sheet-location" : ".panel-location-name").textContent())?.trim();
   expect(selectedName).toBeTruthy();
   const addButton = page.locator(".candidate-add-button");
   await expect(addButton).toBeVisible({ timeout: 15000 });
