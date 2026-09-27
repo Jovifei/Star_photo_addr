@@ -6,7 +6,7 @@
 - Source branch: `codex/mobile-browser-ia-v2-20260927`
 - Source HEAD: `1a0a746ba6c38770e615a1f4f052eb4af8b60334`
 - Implementation branch: `codex/mobile-home-priority-v2-20260927`
-- Final local HEAD: `ac6b425c75fe0d6131fb1d8be23e51fef6999dbe`
+- Final local HEAD: `6a1bf4439fa76ef4c8e6385f8ee1679fa75a2ed1`
 - Base: `origin/main@5a054fd31bda0f743bdc68345ebb3916d0199294`
 - Owner workspace: `E:\project\Star_photo_addr` (dirty; preserve it)
 
