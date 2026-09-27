@@ -406,3 +406,58 @@
 @media (prefers-reduced-motion: reduce) {
   .mobile-data-sheet-actions button { transition: none; }
 }
+
+/* MOBILE-V2 Phase 1/2: portrait and normal tablet layouts use the browser's
+   document as the only vertical scroll owner. Keep the map and its summary in
+   the document flow; sheets remain the only intentional nested vertical
+   scrollers. Short landscape retains its compact side inspector contract for
+   the next RED/GREEN batch. */
+@media (max-width: 1199px) and (min-height: 521px) {
+  .app-shell:is(.workspace-shell, .fireglow-root, .cloudsea-root) {
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .workspace-shell .workspace-shell-body {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .workspace-shell .workspace-canvas {
+    flex: none;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .workspace-canvas .map-stage {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .workspace-canvas .map-viewport {
+    flex: none;
+    height: min(52svh, 560px) !important;
+    min-height: 340px;
+  }
+
+  .fireglow-root .fireglow-workspace,
+  .cloudsea-root .cloudsea-body {
+    flex: none;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .fireglow-root .fireglow-map,
+  .cloudsea-root .cloudsea-map-pane {
+    flex: none;
+    height: min(52svh, 560px);
+    min-height: 340px;
+    overflow: visible;
+  }
+}

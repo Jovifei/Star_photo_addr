@@ -865,3 +865,28 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - [x] 补跨小时/跨日浏览器回归，桌面/手机 2/2；手机地图专项 12/12。
 - [ ] 升版 v1.0.22，完成本地完整检查和当前提交 CI 后合并。
 - [ ] 复用已核验的 ECS 目标发布，检查 app/worker、数据源、公网页面和资源卷；记录根因及收尾证据。
+
+## 2026-09-27 Mobile Browser Architecture v2
+
+- [x] 读取远端项目聊天、当前 Docs/docs 与项目状态。
+- [x] 取得远端阶段方案：`MOBILE-V2-P0` 起步，8 个有限工作包，数据语义保持 fail-closed。
+- [x] 创建 `origin/main@5a054fd` 隔离 worktree，Owner 工作区保持未触碰。
+- [x] 写入 `MOBILE_BASELINE_MANIFEST.md` 与 `tasks/plans/2026-09-27-mobile-browser-architecture-v2.md`。
+- [x] 新增移动架构 RED 契约并运行基线；3 项预期失败，证明 viewport cage 仍存在。
+- [ ] 复核 Owner dirty 变更与选定基线的逐文件保留关系。
+- [x] 进入 Phase 1：实现 document-scroll contract；先补 RED/GREEN，再继续 sheet 与地图手势。
+- [ ] 完成 Node24 全量门禁、截图、多视口、跨浏览器和真实设备边界记录。
+
+### Review
+
+- Status: `P0_RED_BASELINE_RECORDED`。
+- Build: `PASS`。
+- RED report: `RED_BASELINE_REPORT.md`，3/3 architecture contracts failed as expected on the selected baseline。
+- Product code: unchanged in this phase。
+
+## Phase 1 first batch review
+
+- Status: `DOCUMENT_SCROLL_CONTRACT_GREEN`。
+- Change: portrait and normal-tablet mobile shells now release the viewport cage; short landscape remains explicitly deferred to its own batch.
+- Verification: build `PASS`; `mobile-v2-baseline.spec.ts` `3 passed`; existing `mobile-content-flow.spec.ts` + `mobile-map-first.spec.ts` `19 passed`.
+- Scope: no provider, cache, snapshot schema, score, `.env`, production volume, merge, or deployment changes.
