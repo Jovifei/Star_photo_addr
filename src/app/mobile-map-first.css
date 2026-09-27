@@ -357,7 +357,9 @@
   .mobile-data-sheet-body .cloudsea-site-detail .cs-hero-top { flex-direction: column; align-items: flex-start; gap: 8px; }
   .mobile-data-sheet-body .cloudsea-site-detail .cs-hero-badge-block { align-items: flex-start; }
   .mobile-data-sheet-body .cloudsea-site-detail .cs-hero-metrics-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-  .mobile-data-sheet-body .cloudsea-site-detail .cs-detail-card { padding-inline: 11px; }
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-detail-card { padding-inline: 8px; }
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-detail-card > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-detail-card :is(span, strong, small, p, label) { overflow-wrap: anywhere; }
   .mobile-data-sheet-body .cloudsea-site-detail .cs-mini-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 }
 
