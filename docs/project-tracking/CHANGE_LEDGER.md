@@ -4,11 +4,17 @@
 > 记录范围：影响产品、数据、部署、测试体系或项目跟踪的主干提交。
 > 规则：PR 合并后记录最终主干 SHA；未完成验证的直接提交必须明确标记，不得用旧绿灯代替。
 
-## 0.2 v1.0.21 本地发布候选（2026-09-27）
+## 0.3 v1.0.22 首屏水合热修候选（2026-09-27）
+
+| 日期 | 工作包 | PR / Commit | 候选交付 | 验证与边界 |
+| --- | --- | --- | --- | --- |
+| 2026-09-27 | RELEASE-HYDRATION-022 | `codex/home-hydration-clock-20260927`；PR 待创建 | 服务端首屏时钟与浏览器水合一致；手机视口改用订阅快照；本机低资源构建可限制 worker | 本地 `check` 64/370、跨两天桌面/手机 2/2、手机地图 12/12；GitHub CI、合并、ECS 更新和公网复核待执行；物理手机 NOT_RUN |
+
+## 0.2 v1.0.21 已合并发布（2026-09-27）
 
 | 日期 | 工作包 | PR / Commit | 候选交付 | 发布前验证与边界 |
 | --- | --- | --- | --- | --- |
-| 2026-09-27 | RELEASE-MAP-FIRST-021 | 本地分支 `codex/mobile-map-first-20260926`；PR/commit 待创建 | 地图优先手机/平板布局、共用三态数据面板、地图触摸、专题附近目录点和逐日高分归属 | `npm run check` 64/370；Chromium 248/172 passed/76 skip/0 failed；Firefox/WebKit 6/6；live smoke 与 audit PASS；部署前公网基线 v1.0.20 / `1db11f3`；main merge/ECS 待验；物理手机 NOT_RUN |
+| 2026-09-27 | RELEASE-MAP-FIRST-021 | PR #36；`main@d75bcffc571c8cfcb31d828d0ab8ca123d1c3c6a` | 地图优先手机/平板布局、共用三态数据面板、地图触摸、专题附近目录点和逐日高分归属 | PR CI 五项 PASS（Chromium 174 passed / 76 skipped）；ECS app/worker healthy、公网身份与数据源 PASS。发布后首页/暗夜选址浏览器暴露 React #418，热修中；物理手机 NOT_RUN |
 
 ## 0.1 v1.0.19 发布前候选快照（2026-09-23）
 

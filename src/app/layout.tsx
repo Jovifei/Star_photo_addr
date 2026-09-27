@@ -63,10 +63,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialNow = new Date().toISOString();
   return (
     <html lang="zh-CN" className="h-full">
       <body className="min-h-full antialiased">
-        <StoreProvider>
+        <StoreProvider initialNow={initialNow}>
           <VisualViewportSize />
           <Suspense fallback={null}>
             <ProductStateBridge />

@@ -13,8 +13,26 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-09-27",
-    tag: "手机地图主页与底部数据面板",
+    tag: "手机首屏稳定性",
     current: true,
+    highlights: [
+      {
+        icon: ShieldCheck,
+        title: "跨日期打开无水合错误",
+        desc: "首页与暗夜选址以一致的首屏时钟加载，再更新到当前日期和时次。",
+      },
+      {
+        icon: Layers,
+        title: "手机面板首屏稳定",
+        desc: "响应式导航和侧栏在加载时保持一致，手机与桌面的地图控件照常可用。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.21",
+    date: "2026-09-27",
+    tag: "手机地图主页与底部数据面板",
+    current: false,
     highlights: [
       {
         icon: Layers,

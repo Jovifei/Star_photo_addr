@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -42,24 +43,18 @@ const PANEL_ITEMS = [
 type DockPanelKey = (typeof PANEL_ITEMS)[number]["id"];
 type MobilePanelKey = DockPanelKey | "summary";
 
-function isMobilePanelViewport(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia(MOBILE_MAP_PANEL_QUERY).matches
-  );
+function getMobilePanelSnapshot(): boolean {
+  return window.matchMedia(MOBILE_MAP_PANEL_QUERY).matches;
+}
+
+function subscribeMobilePanel(onChange: () => void): () => void {
+  const query = window.matchMedia(MOBILE_MAP_PANEL_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
 }
 
 export function useMobilePanelViewport(): boolean {
-  const [mobile, setMobile] = useState(isMobilePanelViewport);
-
-  useEffect(() => {
-    const query = window.matchMedia(MOBILE_MAP_PANEL_QUERY);
-    const onChange = (event: MediaQueryListEvent) => setMobile(event.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
-
-  return mobile;
+  return useSyncExternalStore(subscribeMobilePanel, getMobilePanelSnapshot, () => false);
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -178,7 +173,7 @@ export default function ResponsiveMapControls({
     // The dynamic control shell can render one frame before matchMedia
     // settles. Do not close a just-opened drawer merely because the hook's
     // initial boolean was false while the viewport already matches mobile.
-    if (!requestedPanel || mobile || isMobilePanelViewport()) return;
+    if (!requestedPanel || mobile || getMobilePanelSnapshot()) return;
     // Deferred so the guard runs after paint instead of cascading a render.
     const frame = window.setTimeout(() => setRequestedPanel(null), 0);
     return () => window.clearTimeout(frame);
