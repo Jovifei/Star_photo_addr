@@ -1,6 +1,6 @@
 # Mobile Browser Architecture v2 Baseline
 
-Status: `BASELINE_RECONCILIATION_IN_PROGRESS`
+Status: `BASELINE_RECONCILED`
 
 ## Source identities
 
@@ -10,6 +10,9 @@ Status: `BASELINE_RECONCILIATION_IN_PROGRESS`
 - Owner is behind the selected baseline by 35 commits.
 - Historical deployment references: `60c348b`, `ec5abdd`, `349db7b`; these are history evidence until their trees are reproduced in the selected baseline.
 - Isolated worktree: `C:\Users\Admin\.codex\worktrees\mobile-browser-ia-v2\Star_photo_addr`
+- Phase 1/2 commit: `52036ed32d123fd38498fe26a892196c8c2be1d1`
+- Phase 3 commit: `e0a68df0c4eebcc7229d4539406fb31ee82e774c`
+- Review/documentation commit: `1a0a746ba6c38770e615a1f4f052eb4af8b60334`
 
 ## Owner workspace protection
 
@@ -44,4 +47,6 @@ The Owner worktree remains dirty and was not reset, cleaned, stashed, or copied 
 ## Classification rule
 
 `KEEP` means preserve for later comparison or selective application. `SUPERSEDED` means verify against the selected baseline before reusing. `UNRELATED` means do not bring into the mobile v2 worktree. No classification authorizes deleting or overwriting Owner files.
+
+The baseline reconciliation is closed for this isolated tree. The old RED evidence is historical; it turned GREEN in `52036ed`. Short landscape, full cross-browser, real-device, and production gates remain separate.
 

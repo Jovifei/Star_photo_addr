@@ -7,6 +7,8 @@ import type { GeocodeResult } from "@/lib/types";
 import SearchCombobox from "@/components/SearchCombobox";
 import { resolveElevation } from "@/lib/elevationLookup";
 import RecommendationQuickControls from "@/components/RecommendationQuickControls";
+import AdaptiveSheet from "@/components/ui/AdaptiveSheet";
+import { useMobilePanelViewport } from "@/components/ResponsiveMapControls";
 import { LocateFixed, SlidersHorizontal } from "lucide-react";
 
 /** Search row + top-level location and recommendation controls. */
@@ -14,6 +16,7 @@ export default function MapSearchCard() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filtersId = useId();
   const filtersButton = useRef<HTMLButtonElement>(null);
+  const mobile = useMobilePanelViewport();
   const { sampleAt } = useStore();
 
   const handlePick = useCallback(
@@ -42,6 +45,10 @@ export default function MapSearchCard() {
 
   const { loading, error, locate } = useGeolocation(onLocated);
 
+  const closeFilters = useCallback(() => {
+    setFiltersOpen(false);
+  }, []);
+
   return (
     <div className="map-search-card">
       <div className="search-only-row">
@@ -65,22 +72,46 @@ export default function MapSearchCard() {
           className="mobile-filter-toggle"
           aria-label={filtersOpen ? "收起时间与地点筛选" : "时间与地点筛选"}
           aria-expanded={filtersOpen}
-          aria-controls={filtersId}
-          onClick={() => setFiltersOpen((open) => !open)}
+          aria-controls={mobile ? "mobile-filter-sheet" : filtersId}
+          onClick={() => setFiltersOpen((open) => (mobile ? true : !open))}
         >
           <SlidersHorizontal size={18} aria-hidden="true" />
           <span className="mobile-filter-label">{filtersOpen ? "收起" : "筛选"}</span>
         </button>
-        <div id={filtersId} className="location-filter-controls" data-open={filtersOpen}
-          onKeyDown={(event) => {
-            if (event.key !== "Escape") return;
-            event.stopPropagation();
-            setFiltersOpen(false);
-            filtersButton.current?.focus({ preventScroll: true });
-          }}>
-          <RecommendationQuickControls />
-        </div>
+        {!mobile ? (
+          <div id={filtersId} className="location-filter-controls" data-open={filtersOpen}>
+            <RecommendationQuickControls />
+          </div>
+        ) : null}
       </div>
+      {mobile ? (
+        <AdaptiveSheet
+          open={filtersOpen}
+          title="时间与地点筛选"
+          id="mobile-filter-sheet"
+          onClose={closeFilters}
+          triggerRef={filtersButton}
+          className="mobile-filter-sheet"
+          backdropClassName="mobile-filter-sheet-backdrop"
+          bodyClassName="mobile-filter-sheet-body"
+          testId="mobile-filter-sheet"
+          header={(
+            <header className="mobile-filter-sheet-head">
+              <div>
+                <span>高级筛选</span>
+                <strong>时间与地点筛选</strong>
+              </div>
+              <button type="button" onClick={closeFilters} aria-label="关闭时间与地点筛选">
+                关闭
+              </button>
+            </header>
+          )}
+        >
+          <div className="mobile-filter-sheet-content">
+            <RecommendationQuickControls />
+          </div>
+        </AdaptiveSheet>
+      ) : null}
       {error && (
         <div
           style={{

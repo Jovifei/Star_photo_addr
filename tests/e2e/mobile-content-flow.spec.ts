@@ -37,10 +37,14 @@ for (const width of [320, 390, 768, 1024]) {
     const filterBox = await filter.boundingBox();
     const locateBox = await locate.boundingBox();
     expect(Math.abs(filterBox!.y - locateBox!.y)).toBeLessThanOrEqual(1);
-    await expect(page.locator(".location-filter-controls")).toBeHidden();
+    await expect(page.locator(".location-filter-controls")).toHaveCount(0);
     await filter.click();
-    await expect(page.locator(".location-filter-controls")).toBeVisible();
-    await page.getByRole("button", { name: "收起时间与地点筛选" }).click();
+    const filterSheet = page.getByTestId("mobile-filter-sheet");
+    await expect(filterSheet).toHaveAttribute("aria-modal", "true");
+    await expect(filterSheet.getByTestId("recommendation-quick-controls")).toBeVisible();
+    await filterSheet.getByRole("button", { name: "关闭时间与地点筛选" }).click();
+    await expect(filterSheet).toHaveAttribute("aria-hidden", "true");
+    await expect(filter).toBeFocused();
     await expect(page.locator(".map-stage > .cloud-timeline")).toBeHidden();
     await page.getByRole("button", { name: "展开数据面板" }).click();
     await page.getByRole("button", { name: "展开数据面板" }).click();

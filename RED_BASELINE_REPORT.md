@@ -22,5 +22,7 @@ The failures identify the current viewport cage directly. They are not provider 
 
 ## Phase 0 decision
 
-`BASELINE_RECONCILED` is not yet claimed. The isolated tree and exact SHA are known, Owner changes are preserved, and the RED suite is recorded. The next implementation phase may address the shell/document-scroll contract only after this report is reviewed against the preserved Owner changes.
+Status: `CLOSED_EXPECTED_RED`.
+
+The isolated tree and exact SHA were reviewed by remote ChatGPT. The RED suite was expected against the selected baseline and turned GREEN after `52036ed`; this report remains the historical before-state and is not a current failure claim.
 
