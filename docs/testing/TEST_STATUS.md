@@ -205,3 +205,16 @@ Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit
 ## 当前退出结论
 
 第一阶段自动化测试已通过。第二阶段代码、测试和文档已进入 `main`，但最终全量门禁证据仍需从 GitHub Actions 或用户本地运行取得；在此之前保持 IMPLEMENTED / IN_PROGRESS。真机、阿里云、正式 TLS、授权暗夜资产和科学真值仍按 MANUAL/BLOCKED 管理。
+
+## Mobile Browser v2 focused evidence (2026-09-27)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Home filter AdaptiveSheet | IMPLEMENTED | `codex/mobile-home-priority-v2-20260927@ac6b425` |
+| Mobile focused E2E | PASS | 11 passed |
+| Desktop inline filter | PASS | 2 passed at 1200/1440 |
+| typecheck / lint / build | PASS | local Node 24 run |
+| Provider/cache/snapshot/score changes | NONE | scope review |
+| PR / CI / merge / deploy | PENDING | `gh auth login` required locally |
+
+This focused evidence does not replace full E2E, cross-browser, device, CI, or production gates.

@@ -16,11 +16,11 @@ The first executable package is `MOBILE-V2-P0`: baseline reconciliation plus a R
 
 ## Eight work packages
 
-0. Reconcile the Owner dirty worktree, exact baseline SHA, historical SHAs, and a clean isolated worktree. Produce `MOBILE_BASELINE_MANIFEST.md` and `RED_BASELINE_REPORT`.
-1. Define mobile information architecture. At 390×844 keep header/navigation/actions within 170–180 CSS px and make the map visible. Put the current judgement in document flow; keep advanced filters in a secondary sheet.
+0. Reconcile the Owner dirty worktree, exact baseline SHA, historical SHAs, and a clean isolated worktree. `DONE` at `52036ed`.
+1. Define mobile information architecture. At 390×844 keep header/navigation/actions within 170–180 CSS px and make the map visible. Put the current judgement in document flow; keep advanced filters in a secondary sheet. The first home filter sheet batch is `DONE` at `ac6b425`.
 2. Establish one document scroll owner. Remove competing viewport cages and nested vertical scrollers; keep only sheet bodies vertically scrollable and the hourly matrix horizontally scrollable.
 3. Create one adaptive sheet primitive for modal semantics, backdrop, scroll lock, focus trap/restore, Escape, safe areas, orientation changes, and reduced motion. Reuse existing Base UI/shadcn dependencies after license metadata review.
-4. Define map gesture ownership: page vertical swipe by default; explicit “move map” mode for one-finger map drag; resize observers call Leaflet `invalidateSize()` without request storms; move legends below the map on narrow screens.
+4. Define map gesture ownership: preserve the current map-first default direct pan/zoom contract; the former explicit “move map” mode is `SUPERSEDED_BY_MAP_FIRST_CONTRACT`. Resize observers and legend placement remain separate work.
 5. Centralize presentation of provider health, selected-data validity, and recommendation eligibility. Preserve `missing != 0`, `stale != fresh`, `partial != available`, and fail-closed score rules.
 6. Re-layout Fireglow and CloudSea with current context first, map, status, ranking, detail, and long explanations in sheets. Preserve empty snapshot and partial pressure protections.
 7. Measure interaction performance and remove gesture/layout contention. Use short transform/opacity transitions and `prefers-reduced-motion`; do not add forced smooth scrolling or virtualize without profiling.
