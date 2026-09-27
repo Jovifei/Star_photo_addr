@@ -101,46 +101,47 @@ interface AppState {
   dataRefreshRevision: number;
 }
 
-const homeNight = currentNightKey();
-const homeNightKeys = nightRangeKeys(homeNight, 7);
-const homeForecastTime = initialForecastTime();
-
-const initialState: AppState = {
-  sample: null,
-  selectedLocation: null,
-  forecast: null,
-  nightKeys: homeNightKeys,
-  selectedNight: homeNight,
-  bortleEnabled: hasDarkSkyLayer(),
-  cloudState: {
-    ...DEFAULT_CLOUD_STATE,
-    activeForecastTime: homeForecastTime,
-    timeIndex: nightHourIndex(homeForecastTime),
-  },
-  candidates: [...DEFAULT_CANDIDATE_SEEDS],
-  detailOpen: false,
-  loading: false,
-  error: "",
-  forecastAvailability: { error: null, lastSuccessAt: null, staleInUse: false },
-  cloudGrid: null,
-  cloudGridLoading: false,
-  satelliteFrames: [],
-  forecastCache: new Map(),
-  mapViewMode: "combined",
-  mapWorkspace: "tonight",
-  forecastTheme: "star",
-  recommendationThreshold: 70,
-  observingBortleLevels: [...DEFAULT_BORTLE_LEVELS],
-  observingBortleLimit: 3,
-  recommendedOnly: false,
-  visibleRecommendationBands: [
-    "priority",
-    "recommended",
-    "watch",
-    "not-recommended",
-  ],
-  dataRefreshRevision: 0,
-};
+function createInitialState(initialNow: string): AppState {
+  const now = new Date(initialNow);
+  const homeNight = currentNightKey(now);
+  const homeForecastTime = initialForecastTime(now);
+  return {
+    sample: null,
+    selectedLocation: null,
+    forecast: null,
+    nightKeys: nightRangeKeys(homeNight, 7),
+    selectedNight: homeNight,
+    bortleEnabled: hasDarkSkyLayer(),
+    cloudState: {
+      ...DEFAULT_CLOUD_STATE,
+      activeForecastTime: homeForecastTime,
+      timeIndex: nightHourIndex(homeForecastTime),
+    },
+    candidates: [...DEFAULT_CANDIDATE_SEEDS],
+    detailOpen: false,
+    loading: false,
+    error: "",
+    forecastAvailability: { error: null, lastSuccessAt: null, staleInUse: false },
+    cloudGrid: null,
+    cloudGridLoading: false,
+    satelliteFrames: [],
+    forecastCache: new Map(),
+    mapViewMode: "combined",
+    mapWorkspace: "tonight",
+    forecastTheme: "star",
+    recommendationThreshold: 70,
+    observingBortleLevels: [...DEFAULT_BORTLE_LEVELS],
+    observingBortleLimit: 3,
+    recommendedOnly: false,
+    visibleRecommendationBands: [
+      "priority",
+      "recommended",
+      "watch",
+      "not-recommended",
+    ],
+    dataRefreshRevision: 0,
+  };
+}
 
 type Action =
   | { type: "SET_SAMPLE"; sample: DarkSkySample | null }
@@ -148,6 +149,13 @@ type Action =
   | { type: "HYDRATE_LOCATION"; location: Location }
   | { type: "SET_FORECAST"; forecast: LocationForecast | null }
   | { type: "SELECT_NIGHT"; nightKey: string }
+  | {
+      type: "SYNC_INITIAL_CLOCK";
+      expectedNight: string;
+      expectedForecastTime: string;
+      night: string;
+      forecastTime: string;
+    }
   | { type: "SET_BORTLE"; enabled: boolean }
   | { type: "SET_CLOUD"; partial: Partial<CloudState> }
   | { type: "SET_CANDIDATES"; candidates: CityCandidate[] }
@@ -207,6 +215,21 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, forecast: action.forecast };
     case "SELECT_NIGHT":
       return { ...state, selectedNight: action.nightKey };
+    case "SYNC_INITIAL_CLOCK":
+      if (
+        state.selectedNight !== action.expectedNight ||
+        state.cloudState.activeForecastTime !== action.expectedForecastTime
+      ) return state;
+      return {
+        ...state,
+        nightKeys: nightRangeKeys(action.night, 7),
+        selectedNight: action.night,
+        cloudState: {
+          ...state.cloudState,
+          activeForecastTime: action.forecastTime,
+          timeIndex: nightHourIndex(action.forecastTime),
+        },
+      };
     case "SET_BORTLE":
       return { ...state, bortleEnabled: action.enabled };
     case "SET_CLOUD":
@@ -385,18 +408,41 @@ const StoreContext = createContext<StoreContextValue | null>(null);
  */
 export const FORECAST_SAMPLE_COOLDOWN_MS = 10_000;
 
-export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+export function StoreProvider({
+  children,
+  initialNow,
+}: {
+  children: ReactNode;
+  initialNow: string;
+}) {
+  const [state, dispatch] = useReducer(reducer, initialNow, createInitialState);
   const [candidatesHydrated, setCandidatesHydrated] = useState(false);
   const allowEmptyCandidatePersistRef = useRef(false);
   const forecastHydrationKeyRef = useRef<string | null>(null);
   const selectedLocationIdRef = useRef<string | null>(null);
-  const currentModelRef = useRef<CloudState["model"]>(initialState.cloudState.model);
+  const currentModelRef = useRef<CloudState["model"]>(DEFAULT_CLOUD_STATE.model);
   const pendingModelRef = useRef<CloudState["model"] | null>(null);
   const latestForecastRequestRef = useRef(0);
   const forecastInFlightRef = useRef(false);
   const lastForecastAttemptRef = useRef<{ key: string; at: number } | null>(null);
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const initial = new Date(initialNow);
+    const now = new Date();
+    const expectedNight = currentNightKey(initial);
+    const expectedForecastTime = initialForecastTime(initial);
+    const night = currentNightKey(now);
+    const forecastTime = initialForecastTime(now);
+    if (night === expectedNight && forecastTime === expectedForecastTime) return;
+    dispatch({
+      type: "SYNC_INITIAL_CLOCK",
+      expectedNight,
+      expectedForecastTime,
+      night,
+      forecastTime,
+    });
+  }, [initialNow]);
 
   useEffect(() => {
     selectedLocationIdRef.current = state.selectedLocation?.id ?? null;

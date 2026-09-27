@@ -1,16 +1,22 @@
 # 逐星项目状态总览
 
-> 快照日期：2026-09-27（本地发布候选）
-> 候选代码包版本：`v1.0.21`；生产公网基线实测：`v1.0.20 / 1db11f3174da6d70ed44de9ce5816b3e0edb3012`。
-> 本地 check、Chromium、Firefox/WebKit、live smoke 和依赖审计已通过；PR CI、main 合并、ECS 部署和公网验收待完成。
+> 快照日期：2026-09-27（v1.0.22 热修候选）
+> 候选版本：`v1.0.22`，分支 `codex/home-hydration-clock-20260927`；生产基线：`v1.0.21 / d75bcffc571c8cfcb31d828d0ab8ca123d1c3c6a`。
+> v1.0.21 已合并部署且 app/worker、数据源通过；发布后浏览器发现首页/暗夜选址水合错误，v1.0.22 修复待 CI、合并和公网复核。
 
-## 0.1 v1.0.21 当前候选
+## 0.1 v1.0.22 当前热修候选
+
+- 首屏时间由服务端序列化并在浏览器挂载后同步实际日期；响应式地图面板以一致的服务端快照完成水合。
+- 本地 `npm run check`：64 个 Vitest 文件 / 370 项、ESLint、TypeScript、生产构建通过；跨两天桌面/手机回归 2/2，手机地图专项 12/12。
+- GitHub CI、main 合并、ECS 更新和公网再次验收待完成；物理手机浏览器仍为 `NOT_RUN`。
+
+## 0.2 v1.0.21 已发布快照
 
 - 四个入口手机/平板共享地图主页、紧凑搜索日期栏、底部导航和三态数据面板；横向平板使用地图加侧栏。
 - 手机地图默认可拖动、双指/双击缩放与点选；火烧云/云海空白坐标显示附近目录点，不为任意坐标造预测分数；三日排行逐行注明日期。
 - `npm run check`：64 个 Vitest 文件 / 370 项测试、ESLint、TypeScript、production build 均通过。
 - Chromium：248 项，172 passed / 76 适用性跳过 / 0 failed；Firefox/WebKit 6/6；live smoke required/optional 源均通过；production dependency audit 0 vulnerabilities。
-- 真机手机浏览器：`NOT_RUN`（桌面策略拒绝启动 Android 浏览器）；GitHub CI、main 合并、ECS 部署与公网复核尚未完成。
+- PR #36 的五项 CI 通过后合并为 `main@d75bcffc571c`；ECS app/worker healthy，公网 `/healthz` 与数据源核查确认 v1.0.21。手机实测浏览器随后发现首页/暗夜选址 React #418，转入 v1.0.22 热修；物理手机仍为 `NOT_RUN`。
 
 ## 0.2 历史发布快照（v1.0.14，截至 2026-09-10）
 

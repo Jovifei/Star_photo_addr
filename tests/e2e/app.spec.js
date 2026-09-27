@@ -25,15 +25,38 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
-test("首屏导航不会因当前小时变化触发 hydration 警告", async ({ page }) => {
+test("跨日期进入首页时首屏水合、日期与导航一致", async ({ page }, testInfo) => {
+  const browserTime = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  await page.clock.setFixedTime(browserTime);
   const hydrationErrors = [];
+  page.on("pageerror", (error) => {
+    if (/hydration|server rendered HTML|React error #418/i.test(error.message)) {
+      hydrationErrors.push(error.message);
+    }
+  });
   page.on("console", (message) => {
-    if (message.type() === "error" && /hydration|server rendered HTML/i.test(message.text())) {
+    if (message.type() === "error" && /hydration|server rendered HTML|React error #418/i.test(message.text())) {
       hydrationErrors.push(message.text());
     }
   });
   await page.goto("/");
   await expect(page.locator(".nav-tabs")).toBeVisible();
+  const dateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(browserTime);
+  const month = dateParts.find((part) => part.type === "month")?.value;
+  const day = dateParts.find((part) => part.type === "day")?.value;
+  const expectedDate = `${Number(month)}月${Number(day)}日`;
+  await expect(page.locator(".event-status")).toContainText(expectedDate);
+  if (testInfo.project.name === "mobile") {
+    const filter = page.locator(".mobile-filter-toggle");
+    await filter.click();
+    await expect(filter).toHaveAttribute("aria-expanded", "true");
+  } else {
+    await expect(page.getByRole("group", { name: "输入栏宽度" })).toBeVisible();
+  }
   expect(hydrationErrors).toEqual([]);
 });
 

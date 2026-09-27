@@ -6,6 +6,8 @@ import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 const currentVersion = `v${(JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
 ) as { version: string }).version}`;
+const [major, minor, patch] = currentVersion.slice(1).split(".").map(Number);
+const previousPatchVersion = patch > 0 ? `v${major}.${minor}.${patch - 1}` : null;
 
 function buildForecastResponse(requestUrl: string) {
   const url = new URL(requestUrl);
@@ -97,9 +99,12 @@ test(`version history shows ${currentVersion} and keeps recent releases`, async 
   const releases = dialog.locator(".changelog-release");
   await expect(releases.first()).toContainText(currentVersion);
   await expect(releases.first()).toContainText("当前版本");
-  await expect(releases.nth(1)).toContainText("v1.0.20");
-  await expect(releases.nth(2)).toContainText("v1.0.19");
-  await expect(releases.nth(3)).toContainText("v1.0.18");
+  if (previousPatchVersion) {
+    await expect(releases.nth(1)).toContainText(previousPatchVersion);
+  }
+  await expect(dialog).toContainText("v1.0.20");
+  await expect(dialog).toContainText("v1.0.19");
+  await expect(dialog).toContainText("v1.0.18");
 });
 
 test("sites compatibility route preserves context and opens the dark-sky site panel", async ({

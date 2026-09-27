@@ -12,6 +12,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  ...(process.env.STAR_BUILD_CPUS
+    ? { experimental: { cpus: Number(process.env.STAR_BUILD_CPUS) } }
+    : {}),
   poweredByHeader: false,
   compress: true,
   // Next 16 blocks cross-origin dev resources by default. Allow local loopback

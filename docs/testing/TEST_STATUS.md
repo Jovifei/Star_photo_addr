@@ -4,8 +4,8 @@
 > 详细剩余任务：[`../project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md)
 > 项目总览：[`../project-tracking/PROJECT_STATUS.md`](../project-tracking/PROJECT_STATUS.md)
 > 状态日期：2026-09-27
-> 当前 release candidate：`v1.0.21`，分支 `codex/mobile-map-first-20260926`
-> 候选基线：`origin/main@1db11f3`（v1.0.20）；发布前公网基线实测：v1.0.20 / `1db11f3174da6d70ed44de9ce5816b3e0edb3012`。候选本地 PASS 不代表已部署。
+> 当前 release candidate：`v1.0.22`，分支 `codex/home-hydration-clock-20260927`
+> 候选基线：`origin/main@d75bcffc571c`（v1.0.21）；生产公网 v1.0.21 已实测，首页水合错误待热修发布。
 
 ## 状态定义
 
@@ -32,7 +32,18 @@
 
 本节为 v1.0.19 本地发布候选证据；GitHub CI、main 合并、ECS 新版本部署与生产 `/healthz` 仍需单独验收。
 
-## v1.0.21 本地发布候选门禁（2026-09-27）
+## v1.0.22 首屏水合热修门禁（2026-09-27）
+
+| 门禁 | 结果 | 说明 |
+| --- | --- | --- |
+| `STAR_BUILD_CPUS=1 npm run check` | PASS | 本机低资源构建；64 个 Vitest 文件 / 370 项、lint、TypeScript、生产构建 |
+| 跨两天水合专项 | PASS | 桌面/手机 2/2，日期更新正确、筛选可操作，无 React 水合错误 |
+| 手机地图专项 | PASS | 320、375、390、430、768、1024 等 12/12，覆盖地图拖动/缩放、面板手势和四入口 |
+| 版本历史专项 | PASS | 首轮 CI 的旧测试仍写死上一版 v1.0.20；按当前版本推导上一补丁版后，桌面/手机 2/2 |
+| GitHub CI、main 合并、ECS 公网 | PENDING | 必须以 v1.0.22 最终提交和真实公网结果验收 |
+| 物理手机浏览器 | NOT_RUN | 桌面策略仍阻止直接启动连接手机的浏览器 |
+
+## v1.0.21 已发布门禁及发现问题（2026-09-27）
 
 | 门禁 | 结果 | 说明 |
 | --- | --- | --- |
@@ -42,10 +53,11 @@
 | `npm run test:live` | PASS | Open-Meteo best_match、ICON、GFS、AIFS、pressure profile、geocoding、AQI、NASA GIBS、NOAA Kp；VIIRS optional tile 均 OK |
 | `npm audit --omit=dev --audit-level=high` | PASS | 0 vulnerabilities |
 | 物理手机浏览器 | NOT_RUN | Android 已连接；启动浏览器访问本地候选命令被桌面执行策略拒绝，临时端口映射已撤销 |
-| GitHub PR CI / main | PENDING | 本地候选已通过，尚待推送后跑远端 CI 与合并 |
-| 生产健康/数据源/页面 | PENDING | 当前生产基线 v1.0.20 / `1db11f3174da6d70ed44de9ce5816b3e0edb3012`；候选尚未部署 |
+| GitHub PR CI / main | PASS | PR #36 五项 CI 全绿，合并提交 `d75bcffc571c`；Chromium 174 passed / 76 skipped |
+| 生产健康/数据源 | PASS | app/worker healthy，公网 `/healthz` v1.0.21 / `d75bcffc571c`；天气/卫星/夜光可用 |
+| 发布后手机视口浏览器 | CHANGES_REQUIRED | 首页和暗夜选址 React #418；火烧云/云海无同类错误；v1.0.22 修复待发布 |
 
-本地 E2E 的瓦片/专题排行以 fixture 验证布局与交互，live smoke 单独验证外部数据源可达；二者不互相替代。真机与公网结果只在实际执行后回填。
+本地 E2E 的瓦片/专题排行以 fixture 验证布局与交互，live smoke 单独验证外部数据源可达；二者不互相替代。v1.0.21 的公网浏览器缺陷已转入 v1.0.22 热修，不因原 CI 绿灯而忽略。
 
 ## v1.0.14 发布门禁结果
 
