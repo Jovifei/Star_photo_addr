@@ -847,3 +847,12 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - 截图：`tmp/mobile-content-flow-capture/` 覆盖手机、平板、横屏与桌面；瓦片等待绘制，天气/专题数据使用 fixture。已目视检查 390×844 与 812×375 首屏和附近点面板。
 - 真机：NOT_RUN — 当前桌面策略拒绝启动 Android 浏览器访问本地候选；临时 `adb reverse` 已撤销。公网部署后的实体设备验收仍由 Jovi 执行。
 - 剩余门禁：GitHub PR CI、main 合并、ECS 发布和公网 `/healthz`/`api/data-status`/浏览器验收。
+
+## 2026-09-27 v1.0.21 发布门禁
+
+- [x] PR #36 候选提交及隔离工作区已核对；Owner 工作区保留。
+- [x] 本地完整代码检查、Chromium、Firefox/WebKit、实时数据及生产依赖检查已通过。
+- [ ] 处理 CI 中 Open-Meteo HTTP 429，重新核对当前提交的所有必需检查。
+- [ ] 全部检查通过后合并 PR #36，并核对 main SHA。
+- [ ] 按生产部署流程更新 ECS，验证公网版本、数据状态和页面。
+- [ ] 记录手机真机验证边界与最终发布结果。

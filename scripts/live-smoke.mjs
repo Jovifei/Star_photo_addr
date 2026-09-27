@@ -47,11 +47,12 @@ const MODELS = {
   aifs: "ecmwf_aifs025_single",
 };
 
-async function fetchWithRetry(url, options = {}, attempts = 3) {
+async function fetchWithRetry(url, options = {}, attempts = 4) {
   let lastError;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25_000);
+    let rateLimited = false;
     try {
       const response = await fetch(url, {
         ...options,
@@ -64,6 +65,7 @@ async function fetchWithRetry(url, options = {}, attempts = 3) {
         },
       });
       if (!response.ok) {
+        rateLimited = response.status === 429;
         const detail = await response.text().catch(() => "");
         throw new Error(
           `HTTP ${response.status}${detail ? ` · ${detail.slice(0, 180)}` : ""}`,
@@ -74,7 +76,10 @@ async function fetchWithRetry(url, options = {}, attempts = 3) {
       lastError = error;
       if (attempt < attempts) {
         await new Promise((resolve) =>
-          setTimeout(resolve, 500 * 2 ** (attempt - 1)),
+          setTimeout(
+            resolve,
+            (rateLimited ? 2_000 : 500) * 2 ** (attempt - 1),
+          ),
         );
       }
     } finally {
@@ -261,18 +266,15 @@ async function probeLightPollution() {
   }
 }
 
-const requiredTasks = [
-  ...Object.entries(MODELS).map(([name, model]) =>
-    probeForecastModel(name, model),
-  ),
-  probePressure(),
-  probeGeocode(),
-  probeAirQuality(),
-  probeGibs(),
-  probeKp(),
-];
-
-const required = await Promise.all(requiredTasks);
+const required = [];
+for (const [name, model] of Object.entries(MODELS)) {
+  required.push(await probeForecastModel(name, model));
+}
+required.push(await probePressure());
+required.push(await probeGeocode());
+required.push(await probeAirQuality());
+required.push(await probeGibs());
+required.push(await probeKp());
 const optional = await probeLightPollution();
 const report = {
   status: "ok",
