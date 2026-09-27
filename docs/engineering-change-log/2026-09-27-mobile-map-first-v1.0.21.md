@@ -10,6 +10,7 @@
 | 三日最高分标在首日标题下 | 排序使用三日最佳值，移动端行标题却固定用首日，没有显示分数对应日 | 三日排行标题显示日期覆盖区间，逐行附分数实际所属日期；沿用原日期、模型和评分结果 |
 | 拖面板后第一下手机地图点击偶尔无效 | 浏览器在面板触摸拖动后可发 pointer-up 而省略合成 click；只依赖 Leaflet click 会漏掉首击 | 地图容器共享短触摸 pointer-up 回退，8px 位移阈值区分拖动，并过滤标记/控件、去重随后的合成 click |
 | 手机详情内部滚动抢走整页手势 | 详情卡自带独立滚动区，而父面板正文也可滚动 | mobile sheet 中详情按自然高度展开；将详情自身滚动设为 visible，只让统一面板正文纵向滚动 |
+| Linux CI 的 320px 云海详情首卡横向多 7px | Linux 字体度量比本机 Windows 略宽，固有 flex 最小宽度挤出卡片 | 380px 以下摘要改为纵向、徽标允许换行、指标改为双列并约束卡片子项宽度；保留 `scrollWidth <= clientWidth` 断言 |
 | 固定工具按钮的点击目标受大字与屏幕旋转影响 | 旧按钮标签和视口尺寸耦合，地图尺寸变化没有稳定地同步到 Leaflet | 定位/筛选改为图标按钮并保留完整无障碍名称；ResizeObserver 合帧调用 Leaflet `invalidateSize`；以 visual viewport 适配浏览器栏和软键盘 |
 
 ## 数据与产品边界
@@ -25,5 +26,6 @@
 - Chromium：PASS — 248 项，172 passed / 76 项适用性 skipped / 0 failed；Firefox/WebKit：PASS — 6/6。
 - Live smoke：PASS — Open-Meteo best_match/ICON/GFS/AIFS、压力层、地理编码、AQI、NASA GIBS、NOAA Kp；VIIRS optional tile PASS。`npm audit --omit=dev --audit-level=high`：0 vulnerabilities。
 - 本地手势与布局矩阵覆盖 320/375/390/430/768/1024px、812×375 横屏、键盘、200%文字模拟、平板侧栏、候选和专题附近点。fixture 与 live-source 证据分开。
-- GitHub CI、PR/main SHA、ECS 部署及公网 `/healthz`：待交付流程完成后回填。
+- GitHub 首轮 CI 的 320px 云海详情用例发现横向溢出；修正后本地 `responsive-layout` 详情矩阵通过，GitHub CI 复跑待完成。
+- PR #36 的 main SHA、ECS 部署及公网 `/healthz`：待交付流程完成后回填。
 - 物理手机浏览器启动受执行策略阻止；真机验收记 `NOT_RUN`，没有将模拟视口记作真机通过。

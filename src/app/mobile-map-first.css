@@ -332,12 +332,14 @@
   .mobile-sheet-candidates { min-width: 0; margin-top: 12px; }
   .mobile-sheet-candidates .candidate-leaderboard { max-height: none; overflow: visible; }
   .mobile-data-sheet-body :is(.fireglow-site-detail, .cloudsea-site-detail) {
-    height: auto; max-height: none; min-height: 0; overflow: visible;
+    box-sizing: border-box; width: 100%; max-width: 100%; height: auto; max-height: none; min-height: 0; overflow: visible;
     box-shadow: none; animation: none;
   }
   .mobile-data-sheet-body :is(.fg-detail-scroll-content, .cs-detail-scroll-content) {
-    flex: none; height: auto; max-height: none; min-height: 0; overflow: visible;
+    box-sizing: border-box; width: 100%; max-width: 100%; flex: none; height: auto; max-height: none; min-height: 0; overflow: visible;
   }
+  .mobile-data-sheet-body .cloudsea-site-detail :is(.cs-detail-card, .cs-hero-top, .cs-hero-score-block, .cs-hero-badge-block) { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-pos-pill { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 
   .workspace-canvas .mobile-map-panel-rail {
     position: absolute; z-index: 500; inset: auto 8px 8px auto;
@@ -349,6 +351,14 @@
   .fireglow-map .leaflet-control-zoom a,
   .cloudsea-map-pane .leaflet-control-zoom a { width: 48px; height: 48px; line-height: 48px; }
   .leaflet-control-attribution { font-size: 10px; }
+}
+
+@media (max-width: 380px) {
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-hero-top { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-hero-badge-block { align-items: flex-start; }
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-hero-metrics-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-detail-card { padding-inline: 11px; }
+  .mobile-data-sheet-body .cloudsea-site-detail .cs-mini-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 }
 
 @media (max-width: 1199px) and (max-height: 520px),
