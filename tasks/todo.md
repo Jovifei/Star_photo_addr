@@ -884,6 +884,14 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - RED report: `RED_BASELINE_REPORT.md`，3/3 architecture contracts failed as expected on the selected baseline。
 - Product code: unchanged in this phase。
 
+## Phase 3 first batch review
+
+- [x] 新增可复用 `src/components/ui/AdaptiveSheet.tsx`。
+- [x] 将移动地图工具 drawer 迁移到 AdaptiveSheet；“今晚判断”保持主内容路径。
+- [x] typecheck、lint、build、mobile-content-flow 7/7、mobile-map-first 12/12 全部通过。
+- [x] 远端 ChatGPT 独立复核：dialog semantics、scroll lock、focus trap/restore、Escape、safe-area、orientation、reduced-motion 全部 PASS。
+- [ ] 后续只扩展主页信息架构；Fireglow/CloudSea 详情迁移另立工作包。
+
 ## Phase 1 first batch review
 
 - Status: `DOCUMENT_SCROLL_CONTRACT_GREEN`。
