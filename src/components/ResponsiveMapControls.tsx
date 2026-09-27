@@ -12,7 +12,6 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { lockCompactPageScroll } from "@/lib/pageScrollLock";
 import { useStore } from "@/lib/store";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import BortleControl from "@/components/BortleControl";
@@ -23,6 +22,7 @@ import MapLegend from "@/components/MapLegend";
 import MapViewActions from "@/components/MapViewActions";
 import ObservingMapControl from "@/components/ObservingMapControl";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
+import AdaptiveSheet from "@/components/ui/AdaptiveSheet";
 
 /** Phones and tablets use the same map-first docked control UI. */
 export const MOBILE_MAP_PANEL_QUERY =
@@ -57,15 +57,6 @@ export function useMobilePanelViewport(): boolean {
   return useSyncExternalStore(subscribeMobilePanel, getMobilePanelSnapshot, () => false);
 }
 
-const FOCUSABLE_SELECTOR = [
-  "button:not([disabled])",
-  "a[href]",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  "[tabindex]:not([tabindex='-1'])",
-].join(",");
-
 export default function ResponsiveMapControls({
   mapRef,
   ready,
@@ -82,18 +73,11 @@ export default function ResponsiveMapControls({
   const mobile = useMobilePanelViewport();
   const { setDetailOpen } = useStore();
   const [requestedPanel, setRequestedPanel] = useState<MobilePanelKey | null>(null);
-  const drawerRef = useRef<HTMLElement | null>(null);
-  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastTriggerRef = useRef<HTMLElement | null>(null);
   const showMobileDock = variant === "mobile" || (variant === "canvas" && mobile);
   const activePanel = requestedPanel;
 
   const panelOpen = showMobileDock && activePanel !== null;
-
-  useEffect(() => {
-    if (!panelOpen) return;
-    return lockCompactPageScroll();
-  }, [panelOpen]);
 
   const activeTitle = useMemo(() => {
     if (activePanel === "summary") return "今晚判断";
@@ -103,7 +87,6 @@ export default function ResponsiveMapControls({
   const closePanel = useCallback(() => {
     setRequestedPanel(null);
     setDetailOpen(false);
-    window.requestAnimationFrame(() => lastTriggerRef.current?.focus({ preventScroll: true }));
   }, [setDetailOpen]);
 
   const selectPanel = useCallback(
@@ -122,52 +105,6 @@ export default function ResponsiveMapControls({
     },
     [selectPanel],
   );
-
-  useEffect(() => {
-    const drawer = drawerRef.current;
-    if (drawer) drawer.inert = !panelOpen;
-    if (!panelOpen) return;
-
-    const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus({ preventScroll: true }));
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        // A compact drawer is the top-level modal surface. Let a nested
-        // dialog keep Escape for itself, but do not require focus to remain
-        // inside the drawer after a pointer interaction.
-        const target = event.target instanceof Element ? event.target : null;
-        const nestedDialog = target?.closest('[role="dialog"]:not(#mobile-map-panel-drawer)');
-        if (nestedDialog) return;
-        event.preventDefault();
-        closePanel();
-        return;
-      }
-      if (
-        !drawerRef.current ||
-        !drawerRef.current.contains(document.activeElement)
-      ) {
-        return;
-      }
-      if (event.key !== "Tab" || !drawerRef.current) return;
-      const focusable = Array.from(
-        drawerRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter((element) => !element.hidden && element.offsetParent !== null);
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      window.cancelAnimationFrame(frame);
-      document.removeEventListener("keydown", onKeyDown, true);
-    };
-  }, [panelOpen, closePanel]);
 
   useEffect(() => {
     // The dynamic control shell can render one frame before matchMedia
@@ -207,60 +144,49 @@ export default function ResponsiveMapControls({
         </button>
       </nav>
 
-      <button
-        type="button"
-        className="mobile-map-panel-backdrop"
-        onClick={closePanel}
-        aria-label="关闭地图工具侧边栏"
-        hidden={!activePanel}
-      />
-
-      <aside
+      <AdaptiveSheet
+        open={panelOpen}
+        title={activeTitle}
         id="mobile-map-panel-drawer"
-        ref={drawerRef}
+        onClose={closePanel}
+        triggerRef={lastTriggerRef}
         className="mobile-map-panel-drawer"
-        role="dialog"
-        aria-modal={panelOpen ? true : undefined}
-        aria-hidden={!activePanel}
-        aria-label={activeTitle}
-        data-testid="mobile-map-panel-drawer"
-      >
-        <header className="mobile-map-panel-drawer-head">
-          <div>
-            <span>地图工具</span>
-            <strong>{activeTitle}</strong>
+        backdropClassName="mobile-map-panel-backdrop"
+        bodyClassName="mobile-map-panel-body"
+        testId="mobile-map-panel-drawer"
+        header={(
+          <header className="mobile-map-panel-drawer-head">
+            <div>
+              <span>地图工具</span>
+              <strong>{activeTitle}</strong>
+            </div>
+            <button type="button" onClick={closePanel} aria-label="关闭地图工具侧边栏">
+              <X size={19} aria-hidden="true" />
+            </button>
+          </header>
+        )}
+        navigation={(
+          <div className="mobile-map-panel-tabs" role="tablist" aria-label="地图工具分类">
+            {PANEL_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = activePanel === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={active ? "active" : ""}
+                  onClick={() => selectPanel(item.id)}
+                >
+                  <Icon size={15} aria-hidden="true" />
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            onClick={closePanel}
-            aria-label="关闭地图工具侧边栏"
-          >
-            <X size={19} aria-hidden="true" />
-          </button>
-        </header>
-
-        <div className="mobile-map-panel-tabs" role="tablist" aria-label="地图工具分类">
-          {PANEL_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = activePanel === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className={active ? "active" : ""}
-                onClick={() => selectPanel(item.id)}
-              >
-                <Icon size={15} aria-hidden="true" />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mobile-map-panel-body">
+        )}
+      >
           {activePanel === "layers" ? (
             <div className="mobile-map-panel-pane" role="tabpanel" data-panel="layers">
               <MapLayerBar />
@@ -298,8 +224,7 @@ export default function ResponsiveMapControls({
               {summaryPane}
             </div>
           ) : null}
-        </div>
-      </aside>
+      </AdaptiveSheet>
     </section>
   );
 }

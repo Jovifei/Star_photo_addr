@@ -1,0 +1,124 @@
+"use client";
+
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { lockCompactPageScroll } from "@/lib/pageScrollLock";
+
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "a[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
+export default function AdaptiveSheet({
+  open,
+  title,
+  id,
+  onClose,
+  triggerRef,
+  header,
+  navigation,
+  children,
+  className,
+  backdropClassName,
+  bodyClassName,
+  testId,
+}: {
+  open: boolean;
+  title: string;
+  id: string;
+  onClose: () => void;
+  triggerRef: RefObject<HTMLElement | null>;
+  header: ReactNode;
+  navigation?: ReactNode;
+  children: ReactNode;
+  className: string;
+  backdropClassName: string;
+  bodyClassName: string;
+  testId?: string;
+}) {
+  const sheetRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    return lockCompactPageScroll();
+  }, [open]);
+
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (sheet) sheet.inert = !open;
+    if (!open) return;
+
+    const focusables = () =>
+      Array.from(sheetRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
+        .filter((element) => !element.hidden && element.offsetParent !== null);
+    const frame = window.requestAnimationFrame(() => focusables()[0]?.focus({ preventScroll: true }));
+    const onKeyDown = (event: KeyboardEvent) => {
+      const current = sheetRef.current;
+      if (!current) return;
+      if (event.key === "Escape") {
+        const target = event.target instanceof Element ? event.target : null;
+        const nestedDialog = target?.closest(`[role="dialog"]:not(#${id})`);
+        if (nestedDialog) return;
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !current.contains(document.activeElement)) return;
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [id, onClose, open]);
+
+  useEffect(() => {
+    if (open) return;
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const frame = window.requestAnimationFrame(() => trigger.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, triggerRef]);
+
+  return (
+    <>
+      <button
+        type="button"
+        className={backdropClassName}
+        onClick={onClose}
+        aria-label={`关闭${title}`}
+        hidden={!open}
+      />
+      <aside
+        id={id}
+        ref={sheetRef}
+        className={className}
+        role="dialog"
+        aria-modal={open ? true : undefined}
+        aria-hidden={!open}
+        aria-label={title}
+        data-testid={testId}
+        data-adaptive-sheet="true"
+      >
+        {header}
+        {navigation}
+        <div className={bodyClassName}>{children}</div>
+      </aside>
+    </>
+  );
+}
+
