@@ -448,6 +448,38 @@
   overflow-wrap: anywhere;
 }
 
+.decision-data-state {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.decision-data-state > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(9, 24, 32, .56);
+}
+
+.decision-data-state span {
+  color: var(--muted-2);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.decision-data-state strong { color: var(--text); font-size: 13px; }
+.decision-data-state small { color: var(--muted); line-height: 1.35; overflow-wrap: anywhere; }
+.decision-data-state [data-state="ready"],
+.decision-data-state [data-state="eligible"] { border-color: rgba(113, 210, 161, .38); }
+.decision-data-state [data-state="stale"],
+.decision-data-state [data-state="partial"],
+.decision-data-state [data-state="withheld"] { border-color: rgba(247, 190, 96, .42); }
+.decision-data-state [data-state="invalid"],
+.decision-data-state [data-state="unavailable"] { border-color: rgba(248, 124, 122, .42); }
+
 .decision-summary-provenance {
   margin: 0;
   color: var(--muted);
