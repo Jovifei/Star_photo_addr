@@ -234,3 +234,7 @@ Review follow-up: removed the unused legacy `forecastQualityLabel` export and
 its old presentation assertions so `dataPresentation.ts` is the single
 hourly vocabulary owner. Track geometry tests remain in `timelineTrack.test.ts`.
 
+The product-integrity stale/unknown assertion now checks
+`map-recommendation-eligibility=data-state="withheld"` and keeps the raw
+`data-score-status` plus “灰色点为当前时次数据不足，不代表低分” contract.
+

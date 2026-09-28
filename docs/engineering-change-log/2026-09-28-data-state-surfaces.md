@@ -33,3 +33,7 @@ Remote review identified a remaining second vocabulary in the unused exported
 `forecastQualityLabel`. It is now removed; timeline presentation cases live in
 `dataPresentation.test.ts`, while `timelineTrack.test.ts` retains only track
 geometry/night grouping coverage. No hourly fact calculation changed.
+
+The follow-up also updated the existing product-integrity assertion to the
+`map-recommendation-eligibility` contract while retaining the raw
+`data-score-status` and unknown-point wording.

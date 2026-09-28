@@ -122,3 +122,6 @@ Suggested branch: `codex/data-state-surfaces-v2-20260928`
 Review follow-up: legacy `forecastQualityLabel` presentation text was removed;
 hourly status cases now live in the P3 mapper contract tests.
 
+Review follow-up also aligned the existing product-integrity unknown-score test
+with the new map eligibility contract without removing raw snapshot status.
+

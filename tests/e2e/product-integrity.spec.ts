@@ -217,7 +217,8 @@ test("当前时次评分不可用时明确显示数据不足，不把未知点�
   await page.getByRole("tab", { name: "图层与偏好" }).click();
   const panel = page.locator(".observing-map-control:visible");
   await expect(panel).toHaveAttribute("data-score-status", "degraded", { timeout: 15000 });
-  await expect(panel).toContainText("灰色点代表未知，不等同于低分");
+  await expect(panel.getByTestId("map-recommendation-eligibility")).toHaveAttribute("data-state", "withheld");
+  await expect(panel.getByTestId("map-recommendation-eligibility")).toContainText("不发布推荐");
   await expect(panel.locator(".observing-unknown-option")).toContainText("数据不足");
 });
 
