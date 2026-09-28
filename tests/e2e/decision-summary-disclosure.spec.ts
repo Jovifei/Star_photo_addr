@@ -41,6 +41,11 @@ for (const project of ["mobile", "desktop"] as const) {
     await expect(evidence).toContainText("请求坐标");
     await expect(evidence).toContainText("模型网格");
     await expect(evidence).toContainText("原始抓取");
+    if (project === "mobile") {
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        await page.evaluate(() => document.documentElement.clientWidth + 1),
+      );
+    }
     await evidence.locator("summary").click();
     await expect(evidence).not.toHaveAttribute("open", "");
   });

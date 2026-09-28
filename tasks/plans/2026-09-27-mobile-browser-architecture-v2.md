@@ -80,3 +80,6 @@ Base: `origin/codex/mobile-home-context-v2-20260928@2c551b4`
 Suggested branch: `codex/mobile-decision-summary-v2-20260928`
 Status: `EXECUTING_LOCALLY`.
 
+Remote review follow-up added an explicit mobile post-expansion horizontal
+overflow assertion; product scope remains unchanged.
+

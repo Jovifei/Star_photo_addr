@@ -148,6 +148,10 @@ remove the duplicate `.observation-provenance` from `ObservationDetails`.
 Remote review must resolve the pushed branch tip again after commit. Do not
 merge or deploy.
 
+Review follow-up: the mobile disclosure test now explicitly checks
+`scrollWidth <= clientWidth + 1` after expanding provenance. This is a test-only
+contract addition; no product or data semantics changed.
+
 ### Review follow-up
 
 Remote review identified a presentation-only UTC timestamp issue in

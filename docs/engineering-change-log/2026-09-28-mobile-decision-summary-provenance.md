@@ -32,3 +32,10 @@ mean a valid recommendation.
   remains visible and the 94 score stays withheld.
 - Workspace/content regression: 23 passed, 19 project skips.
 - Full Chromium/cross-browser/device/CI/production: `NOT_RUN`.
+
+## Review follow-up — mobile overflow contract
+
+The remote review requested an explicit mobile assertion after opening the L3
+disclosure. `decision-summary-disclosure.spec.ts` now checks
+`document.documentElement.scrollWidth <= clientWidth + 1` after expansion.
+The focused mobile/desktop disclosure tests remain green.
