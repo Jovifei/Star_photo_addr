@@ -927,4 +927,3 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 
 - Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`; base `952577fa`; branch `codex/data-state-presentation-v2-20260928`。
 - Protected: `missing != 0`, `stale != fresh`, `partial != available`, HTTP 200 != valid recommendation; P3-B/P4/P5 remain separate。
-

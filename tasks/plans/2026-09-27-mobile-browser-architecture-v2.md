@@ -99,6 +99,6 @@ data/recommendation block, and a provider-panel scope sentence. It does not
 reimplement scoring/integrity, put provider health in the store, or start P3-B
 CloudTimeline/ObservingMapControl vocabulary work.
 
-Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`  
+Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`
 Base: `origin/codex/mobile-decision-summary-v2-20260928@952577fa`
 
