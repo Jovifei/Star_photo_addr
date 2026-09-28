@@ -313,6 +313,7 @@
   .mobile-data-sheet-body > * { min-width: 0; }
   .mobile-data-sheet-body .decision-summary h2 { font-size: 17px; }
   .mobile-data-sheet-body .decision-summary .status-pill { font-size: 15px; }
+  .mobile-data-sheet-body .decision-data-state { grid-template-columns: minmax(0, 1fr); }
   .mobile-data-sheet-body .decision-summary-evidence-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 8px;

@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
 import { forecastTrustIssue } from "@/lib/forecastIntegrity";
 import { buildDecisionSummary } from "@/lib/decisionSummary";
+import { presentRecommendationEligibility, presentSelectedData } from "@/lib/dataPresentation";
 import type { InspectorTabId } from "@/components/workspace/ContextInspector";
 
 export default function DecisionSummary({
@@ -43,8 +44,25 @@ export default function DecisionSummary({
     : null;
   const forecastIssue = forecastTrustIssue(forecast, undefined, state.cloudState.model);
   const selectedForecastTime = state.cloudState.activeForecastTime;
+  const selectedDataState = presentSelectedData({
+    hasLocation: Boolean(state.selectedLocation),
+    loading: state.loading,
+    hasForecast: Boolean(forecast),
+    availabilityError: state.forecastAvailability.error,
+    staleInUse: state.forecastAvailability.staleInUse,
+    forecastIssue,
+    hasEvaluation: Boolean(evaluation),
+  });
+  const recommendationState = presentRecommendationEligibility({
+    hasLocation: Boolean(state.selectedLocation),
+    loading: state.loading,
+    hasForecast: Boolean(forecast),
+    hasEvaluation: Boolean(evaluation),
+    forecastIssue,
+    availabilityError: state.forecastAvailability.error,
+  });
   const trustSummary = forecast
-    ? `数据依据 · ${forecast.metadata?.model?.toUpperCase() ?? "未知模型"} · ${forecastIssue ? `质量：${forecastIssue}` : "质量：可用；多模型核验：未检查"}`
+    ? `数据依据 · ${forecast.metadata?.model?.toUpperCase() ?? "未知模型"} · ${forecastIssue ?? "查看技术详情"}`
     : "数据依据 · 暂无天气数据";
 
   return (
@@ -70,6 +88,18 @@ export default function DecisionSummary({
           <dd>{model.updatedLabel}</dd>
         </div>
       </dl>
+      <div className="decision-data-state" data-testid="decision-data-state" aria-label="当前数据与推荐门禁">
+        <div data-testid="selected-data-state" data-state={selectedDataState.code}>
+          <span>当前数据</span>
+          <strong>{selectedDataState.label}</strong>
+          <small>{selectedDataState.detail}</small>
+        </div>
+        <div data-testid="recommendation-eligibility" data-state={recommendationState.code}>
+          <span>推荐门禁</span>
+          <strong>{recommendationState.label}</strong>
+          <small>{recommendationState.detail}</small>
+        </div>
+      </div>
       {forecast ? (
         <details className="decision-summary-evidence" data-testid="forecast-evidence-details">
           <summary data-testid="forecast-trust-summary">{trustSummary}</summary>

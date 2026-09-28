@@ -913,3 +913,18 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 
 - Package: `MOBILE-V2-P2B-DECISION-PROVENANCE`; base `2c551b4`; branch `codex/mobile-decision-summary-v2-20260928`。
 - Protected: `missing != 0`, `stale != fresh`, `partial != available`, HTTP 200 != valid recommendation; P3/P4/P5 remain separate。
+# 2026-09-28 P3-A 数据展示状态统一
+
+## Plan
+
+- [x] 接收远端 `c2c_8f4c` 三轴状态计划，确认 Provider Health、Selected Data Validity、Recommendation Eligibility 不合并成 boolean。
+- [x] 新增纯 mapper 单测，覆盖 optional provider、partial、stale、withheld、eligible 和 provider/data 解耦。
+- [x] 在主页展示当前数据/推荐门禁，在 Provider 面板补充范围声明；不改评分、integrity、store、API。
+- [x] 完成 P3A E2E、P0/data-refresh/workspace refresh 回归与 `npm run check`。
+- [ ] 提交、推送并交给远端复审；不合并、不部署。
+
+## Review
+
+- Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`; base `952577fa`; branch `codex/data-state-presentation-v2-20260928`。
+- Protected: `missing != 0`, `stale != fresh`, `partial != available`, HTTP 200 != valid recommendation; P3-B/P4/P5 remain separate。
+

@@ -234,6 +234,19 @@ This focused evidence does not replace full E2E, cross-browser, device, CI, or p
 P2-B does not change forecast integrity, scoring, provider/cache/snapshot, or
 the `ForecastAvailability` path.
 
+## Mobile Browser v2 P3-A focused evidence (2026-09-28)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Presentation mappers | PASS | 7 unit tests |
+| Three-axis data-state E2E | PASS | 4 passed |
+| P0/data refresh/workspace refresh | PASS | 13 passed |
+| `npm run check` | PASS | 65 Vitest files / 377 tests, build |
+| Full Chromium / cross-browser / device / CI / production | NOT_RUN | separate gates |
+
+P3-A keeps Provider Health, Selected Data Validity, and Recommendation
+Eligibility separate; it does not make probe status a recommendation result.
+
 ## Mobile Browser v2 P2-A focused evidence (2026-09-28)
 
 | Item | Status | Evidence |

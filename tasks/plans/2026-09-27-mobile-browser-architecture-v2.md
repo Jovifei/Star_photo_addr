@@ -83,3 +83,22 @@ Status: `EXECUTING_LOCALLY`.
 Remote review follow-up added an explicit mobile post-expansion horizontal
 overflow assertion; product scope remains unchanged.
 
+## P3-A data presentation contract (2026-09-28)
+
+Remote task `c2c_8f4c` fixes the display boundary without merging the four
+underlying fact sources. The three axes are:
+
+- Provider Health: independent `/api/data-status` probe state.
+- Selected Data Validity: current location/model/time forecast facts and
+  existing integrity results.
+- Recommendation Eligibility: whether an existing `NightEvaluation` may be
+  published as a recommendation decision.
+
+P3-A adds pure mappers from existing facts to presentation DTOs, a compact L2
+data/recommendation block, and a provider-panel scope sentence. It does not
+reimplement scoring/integrity, put provider health in the store, or start P3-B
+CloudTimeline/ObservingMapControl vocabulary work.
+
+Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`  
+Base: `origin/codex/mobile-decision-summary-v2-20260928@952577fa`
+

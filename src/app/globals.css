@@ -72,6 +72,7 @@
 .source-status-panel span { display: flex; align-items: center; gap: 5px; }
 .source-status-title { color: #eef3ff; font-weight: 600; }
 .source-status-panel b { margin-left: auto; color: #8edca9; font-weight: 500; }
+.source-status-scope { margin: 2px 0 2px; color: var(--muted); font-size: 10px; line-height: 1.45; }
 .source-dot { width: 6px; height: 6px; border-radius: 50%; background: #8edca9; }
 .source-dot.unconfigured { background: #efc46c; }
 .source-dot.not-installed { background: #8c96a8; }

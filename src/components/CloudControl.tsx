@@ -17,10 +17,10 @@ import {
 } from "@/lib/cloudGrid";
 import { isInNight } from "@/lib/nighttime";
 import {
-  dataSourceStatusLabel,
   type DataSourceHealthResponse,
   type DataSourceProbe,
 } from "@/lib/dataSourceStatus";
+import { presentProviderHealth } from "@/lib/dataPresentation";
 import type { CloudDisplayMode } from "@/lib/types";
 
 const MODELS: { id: "icon" | "gfs" | "aifs"; label: string }[] = [
@@ -45,11 +45,12 @@ function statusClass(source?: DataSourceProbe): string {
 }
 
 function SourceStatusRow({ source }: { source?: DataSourceProbe }) {
+  const presentation = presentProviderHealth(source);
   return (
     <span className="source-status-row" data-status={source?.status ?? "loading"} title={source?.detail}>
       <i className={`source-dot ${statusClass(source)}`} />
       <span>{source?.label ?? "数据源"}</span>
-      <b>{source ? dataSourceStatusLabel(source.status) : "检测中"}</b>
+      <b>{presentation.label}</b>
     </span>
   );
 }
@@ -263,6 +264,9 @@ export default function CloudControl() {
           数据源状态
           <small title={health?.nextRefreshAt}>{healthSummary}</small>
         </span>
+        <p className="source-status-scope" data-testid="provider-health-scope">
+          上游探测只说明数据源服务状态；当前地点数据完整性与推荐门禁以“今晚判断”为准。
+        </p>
         <SourceStatusRow source={sources?.weather} />
         <SourceStatusRow source={sources?.satellite} />
         <SourceStatusRow source={sources?.["light-pollution"]} />

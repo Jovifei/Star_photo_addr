@@ -148,6 +148,51 @@ remove the duplicate `.observation-provenance` from `ObservationDetails`.
 Remote review must resolve the pushed branch tip again after commit. Do not
 merge or deploy.
 
+## Next cycle — P3-A data presentation contract
+
+Remote planning task: `c2c_8f4c`
+Source branch: `codex/mobile-decision-summary-v2-20260928`
+Source head: `952577fa38851e3ea2f9cf993383e941cd512851`
+Implementation branch: `codex/data-state-presentation-v2-20260928`
+Base tip: `952577fa38851e3ea2f9cf993383e941cd512851`
+Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`
+
+### Product result
+
+Three presentation axes now remain separate: Provider Health, Selected Data
+Validity, and Recommendation Eligibility. L2 shows current data and gate
+states; provider probes remain in the L3 provider panel. Optional unconfigured
+sources stay neutral. Existing integrity and scoring facts are only mapped to
+labels; they are not recomputed.
+
+### Files
+
+- `src/lib/dataPresentation.ts`
+- `src/components/workspace/DecisionSummary.tsx`
+- `src/components/CloudControl.tsx`
+- `src/app/globals.css`
+- `src/app/mobile-map-first.css`
+- `tests/unit/dataPresentation.test.ts`
+- `tests/e2e/data-state-presentation.spec.ts`
+- `tests/e2e/forecast-integrity-p0.spec.ts`
+- `docs/engineering-change-log/2026-09-28-data-presentation-contract.md`
+
+### Evidence
+
+- Mapper unit: 7 PASS.
+- P3A data-state E2E: 4 PASS.
+- P0/data-refresh/workspace refresh E2E: 13 PASS.
+- `npm run check`: PASS — 65 Vitest files / 377 tests and build.
+- `git diff --check`: PASS.
+- Full Chromium/cross-browser/device/CI/production: `NOT_RUN`.
+
+### Protected rules
+
+Do not modify `forecastIntegrity.ts`, scoring, hour scoring, store request or
+cache behavior, API routes, provider probes, snapshot worker, Fireglow/CloudSea
+semantics, or merge/deploy without separate authorization. P3-B will later
+align CloudTimeline and ObservingMapControl; P4/P5 remain separate.
+
 Review follow-up: the mobile disclosure test now explicitly checks
 `scrollWidth <= clientWidth + 1` after expanding provenance. This is a test-only
 contract addition; no product or data semantics changed.
