@@ -907,7 +907,7 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - [x] 将 `DecisionSummary` 的长 provenance 改为原生 `details`，默认收起；保留 `forecastTrustIssue` 原文和 `ForecastAvailability`。
 - [x] 移除 `ObservationDetails` 重复 forecast provenance，不改变评分、候选、暗夜、月光、银河或置信度。
 - [x] 完成移动/桌面 P2-B E2E、P0 stale/integrity、workspace/content 回归与 `npm run check`。
-- [ ] 提交、推送并交给远端复审；不合并、不部署。
+- [x] 提交、推送并交给远端复审；不合并、不部署。
 
 ## Review
 
