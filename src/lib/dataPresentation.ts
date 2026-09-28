@@ -28,6 +28,21 @@ export interface RecommendationFacts {
   availabilityError: string | null;
 }
 
+export interface HourlyDataFacts {
+  hasSource: boolean;
+  stale: boolean;
+  hasHour: boolean;
+  missingFields: string[];
+}
+
+export interface MapRecommendationFacts {
+  loading: boolean;
+  requestFailed: boolean;
+  hasSnapshot: boolean;
+  stale: boolean;
+  publishableCount: number;
+}
+
 export function presentProviderHealth(source?: DataSourceProbe): PresentationState {
   if (!source) {
     return { code: "loading", label: "检测中", detail: "正在读取数据源状态", tone: "loading" };
@@ -93,5 +108,41 @@ export function presentRecommendationEligibility(facts: RecommendationFacts): Pr
     label: "不发布推荐",
     detail: facts.forecastIssue ?? facts.availabilityError ?? "当前观测夜未通过完整评分门禁",
     tone: "warn",
+  };
+}
+
+export function presentHourlyDataValidity(facts: HourlyDataFacts): PresentationState {
+  if (!facts.hasSource) {
+    return { code: "unavailable", label: "当前数据不可用", detail: "当前时次没有有效预报", tone: "bad" };
+  }
+  if (facts.stale) {
+    return { code: "stale", label: "数据已过期/降级", detail: "当前时次使用过期数据，不发布推荐", tone: "warn" };
+  }
+  if (!facts.hasHour) {
+    return { code: "partial", label: "数据部分可用", detail: "当前时次没有完整天气字段", tone: "warn" };
+  }
+  if (facts.missingFields.length) {
+    return { code: "partial", label: "数据部分可用", detail: `评分字段缺失：${facts.missingFields.join("、")}`, tone: "warn" };
+  }
+  return { code: "ready", label: "当前数据完整", detail: "当前时次评分字段完整", tone: "good" };
+}
+
+export function presentMapRecommendationEligibility(facts: MapRecommendationFacts): PresentationState {
+  if (facts.loading) {
+    return { code: "waiting", label: "等待数据", detail: "正在按此时次刷新地点评分", tone: "loading" };
+  }
+  if (facts.requestFailed || !facts.hasSnapshot || facts.stale || facts.publishableCount <= 0) {
+    const detail = facts.stale
+      ? "评分数据已过期/降级；灰色未知地点仍保持数据不足"
+      : facts.requestFailed
+        ? "当前时次评分暂不可用；灰色未知地点不等同于低分"
+        : "当前时次没有有效分数；灰色未知地点不等同于低分";
+    return { code: "withheld", label: "不发布推荐", detail, tone: "warn" };
+  }
+  return {
+    code: "eligible",
+    label: "已通过推荐数据门禁",
+    detail: `仅有有效分数的地点可发布判断；当前 ${facts.publishableCount} 个地点有有效分数，灰色未知地点仍保持数据不足`,
+    tone: "good",
   };
 }

@@ -106,3 +106,16 @@ P0/refresh tests cover unavailable/stale → withheld recommendation states.
 Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`
 Base: `origin/codex/mobile-decision-summary-v2-20260928@952577fa`
 
+## P3-B state surface alignment (2026-09-28)
+
+Remote task `c2c_b3e8` keeps each surface's fact owner and shares only the
+presentation contract. `presentHourlyDataValidity` maps CloudTimeline's
+existing source/stale/hour/missing-field facts; `presentMapRecommendationEligibility`
+maps ObservingMapControl's snapshot/request/stale/publishable-count facts.
+Provider Health remains CloudControl-only. Raw snapshot status and unknown
+scores remain intact.
+
+Package: `MOBILE-V2-P3B-STATE-SURFACE-ALIGNMENT`
+Base: `origin/codex/data-state-presentation-v2-20260928@7462417`
+Suggested branch: `codex/data-state-surfaces-v2-20260928`
+

@@ -20,6 +20,7 @@ import {
   scoreDateForForecastTime,
 } from "@/lib/nighttime";
 import type { BortleLevel, ObservationSnapshot, RecommendationBand } from "@/lib/types";
+import { presentMapRecommendationEligibility } from "@/lib/dataPresentation";
 
 const MOBILE_PANEL_QUERY =
   "(max-width: 768px), (max-height: 520px) and (max-width: 1024px)";
@@ -170,6 +171,13 @@ export default function ObservingMapControl({
     () => baseSites.filter((site) => snapshotScoreAtTime(activeSnapshot, site.id)?.band === "unknown" || !snapshotScoreAtTime(activeSnapshot, site.id)).length,
     [activeSnapshot, baseSites],
   );
+  const mapRecommendationState = presentMapRecommendationEligibility({
+    loading: snapshotStatus === "loading",
+    requestFailed: snapshotErrorTime === snapshotRequestKey,
+    hasSnapshot: Boolean(activeSnapshot),
+    stale: Boolean(activeSnapshot?.stale),
+    publishableCount: Math.max(0, baseSites.length - unknownCount),
+  });
   const visibleCount = useMemo(
     () => baseSites.filter((site) => {
       const score = snapshotScoreAtTime(activeSnapshot, site.id);
@@ -293,6 +301,9 @@ export default function ObservingMapControl({
               <span>现在</span><span>明天</span><span>后天</span><span>+72h</span>
             </div>
             <small>{snapshotStatus === "loading" ? "正在按此时次刷新地点评分…" : snapshotStatus === "degraded" ? "当前时次评分暂不可用；灰色点代表未知，不等同于低分" : "分数、颜色和地点数量均按此时次的数值预报计算；卫星图层仍是独立观测"}</small>
+            <small data-testid="map-recommendation-eligibility" data-state={mapRecommendationState.code}>
+              推荐门禁：{mapRecommendationState.label} · {mapRecommendationState.detail}
+            </small>
           </div>
           <div className="observing-score-counts" aria-label="当前时次评分数量">
             <span>当前显示 <b>{activeSnapshot ? visibleCount : "—"}</b></span>

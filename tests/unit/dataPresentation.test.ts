@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { presentProviderHealth, presentRecommendationEligibility, presentSelectedData } from "@/lib/dataPresentation";
+import { presentHourlyDataValidity, presentMapRecommendationEligibility, presentProviderHealth, presentRecommendationEligibility, presentSelectedData } from "@/lib/dataPresentation";
 import type { DataSourceProbe } from "@/lib/dataSourceStatus";
 
 const source = (status: DataSourceProbe["status"]): DataSourceProbe => ({
@@ -40,5 +40,21 @@ describe("data presentation contract", () => {
     expect(presentRecommendationEligibility({ hasLocation: true, loading: false, hasForecast: true, hasEvaluation: false, forecastIssue: "天气数据模型与当前选择不一致，不发布推荐分", availabilityError: null }).code).toBe("withheld");
     expect(presentRecommendationEligibility({ hasLocation: true, loading: false, hasForecast: true, hasEvaluation: false, forecastIssue: "天气数据已降级或过期，不发布推荐分", availabilityError: null }).code).toBe("withheld");
     expect(presentRecommendationEligibility({ hasLocation: false, loading: false, hasForecast: false, hasEvaluation: false, forecastIssue: null, availabilityError: null }).code).toBe("waiting");
+  });
+
+  it("maps hourly field completeness without calculating integrity", () => {
+    expect(presentHourlyDataValidity({ hasSource: false, stale: false, hasHour: false, missingFields: [] }).code).toBe("unavailable");
+    expect(presentHourlyDataValidity({ hasSource: true, stale: true, hasHour: true, missingFields: [] }).code).toBe("stale");
+    expect(presentHourlyDataValidity({ hasSource: true, stale: false, hasHour: false, missingFields: [] }).code).toBe("partial");
+    expect(presentHourlyDataValidity({ hasSource: true, stale: false, hasHour: true, missingFields: ["能见度"] }).detail).toContain("能见度");
+    expect(presentHourlyDataValidity({ hasSource: true, stale: false, hasHour: true, missingFields: [] }).code).toBe("ready");
+  });
+
+  it("maps map snapshot eligibility from existing publishable counts", () => {
+    expect(presentMapRecommendationEligibility({ loading: true, requestFailed: false, hasSnapshot: false, stale: false, publishableCount: 0 }).code).toBe("waiting");
+    expect(presentMapRecommendationEligibility({ loading: false, requestFailed: true, hasSnapshot: false, stale: false, publishableCount: 0 }).code).toBe("withheld");
+    expect(presentMapRecommendationEligibility({ loading: false, requestFailed: false, hasSnapshot: true, stale: true, publishableCount: 4 }).code).toBe("withheld");
+    expect(presentMapRecommendationEligibility({ loading: false, requestFailed: false, hasSnapshot: true, stale: false, publishableCount: 0 }).code).toBe("withheld");
+    expect(presentMapRecommendationEligibility({ loading: false, requestFailed: false, hasSnapshot: true, stale: false, publishableCount: 4 }).code).toBe("eligible");
   });
 });

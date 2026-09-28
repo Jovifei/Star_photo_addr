@@ -927,3 +927,16 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 
 - Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`; base `952577fa`; branch `codex/data-state-presentation-v2-20260928`。
 - Protected: `missing != 0`, `stale != fresh`, `partial != available`, HTTP 200 != valid recommendation; P3-B/P4/P5 remain separate。
+# 2026-09-28 P3-B CloudTimeline / ObservingMapControl 状态表层统一
+
+## Plan
+
+- [x] 接收远端 `c2c_b3e8` 计划，确认共享 presentation mapper、各 surface 保留事实 owner。
+- [x] 为 hourly data validity 与 map recommendation eligibility 补充纯 mapper 单测和 focused E2E。
+- [x] 保留 `data-score-status`、unknown score、`missingNightInputs`、snapshot/integrity 事实；不接入 Provider Health。
+- [ ] 提交、推送并交给远端复审；不合并、不部署。
+
+## Review
+
+- Package: `MOBILE-V2-P3B-STATE-SURFACE-ALIGNMENT`; base `7462417`; branch `codex/data-state-surfaces-v2-20260928`。
+- Protected: `missing != 0`, `stale != fresh`, `partial != available`, HTTP 200 != valid recommendation; P4/P5 remain separate。

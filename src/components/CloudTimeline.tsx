@@ -9,6 +9,7 @@ import { HOURS_PER_NIGHT } from "@/lib/nighttime";
 import { isInNight } from "@/lib/nighttime";
 import { aggregateForecastHour, getValuesAtTime } from "@/lib/cloudGrid";
 import { missingNightInputs, scoreCoreWeather } from "@/lib/forecastIntegrity";
+import { presentHourlyDataValidity } from "@/lib/dataPresentation";
 import type { HourWeather, SatelliteFrame } from "@/lib/types";
 import HourlyForecastMatrix, { buildNightTimes } from "@/components/HourlyForecastMatrix";
 import { evaluateNight } from "@/lib/scoring";
@@ -211,6 +212,12 @@ export default function CloudTimeline() {
   const forecastStale = pointForecast
     ? Boolean(pointForecast.metadata?.stale)
     : Boolean(cloudGrid?.stale);
+  const hourlyDataState = presentHourlyDataValidity({
+    hasSource: forecastSource !== "暂无有效预报",
+    stale: forecastStale,
+    hasHour: Boolean(activeForecastHour),
+    missingFields: activeForecastHour ? missingNightInputs(activeForecastHour) : [],
+  });
   const sourceFetchedAt = pointForecast
     ? pointForecast.metadata?.sourceFetchedAt ?? pointForecast.fetchedAt ?? null
     : cloudGrid?.sourceFetchedAt ?? null;
@@ -442,7 +449,7 @@ export default function CloudTimeline() {
           <span>云量 {activeForecastHour?.cloudCover == null ? "—" : `${Math.round(activeForecastHour.cloudCover)}%`}</span>
           <span>降水 {activeForecastHour?.precipitation == null ? "—" : `${activeForecastHour.precipitation.toFixed(1)} mm`}</span>
           <span>风 {activeForecastHour?.windSpeed == null ? "—" : `${activeForecastHour.windSpeed.toFixed(1)} m/s`} {activeForecastHour?.windDirection == null ? "" : `${Math.round(activeForecastHour.windDirection)}°`}</span>
-          <small>来源：{forecastSource} · Open-Meteo · {cloudState.model.toUpperCase()} · 时间：{activeForecastTimeLabel(activeForecastHour?.time)} · 原始抓取：{sourceFetchedAt ?? "未提供"} · 数据质量：{forecastQualityLabel(forecastSource, forecastStale, activeForecastHour)}</small>
+          <small>来源：{forecastSource} · Open-Meteo · {cloudState.model.toUpperCase()} · 时间：{activeForecastTimeLabel(activeForecastHour?.time)} · 原始抓取：{sourceFetchedAt ?? "未提供"} · <span data-testid="hourly-data-validity" data-state={hourlyDataState.code}>数据质量：{hourlyDataState.label} · {hourlyDataState.detail}</span></small>
         </>}
       </div>
 

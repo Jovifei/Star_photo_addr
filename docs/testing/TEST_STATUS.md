@@ -250,6 +250,19 @@ Eligibility separate; it does not make probe status a recommendation result.
 P3-A review follow-up also verifies model mismatch/missing identity as `invalid`
 and 429/stale fallback as `unavailable`/`stale` with recommendation withheld.
 
+## Mobile Browser v2 P3-B focused evidence (2026-09-28)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Hourly data validity vocabulary | PASS | ready/partial surface tests |
+| Map recommendation eligibility | PASS | fresh all-unknown snapshot withheld |
+| P3A regression | PASS | existing data-state tests |
+| Unit | PASS | 15 tests |
+| P0/data refresh/workspace refresh | PASS | 13 passed |
+| Full Chromium / cross-browser / device / CI / production | NOT_RUN | separate gates |
+
+P3-B keeps raw snapshot and hourly fact ownership unchanged.
+
 ## Mobile Browser v2 P2-A focused evidence (2026-09-28)
 
 | Item | Status | Evidence |

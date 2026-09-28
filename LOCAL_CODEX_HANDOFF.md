@@ -212,3 +212,21 @@ validity. The focused E2E now checks the displayed update time against the
 timestamp conversion. Re-resolve the branch tip after the follow-up commit;
 the prior implementation evidence remains valid.
 
+## Next cycle — P3-B state surface alignment
+
+Remote planning task: `c2c_b3e8`
+Source branch: `codex/data-state-presentation-v2-20260928`
+Source head: `7462417466711b3d5d45c29ca7ff028338bf4b00`
+Implementation branch: `codex/data-state-surfaces-v2-20260928`
+Base tip: `7462417466711b3d5d45c29ca7ff028338bf4b00`
+Package: `MOBILE-V2-P3B-STATE-SURFACE-ALIGNMENT`
+
+P3-B shares only presentation mappers: CloudTimeline maps hourly source/stale/
+hour/missing-field facts; ObservingMapControl maps snapshot request/stale/
+publishable-count facts. Keep raw `data-score-status`, unknown-score semantics,
+and all integrity/scoring/snapshot owners. Provider Health remains CloudControl.
+
+Evidence: unit 15 PASS; P3-B surface tests pass individually; P0/data refresh/
+workspace refresh 13 PASS; `npm run check` PASS; full Chromium, cross-browser,
+device, CI, and production `NOT_RUN`. Do not merge or deploy.
+
