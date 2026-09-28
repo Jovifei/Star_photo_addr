@@ -107,6 +107,47 @@ Do not alter `forecastIntegrity.ts`, scoring, provider/cache/snapshot/API code,
 Fireglow/CloudSea data semantics, or the map-first gesture contract in this
 package. Preserve `missing != 0`, `stale != fresh`, and `partial != available`.
 
+## Next cycle — P2-B decision/provenance disclosure
+
+Remote planning task: `c2c_5d1b`
+Source branch: `codex/mobile-home-context-v2-20260928`
+Source head: `2c551b485553bbe7bfc69dfbf896f23be3957b83`
+Implementation branch: `codex/mobile-decision-summary-v2-20260928`
+Base tip: `2c551b485553bbe7bfc69dfbf896f23be3957b83`
+Package: `MOBILE-V2-P2B-DECISION-PROVENANCE`
+
+### Product result
+
+Keep the L2 decision and trust reason visible. Put long forecast-instance
+metadata in one native `details` disclosure with keyboard-visible summary;
+remove the duplicate `.observation-provenance` from `ObservationDetails`.
+`ForecastAvailability` stays in place. Do not move provenance into an
+`AdaptiveSheet`, change score/integrity semantics, or start P3.
+
+### Files
+
+- `src/components/workspace/DecisionSummary.tsx`
+- `src/components/ObservationDetails.tsx`
+- `src/components/PerseidsApp.tsx`
+- `src/components/workspace/workspace-shell.css`
+- `src/app/mobile-map-first.css`
+- `tests/e2e/decision-summary-disclosure.spec.ts`
+- `tests/e2e/forecast-integrity-p0.spec.ts`
+- `tasks/plans/2026-09-27-mobile-browser-architecture-v2.md`
+- `docs/engineering-change-log/2026-09-28-mobile-decision-summary-provenance.md`
+
+### Evidence
+
+- RED captured before implementation.
+- `npm run check`: PASS — lint, typecheck, 64 Vitest files / 370 tests, build.
+- P2-B focused mobile/desktop disclosure: PASS.
+- P0 stale/integrity: 8 PASS; workspace/content regression: 23 PASS.
+- `git diff --check`: PASS.
+- Full Chromium/cross-browser/device/CI/production: `NOT_RUN`.
+
+Remote review must resolve the pushed branch tip again after commit. Do not
+merge or deploy.
+
 ### Review follow-up
 
 Remote review identified a presentation-only UTC timestamp issue in

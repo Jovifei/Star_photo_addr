@@ -61,3 +61,22 @@ compact update time. The isolated branch now uses an explicit Shanghai
 timezone conversion and a focused E2E assertion; no data or scoring contract
 changed.
 
+## P2-B decision/provenance disclosure (2026-09-28)
+
+Remote task `c2c_5d1b` fixes the next boundary after P2-A:
+
+- L2 “今晚判断” and stale/model-mismatch/invalid trust reasons stay visible.
+- L3 forecast-instance metadata becomes one native `<details>` disclosure in
+  `DecisionSummary`, default closed on mobile and desktop.
+- `ObservationDetails` stops duplicating the same forecast provenance; it keeps
+  astronomy score, window, dark-sky, moon, galaxy, confidence, and candidates.
+- `ForecastAvailability` remains in the existing order and is not folded into
+  this package.
+- P3 data-state presentation, provider health DTOs, map UI, and topic IA stay
+  separate.
+
+Package: `MOBILE-V2-P2B-DECISION-PROVENANCE`
+Base: `origin/codex/mobile-home-context-v2-20260928@2c551b4`
+Suggested branch: `codex/mobile-decision-summary-v2-20260928`
+Status: `EXECUTING_LOCALLY`.
+

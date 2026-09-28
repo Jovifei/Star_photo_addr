@@ -65,7 +65,6 @@ function TonightEvidence({
       sample={state.sample}
       evaluation={evaluation}
       location={state.selectedLocation}
-      forecast={state.forecast?.metadata?.model === state.cloudState.model ? state.forecast : null}
       isCandidate={isCandidate}
       onAddCandidate={() => addCandidate(state.selectedLocation!)}
       onRemoveCandidate={() => {

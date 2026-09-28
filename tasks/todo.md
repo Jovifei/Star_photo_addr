@@ -898,3 +898,18 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - Change: portrait and normal-tablet mobile shells now release the viewport cage; short landscape remains explicitly deferred to its own batch.
 - Verification: build `PASS`; `mobile-v2-baseline.spec.ts` `3 passed`; existing `mobile-content-flow.spec.ts` + `mobile-map-first.spec.ts` `19 passed`.
 - Scope: no provider, cache, snapshot schema, score, `.env`, production volume, merge, or deployment changes.
+# 2026-09-28 P2-B DecisionSummary L2/L3 信息降噪
+
+## Plan
+
+- [x] 接收远端 `c2c_5d1b` 计划，确认 L2 trust reason 保持默认可见，L3 forecast-instance provenance 统一由 `DecisionSummary` 持有。
+- [x] 新增 disclosure RED，覆盖移动 390、桌面 1440、展开/收起、单一 provenance owner 和 stale 质量语义。
+- [x] 将 `DecisionSummary` 的长 provenance 改为原生 `details`，默认收起；保留 `forecastTrustIssue` 原文和 `ForecastAvailability`。
+- [x] 移除 `ObservationDetails` 重复 forecast provenance，不改变评分、候选、暗夜、月光、银河或置信度。
+- [x] 完成移动/桌面 P2-B E2E、P0 stale/integrity、workspace/content 回归与 `npm run check`。
+- [ ] 提交、推送并交给远端复审；不合并、不部署。
+
+## Review
+
+- Package: `MOBILE-V2-P2B-DECISION-PROVENANCE`; base `2c551b4`; branch `codex/mobile-decision-summary-v2-20260928`。
+- Protected: `missing != 0`, `stale != fresh`, `partial != available`, HTTP 200 != valid recommendation; P3/P4/P5 remain separate。

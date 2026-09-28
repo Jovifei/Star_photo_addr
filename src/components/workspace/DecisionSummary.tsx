@@ -43,6 +43,9 @@ export default function DecisionSummary({
     : null;
   const forecastIssue = forecastTrustIssue(forecast, undefined, state.cloudState.model);
   const selectedForecastTime = state.cloudState.activeForecastTime;
+  const trustSummary = forecast
+    ? `数据依据 · ${forecast.metadata?.model?.toUpperCase() ?? "未知模型"} · ${forecastIssue ? `质量：${forecastIssue}` : "质量：可用；多模型核验：未检查"}`
+    : "数据依据 · 暂无天气数据";
 
   return (
     <section
@@ -68,16 +71,19 @@ export default function DecisionSummary({
         </div>
       </dl>
       {forecast ? (
-        <p className="decision-summary-provenance" data-testid="forecast-provenance">
-          数据身份：{forecast.metadata?.model?.toUpperCase() ?? "未知模型"} · 预报时次 {selectedForecastTime ?? "未选择"} ·
-          请求 {forecast.requestedLatitude?.toFixed(3) ?? state.selectedLocation?.latitude.toFixed(3) ?? "—"},{forecast.requestedLongitude?.toFixed(3) ?? state.selectedLocation?.longitude.toFixed(3) ?? "—"} ·
-          网格 {forecast.modelLatitude.toFixed(3)},{forecast.modelLongitude.toFixed(3)} ·
-          海拔 {forecast.modelElevation.toFixed(0)}m（{forecast.elevationSource === "provider-dem" ? "供应商 DEM" : forecast.elevationSource ?? "未知来源"}） ·
-          距机位 {forecast.modelDistanceKm == null ? "—" : `${forecast.modelDistanceKm.toFixed(1)}km`} ·
-          原始抓取 {forecast.metadata?.sourceFetchedAt ?? forecast.fetchedAt} ·
-          模型运行 {forecast.providerRunAt ?? forecast.metadata?.providerRunAt ?? "供应商未提供"} ·
-          {forecastIssue ? `质量：${forecastIssue}` : "质量：可用；多模型核验：未检查"}
-        </p>
+        <details className="decision-summary-evidence" data-testid="forecast-evidence-details">
+          <summary data-testid="forecast-trust-summary">{trustSummary}</summary>
+          <dl className="decision-summary-evidence-grid">
+            <div><dt>模型</dt><dd>{forecast.metadata?.model?.toUpperCase() ?? "未知模型"}</dd></div>
+            <div><dt>预报时次</dt><dd>{selectedForecastTime ?? "未选择"}</dd></div>
+            <div><dt>请求坐标</dt><dd>{forecast.requestedLatitude?.toFixed(3) ?? state.selectedLocation?.latitude.toFixed(3) ?? "—"},{forecast.requestedLongitude?.toFixed(3) ?? state.selectedLocation?.longitude.toFixed(3) ?? "—"}</dd></div>
+            <div><dt>模型网格</dt><dd>{forecast.modelLatitude.toFixed(3)},{forecast.modelLongitude.toFixed(3)}</dd></div>
+            <div><dt>海拔及来源</dt><dd>{forecast.modelElevation.toFixed(0)}m · {forecast.elevationSource === "provider-dem" ? "供应商 DEM" : forecast.elevationSource ?? "未知来源"}</dd></div>
+            <div><dt>距机位</dt><dd>{forecast.modelDistanceKm == null ? "—" : `${forecast.modelDistanceKm.toFixed(1)}km`}</dd></div>
+            <div><dt>原始抓取</dt><dd>{forecast.metadata?.sourceFetchedAt ?? forecast.fetchedAt}</dd></div>
+            <div><dt>模型运行</dt><dd>{forecast.providerRunAt ?? forecast.metadata?.providerRunAt ?? "供应商未提供"}</dd></div>
+          </dl>
+        </details>
       ) : null}
       {onJumpToEvidence ? (
         <button

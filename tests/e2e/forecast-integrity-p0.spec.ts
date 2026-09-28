@@ -150,7 +150,9 @@ test("stale=true 的旧 94 分不能进入地图、候选或详情推荐", async
     await expect(page.locator(".candidate-card").first()).toContainText("数据不足", { timeout: 20_000 });
   }
   await expect(page.locator(".candidate-score-number strong").filter({ hasText: "94" })).toHaveCount(0);
-  await expect(page.getByTestId("observation-provenance")).toContainText("过期", { timeout: 20_000 });
+  await expect(page.getByTestId("forecast-trust-summary")).toContainText("过期", { timeout: 20_000 });
+  await expect(page.getByTestId("forecast-evidence-details")).not.toHaveAttribute("open", "");
+  await expect(page.getByTestId("observation-provenance")).toHaveCount(0);
   if (testInfo.project.name === "mobile") await openMobileMapPanel(page, "places");
   else await page.getByRole("tab", { name: "图层与偏好" }).click();
   const panel = page.locator(".observing-map-control:visible");

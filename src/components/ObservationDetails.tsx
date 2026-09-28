@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { describeDarkSkyStatus, sampleBortle } from "@/lib/darksky";
 import { formatElevationMeters } from "@/lib/locationPresentation";
 import { statusMeta } from "@/lib/scoring";
-import { forecastTrustIssue } from "@/lib/forecastIntegrity";
-import type { DarkSkySample, Location, LocationForecast, NightEvaluation } from "@/lib/types";
+import type { DarkSkySample, Location, NightEvaluation } from "@/lib/types";
 import ScoreRing from "@/components/ScoreRing";
 
 function sampleMatchesLocation(
@@ -29,7 +28,6 @@ export default function ObservationDetails({
   sample,
   evaluation,
   location,
-  forecast = null,
   isCandidate = false,
   onAddCandidate,
   onRemoveCandidate,
@@ -37,7 +35,6 @@ export default function ObservationDetails({
   sample: DarkSkySample | null;
   evaluation: NightEvaluation | null;
   location: Location | null;
-  forecast?: LocationForecast | null;
   isCandidate?: boolean;
   onAddCandidate?: () => void;
   onRemoveCandidate?: () => void;
@@ -45,7 +42,6 @@ export default function ObservationDetails({
   const meta = evaluation
     ? statusMeta(evaluation.status)
     : { label: "数据不足", tone: "muted" };
-  const forecastIssue = forecast ? forecastTrustIssue(forecast) : "暂无天气数据";
   const [fetchedSample, setFetchedSample] =
     useState<FetchedDarkSkySample | null>(null);
   const locationKey = location
@@ -149,15 +145,6 @@ export default function ObservationDetails({
           </div>
         </div>
       </div>
-
-      {forecast ? (
-        <p className="observation-provenance" data-testid="observation-provenance">
-          {forecast.metadata?.model?.toUpperCase() ?? "未知模型"} · 原始抓取 {forecast.metadata?.sourceFetchedAt ?? forecast.fetchedAt} ·
-          网格 {forecast.modelLatitude.toFixed(3)},{forecast.modelLongitude.toFixed(3)} ·
-          海拔 {forecast.modelElevation.toFixed(0)}m（{forecast.elevationSource === "provider-dem" ? "供应商 DEM" : forecast.elevationSource ?? "未知来源"}） ·
-          {forecast.metadata?.providerRunAt ?? forecast.providerRunAt ?? "模型运行时间：供应商未提供"} · 质量：{forecastIssue ?? "可用；多模型核验：未检查"}
-        </p>
-      ) : null}
 
       <div className="metric-grid">
         <div className="metric">

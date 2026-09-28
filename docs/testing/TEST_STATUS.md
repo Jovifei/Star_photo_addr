@@ -219,6 +219,21 @@ Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit
 
 This focused evidence does not replace full E2E, cross-browser, device, CI, or production gates.
 
+## Mobile Browser v2 P2-B focused evidence (2026-09-28)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| DecisionSummary L2/trust summary | PASS | default visible on mobile and desktop |
+| Forecast instance provenance | PASS | one native disclosure, closed by default, expandable |
+| Duplicate observation provenance | PASS | `.observation-provenance` count 0 |
+| Stale/invalid fail-closed | PASS | P0 stale reason visible; score 94 withheld |
+| `npm run check` | PASS | lint, typecheck, 64 Vitest files / 370 tests, build |
+| Workspace/content regression | PASS | 23 passed |
+| Full Chromium / cross-browser / device / CI / production | NOT_RUN | separate gates |
+
+P2-B does not change forecast integrity, scoring, provider/cache/snapshot, or
+the `ForecastAvailability` path.
+
 ## Mobile Browser v2 P2-A focused evidence (2026-09-28)
 
 | Item | Status | Evidence |
