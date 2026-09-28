@@ -53,3 +53,57 @@ LOCAL_CODEX_NEXT:
 
 Do not merge `main` or deploy from this handoff.
 
+## Next cycle — P2-A home context hierarchy
+
+Remote planning/review task: `c2c_9a7e`
+Source branch: `codex/mobile-home-priority-v2-20260927`
+Source head: `667f16746c4982624673ce7491b93ca977d3379c`
+Implementation branch: `codex/mobile-home-context-v2-20260928`
+Base tip: `667f16746c4982624673ce7491b93ca977d3379c`
+Package: `MOBILE-V2-P2A-HOME-CONTEXT-HIERARCHY`
+
+### Product result
+
+`HomeContextStrip` is a read-only mobile context line rendered before the map.
+It shows the selected night, existing forecast model, active forecast time, and
+known update time. Unknown values stay explicit. The command row remains one
+48px search/location/filter row, the map-first budget remains intact, and
+desktop inline controls are unchanged.
+
+### Files
+
+- `src/components/HomeContextStrip.tsx`
+- `src/components/PerseidsApp.tsx`
+- `src/app/mobile-map-first.css`
+- `tests/e2e/mobile-home-context.spec.ts`
+- `tasks/plans/2026-09-27-mobile-browser-architecture-v2.md`
+- `docs/engineering-change-log/2026-09-28-mobile-home-context-hierarchy.md`
+
+### Evidence
+
+- `npm run check`: PASS — lint, typecheck, 64 Vitest files / 370 tests, build.
+- Focused E2E: mobile context 4 PASS; desktop context 2 PASS; map-first 16
+  PASS; content-flow/home-priority 11 PASS; related desktop inline 4 PASS.
+- `git diff --check`: PASS.
+- Provider/cache/snapshot/score/fail-closed rules: unchanged.
+- Full Chromium/cross-browser, real device, CI, and production: `NOT_RUN`.
+
+### Remote review handoff
+
+The final pushed tip must be resolved from
+`origin/codex/mobile-home-context-v2-20260928` after push; this handoff does
+not self-reference its own commit. Remote ChatGPT should independently read
+the branch diff and the latest execution output, verify that the context strip
+does not add command-bar height or data semantics, and return `DONE`,
+`CHANGES_REQUIRED`, or `BLOCKED`.
+
+PR: `NOT_CREATED — gh auth unavailable locally`
+Merged: `NO`
+Deployed: `NO`
+
+### Protected rules
+
+Do not alter `forecastIntegrity.ts`, scoring, provider/cache/snapshot/API code,
+Fireglow/CloudSea data semantics, or the map-first gesture contract in this
+package. Preserve `missing != 0`, `stale != fresh`, and `partial != available`.
+

@@ -21,6 +21,7 @@ import DecisionSummary from "@/components/workspace/DecisionSummary";
 import ForecastAvailability from "@/components/workspace/ForecastAvailability";
 import HourlyForecastMatrix from "@/components/HourlyForecastMatrix";
 import MapHeadline from "@/components/MapHeadline";
+import HomeContextStrip from "@/components/HomeContextStrip";
 import WorkspaceShell from "@/components/workspace/WorkspaceShell";
 import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
@@ -168,6 +169,7 @@ export default function PerseidsApp() {
       canvas={
         <>
           <MapHeadline />
+          <HomeContextStrip />
           <MapStage
             mapRef={mapRef}
             ready={ready}

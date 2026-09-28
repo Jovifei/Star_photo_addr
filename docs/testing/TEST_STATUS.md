@@ -218,3 +218,19 @@ Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit
 | PR / CI / merge / deploy | PENDING | `gh auth login` required locally |
 
 This focused evidence does not replace full E2E, cross-browser, device, CI, or production gates.
+
+## Mobile Browser v2 P2-A focused evidence (2026-09-28)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| Home context strip mobile matrix | PASS | 320/390/768/1024: 4 passed |
+| Home context strip desktop behavior | PASS | 1200/1440: 2 passed; strip hidden, controls inline |
+| Map-first regression | PASS | 16 passed |
+| Content flow / home priority regression | PASS | 11 passed |
+| Related desktop inline regression | PASS | 4 passed |
+| `npm run check` | PASS | lint, typecheck, 64 Vitest files / 370 tests, build |
+| `git diff --check` | PASS | clean |
+| Full Chromium / cross-browser / device / CI / production | NOT_RUN | separate gates |
+
+P2-A only reads existing night/model/time/update state. Provider, cache,
+snapshot, score, forecast integrity, and fail-closed semantics are unchanged.

@@ -34,3 +34,25 @@ Use `ui-ux-pro-max` as design guidance only; do not copy unlicensed source. Pref
 
 `BASELINE_RECONCILED` requires a clean isolated tree, exact SHA relationships, preserved Owner changes, and a recorded RED baseline. Product UI changes start only after that report.
 
+## P2-A route reconciliation and execution (2026-09-28)
+
+Remote review task `c2c_9a7e` supersedes the old information-architecture
+assumptions while preserving the map-first contract:
+
+- Mobile L0/L1 stays thin: search, location, and filter entry remain one row.
+- L2 “今晚判断” remains primary content in the document flow.
+- L3 filters and map tools remain secondary `AdaptiveSheet` content.
+- Desktop `>=1200px` keeps the three-column workbench and inline controls.
+- The former explicit Move Map mode and mobile all-filters-visible layout are
+  `SUPERSEDED_BY_MAP_FIRST_CONTRACT` and must not be reintroduced.
+
+The next finite package is `MOBILE-V2-P2A-HOME-CONTEXT-HIERARCHY`, based on
+`origin/codex/mobile-home-priority-v2-20260927@667f167`. It adds only a
+read-only mobile context strip for the selected night, forecast model, active
+forecast time, and known update time. It must consume existing store values,
+show explicit unknown labels, and never calculate or reinterpret score/data
+validity. P2-B provenance reduction, P3 data-state presentation, topic IA,
+short-landscape, desktop IA, and full gates remain separate later packages.
+
+Status: `EXECUTED_LOCALLY_PENDING_REMOTE_REVIEW`.
+
