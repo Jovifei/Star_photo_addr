@@ -3,10 +3,16 @@
 import { useStore } from "@/lib/store";
 import { formatHourWithDate, formatNightLabel } from "@/lib/nighttime";
 
-function formatUpdateTime(value: string | null | undefined): string {
+export function formatUpdateTime(value: string | null | undefined): string {
   if (!value) return "更新时间未知";
-  const match = /T(\d{2}):(\d{2})/.exec(value);
-  return match ? `数据更新 ${match[1]}:${match[2]}` : "更新时间未知";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "更新时间未知";
+  return `数据更新 ${new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date)}`;
 }
 
 function formatForecastTime(value: string | null | undefined, nightKey: string): string {
@@ -40,6 +46,7 @@ export default function HomeContextStrip() {
       data-night-key={state.selectedNight}
       data-model={model}
       data-forecast-time={state.cloudState.activeForecastTime ?? ""}
+      data-updated-at={updatedAt ?? ""}
       aria-label="当前预报上下文"
     >
       <span className="home-context-strip-night">

@@ -56,3 +56,8 @@ short-landscape, desktop IA, and full gates remain separate later packages.
 
 Status: `EXECUTED_LOCALLY_PENDING_REMOTE_REVIEW`.
 
+Review follow-up: remote audit found a UTC-to-local display ambiguity in the
+compact update time. The isolated branch now uses an explicit Shanghai
+timezone conversion and a focused E2E assertion; no data or scoring contract
+changed.
+

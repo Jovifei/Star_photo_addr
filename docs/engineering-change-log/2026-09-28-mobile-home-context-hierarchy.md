@@ -47,3 +47,18 @@ mean a valid recommendation.
 - `git diff --check`: PASS.
 - Full Chromium/cross-browser, real device, CI, and production checks:
   `NOT_RUN` for this package.
+
+## Review follow-up — UTC timestamp presentation
+
+Remote review found that `fetchedAt` is emitted as a UTC ISO timestamp. The
+follow-up now parses the timestamp and formats it explicitly in
+`Asia/Shanghai`, instead of slicing the raw `T##:##` text. The E2E contract
+also checks the rendered update time against the timestamp's Shanghai value.
+
+- `npm run lint`: PASS
+- `npm run typecheck`: PASS
+- `npm run build`: PASS
+- `mobile-home-context` mobile/desktop: 6 passed (6 project skips)
+- `git diff --check`: PASS
+- Provider/cache/snapshot/score/fail-closed rules: unchanged
+- Full Chromium/cross-browser, real device, CI, and production: `NOT_RUN`

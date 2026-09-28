@@ -39,6 +39,16 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [1024, 768]]
     await expect(context).toContainText(/今晚|今日|明日|后日|月/);
     await expect(context).toContainText(/ICON|GFS|AIFS|BEST_MATCH|未知模型/);
     await expect(context).toContainText(/\d{2}:\d{2}|未选择/);
+    const updatedAt = await context.getAttribute("data-updated-at");
+    if (updatedAt) {
+      const expectedUpdate = new Intl.DateTimeFormat("zh-CN", {
+        timeZone: "Asia/Shanghai",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(new Date(updatedAt));
+      await expect(context).toContainText(`数据更新 ${expectedUpdate}`);
+    }
     await expect(page.getByTestId("mobile-filter-sheet")).toHaveAttribute("aria-hidden", "true");
     await expectNoOverflow(page);
 

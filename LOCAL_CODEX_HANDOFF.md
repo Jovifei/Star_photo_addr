@@ -107,3 +107,12 @@ Do not alter `forecastIntegrity.ts`, scoring, provider/cache/snapshot/API code,
 Fireglow/CloudSea data semantics, or the map-first gesture contract in this
 package. Preserve `missing != 0`, `stale != fresh`, and `partial != available`.
 
+### Review follow-up
+
+Remote review identified a presentation-only UTC timestamp issue in
+`HomeContextStrip`. The follow-up parses ISO timestamps and formats them with
+the explicit `Asia/Shanghai` timezone; it does not change forecast data or
+validity. The focused E2E now checks the displayed update time against the
+timestamp conversion. Re-resolve the branch tip after the follow-up commit;
+the prior implementation evidence remains valid.
+
