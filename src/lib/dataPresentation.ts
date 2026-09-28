@@ -63,7 +63,10 @@ export function presentSelectedData(facts: SelectedDataFacts): PresentationState
       tone: "bad",
     };
   }
-  if (facts.staleInUse || isStaleIssue(facts.forecastIssue)) {
+  if (facts.forecastIssue) {
+    if (!isStaleIssue(facts.forecastIssue)) {
+      return { code: "invalid", label: "数据身份不匹配", detail: facts.forecastIssue, tone: "bad" };
+    }
     return {
       code: "stale",
       label: "数据已过期/降级",
@@ -71,9 +74,7 @@ export function presentSelectedData(facts: SelectedDataFacts): PresentationState
       tone: "warn",
     };
   }
-  if (facts.forecastIssue) {
-    return { code: "invalid", label: "数据身份不匹配", detail: facts.forecastIssue, tone: "bad" };
-  }
+  if (facts.staleInUse) return { code: "stale", label: "数据已过期/降级", detail: "当前使用最近成功数据，不能发布新鲜推荐", tone: "warn" };
   if (!facts.hasEvaluation) {
     return { code: "partial", label: "数据部分可用", detail: "当前观测夜未形成完整可评分结果", tone: "warn" };
   }

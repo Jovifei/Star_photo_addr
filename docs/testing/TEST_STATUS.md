@@ -247,6 +247,9 @@ the `ForecastAvailability` path.
 P3-A keeps Provider Health, Selected Data Validity, and Recommendation
 Eligibility separate; it does not make probe status a recommendation result.
 
+P3-A review follow-up also verifies model mismatch/missing identity as `invalid`
+and 429/stale fallback as `unavailable`/`stale` with recommendation withheld.
+
 ## Mobile Browser v2 P2-A focused evidence (2026-09-28)
 
 | Item | Status | Evidence |

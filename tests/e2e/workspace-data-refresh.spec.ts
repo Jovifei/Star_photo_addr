@@ -115,6 +115,8 @@ test("unavailable hourly forecast shows reason with retry and recovers real valu
   await expect(availability).toBeVisible({ timeout: 20000 });
   await expect(availability).toContainText("暂不可用");
   await expect(availability).toContainText("429");
+  await expect(page.getByTestId("selected-data-state")).toHaveAttribute("data-state", "unavailable");
+  await expect(page.getByTestId("recommendation-eligibility")).toHaveAttribute("data-state", "withheld");
   const retry = availability.getByRole("button", { name: /重试/ });
   await expect(retry).toBeVisible();
 
@@ -152,6 +154,9 @@ test("manual refresh failure keeps last good values and says so", async ({
 
   await expect(availability).toContainText(/使用最近成功数据/, { timeout: 20000 });
   await expect(availability).toContainText("429");
+  await page.getByRole("tab", { name: "地点详情" }).click();
+  await expect(page.getByTestId("selected-data-state")).toHaveAttribute("data-state", "stale");
+  await expect(page.getByTestId("recommendation-eligibility")).toHaveAttribute("data-state", "withheld");
   await expect(stableCell).toHaveText(goodValue ?? "");
 });
 

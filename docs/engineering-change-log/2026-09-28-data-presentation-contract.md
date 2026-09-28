@@ -32,3 +32,12 @@ semantics remain authoritative. `missing != 0`, `stale != fresh`,
 - `npm run check`: PASS — ESLint, TypeScript, 65 Vitest files / 377 tests,
   Next production build.
 - Full Chromium/cross-browser/device/CI/production: `NOT_RUN`.
+
+## Review follow-up — invalid and stale state wiring
+
+The remote review found two edge cases in the first wiring pass. The summary
+now keeps `rawForecast` separate from the model-matching forecast used for
+evaluation, so model mismatch/missing identity remains an `invalid` trust
+reason. The mapper classifies explicit integrity reasons before generic stale
+fallback, and P0/refresh tests assert `unavailable`, `stale`, and withheld
+recommendation states on the real Store → DecisionSummary path.

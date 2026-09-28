@@ -193,6 +193,12 @@ cache behavior, API routes, provider probes, snapshot worker, Fireglow/CloudSea
 semantics, or merge/deploy without separate authorization. P3-B will later
 align CloudTimeline and ObservingMapControl; P4/P5 remain separate.
 
+Review follow-up: the invalid/model-mismatch classification and stale-fallback
+priority were corrected after remote review. `DecisionSummary` now passes raw
+forecast facts to the authoritative integrity function while keeping evaluation
+restricted to the matching model. P0 and refresh E2E assert unavailable/stale
+and withheld states. Re-resolve the branch tip after this follow-up commit.
+
 Review follow-up: the mobile disclosure test now explicitly checks
 `scrollWidth <= clientWidth + 1` after expanding provenance. This is a test-only
 contract addition; no product or data semantics changed.

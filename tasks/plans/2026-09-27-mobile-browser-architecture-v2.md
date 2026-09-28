@@ -99,6 +99,10 @@ data/recommendation block, and a provider-panel scope sentence. It does not
 reimplement scoring/integrity, put provider health in the store, or start P3-B
 CloudTimeline/ObservingMapControl vocabulary work.
 
+Review follow-up: raw forecast identity is now preserved for integrity error
+classification, explicit invalid reasons outrank generic stale fallback, and
+P0/refresh tests cover unavailable/stale → withheld recommendation states.
+
 Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`
 Base: `origin/codex/mobile-decision-summary-v2-20260928@952577fa`
 

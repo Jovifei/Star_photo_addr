@@ -39,15 +39,16 @@ export default function DecisionSummary({
       state.forecastAvailability.lastSuccessAt ??
       null,
   });
-  const forecast = state.forecast?.metadata?.model === state.cloudState.model
+  const rawForecast = state.forecast;
+  const forecast = rawForecast?.metadata?.model === state.cloudState.model
     ? state.forecast
     : null;
-  const forecastIssue = forecastTrustIssue(forecast, undefined, state.cloudState.model);
+  const forecastIssue = forecastTrustIssue(rawForecast, undefined, state.cloudState.model);
   const selectedForecastTime = state.cloudState.activeForecastTime;
   const selectedDataState = presentSelectedData({
     hasLocation: Boolean(state.selectedLocation),
     loading: state.loading,
-    hasForecast: Boolean(forecast),
+    hasForecast: Boolean(rawForecast),
     availabilityError: state.forecastAvailability.error,
     staleInUse: state.forecastAvailability.staleInUse,
     forecastIssue,
