@@ -300,7 +300,6 @@ export default function ObservingMapControl({
             <div className="observing-score-window-ticks" aria-hidden="true">
               <span>现在</span><span>明天</span><span>后天</span><span>+72h</span>
             </div>
-            <small>{snapshotStatus === "loading" ? "正在按此时次刷新地点评分…" : snapshotStatus === "degraded" ? "当前时次评分暂不可用；灰色点代表未知，不等同于低分" : "分数、颜色和地点数量均按此时次的数值预报计算；卫星图层仍是独立观测"}</small>
             <small data-testid="map-recommendation-eligibility" data-state={mapRecommendationState.code}>
               推荐门禁：{mapRecommendationState.label} · {mapRecommendationState.detail}
             </small>
@@ -311,7 +310,7 @@ export default function ObservingMapControl({
           </div>
           <small className="observing-score-provenance" data-testid="observing-score-provenance">
             数据身份：{state.cloudState.model.toUpperCase()} · 预报时次 {activeScoreTime || "—"} · 原始抓取 {activeSnapshot?.sourceFetchedAt ?? "未提供"} ·
-            {activeSnapshot?.stale ? "质量：过期/降级，禁止推荐" : activeSnapshot ? "质量：可用" : "质量：数据不足"} · 多模型核验：未检查
+            推荐门禁：{mapRecommendationState.label} · 多模型核验：未检查
           </small>
           <div className="observing-score-legend" aria-label="推荐评分颜色筛选">
             {BAND_FILTERS.map((filter) => (

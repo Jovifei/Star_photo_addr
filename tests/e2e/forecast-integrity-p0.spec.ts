@@ -159,7 +159,7 @@ test("stale=true 的旧 94 分不能进入地图、候选或详情推荐", async
   else await page.getByRole("tab", { name: "图层与偏好" }).click();
   const panel = page.locator(".observing-map-control:visible");
   await expect(panel).toHaveAttribute("data-score-status", "degraded", { timeout: 20_000 });
-  await expect(panel).toContainText("质量：过期/降级");
+  await expect(panel).toContainText("推荐门禁：不发布推荐");
   await page.screenshot({ path: `tmp/p0-integrity-stale-${testInfo.project.name}.png`, fullPage: true });
 });
 
@@ -198,6 +198,6 @@ test("无有效天气预报时，时间轴质量显示为数据不足", async ({
   const quality = page.locator(".cloud-timeline:visible .cloud-timeline-data-card small");
   await expect(quality).toBeVisible({ timeout: 20_000 });
   await expect(quality).toContainText("暂无有效预报");
-  await expect(quality).toContainText("数据质量：数据不足");
-  await expect(quality).not.toContainText("数据质量：可用");
+  await expect(quality).toContainText("数据质量：当前数据不可用");
+  await expect(quality).not.toContainText("数据质量：当前数据完整");
 });
