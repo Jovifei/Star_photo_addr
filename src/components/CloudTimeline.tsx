@@ -10,7 +10,7 @@ import { isInNight } from "@/lib/nighttime";
 import { aggregateForecastHour, getValuesAtTime } from "@/lib/cloudGrid";
 import { missingNightInputs, scoreCoreWeather } from "@/lib/forecastIntegrity";
 import { presentHourlyDataValidity } from "@/lib/dataPresentation";
-import type { HourWeather, SatelliteFrame } from "@/lib/types";
+import type { SatelliteFrame } from "@/lib/types";
 import HourlyForecastMatrix, { buildNightTimes } from "@/components/HourlyForecastMatrix";
 import { evaluateNight } from "@/lib/scoring";
 
@@ -43,20 +43,6 @@ function formatTimelineTime(time: string): string {
 function activeForecastTimeLabel(time?: string): string {
   if (!time) return "暂无";
   return time.replace("T", " ");
-}
-
-export function forecastQualityLabel(
-  source: string,
-  stale: boolean,
-  hour?: HourWeather | null,
-): string {
-  if (stale) return "过期/降级，禁止推荐";
-  if (source === "暂无有效预报") return "数据不足";
-  if (!hour) return "当前时次字段不足";
-  const missing = missingNightInputs(hour);
-  return missing.length
-    ? `天气可展示；评分字段缺失：${missing.join("、")}`
-    : "评分字段完整，可用";
 }
 
 function previousDateKey(date: string): string {

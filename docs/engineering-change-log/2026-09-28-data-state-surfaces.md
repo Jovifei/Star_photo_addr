@@ -26,3 +26,10 @@ not zero or low scores.
 - P0/data refresh/workspace refresh: 13 passed.
 - `npm run check`: PASS — 65 Vitest files / 377 tests, build.
 - Full Chromium/cross-browser/device/CI/production: `NOT_RUN`.
+
+## Review follow-up — remove legacy hourly presentation helper
+
+Remote review identified a remaining second vocabulary in the unused exported
+`forecastQualityLabel`. It is now removed; timeline presentation cases live in
+`dataPresentation.test.ts`, while `timelineTrack.test.ts` retains only track
+geometry/night grouping coverage. No hourly fact calculation changed.

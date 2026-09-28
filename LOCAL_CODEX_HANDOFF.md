@@ -230,3 +230,7 @@ Evidence: unit 15 PASS; P3-B surface tests pass individually; P0/data refresh/
 workspace refresh 13 PASS; `npm run check` PASS; full Chromium, cross-browser,
 device, CI, and production `NOT_RUN`. Do not merge or deploy.
 
+Review follow-up: removed the unused legacy `forecastQualityLabel` export and
+its old presentation assertions so `dataPresentation.ts` is the single
+hourly vocabulary owner. Track geometry tests remain in `timelineTrack.test.ts`.
+

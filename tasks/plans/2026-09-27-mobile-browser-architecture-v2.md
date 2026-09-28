@@ -119,3 +119,6 @@ Package: `MOBILE-V2-P3B-STATE-SURFACE-ALIGNMENT`
 Base: `origin/codex/data-state-presentation-v2-20260928@7462417`
 Suggested branch: `codex/data-state-surfaces-v2-20260928`
 
+Review follow-up: legacy `forecastQualityLabel` presentation text was removed;
+hourly status cases now live in the P3 mapper contract tests.
+
