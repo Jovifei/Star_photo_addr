@@ -260,6 +260,15 @@
 .map-stage .map-render-status--tile button {
   min-height: 40px;
 }
+.map-stage .map-render-status--tile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.map-stage .map-render-status--tile button {
+  margin-top: 0;
+}
 
 .map-boundary-status {
   position: absolute;

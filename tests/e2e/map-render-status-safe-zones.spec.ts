@@ -88,6 +88,9 @@ test("手机竖屏 render status 避开工具 rail 与数据表", async ({ page 
   assertInside(mapBox!, satelliteBox!);
   expect(overlaps(tileBox!, satelliteBox!)).toBe(false);
   expect(overlaps(satelliteBox!, railBox!)).toBe(false);
+  const retryBox = await tile.getByRole("button", { name: "重试地图图层" }).boundingBox();
+  expect(retryBox).not.toBeNull();
+  expect(retryBox!.height).toBeGreaterThanOrEqual(48);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 });
 
@@ -114,6 +117,9 @@ test("短横屏 render status 保持左右 safe zones，抽屉覆盖状态徽章
   assertInside(mapBox!, satelliteBox!);
   expect(overlaps(tileBox!, satelliteBox!)).toBe(false);
   expect(overlaps(satelliteBox!, railBox!)).toBe(false);
+  const retryBox = await tile.getByRole("button", { name: "重试地图图层" }).boundingBox();
+  expect(retryBox).not.toBeNull();
+  expect(retryBox!.height).toBeGreaterThanOrEqual(48);
 
   await page.getByTestId("mobile-map-panel-open-tools").click();
   await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "false");

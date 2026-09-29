@@ -389,6 +389,12 @@
     max-width: min(280px, calc(100% - 84px));
   }
   .workspace-canvas .map-viewport .map-render-status--tile button { min-height: 48px; }
+  .workspace-canvas .map-viewport .map-render-status--tile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .workspace-canvas .map-viewport .map-render-status--tile button {
+    margin-top: 6px;
+  }
   .map-viewport .leaflet-control-zoom a,
   .fireglow-map .leaflet-control-zoom a,
   .cloudsea-map-pane .leaflet-control-zoom a { width: 48px; height: 48px; line-height: 48px; }
