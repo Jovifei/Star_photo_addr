@@ -975,3 +975,19 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - Scope: only MapTileStatus/SatelliteLayer render markup/classes, map status CSS lanes, safe-zone geometry and regression contracts; no P3/data/scoring/provider/cache/snapshot/API/store changes.
 - Static: pending final commit; current `npm run check` PASS — 65 Vitest files / 378 tests.
 - Browser evidence: safe-zone 3 PASS / 3 project skips; map-canvas-status 5 PASS / 5 project skips; satellite/product-integrity and app satellite regressions PASS.
+# 2026-09-29 P4-C Marker / Label Disclosure
+
+- [x] 从 P4-B `8d672172fbeee14f3a4b035935e03bfb4e39e184` 建立隔离 worktree。
+- [x] 以 ObservingSitesLayer 作为目录选中 marker owner，抑制重复 SampleMarker，并 pin 被筛选排除的当前目录点位。
+- [x] 保持搜索/custom SampleMarker、Leaflet rank Tooltip、spacedLabelIndices 与评分/排名事实不变。
+- [x] 新增 marker-label-disclosure E2E 与 labelLayout unit protection。
+- [x] 运行 `npm run check`、marker/viewport focused 与 app/map-first/P4-B regressions。
+- [ ] 远端 ChatGPT 独立复审最终推送 tip并返回 DONE / CHANGES_REQUIRED / BLOCKED。
+- [ ] Full Chromium、cross-browser、真实设备、CI、production 保持 `NOT_RUN`。
+
+## Review
+
+- Static: `npm run check` PASS — 65 Vitest files / 379 tests。
+- Marker focused: 目录/筛选/search 5 PASS / 1 project skip；rank 1 PASS；viewport recommendations 2 PASS。
+- Regression: app/map-first/P4-B 31 PASS / 19 project skips。
+- Protected: P3/data/scoring/provider/cache/snapshot/API/store、P4-B safe zones、Fireglow/CloudSea P5 未改。

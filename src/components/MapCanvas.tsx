@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import MapViewportObserver from "@/components/MapViewportObserver";
 import MapTileStatus from "@/components/MapTileStatus";
 import {
@@ -10,7 +10,7 @@ import {
   Tooltip,
   useMap,
 } from "react-leaflet";
-import type { Map as LeafletMap } from "leaflet";
+import type { CircleMarker as LeafletCircleMarker, Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useStore } from "@/lib/store";
 import {
@@ -19,6 +19,7 @@ import {
   BASEMAP_TILE_CLASS_NAME,
   BASEMAP_TILE_URL,
 } from "@/lib/constants";
+import { OBSERVING_SITES } from "@/lib/observingSites";
 import WorldAtlasOverlay from "@/components/WorldAtlasOverlay";
 import BoundaryLayers from "@/components/BoundaryLayers";
 import CloudLayer from "@/components/CloudLayer";
@@ -40,12 +41,25 @@ function ClickHandler({
   return null;
 }
 
-function SampleMarker() {
+function SampleMarker({ catalogLayerMounted }: { catalogLayerMounted: boolean }) {
   const { state } = useStore();
+  const markerRef = useRef<LeafletCircleMarker | null>(null);
   const location = state.selectedLocation;
+  useEffect(() => {
+    const element = markerRef.current?.getElement();
+    if (!element) return;
+    element.classList.add("selected-sample-marker");
+    return () => element.classList.remove("selected-sample-marker");
+  }, [location]);
   if (!location) return null;
+  const catalogSelectionOwnedByObservingLayer =
+    catalogLayerMounted &&
+    location.source === "参考点位" &&
+    OBSERVING_SITES.some((site) => site.id === location.id);
+  if (catalogSelectionOwnedByObservingLayer) return null;
   return (
     <CircleMarker
+      ref={markerRef}
       center={[location.latitude, location.longitude]}
       radius={8}
       pathOptions={{
@@ -180,7 +194,7 @@ export default function MapCanvas({
       {showCloud && <SatelliteLayer />}
       {showCloud && <ObservingSitesLayer />}
       <ClickHandler onSample={onSample} />
-      <SampleMarker />
+      <SampleMarker catalogLayerMounted={showCloud} />
       <MapViewportObserver />
       <MapTileStatus />
       <RecenterOnSelected enabled={recenterOnSelect} />

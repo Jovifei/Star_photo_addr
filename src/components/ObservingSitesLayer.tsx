@@ -107,7 +107,7 @@ export default function ObservingSitesLayer() {
       ? snapshot
       : null;
 
-  const visibleSites = useMemo(
+  const filteredSites = useMemo(
     () =>
       filterSitesByBortleLevels(OBSERVING_SITES, state.observingBortleLevels).filter((site) => {
         const score = snapshotScoreAtTime(activeSnapshot, site.id);
@@ -135,6 +135,24 @@ export default function ObservingSitesLayer() {
       state.visibleRecommendationBands,
     ],
   );
+  const selectedReferenceSite = useMemo(
+    () =>
+      state.selectedLocation?.source === "参考点位"
+        ? OBSERVING_SITES.find((site) => site.id === state.selectedLocation?.id) ?? null
+        : null,
+    [state.selectedLocation],
+  );
+  const visibleSites = useMemo(() => {
+    if (
+      !selectedReferenceSite ||
+      filteredSites.some((site) => site.id === selectedReferenceSite.id)
+    ) {
+      return filteredSites;
+    }
+    // Keep the current catalog selection visible without changing the filter
+    // result count or the browse set represented by data-observing-site-count.
+    return [...filteredSites, selectedReferenceSite];
+  }, [filteredSites, selectedReferenceSite]);
 
   const effectiveSnapshotStatus = activeSnapshot
     ? snapshotStatus
@@ -144,9 +162,9 @@ export default function ObservingSitesLayer() {
 
   useEffect(() => {
     const container = map.getContainer();
-    container.dataset.observingSiteCount = String(visibleSites.length);
+    container.dataset.observingSiteCount = String(filteredSites.length);
     container.dataset.observingSnapshotStatus = effectiveSnapshotStatus;
-  }, [effectiveSnapshotStatus, map, visibleSites.length]);
+  }, [effectiveSnapshotStatus, filteredSites.length, map]);
 
   return (
     <>
