@@ -30,3 +30,7 @@
 ## 远端交接
 
 推送后远端 ChatGPT 需要在精确 branch tip 上独立复审：空快照边界、stale/phase/threshold 分离、地图色阶披露、详情披露、移动 peek 真值、Fireglow 数据所有者未改、CloudSea 未改和 Owner 保留。远端返回 `DONE` 后才能启动 P5-B CloudSea Evidence IA。
+
+## 远端复审结果
+
+远端已在 `156c31ec209352328c829df55dd38f432e8197dc` 返回 `DONE`。复审确认移动 threshold-empty 文案与 72/60/40 空列表夹具、HTTP 200 空评分防线、stale/phase 分离、地图和详情 disclosure、Fireglow 受保护 owner、CloudSea 未改及 Owner 保留均通过。该 tip 的产品/测试工作已完成；交接文档的 docs-only 收尾后进入 P5-B 规划。完整 Chromium、跨浏览器、真实设备、CI、production 仍为 `NOT_RUN`。

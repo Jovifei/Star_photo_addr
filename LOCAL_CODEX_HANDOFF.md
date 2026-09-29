@@ -339,7 +339,8 @@ Remote planning task: `c2c_d92e`
 Base: `codex/marker-label-disclosure-v2-20260929@21d07ef1f72e3e307cd6f2880f3c1552939ee830`
 Implementation branch: `codex/fireglow-topic-ia-v2-20260929`
 Package: `MOBILE-V2-P5A-FIREGLOW-TOPIC-IA`
-Final reviewed tip: pending remote review
+Final reviewed product tip: `156c31ec209352328c829df55dd38f432e8197dc`
+Final handoff tip: pending docs-only review
 
 ### Product result
 
@@ -385,14 +386,20 @@ threshold-empty.
 - `git diff --check`: PASS.
 - Full Chromium, cross-browser, real device, CI, production: `NOT_RUN`.
 
+### Remote review result
+
+Remote ChatGPT independently reviewed `4053a0e` → `156c31e` and returned
+`DONE`. It confirmed the mobile threshold-empty follow-up, empty snapshot and
+stale/phase boundaries, map/detail disclosures, protected Fireglow owners,
+untouched CloudSea, and Owner preservation. The product/test tip is complete;
+this handoff section is closed after the docs-only tip is reviewed.
+
 ### Remote review handoff
 
-Remote ChatGPT must independently resolve the pushed branch tip and verify
-the empty snapshot boundary, stale/phase/threshold separation, map legend
-disclosure, detail disclosure, mobile peek truthfulness, unchanged Fireglow
-data owners, untouched CloudSea and Owner preservation. Return `DONE`,
-`CHANGES_REQUIRED`, or `BLOCKED`; this package must be closed before starting
-P5-B CloudSea evidence IA.
+The product/test tip has been independently reviewed `DONE`. The docs-only
+follow-up only aligns this handoff with the final evidence; after it is pushed,
+remote ChatGPT should confirm the final tip and then plan P5-B CloudSea
+evidence IA. P5-B starts only from this reviewed handoff.
 
 PR: `NOT_CREATED — gh auth unavailable locally`
 Merged: `NO`

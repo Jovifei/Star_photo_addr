@@ -7,11 +7,11 @@
 - [x] 补齐 Fireglow 专题 IA 的桌面/移动 RED→GREEN 回归。
 - [x] 运行 focused gates、`npm run check`、`git diff --check`，审阅 diff 与禁止文件边界。
 - [x] 按远端复审修正移动 threshold-empty 文案并补齐 72/60/40 → 100 的桌面/移动回归。
-- [ ] 提交、推送并交回远端独立审核；按审核结果修复后再进入 P5-B。
+- [x] 提交、推送并交回远端独立审核；按审核结果修复后再进入 P5-B。
 
 ## Review
 
-待 P5-A 远端审核完成后填写精确提交、测试结果、未运行门禁和下一步交接。
+远端复审 `DONE`：产品/测试最终 tip `156c31ec209352328c829df55dd38f432e8197dc`；移动 threshold-empty、HTTP 200 空快照、stale/phase 分离、桌面/详情 disclosure 和 Owner/CloudSea 边界均通过。`npm run check` 通过 65 个 Vitest 文件 / 379 项，P5-A 专项 4 PASS / 4 skips；Fireglow integrity 8 PASS / 6 skips；mobile map-first `/fireglow` 1 PASS。Full Chromium、cross-browser、真实设备、CI、production 保持 `NOT_RUN`。当前只需提交 docs-only handoff tip，随后进入 P5-B 远端规划。
 
 # 2026-09-23 手机内容密度与信息层级修复
 
