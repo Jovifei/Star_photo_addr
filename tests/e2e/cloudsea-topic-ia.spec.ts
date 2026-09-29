@@ -5,6 +5,23 @@ const onePixelPng = Buffer.from(
   "base64",
 );
 
+function shanghaiDateKey(): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function shiftDate(date: string, days: number): string {
+  const value = new Date(`${date}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
 type WindowOptions = {
   score?: number | null;
   cloudPosition?: "above" | "in" | "below" | "clear" | "unknown";
@@ -125,7 +142,7 @@ async function selectTaizijian(page: Page) {
 
 test("CloudSea desktop reduces map/card chrome and discloses detail evidence progressively", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "桌面 IA 在 desktop Chromium 验证一次");
-  const date = "2026-09-29";
+  const date = shanghaiDateKey();
   await mockSnapshot(page, snapshot(date));
   await page.goto("/cloudsea");
 
@@ -150,7 +167,7 @@ test("CloudSea desktop reduces map/card chrome and discloses detail evidence pro
 
 test("CloudSea pressure unavailable preserves surface facts and vertical unknown on mobile", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile", "移动 pressure-unavailable contract 在 mobile Chromium 验证一次");
-  const date = "2026-09-29";
+  const date = shanghaiDateKey();
   await page.setViewportSize({ width: 390, height: 844 });
   await mockSnapshot(page, snapshot(date, {
     score: null,
@@ -176,7 +193,7 @@ test("CloudSea pressure unavailable preserves surface facts and vertical unknown
 
 test("CloudSea pressure partial keeps a selected numeric score above global coverage notice", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile", "移动 partial pressure contract 在 mobile Chromium 验证一次");
-  const date = "2026-09-29";
+  const date = shanghaiDateKey();
   await page.setViewportSize({ width: 390, height: 844 });
   await mockSnapshot(page, snapshot(date, {
     score: 88,
@@ -192,9 +209,9 @@ test("CloudSea pressure partial keeps a selected numeric score above global cove
 
 test("CloudSea selected detail keeps the winning date window in three-day mode", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "三日 winning-window contract 在 desktop Chromium 验证一次");
-  const base = "2026-09-29";
-  const tomorrow = "2026-09-30";
-  const afterTomorrow = "2026-10-01";
+  const base = shanghaiDateKey();
+  const tomorrow = shiftDate(base, 1);
+  const afterTomorrow = shiftDate(base, 2);
   await page.route("**/api/cloudsea/snapshot**", async (route) => {
     const date = new URL(route.request().url()).searchParams.get("date") ?? base;
     const options = date === tomorrow
@@ -220,9 +237,9 @@ test("CloudSea selected detail keeps the winning date window in three-day mode",
 
 test("CloudSea selected fresh winner is not downgraded by another stale date", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "三日 stale scope 在 desktop Chromium 切换到 mobile viewport 验证一次");
-  const base = "2026-09-29";
-  const tomorrow = "2026-09-30";
-  const afterTomorrow = "2026-10-01";
+  const base = shanghaiDateKey();
+  const tomorrow = shiftDate(base, 1);
+  const afterTomorrow = shiftDate(base, 2);
   await page.route("**/api/cloudsea/snapshot**", async (route) => {
     const date = new URL(route.request().url()).searchParams.get("date") ?? base;
     const body = date === base
@@ -245,7 +262,6 @@ test("CloudSea selected fresh winner is not downgraded by another stale date", a
 
 test("CloudSea total surface failure is unavailable rather than pressure partial", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile", "移动 total failure contract 在 mobile Chromium 验证一次");
-  const date = "2026-09-29";
   await page.setViewportSize({ width: 390, height: 844 });
   await mockSnapshot(page, { error: "surface provider unavailable" }, 502);
   await page.goto("/cloudsea");
