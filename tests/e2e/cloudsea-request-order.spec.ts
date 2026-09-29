@@ -92,7 +92,8 @@ test("云海日期切换不会让旧请求覆盖当前日期", async ({ page }, 
     { timeout: 5000 },
   );
   await expect(page.locator(".cloudsea-card-score").first()).toContainText("88/100", { timeout: 5000 });
-  await expect(page.locator(".cloudsea-card-summary").first()).toContainText(base);
+  await page.locator(".cloudsea-card").first().click();
+  await expect(page.locator(".cloudsea-site-detail")).toContainText(base);
   releaseOld();
   await expect.poll(() => oldFinished).toBe(true);
   await expect(page.locator('.cloudsea-root')).not.toContainText('OLD_DATE_FAILURE');

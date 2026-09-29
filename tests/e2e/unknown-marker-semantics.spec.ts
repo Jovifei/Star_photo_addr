@@ -19,6 +19,29 @@ async function mockMapTiles(page: Page) {
 
 test("CloudSea null scores use an unknown marker instead of p20", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "unknown marker semantics are covered once on desktop");
+  const unknownWindow = {
+    score: null,
+    conditionLevel: null,
+    conditionLabel: null,
+    probabilityLevel: null,
+    probabilityLabel: null,
+    cloudPosition: "unknown",
+    positionLabel: "数据不足",
+    cloudBaseM: null,
+    cloudTopM: null,
+    altitudeDiffM: null,
+    lowCloud: 80,
+    midCloud: 20,
+    highCloud: 10,
+    humidity: 90,
+    windSpeed: 2,
+    peakTime: null,
+    pressureTime: null,
+    pressureStatus: "unavailable",
+    pressureConfidence: null,
+    inversion: { status: "unavailable", lowerMsl: null, upperMsl: null, deltaTempC: null, strength: null },
+    summary: "surface 低云条件存在，但压力层不足；不推断垂直层位。",
+  };
   await page.route("**/api/cloudsea/snapshot**", async (route) => {
     const date = new URL(route.request().url()).searchParams.get("date") ?? "2026-09-08";
     await route.fulfill({
@@ -30,9 +53,9 @@ test("CloudSea null scores use an unknown marker instead of p20", async ({ page 
         generatedAt: `${date}T00:00:00.000Z`,
         source: "E2E unknown CloudSea snapshot",
         stale: false,
-        surface: { status: "unavailable", availableSites: 0, totalSites: 54, failedSites: 54 },
+        surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         pressure: { status: "unavailable", availableSites: 0, totalSites: 54, failedSites: 54 },
-        sites: {},
+        sites: { "cs-taizijian": { morning: unknownWindow, evening: unknownWindow } },
       }),
     });
   });
@@ -40,7 +63,8 @@ test("CloudSea null scores use an unknown marker instead of p20", async ({ page 
 
   await page.goto("/cloudsea");
   await expect(page.locator(".cloudsea-card")).toHaveCount(0);
-  await expect(page.locator(".cloudsea-empty-threshold")).toContainText("暂无达到 ≥0 分");
+  await expect(page.locator(".cloudsea-empty-no-score")).toContainText("当前时段暂无可发布的云海条件指数");
+  await expect(page.locator(".cloudsea-empty-threshold")).toHaveCount(0);
   await expect(page.locator(".cloudsea-legend-unknown")).toContainText("数据不足");
   await expect
     .poll(() => page.locator(".leaflet-overlay-pane path").evaluateAll((paths) =>

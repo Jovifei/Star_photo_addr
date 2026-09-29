@@ -392,6 +392,59 @@ export default function CloudSeaApp() {
       rankedSites.find((ranked) => ranked.site.id === selectedSiteId) ?? null
     );
   }, [rankedSites, selectedSiteId]);
+  const hasActiveSnapshot = activeDates.some((date) => Boolean(snapshots[date]));
+  const hasPublishedScore = rankedSites.some(({ window: windowScore }) => windowScore.score != null);
+  const selectedWindow = useMemo(() => {
+    if (!selectedSiteId) return null;
+    const rawWindow = activeDates
+      .map((date) => snapshots[date]?.sites?.[selectedSiteId]?.[phase])
+      .find((windowScore): windowScore is CloudSeaWindowScore => Boolean(windowScore));
+    return rawWindow ?? selectedRanked?.window ?? null;
+  }, [activeDates, phase, selectedRanked, selectedSiteId, snapshots]);
+  const selectedSnapshot = selectedRanked ? snapshots[selectedRanked.dateKey] : undefined;
+  const selectedWindowHasSurfaceEvidence = Boolean(
+    selectedWindow && (
+      selectedWindow.lowCloud != null ||
+      selectedWindow.midCloud != null ||
+      selectedWindow.highCloud != null ||
+      selectedWindow.humidity != null ||
+      selectedWindow.windSpeed != null
+    ),
+  );
+  const snapshotStale = activeDates.some((date) => Boolean(
+    snapshots[date]?.stale || snapshots[date]?.refreshError,
+  ));
+  const selectedSnapshotStale = Boolean(
+    selectedSnapshot?.stale || selectedSnapshot?.refreshError,
+  );
+  const mobileConclusion =
+    loading && !hasActiveSnapshot
+      ? "正在读取云海条件数据…"
+      : !hasActiveSnapshot
+        ? "数据不可用 · 请重试"
+        : selectedSnapshotStale || snapshotStale
+          ? "旧数据 · 仅供参考"
+          : selectedWindow?.score != null
+            ? `条件指数 ${selectedWindow.conditionLabel ?? `${selectedWindow.score}/100`}`
+            : selectedWindow?.cloudPosition === "unknown" && (
+              selectedWindowHasSurfaceEvidence || selectedWindow.pressureStatus !== "available"
+            )
+              ? "垂直证据不足"
+              : hasPublishedScore && !filteredRankedSites.length
+                ? `暂无达到 ≥${scoreThreshold} 分的山峰`
+                : !hasPublishedScore
+                  ? "当前时段暂无可发布的云海条件指数"
+                  : pickedPoint
+                    ? "查看附近目录山峰"
+                    : "点地图查看山峰";
+  const mobileRankingEmptyMessage =
+    loading && !hasActiveSnapshot
+      ? "正在读取所选日期的数据…"
+      : !hasActiveSnapshot
+        ? "数据不可用 · 请重试"
+        : !hasPublishedScore
+          ? "当前时段暂无可发布的云海条件指数"
+          : `暂无达到 ≥${scoreThreshold} 分的山峰`;
   const nearby = useMemo(
     () => pickedPoint ? nearbyDirectorySites(pickedPoint, CLOUD_SEA_SITES) : [],
     [pickedPoint],
@@ -481,12 +534,6 @@ export default function CloudSeaApp() {
         Beta · 条件指数综合 Open-Meteo GFS surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
         </p>
       </details>
-      {dataNotice ? (
-        <div className="cloudsea-beta-banner" role="status">
-          数据状态 · {dataNotice}
-        </div>
-      ) : null}
-
       <div
         className="cloudsea-body"
         data-inspector-open={selectedRanked ? "true" : "false"}
@@ -605,28 +652,6 @@ export default function CloudSeaApp() {
             <MapTileStatus />
           </MapContainer>
 
-          <div className="cloudsea-legend">
-            <span className="cloudsea-legend-title">
-              云海条件指数色阶 · 点位插值
-            </span>
-            <div className="cloudsea-legend-bar">
-              {LEVEL_LABELS.map((item) => (
-                <span
-                  key={item.level}
-                  className="cloudsea-legend-chip"
-                  style={{ backgroundColor: LEVEL_COLORS[item.level] }}
-                >
-                  {item.range}
-                </span>
-              ))}
-              <span
-                className="cloudsea-legend-chip cloudsea-legend-unknown"
-                style={{ backgroundColor: UNKNOWN_MARKER_COLOR }}
-              >
-                数据不足
-              </span>
-            </div>
-          </div>
         </div>
 
         <aside className="cloudsea-sidebar">
@@ -648,6 +673,15 @@ export default function CloudSeaApp() {
             testId="cloudsea-score-threshold"
             onChange={setScoreThreshold}
           />
+          {dataNotice ? (
+            <div
+              className="cloudsea-beta-banner cloudsea-evidence-status"
+              data-testid="cloudsea-evidence-status"
+              role="status"
+            >
+              数据状态 · {dataNotice}
+            </div>
+          ) : null}
 
           <div className="cloudsea-site-list">
             {loading && rankedSites.length === 0 ? (
@@ -697,9 +731,13 @@ export default function CloudSeaApp() {
                   <RefreshCw size={14} /> 重新获取数据
                 </button>
               </div>
+            ) : !hasPublishedScore ? (
+              <div className="cloudsea-empty-no-score">
+                当前时段暂无可发布的云海条件指数
+              </div>
             ) : filteredRankedSites.length === 0 ? (
               <div className="cloudsea-empty-threshold">
-                暂无达到 ≥{scoreThreshold} 分的地点
+                暂无达到 ≥{scoreThreshold} 分的山峰
               </div>
             ) : (
               filteredRankedSites.map(({ site, window: windowScore }) => {
@@ -751,47 +789,54 @@ export default function CloudSeaApp() {
                       </div>
                     </div>
 
-                    <div className="cloudsea-profile-strip">
-                      <div>
-                        <label>模式云顶</label>
-                        <strong>
-                          {windowScore.cloudTopM != null
-                            ? `${windowScore.cloudTopM}m`
-                            : "—"}
-                        </strong>
-                      </div>
-                      <div>
-                        <label>峰顶-云顶高差</label>
-                        <strong>
-                          {windowScore.altitudeDiffM != null
-                            ? `${windowScore.altitudeDiffM > 0 ? "+" : ""}${windowScore.altitudeDiffM}m`
-                            : "—"}
-                        </strong>
-                      </div>
-                      <div>
-                        <label>近地风速</label>
-                        <strong>
-                          {windowScore.windSpeed != null
-                            ? `${windowScore.windSpeed}m/s`
-                            : "—"}
-                        </strong>
-                      </div>
-                    </div>
-
-                    <p className="cloudsea-card-summary">
-                      {windowScore.summary}
-                    </p>
+                    {windowScore.pressureStatus === "partial" ? (
+                      <span className="cloudsea-card-evidence">
+                        压力时次部分可用
+                      </span>
+                    ) : windowScore.pressureStatus === "unavailable" && windowScore.cloudPosition === "unknown" ? (
+                      <span className="cloudsea-card-evidence">
+                        垂直证据不足
+                      </span>
+                    ) : null}
                   </button>
                 );
               })
             )}
           </div>
+          <details className="cloudsea-reference-details" data-testid="cloudsea-reference-details">
+            <summary>指数口径与色阶</summary>
+            <div className="cloudsea-legend">
+              <span className="cloudsea-legend-title">
+                云海条件指数色阶 · 点位插值
+              </span>
+              <div className="cloudsea-legend-bar">
+                {LEVEL_LABELS.map((item) => (
+                  <span
+                    key={item.level}
+                    className="cloudsea-legend-chip"
+                    style={{ backgroundColor: LEVEL_COLORS[item.level] }}
+                  >
+                    {item.range}
+                  </span>
+                ))}
+                <span
+                  className="cloudsea-legend-chip cloudsea-legend-unknown"
+                  style={{ backgroundColor: UNKNOWN_MARKER_COLOR }}
+                >
+                  数据不足
+                </span>
+              </div>
+              <p className="cloudsea-reference-note">
+                条件指数综合真实 surface 天气与 pressure-level 模式证据；云底、云顶和山顶关系不是探空或现场仪器实测，也不是实拍概率。缺失 pressure 不推断垂直层位。
+              </p>
+            </div>
+          </details>
         </aside>
 
         <MobileDataSheet
           title={selectedRanked?.site.name ?? (pickedPoint ? `所点坐标 ${pickedPoint.latitude.toFixed(3)}, ${pickedPoint.longitude.toFixed(3)}` : "云海 · 选择山峰")}
-          conclusion={dataNotice ? "数据降级 · 仅供参考" : selectedRanked ? (selectedRanked.window.conditionLabel ? `条件指数 ${selectedRanked.window.conditionLabel}` : "条件数据不足") : pickedPoint ? "查看附近目录山峰" : "点地图查看山峰"}
-          bestTime={selectedRanked?.window.peakTime ? `最佳 ${selectedRanked.window.peakTime} · ${dateLabel(selectedRanked.dateKey)}` : `${phase === "morning" ? "晨间" : "傍晚"} · ${range === 3 ? "三日" : dateLabel(primaryDate)}`}
+          conclusion={mobileConclusion}
+          bestTime={selectedWindow?.peakTime ? `最佳 ${selectedWindow.peakTime} · ${dateLabel(selectedRanked?.dateKey ?? primaryDate)}` : `${phase === "morning" ? "晨间" : "傍晚"} · ${range === 3 ? "三日" : dateLabel(primaryDate)}`}
           status={dataNotice || (loading ? "正在读取云海条件数据…" : "")}
           selectionKey={selectedSiteId ?? (pickedPoint ? `${pickedPoint.latitude.toFixed(4)},${pickedPoint.longitude.toFixed(4)}` : null)}
         >{(level) => <>
@@ -804,13 +849,13 @@ export default function CloudSeaApp() {
               </button>;
             })}
           </section> : null}
-          {selectedRanked ? <div className="mobile-key-metrics">
-            <span>山顶与云层 <strong>{selectedRanked.window.positionLabel}</strong></span>
-            <span>最佳时刻 <strong>{selectedRanked.window.peakTime ?? "—"}</strong></span>
-            <span>湿度 <strong>{selectedRanked.window.humidity != null ? `${selectedRanked.window.humidity}%` : "—"}</strong></span>
-            <span>近地风 <strong>{selectedRanked.window.windSpeed != null ? `${selectedRanked.window.windSpeed}m/s` : "—"}</strong></span>
+          {selectedRanked && selectedWindow ? <div className="mobile-key-metrics">
+            <span>山顶与云层 <strong>{selectedWindow.positionLabel}</strong></span>
+            <span>最佳时刻 <strong>{selectedWindow.peakTime ?? "—"}</strong></span>
+            <span>湿度 <strong>{selectedWindow.humidity != null ? `${selectedWindow.humidity}%` : "—"}</strong></span>
+            <span>近地风 <strong>{selectedWindow.windSpeed != null ? `${selectedWindow.windSpeed}m/s` : "—"}</strong></span>
           </div> : null}
-          {level === "full" && selectedRanked ? <CloudSeaSiteDetail site={selectedRanked.site} window={selectedRanked.window} phase={phase} dateKey={selectedRanked.dateKey} onClose={() => setSelectedSiteId(null)} /> : null}
+          {level === "full" && selectedRanked && selectedWindow ? <CloudSeaSiteDetail site={selectedRanked.site} window={selectedWindow} phase={phase} dateKey={selectedRanked.dateKey} onClose={() => setSelectedSiteId(null)} /> : null}
           {level === "full" ? <details className="mobile-sheet-explainer">
             <summary>数据口径与地图色阶</summary>
             <p>条件指数综合 GFS 地面天气与压力层模式剖面；云底、云顶和逆温为模式推导，不是现场实测。地图色面是目录点位指数插值，缺失数据不推断分数。</p>
@@ -823,7 +868,7 @@ export default function CloudSeaApp() {
             {(level === "full" ? filteredRankedSites : filteredRankedSites.slice(0, 5)).map(({ site, window, dateKey }) => <button key={site.id} type="button" onClick={() => handleSelectSite(site.id)}>
               <span>{site.name}</span><strong>{range === 3 ? `${dateLabel(dateKey)} · ` : ""}{window.conditionLabel ?? "数据不足"}</strong>
             </button>)}
-            {!filteredRankedSites.length ? <p>{loading ? "正在读取所选日期的数据…" : dataNotice || "当前无可显示的山峰评分"}</p> : null}
+            {!filteredRankedSites.length ? <p>{mobileRankingEmptyMessage}</p> : null}
           </div> : null}
         </>}</MobileDataSheet>
 
@@ -835,7 +880,7 @@ export default function CloudSeaApp() {
           >
             <CloudSeaSiteDetail
               site={selectedRanked.site}
-              window={selectedRanked.window}
+              window={selectedWindow ?? selectedRanked.window}
               phase={phase}
               dateKey={selectedRanked.dateKey}
               onClose={() => setSelectedSiteId(null)}

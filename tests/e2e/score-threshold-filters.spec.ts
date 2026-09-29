@@ -130,7 +130,7 @@ test("云海分数滑块只保留达到门槛的排行地点", async ({ page }, 
         surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         sites: {
-          "cs-taizijian": { morning: cloudSeaWindow(100), evening: cloudSeaWindow(40) },
+          "cs-taizijian": { morning: cloudSeaWindow(72), evening: cloudSeaWindow(40) },
           "cs-qianniugang": { morning: cloudSeaWindow(60), evening: cloudSeaWindow(40) },
           "cs-kuocangshan": { morning: cloudSeaWindow(40), evening: cloudSeaWindow(40) },
         },
@@ -156,6 +156,7 @@ test("云海分数滑块只保留达到门槛的排行地点", async ({ page }, 
 
   await slider.press("End");
   await expect(slider).toHaveValue("100");
-  await expect(rows).toHaveCount(1);
-  await expect(list).toContainText("临安太子尖");
+  await expect(rows).toHaveCount(0);
+  await expect(list).toContainText("暂无达到 ≥100 分的山峰");
+  await expect(list).not.toContainText("当前时段暂无可发布的云海条件指数");
 });

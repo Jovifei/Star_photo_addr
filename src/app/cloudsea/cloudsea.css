@@ -237,6 +237,12 @@
   outline-color: var(--cs-cyan);
 }
 
+.cloudsea-evidence-status {
+  margin: 8px 12px 0;
+  color: var(--cs-muted);
+  line-height: 1.45;
+}
+
 .cloudsea-site-list {
   flex: 1;
   overflow-y: auto;
@@ -250,6 +256,16 @@
   margin: auto 0;
   padding: 28px 16px;
   border: 1px dashed var(--cs-line);
+  border-radius: 10px;
+  color: var(--cs-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.cloudsea-empty-no-score {
+  margin: auto 0;
+  padding: 28px 16px;
+  border: 1px dashed rgba(127, 140, 141, 0.36);
   border-radius: 10px;
   color: var(--cs-muted);
   font-size: 12px;
@@ -335,6 +351,89 @@
   color: #8d999e;
   font-size: 10px;
   font-weight: 600;
+}
+
+.cloudsea-card-evidence {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  padding: 3px 7px;
+  border: 1px solid rgba(243, 156, 18, 0.32);
+  border-radius: 999px;
+  color: #f5b041;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.cloudsea-reference-details {
+  flex: 0 0 auto;
+  margin: 0 12px 12px;
+  border-top: 1px solid var(--cs-line);
+  padding-top: 8px;
+}
+
+.cloudsea-reference-details > summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--cs-muted);
+  font-size: 11px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.cloudsea-reference-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cloudsea-reference-details > summary::after {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  border: 1px solid var(--cs-line-strong);
+  border-radius: 999px;
+  color: #7ce3e3;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.cloudsea-reference-details[open] > summary::after {
+  content: "−";
+}
+
+.cloudsea-reference-details > summary:focus-visible {
+  outline: 2px solid #7ce3e3;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.cloudsea-reference-details .cloudsea-legend {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-width: none;
+  margin: 0;
+  padding: 8px 0 0;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.cloudsea-reference-details .cloudsea-legend-bar {
+  flex-wrap: wrap;
+}
+
+.cloudsea-reference-note {
+  margin: 0;
+  color: var(--cs-muted);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .cloudsea-pos-badge {
@@ -543,6 +642,17 @@
   background: rgba(72, 181, 181, 0.45);
 }
 
+.cs-detail-summary {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(72, 181, 181, 0.16);
+  border-radius: 8px;
+  background: rgba(72, 181, 181, 0.05);
+  color: #9ab7c6;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 /* 通用卡片容器 */
 .cs-detail-card {
   padding: 13px 15px;
@@ -732,6 +842,50 @@
 .cs-bar-moisture { background: linear-gradient(90deg, #3498db, #48b5b5); }
 .cs-bar-position { background: linear-gradient(90deg, #2ecc71, #6fe3e3); }
 .cs-bar-wind { background: linear-gradient(90deg, #e67e22, #2ecc71); }
+
+.cs-pressure-evidence {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(72, 181, 181, 0.2);
+  border-radius: 8px;
+  background: rgba(72, 181, 181, 0.06);
+}
+
+.cs-pressure-evidence-label,
+.cs-pressure-evidence small {
+  color: #7b9aa8;
+  font-size: 10px;
+}
+
+.cs-pressure-evidence strong {
+  color: #d8edf3;
+  font-size: 11px;
+}
+
+.cs-pressure-evidence small {
+  grid-column: 1 / -1;
+  line-height: 1.4;
+}
+
+.cs-pressure-evidence--partial {
+  border-color: rgba(243, 156, 18, 0.34);
+  background: rgba(243, 156, 18, 0.07);
+}
+
+.cs-pressure-evidence--partial strong {
+  color: #f5b041;
+}
+
+.cs-pressure-evidence--unavailable {
+  border-color: rgba(127, 140, 141, 0.35);
+  background: rgba(127, 140, 141, 0.07);
+}
+
+.cs-pressure-evidence--unavailable strong {
+  color: #bdc3c7;
+}
 
 /* 3. 山峰与云海垂直剖面可视化标尺 (Elevation Profile Visualizer) */
 .cs-elevation-card {
@@ -1116,6 +1270,60 @@
 /* 5. 摄影实战方案 Blueprint */
 .cs-blueprint-card {
   border-color: rgba(72, 181, 181, 0.22);
+}
+
+.cs-blueprint-disclosure {
+  gap: 0;
+}
+
+.cs-blueprint-summary {
+  min-height: 48px;
+  cursor: pointer;
+  list-style: none;
+  outline: none;
+}
+
+.cs-blueprint-summary::-webkit-details-marker {
+  display: none;
+}
+
+.cs-blueprint-summary::after {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  margin-left: 8px;
+  border: 1px solid rgba(72, 181, 181, 0.35);
+  border-radius: 999px;
+  color: #7ce3e3;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.cs-blueprint-disclosure[open] {
+  gap: 10px;
+}
+
+.cs-blueprint-disclosure[open] .cs-blueprint-summary::after {
+  content: "−";
+}
+
+.cs-blueprint-summary:focus-visible {
+  outline: 2px solid #7ce3e3;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.cs-blueprint-summary-hint {
+  margin-left: auto;
+  color: #6f8a98;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .cs-viewpoint-spot {

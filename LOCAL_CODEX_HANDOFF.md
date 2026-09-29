@@ -101,6 +101,69 @@ PR: `NOT_CREATED — gh auth unavailable locally`
 Merged: `NO`
 Deployed: `NO`
 
+## Next cycle — P5-B CloudSea evidence IA
+
+Remote planning task: `c2c_d92e`, iteration 2
+Base: `codex/fireglow-topic-ia-v2-20260929@47779d74b6fe1d160bc2d68c90b9712101b1de33`
+Implementation branch: `codex/cloudsea-evidence-ia-v2-20260929`
+Package: `MOBILE-V2-P5B-CLOUDSEA-EVIDENCE-IA`
+Final reviewed tip: pending remote review
+
+### Product result
+
+CloudSea now keeps three facts separate: surface evidence, pressure coverage,
+and the selected mountain/window's publishable score and vertical conclusion.
+Global partial coverage remains an evidence/status row while a selected site
+with a real score keeps its score. A selected pressure-unavailable site keeps
+surface humidity/wind and shows vertical evidence unknown. Unknown-only data is
+not threshold-empty. The desktop legend and low-frequency card/detail content
+use native disclosures; mobile keeps one `MobileDataSheet`.
+
+### Files changed
+
+- `src/app/cloudsea/CloudSeaApp.tsx`
+- `src/app/cloudsea/CloudSeaSiteDetail.tsx`
+- `src/app/cloudsea/cloudsea.css`
+- `tests/e2e/cloudsea-topic-ia.spec.ts`
+- `tests/e2e/cloudsea-request-order.spec.ts`
+- `tests/e2e/score-threshold-filters.spec.ts`
+- `tests/e2e/unknown-marker-semantics.spec.ts`
+- `tasks/todo.md`
+- `docs/engineering-change-log/2026-09-29-cloudsea-evidence-ia.md`
+
+### Protected boundaries
+
+Do not modify `src/lib/cloudsea.ts`, `src/lib/cloudLayers.ts`,
+`src/lib/pressure.ts`, `src/lib/cloudseaOverlay.ts`, `src/lib/scoreThreshold.ts`,
+CloudSea snapshot/pressure API routes, provider/cache/request batching, score,
+ranking algorithm, pressure majority rule, Fireglow, or `MobileDataSheet`.
+Missing values remain missing; pressure partial is not unavailable; vertical
+unknown is not low score; no synthetic cloud base/top or heuristic conclusion
+is introduced.
+
+### Evidence
+
+- `npm run check`: PASS — 65 Vitest files / 379 tests; lint, typecheck, build.
+- P5-B topic IA: 4 PASS / 4 project skips; CloudSea pressure: 4 PASS;
+  unknown-only: 1 PASS; CloudSea threshold desktop/mobile: 2 PASS;
+  request-order: 1 PASS; day3: 1 PASS; mobile map-first `/cloudsea`: 1 PASS.
+- CloudSea unit/integration/release integrity: 41 PASS.
+- `git diff --check`: PASS.
+- Full Chromium, cross-browser, real device, CI, production: `NOT_RUN`.
+
+### Remote review handoff
+
+Remote ChatGPT must independently resolve the pushed tip and verify surface /
+pressure semantics, unknown-only versus threshold-empty, selected score under
+global partial coverage, mobile vertical-unknown and total-failure copy,
+desktop disclosures, protected blobs, Fireglow untouched and Owner
+preservation. Return `DONE`, `CHANGES_REQUIRED`, or `BLOCKED` before the next
+phase.
+
+PR: `NOT_CREATED — gh auth unavailable locally`
+Merged: `NO`
+Deployed: `NO`
+
 ### Protected rules
 
 Do not alter `forecastIntegrity.ts`, scoring, provider/cache/snapshot/API code,

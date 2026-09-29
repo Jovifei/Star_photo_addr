@@ -225,6 +225,7 @@ export default function CloudSeaSiteDetail({
         <p className="cs-beta-note">
           Beta · surface 湿度/风来自 Open-Meteo；云底、云顶、山顶关系与逆温为压力层数值模式推导，不是探空/现场云底仪实测；条件指数仍未做长期实拍事件概率校准。
         </p>
+        <p className="cs-detail-summary">{win.summary}</p>
 
         <section className="cs-detail-card cs-hero-card">
           <div className="cs-hero-top">
@@ -298,6 +299,24 @@ export default function CloudSeaSiteDetail({
                 />
               </div>
             </div>
+          </div>
+
+          <div className={`cs-pressure-evidence cs-pressure-evidence--${win.pressureStatus}`} data-testid="cloudsea-pressure-evidence">
+            <span className="cs-pressure-evidence-label">压力层证据</span>
+            <strong>
+              {win.pressureStatus === "available"
+                ? "压力层证据完整"
+                : win.pressureStatus === "partial"
+                  ? "压力层时次部分可用"
+                  : "压力层证据不足"}
+            </strong>
+            <small>
+              {win.cloudPosition === "unknown"
+                ? "缺失 pressure 不推断垂直云层层位"
+                : win.pressureStatus === "partial"
+                  ? "当前窗口仍可使用已有真实时次"
+                  : "当前地点的 pressure 覆盖状态"}
+            </small>
           </div>
         </section>
 
@@ -563,13 +582,14 @@ export default function CloudSeaSiteDetail({
           </div>
         </section>
 
-        <section className="cs-detail-card cs-blueprint-card">
-          <div className="cs-card-header">
-            <div className="cs-card-title">
+        <details className="cs-detail-card cs-blueprint-card cs-blueprint-disclosure" data-testid="cloudsea-field-blueprint">
+          <summary className="cs-card-header cs-blueprint-summary">
+            <span className="cs-card-title">
               <Camera size={14} className="cs-card-icon" />
               <span>摄影实操方案 (Field Blueprint)</span>
-            </div>
-          </div>
+            </span>
+            <span className="cs-blueprint-summary-hint">低频参考</span>
+          </summary>
 
           <div className="cs-viewpoint-spot">
             <div className="cs-spot-lead">
@@ -616,7 +636,7 @@ export default function CloudSeaSiteDetail({
               </small>
             </div>
           </div>
-        </section>
+        </details>
       </div>
     </aside>
   );
