@@ -253,6 +253,10 @@
     overflow: visible;
   }
 
+  .map-stage .mobile-map-panel-drawer .map-reference-tools > summary {
+    min-height: 48px;
+  }
+
   .map-stage .mobile-map-panel-drawer .map-reference-tools-body {
     min-width: 0;
   }

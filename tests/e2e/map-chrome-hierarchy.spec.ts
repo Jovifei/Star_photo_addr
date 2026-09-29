@@ -62,6 +62,9 @@ test("移动端图层默认稀疏，说明与视图按需展开", async ({ page 
   await expect(drawer.locator(".bortle-control")).toBeVisible();
   await expect(references).toBeVisible();
   await expect(references).not.toHaveAttribute("open");
+  const summaryBox = await references.locator("summary").boundingBox();
+  expect(summaryBox).not.toBeNull();
+  expect(summaryBox!.height).toBeGreaterThanOrEqual(48);
   await expect(references.locator(".map-view-actions")).toBeHidden();
   await expect(references.locator(".map-legend")).toBeHidden();
 
@@ -82,6 +85,9 @@ test("短横屏继续使用侧栏，低频工具不回到地图浮窗", async ({
   const references = drawer.locator(".map-reference-tools");
   await expect(drawer).toBeVisible();
   await expect(drawer.locator(".map-layer-bar")).toBeVisible();
+  const summaryBox = await references.locator("summary").boundingBox();
+  expect(summaryBox).not.toBeNull();
+  expect(summaryBox!.height).toBeGreaterThanOrEqual(48);
   await expect(references.locator(".map-view-actions")).toBeHidden();
   await references.locator("summary").click();
   await expect(references.locator(".map-view-actions")).toBeVisible();
