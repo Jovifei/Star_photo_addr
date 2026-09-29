@@ -314,6 +314,26 @@ CI and production remain `NOT_RUN` until separately authorized and executed.
 Remote planning task: `c2c_c6d3`
 Base: `codex/map-status-safe-zones-v2-20260929@8d672172fbeee14f3a4b035935e03bfb4e39e184`
 Implementation branch: `codex/marker-label-disclosure-v2-20260929`
+Final reviewed tip: `a02aea9711072b9bbd8960dbbc066b1641dbe0ee`
+
+P4-C keeps ObservingSitesLayer as the selected catalog marker and permanent
+label owner. SampleMarker remains for search/custom/map-sampling locations and
+is suppressed only when the catalog layer is mounted and truly owns the
+selected catalog reference. A selected catalog site is pinned through filters
+without changing `data-observing-site-count`. Rank markers keep Leaflet 1.9.4
+native temporary Tooltip behavior; no clustering, new engine, or global
+tooltip state.
+
+Evidence: `npm run check` PASS — 65 Vitest files / 379 tests; marker focused
+7 PASS / 3 project skips; viewport recommendations 2 PASS; app/map-first/P4-B
+regressions 31 PASS / 19 project skips. Full Chromium, cross-browser, real
+device, CI and production: `NOT_RUN`. Remote verdict: `DONE`.
+
+## Next cycle — P4-C marker / label disclosure
+
+Remote planning task: `c2c_c6d3`
+Base: `codex/map-status-safe-zones-v2-20260929@8d672172fbeee14f3a4b035935e03bfb4e39e184`
+Implementation branch: `codex/marker-label-disclosure-v2-20260929`
 
 P4-C keeps `ObservingSitesLayer` as the selected catalog marker and permanent
 label owner. `SampleMarker` remains for search/custom/map-sampling locations;

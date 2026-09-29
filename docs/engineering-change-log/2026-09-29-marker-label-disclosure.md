@@ -25,5 +25,6 @@
 - Marker focused：目录/筛选/search 5 PASS / 1 project skip；rank Tooltip 1 PASS；viewport recommendations 2 PASS。
 - 回归：app、mobile-map-first、map-render-status-safe-zones 31 PASS / 19 project skips。
 - Full Chromium、cross-browser、真实设备、CI、production：`NOT_RUN`。
+- Final reviewed tip：`a02aea9711072b9bbd8960dbbc066b1641dbe0ee`。
 
-远端复审需确认 selected marker owner、筛选 pin、rank temporary tooltip、spacedLabelIndices 未改、P4-B/P5 未混入及 Owner preservation。
+远端复审已确认 selected marker owner、筛选 pin、rank temporary tooltip、spacedLabelIndices 未改、P4-B/P5 未混入及 Owner preservation，返回 `DONE`。

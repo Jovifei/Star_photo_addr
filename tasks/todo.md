@@ -982,7 +982,7 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - [x] 保持搜索/custom SampleMarker、Leaflet rank Tooltip、spacedLabelIndices 与评分/排名事实不变。
 - [x] 新增 marker-label-disclosure E2E 与 labelLayout unit protection。
 - [x] 运行 `npm run check`、marker/viewport focused 与 app/map-first/P4-B regressions。
-- [ ] 远端 ChatGPT 独立复审最终推送 tip并返回 DONE / CHANGES_REQUIRED / BLOCKED。
+- [x] 远端 ChatGPT 独立复审最终推送 tip `a02aea9711072b9bbd8960dbbc066b1641dbe0ee` 并返回 DONE。
 - [ ] Full Chromium、cross-browser、真实设备、CI、production 保持 `NOT_RUN`。
 
 ## Review
