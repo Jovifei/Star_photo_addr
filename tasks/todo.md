@@ -966,7 +966,7 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - [x] 完成远端 PLAN：tile top-right、satellite bottom-left、移动 rail/data sheet 避让、preserved-frame 单一 badge。
 - [x] 新增 safe-zone/geometry E2E，更新 satellite degraded product-integrity contract。
 - [x] 运行 `npm run check`、P4-B focused、map-canvas-status、satellite/product-integrity、app satellite regressions。
-- [ ] 远端 ChatGPT 独立复审最终推送 tip 并返回 DONE / CHANGES_REQUIRED / BLOCKED。
+- [x] 远端 ChatGPT 独立复审最终推送 tip `c208a0b7d0a4419f03deccc51ca7dd67cf8795e6` 并返回 DONE。
 - [ ] Full Chromium、cross-browser、真实设备、CI、production 保持 `NOT_RUN`。
 
 ## Review

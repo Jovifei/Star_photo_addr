@@ -283,6 +283,7 @@ MapPanelManager mount, and unchanged P3/data owners. Do not merge or deploy.
 Remote planning task: `c2c_7b2f`
 Base: `codex/map-chrome-hierarchy-v2-20260929@4c7fc1dc18487e2679cb1eb7428fadeb1041a9d9`
 Implementation branch: `codex/map-status-safe-zones-v2-20260929`
+Final reviewed tip: `c208a0b7d0a4419f03deccc51ca7dd67cf8795e6`
 
 P4-B keeps MapTileStatus and SatelliteLayer as separate fact owners and
 shares only scoped visual lanes. Tile errors use a top-right lane below the
@@ -307,4 +308,9 @@ Files changed:
 P4-B must not modify P3 data semantics, scoring, provider/cache, snapshot/API,
 store requests, or begin P4-C/P5. Full Chromium, cross-browser, real device,
 CI and production remain `NOT_RUN` until separately authorized and executed.
+
+Evidence: `npm run check` PASS (65 Vitest files / 378 tests); safe-zone E2E
+3 PASS / 3 project skips; map-canvas-status 5 PASS / 5 project skips;
+satellite product-integrity 1 PASS; app satellite regressions 4 PASS.
+Remote verdict: `DONE`; P4-C marker/label disclosure is the next package.
 

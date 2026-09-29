@@ -26,5 +26,6 @@
 - `map-canvas-status.spec.ts`：5 PASS / 5 project skips。
 - 卫星 degraded/product-integrity focused：PASS；普通 satellite app regressions：PASS。
 - Full Chromium、cross-browser、真实设备、CI、production：`NOT_RUN`。
+- Final tip：`c208a0b7d0a4419f03deccc51ca7dd67cf8795e6`。
 
-远端复审必须核对最终分支 tip、单 badge、safe-zone geometry、tile truth boundary、P3/data owners 和 Owner preservation；只有 `DONE` 后才进入 P4-C。
+远端复审已确认最终 tip、单 badge、safe-zone geometry、tile truth boundary、P3/data owners 和 Owner preservation 均通过，返回 `DONE`。下一包进入 P4-C marker/label disclosure。
