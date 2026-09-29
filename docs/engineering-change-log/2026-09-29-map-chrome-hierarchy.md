@@ -23,7 +23,7 @@
 
 - `npm run check`：PASS；65 个 Vitest 文件 / 378 项测试，lint、typecheck、production build 均 PASS。
 - P4-A focused：`map-chrome-hierarchy.spec.ts` + `mobile-panel-dock.spec.ts`，6 PASS / 6 project skips。
-- 远端复审补充：移动端 `MapReferenceTools` summary 高度在 390×844 与 812×375 均 `>=48px`；follow-up tip 为 `ceea9189fd4a653913cbbaae155f110121eb195a`。
+- 远端复审补充：移动端 `MapReferenceTools` summary 高度在 390×844 与 812×375 均 `>=48px`；产品/测试 follow-up 为 `ceea9189fd4a653913cbbaae155f110121eb195a`，最终文档 tip 为 `450e08eb0a0b207ea1c2c59083c8f89a1ea9706e`。
 - 回归：`map-readability.spec.ts`、`workspace-shell.spec.ts`、`mobile-map-first.spec.ts`，41 PASS / 25 project skips，0 failed。
 - Full Chromium、cross-browser、真实设备、CI、production：`NOT_RUN`。
 

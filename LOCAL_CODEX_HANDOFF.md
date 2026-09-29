@@ -243,7 +243,7 @@ The product-integrity stale/unknown assertion now checks
 Remote planning task: `c2c_d7b2`
 Base: `codex/data-state-surfaces-v2-20260928@90050e710829ea841b3774105506f27dcbf800b8`
 Implementation branch: `codex/map-chrome-hierarchy-v2-20260929`
-Latest follow-up tip: `ceea9189fd4a653913cbbaae155f110121eb195a`
+Latest follow-up tip: `450e08eb0a0b207ea1c2c59083c8f89a1ea9706e`
 
 P4-A moves low-frequency map references into the new `MapReferenceTools`
 native details wrapper. Desktop canvas no longer mounts the duplicate
