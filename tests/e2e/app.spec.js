@@ -45,10 +45,21 @@ test("跨日期进入首页时首屏水合、日期与导航一致", async ({ pa
     timeZone: "Asia/Shanghai",
     month: "numeric",
     day: "numeric",
+    hour: "numeric",
+    hour12: false,
   }).formatToParts(browserTime);
-  const month = dateParts.find((part) => part.type === "month")?.value;
-  const day = dateParts.find((part) => part.type === "day")?.value;
-  const expectedDate = `${Number(month)}月${Number(day)}日`;
+  const browserHour = Number(dateParts.find((part) => part.type === "hour")?.value ?? "0");
+  const eventDate = browserHour < 5
+    ? new Date(browserTime.getTime() - 24 * 60 * 60 * 1000)
+    : browserTime;
+  const eventDateParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(eventDate);
+  const eventMonth = eventDateParts.find((part) => part.type === "month")?.value;
+  const eventDay = eventDateParts.find((part) => part.type === "day")?.value;
+  const expectedDate = `${Number(eventMonth)}月${Number(eventDay)}日`;
   await expect(page.locator(".event-status")).toContainText(expectedDate);
   if (testInfo.project.name === "mobile") {
     const filter = page.locator(".mobile-filter-toggle");
