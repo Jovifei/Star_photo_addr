@@ -52,7 +52,7 @@ test("compact header remains operable with measured 200% CSS text stress", async
   expect(ratio).toBeCloseTo(2, 2);
   await page.getByRole('button', {name:'时间与地点筛选'}).click();
   await expect(page.getByRole('slider',{name:'推荐分数门槛'})).toBeVisible();
-  await page.getByRole('button',{name:'收起时间与地点筛选'}).click();
+  await page.getByTestId('mobile-filter-sheet').getByRole('button',{name:'关闭时间与地点筛选'}).click();
   await expect(page.getByRole("button", { name: "时间与地点筛选" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 });
