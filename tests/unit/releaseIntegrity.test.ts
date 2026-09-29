@@ -171,4 +171,10 @@ describe("release integrity invariants", () => {
     expect(fireglowRoute).toContain("turbopackIgnore: true");
     expect(fireglowRoute).toContain("runtime-configurable");
   });
+
+  it("ships every module required by the production snapshot worker", () => {
+    const dockerfile = fs.readFileSync("Dockerfile", "utf8");
+    expect(dockerfile).toContain("/app/scripts/observing-snapshot-worker.mjs");
+    expect(dockerfile).toContain("/app/scripts/observing-snapshot-worker-utils.mjs");
+  });
 });
