@@ -6,6 +6,7 @@
 - [x] 将桌面色阶/长口径和详情低频 Field Blueprint 改为默认收起的原生 disclosure。
 - [x] 补齐 Fireglow 专题 IA 的桌面/移动 RED→GREEN 回归。
 - [x] 运行 focused gates、`npm run check`、`git diff --check`，审阅 diff 与禁止文件边界。
+- [x] 按远端复审修正移动 threshold-empty 文案并补齐 72/60/40 → 100 的桌面/移动回归。
 - [ ] 提交、推送并交回远端独立审核；按审核结果修复后再进入 P5-B。
 
 ## Review

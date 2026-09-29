@@ -17,11 +17,12 @@
 - 桌面地图只保留点位、插值层、Leaflet 控件和必要的降级状态；永久色阶和长口径移到排行栏底部默认关闭的原生 `details`。
 - 详情中的低频 Field Blueprint 默认关闭；关键云层证据和缺失值提示继续默认可见。
 - 移动端继续只有一个 `MobileDataSheet`，peek 结论按 loading、不可用、stale、阶段无分、选中点位和坐标选点的事实优先级展示。
+- 移动排行在存在有效阶段评分但门槛筛空时明确显示 `暂无达到 ≥X 分的地点`，不伪装成无数据或阶段不可用。
 
 ## 验收证据
 
 - `npm run check`：PASS（65 个 Vitest 文件、379 项；lint、typecheck、build）。
-- P5-A 专项 E2E：桌面空快照与披露 2 PASS，移动空快照/peek/390×844/812×375 1 PASS（其余项目按设计跳过）。
+- P5-A 专项 E2E：桌面空快照、披露、失败日期优先级 3 PASS，移动空快照/peek/390×844/812×375 1 PASS（其余项目按设计跳过）。
 - Fireglow 完整性 7 PASS，门槛筛选 2 PASS，未知标记 1 PASS，刷新闭环 1 PASS，产品完整性 3 PASS，mobile map-first `/fireglow` 1 PASS。
 - `git diff --check`：PASS。
 - Full Chromium、cross-browser、真实设备、CI、production：`NOT_RUN`。

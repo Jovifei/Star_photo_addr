@@ -351,6 +351,8 @@ ranking panel. The selected detail keeps cloud-layer missing values explicit;
 the low-frequency Field Blueprint is a closed disclosure. Mobile keeps one
 `MobileDataSheet`; its peek conclusion says “数据不可用 · 请刷新重试” for a
 real empty/error snapshot and preserves “旧数据 · 不作推荐” for fallback.
+When valid phase scores are filtered out by the user threshold, the mobile
+ranking explicitly says `暂无达到 ≥X 分的地点` instead of implying missing data.
 
 ### Files changed
 
@@ -373,9 +375,9 @@ threshold-empty.
 ### Evidence
 
 - `npm run check`: PASS — 65 Vitest files / 379 tests; lint, typecheck, build.
-- P5-A topic IA E2E: 3 PASS / 3 project skips; desktop empty snapshot and
-  disclosure, mobile empty peek at 390×844 and 812×375 with no horizontal
-  overflow.
+- P5-A topic IA E2E: 4 PASS / 4 project skips; desktop empty snapshot,
+  disclosure and failed-date priority, mobile empty peek at 390×844 and
+  812×375 with no horizontal overflow.
 - Fireglow data integrity: 7 PASS / 5 project skips.
 - Fireglow score threshold: 2 PASS; unknown marker: 1 PASS; refresh loop:
   1 PASS; Fireglow product integrity: 3 PASS / 3 project skips; mobile

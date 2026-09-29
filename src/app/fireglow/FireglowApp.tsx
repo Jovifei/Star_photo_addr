@@ -348,6 +348,16 @@ export default function FireglowApp() {
               : pickedPoint
                 ? "查看附近目录点位"
                 : "点地图查看点位";
+  const mobileRankingEmptyMessage =
+    visibleStatus === "loading"
+      ? "正在读取所选日期的数据…"
+      : visibleStatus === "error" && !hasUsableData
+        ? "暂无有效火烧云数据，请刷新重试"
+        : phaseUnavailableNotice
+          ? phaseUnavailableNotice
+          : hasUsablePhaseData
+            ? `暂无达到 ≥${scoreThreshold} 分的地点`
+            : visibleError || "当前无可显示的点位评分";
 
   return (
     <div className="fireglow-root app-shell">
@@ -615,7 +625,7 @@ export default function FireglowApp() {
             {(level === "full" ? filteredRanked : filteredRanked.slice(0, 5)).map((site) => <button key={site.id} type="button" onClick={() => focusSite(site)}>
               <span>{site.name}</span><strong>{rangeMode === 3 ? `${dateLabel(activeDates.find((date) => snapshots[date]?.sites[site.id]?.[phase] === site.window) ?? activeDates[0])} · ` : ""}{site.window.probabilityLabel ?? "数据不足"}</strong>
             </button>)}
-            {!filteredRanked.length ? <p>{visibleStatus === "loading" ? "正在读取所选日期的数据…" : visibleError || "当前无可显示的点位评分"}</p> : null}
+            {!filteredRanked.length ? <p>{mobileRankingEmptyMessage}</p> : null}
           </div> : null}
         </>}</MobileDataSheet>
 

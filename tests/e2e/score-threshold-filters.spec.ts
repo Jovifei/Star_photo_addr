@@ -82,7 +82,7 @@ test("火烧云分数滑块只保留达到门槛的排行地点", async ({ page 
         source: "E2E score threshold",
         stale: false,
         sites: {
-          "finder-001-location": { evening: fireWindow(100), morning: fireWindow(40) },
+          "finder-001-location": { evening: fireWindow(72), morning: fireWindow(40) },
           "finder-002-location": { evening: fireWindow(60), morning: fireWindow(40) },
           "finder-003-location": { evening: fireWindow(40), morning: fireWindow(40) },
         },
@@ -108,8 +108,10 @@ test("火烧云分数滑块只保留达到门槛的排行地点", async ({ page 
 
   await slider.press("End");
   await expect(slider).toHaveValue("100");
-  await expect(rows).toHaveCount(1);
-  await expect(list).toContainText("阿里暗夜公园");
+  await expect(list.locator("button")).toHaveCount(0);
+  await expect(list).toContainText("暂无达到 ≥100 分的地点");
+  await expect(list).not.toContainText("数据不可用");
+  await expect(list).not.toContainText("当前晚霞时段暂无有效评分");
 });
 
 test("云海分数滑块只保留达到门槛的排行地点", async ({ page }, testInfo) => {
