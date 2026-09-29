@@ -940,3 +940,21 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 
 - Package: `MOBILE-V2-P3B-STATE-SURFACE-ALIGNMENT`; base `7462417`; branch `codex/data-state-surfaces-v2-20260928`。
 - Protected: `missing != 0`, `stale != fresh`, `partial != available`, HTTP 200 != valid recommendation; P4/P5 remain separate。
+# 2026-09-29 P4-A 地图画布层级与工具减噪
+
+- [x] 从远端 P3-B `90050e710829ea841b3774105506f27dcbf800b8` 建立隔离 worktree。
+- [x] 将 MapLegend、MapViewActions、MapBoundaryStatus 收敛到 `MapReferenceTools` 原生 details 披露层。
+- [x] 桌面画布移除重复 MapBoundaryStatus 与 MapPanelManager 挂载；保留设置检查器内信息。
+- [x] 移动端图层默认只显示 MapLayerBar、BortleControl 和折叠入口，保留 AdaptiveSheet 单一滚动体。
+- [x] 新增 `map-chrome-hierarchy.spec.ts`，更新 mobile-panel-dock 的渐进披露断言。
+- [x] 运行 ESLint、TypeScript、Vitest、Next build、P4-A focused E2E 与三组地图/工作台回归。
+- [ ] 远端 ChatGPT 独立复审当前推送 tip 并返回 DONE / CHANGES_REQUIRED / BLOCKED。
+- [ ] 未运行 full Chromium、cross-browser、真实设备、CI、production；不据此宣称发布完成。
+
+## Review
+
+- Baseline: `origin/codex/data-state-surfaces-v2-20260928@90050e710829ea841b3774105506f27dcbf800b8`。
+- Scope: 仅 P4-A 地图 chrome / legend / tool density；P4-B 状态徽章/覆盖层、P4-C marker/label 去重、P5 Fireglow/CloudSea 未混入。
+- Static: `npm run check` PASS — 65 Vitest files / 378 tests；lint、typecheck、build PASS。
+- Browser: P4-A focused 6 PASS / 6 project skips；map-readability + workspace-shell + mobile-map-first 41 PASS / 25 project skips；0 failed。
+- Data boundary: scoring、provider/cache、forecastIntegrity、snapshot/API/store、MapTileStatus/SatelliteLayer loading unchanged。

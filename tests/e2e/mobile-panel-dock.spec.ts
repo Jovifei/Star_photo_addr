@@ -123,8 +123,14 @@ test("手机横屏仍使用侧边栏而不是恢复重叠的桌面浮窗", async
   const drawer = page.getByTestId("mobile-map-panel-drawer");
   await expect(drawer.locator(".map-layer-bar")).toBeVisible();
   await expect.poll(() => drawer.evaluate((element) => getComputedStyle(element).transform)).toBe("matrix(1, 0, 0, 1, 0, 0)");
-  await expect(drawer.locator(".map-view-actions")).toBeVisible();
-  await expect(drawer.locator(".map-legend")).toBeVisible();
+  const references = drawer.locator(".map-reference-tools");
+  await expect(references).toBeVisible();
+  await expect(references.locator("summary")).toBeVisible();
+  await expect(references.locator(".map-view-actions")).toBeHidden();
+  await expect(references.locator(".map-legend")).toBeHidden();
+  await references.locator("summary").click();
+  await expect(references.locator(".map-view-actions")).toBeVisible();
+  await expect(references.locator(".map-legend")).toBeVisible();
 
   const drawerBox = await drawer.boundingBox();
   expect(drawerBox).not.toBeNull();

@@ -238,3 +238,39 @@ The product-integrity stale/unknown assertion now checks
 `map-recommendation-eligibility=data-state="withheld"` and keeps the raw
 `data-score-status` plus “灰色点为当前时次数据不足，不代表低分” contract.
 
+## Next cycle — P4-A map chrome hierarchy
+
+Remote planning task: `c2c_d7b2`
+Base: `codex/data-state-surfaces-v2-20260928@90050e710829ea841b3774105506f27dcbf800b8`
+Implementation branch: `codex/map-chrome-hierarchy-v2-20260929`
+
+P4-A moves low-frequency map references into the new `MapReferenceTools`
+native details wrapper. Desktop canvas no longer mounts the duplicate
+`MapBoundaryStatus` or legacy `MapPanelManager`; the inspector keeps one
+collapsed “地图说明与视图” section. Mobile layers show only the map layer
+bar, Bortle control and collapsed disclosure until the user opens it. The
+wrapper is composition-only and does not own provider, forecast, snapshot,
+score, or recommendation state.
+
+Files changed:
+
+- `src/components/MapReferenceTools.tsx`
+- `src/components/ResponsiveMapControls.tsx`
+- `src/components/PerseidsApp.tsx`
+- `src/app/ux-map-v2.css`
+- `src/app/mobile-map-controls.css`
+- `tests/e2e/map-chrome-hierarchy.spec.ts`
+- `tests/e2e/mobile-panel-dock.spec.ts`
+- `docs/engineering-change-log/2026-09-29-map-chrome-hierarchy.md`
+
+Evidence:
+
+- `npm run check`: PASS — 65 Vitest files / 378 tests; lint, typecheck, build.
+- P4-A focused E2E: 6 PASS / 6 project skips.
+- Map/readability/workspace/map-first regression: 41 PASS / 25 project skips.
+- Full Chromium, cross-browser, real device, CI and production: `NOT_RUN`.
+
+Remote review must resolve the final pushed branch tip and independently
+check overlay counts, details disclosure, no nested scroll, no old
+MapPanelManager mount, and unchanged P3/data owners. Do not merge or deploy.
+

@@ -16,10 +16,8 @@ import { useStore } from "@/lib/store";
 import type { ViewportRecommendation } from "@/lib/viewportRecommendations";
 import BortleControl from "@/components/BortleControl";
 import CloudControl from "@/components/CloudControl";
-import MapBoundaryStatus from "@/components/MapBoundaryStatus";
 import MapLayerBar from "@/components/MapLayerBar";
-import MapLegend from "@/components/MapLegend";
-import MapViewActions from "@/components/MapViewActions";
+import MapReferenceTools from "@/components/MapReferenceTools";
 import ObservingMapControl from "@/components/ObservingMapControl";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 import AdaptiveSheet from "@/components/ui/AdaptiveSheet";
@@ -121,12 +119,7 @@ export default function ResponsiveMapControls({
   }
 
   if (!showMobileDock) {
-    return (
-      <>
-        <MapLayerBar />
-        <MapBoundaryStatus />
-      </>
-    );
+    return <MapLayerBar />;
   }
 
   return (
@@ -190,10 +183,8 @@ export default function ResponsiveMapControls({
           {activePanel === "layers" ? (
             <div className="mobile-map-panel-pane" role="tabpanel" data-panel="layers">
               <MapLayerBar />
-              <MapViewActions mapRef={mapRef} />
               <BortleControl />
-              <MapLegend />
-              <MapBoundaryStatus />
+              <MapReferenceTools mapRef={mapRef} />
             </div>
           ) : null}
 

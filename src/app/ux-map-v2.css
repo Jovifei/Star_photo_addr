@@ -153,6 +153,83 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cloud-channel-accent) 45%, transparent);
 }
 
+/* P4-A: low-frequency map references live in one disclosure surface. The
+   child components still own their content; this wrapper only changes where
+   they are laid out so legacy canvas offsets cannot leak into the inspector
+   or mobile sheet. */
+.map-reference-tools {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius, 12px);
+  background: rgba(4, 18, 25, .52);
+}
+.map-reference-tools > summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  list-style-position: inside;
+}
+.map-reference-tools > summary::marker { color: var(--green-soft); }
+.map-reference-tools > summary:focus-visible {
+  outline: 2px solid var(--green, #79cfe2);
+  outline-offset: -2px;
+}
+.map-reference-tools-body {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 10px;
+}
+.map-stage .map-reference-tools .map-view-actions,
+.map-stage .map-reference-tools .map-legend,
+.map-stage .map-reference-tools .map-boundary-status,
+.workspace-inspector .map-reference-tools .map-view-actions,
+.workspace-inspector .map-reference-tools .map-legend,
+.workspace-inspector .map-reference-tools .map-boundary-status {
+  position: static;
+  inset: auto;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  width: auto;
+  max-width: none;
+  transform: none;
+  z-index: auto;
+  pointer-events: auto;
+}
+.map-reference-tools .map-view-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 7px;
+}
+.map-reference-tools .map-view-actions .boundary-legend {
+  grid-column: 1 / -1;
+}
+.map-reference-tools .map-view-actions > button {
+  min-height: 40px;
+}
+.map-reference-tools .map-legend {
+  display: block;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  pointer-events: auto;
+}
+.map-reference-tools .map-boundary-status {
+  display: inline-flex;
+  padding: 7px 0;
+  border: 0;
+  background: transparent;
+}
+
 .map-boundary-status {
   position: absolute;
   right: 18px;

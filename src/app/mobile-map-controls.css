@@ -227,6 +227,7 @@
      map while docked in the drawer. The higher specificity intentionally wins
      over older mobile positioning rules imported earlier. */
   .map-stage .mobile-map-panel-drawer .map-layer-bar,
+  .map-stage .mobile-map-panel-drawer .map-reference-tools,
   .map-stage .mobile-map-panel-drawer .map-view-actions,
   .map-stage .mobile-map-panel-drawer .forecast-theme-switch,
   .map-stage .mobile-map-panel-drawer .bortle-control,
@@ -245,6 +246,15 @@
     max-width: none !important;
     margin: 0 !important;
     transform: none !important;
+  }
+
+  .map-stage .mobile-map-panel-drawer .map-reference-tools {
+    display: block;
+    overflow: visible;
+  }
+
+  .map-stage .mobile-map-panel-drawer .map-reference-tools-body {
+    min-width: 0;
   }
 
   .map-stage .mobile-map-panel-drawer .map-layer-bar {

@@ -12,10 +12,7 @@ import ObservationDetails from "@/components/ObservationDetails";
 import StarWindowTable from "@/components/StarWindowTable";
 import CloudControl from "@/components/CloudControl";
 import BortleControl from "@/components/BortleControl";
-import MapLegend from "@/components/MapLegend";
-import MapViewActions from "@/components/MapViewActions";
-import MapPanelManager from "@/components/MapPanelManager";
-import MapBoundaryStatus from "@/components/MapBoundaryStatus";
+import MapReferenceTools from "@/components/MapReferenceTools";
 import ViewportRecommendationPanel from "@/components/ViewportRecommendationPanel";
 import DecisionSummary from "@/components/workspace/DecisionSummary";
 import ForecastAvailability from "@/components/workspace/ForecastAvailability";
@@ -187,15 +184,12 @@ export default function PerseidsApp() {
             <ObservingMapControl docked />
             <BortleControl />
             <CloudControl />
-            <MapLegend />
-            <MapViewActions mapRef={mapRef} />
-            <MapPanelManager />
-            <MapBoundaryStatus />
             <ViewportRecommendationPanel
               mapRef={mapRef}
               ready={ready}
               onRecommendationsChange={setViewportRecommendations}
             />
+            <MapReferenceTools mapRef={mapRef} />
           </>
         ),
       }}

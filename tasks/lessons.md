@@ -1,5 +1,8 @@
 # Lessons
 
+- 2026-09-29: Codex with ChatGPT 的每一轮必须完整走完“远端审查 → 本地修复/测试/推送 → 远端复审 → 下一阶段 PLAN”，不能在远端首次给出方案或本地首次通过后停下。P4 仍要拆成有限包逐轮关闭，下一包只能在上一包 DONE 后启动。
+- 2026-09-29: 地图工作台的 E2E 在 lazy map layers 仍改变布局时，直接点击检查器 tab 可能一直等待元素稳定；先切换检查器再等待地图层，或明确等待稳定状态，避免用 force-click 掩盖真实遮挡问题。
+
 - 2026-09-23: 页面变紧凑后，平板完整文档可能只比视口高50–57px。手势测试先量scrollHeight−innerHeight，再验证实际可滚动距离与页头位移；不要硬要求80px或为了测试人为增加页面留白。保留真实touch事件，不用scrollTo代替手势验证。
 
 - 2026-09-23: 抽屉外框不溢出不等于内部参数可读。`.mobile-map-panel-pane` 隐式 auto 列被长摘要/表格撑到约747px，手机正文横向溢出382px。Linux上测 pane.scrollWidth 多22px，经失败截图定位为 `star-window-table-wrap` 有意横向滚动的数据表；回归应测 pane/card 边界，而非把二维表内部 scrollWidth 当作整栏溢出。滚动体 clientWidth 也会受原生纵向滚动条影响。
