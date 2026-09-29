@@ -6,11 +6,11 @@
 - [x] 仅在 CloudSea 页面内修正 evidence presentation、unknown/threshold 文案和桌面/移动信息层级。
 - [x] 将地图永久色阶、全局 evidence notice、列表卡片低频字段和 Field Blueprint 按方案渐进披露。
 - [x] 运行 CloudSea focused gates、既有 unit/integration、`npm run check`、`git diff --check`。
-- [ ] 提交、推送并交回远端独立审核；按审核结果修复后再进入后续阶段。
+- [x] 提交、推送并交回远端独立审核；按审核结果修复后再进入后续阶段。
 
 ## Review
 
-待提交并推送 follow-up 后交给远端独立审核；当前本地证据为 `npm run check` PASS（65/379）、P5-B 专项 4 PASS / 4 skips、CloudSea pressure 4 PASS、unknown-only 1 PASS、threshold 2 PASS、request-order 1 PASS、day3 1 PASS、mobile map-first `/cloudsea` 1 PASS、unit/integration 41 PASS、三日 winning/stale scope 2 PASS；Full Chromium、cross-browser、device、CI、production 为 `NOT_RUN`。
+远端已返回 `DONE`，产品/测试最终 tip 为 `27510270edbff21cbc5fe997c0bacc436bf3ea29`。本地证据为 `npm run check` PASS（65/379）、P5-B 专项 4 PASS / 4 skips、CloudSea pressure 4 PASS、unknown-only 1 PASS、threshold 2 PASS、request-order 1 PASS、day3 1 PASS、mobile map-first `/cloudsea` 1 PASS、unit/integration 41 PASS、三日 winning/stale scope 2 PASS；Full Chromium、cross-browser、device、CI、production 为 `NOT_RUN`。当前只需提交 docs-only handoff close。
 
 # 2026-09-29 P5-A Fireglow 专题 IA 与视觉减噪
 

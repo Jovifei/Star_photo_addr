@@ -107,7 +107,8 @@ Remote planning task: `c2c_d92e`, iteration 2
 Base: `codex/fireglow-topic-ia-v2-20260929@47779d74b6fe1d160bc2d68c90b9712101b1de33`
 Implementation branch: `codex/cloudsea-evidence-ia-v2-20260929`
 Package: `MOBILE-V2-P5B-CLOUDSEA-EVIDENCE-IA`
-Product/test tip: pending remote follow-up review
+Final reviewed product/test tip: `27510270edbff21cbc5fe997c0bacc436bf3ea29`
+Final handoff tip: pending docs-only close
 
 ### Product result
 
@@ -153,9 +154,18 @@ is introduced.
 - `git diff --check`: PASS.
 - Full Chromium, cross-browser, real device, CI, production: `NOT_RUN`.
 
+### Remote review result
+
+Remote ChatGPT independently reviewed `0d80b8f` → `2751027` and returned
+`DONE`. It confirmed the three-day winning window/date/snapshot consistency,
+selected versus global stale scope, CloudSea truth boundaries, protected blob
+SHA, Fireglow untouched and Owner preservation. Product/test work is complete;
+the docs-only close records the final handoff tip.
+
 ### Remote review handoff
 
-Remote ChatGPT must independently resolve the pushed follow-up tip and verify surface /
+Remote ChatGPT has independently resolved and approved the product/test tip.
+After this docs-only close it should confirm the final handoff tip; verify surface /
 pressure semantics, unknown-only versus threshold-empty, selected score under
 global partial coverage, mobile vertical-unknown and total-failure copy,
 desktop disclosures, protected blobs, Fireglow untouched and Owner

@@ -28,6 +28,10 @@
 - `git diff --check`：PASS。
 - Full Chromium、cross-browser、真实设备、CI、production：`NOT_RUN`。
 
+## 远端复审结果
+
+远端已在 `27510270edbff21cbc5fe997c0bacc436bf3ea29` 返回 `DONE`。复审确认三日 winning window、dateKey、snapshot 一致，selected 与 global stale scope 分离，surface/pressure/vertical unknown、unknown-only/threshold-empty、移动失败态、桌面 disclosure、受保护 blob、Fireglow 未改和 Owner 保留均通过。该 product/test tip 已完成；docs-only handoff close 后结束 P5-B。
+
 ## 远端交接
 
 推送后远端 ChatGPT 需要在精确 branch tip 上独立核对 surface/pressure coverage、selected score 在全局 partial 下的保留、pressure unavailable 的 vertical unknown、unknown-only 与 threshold-empty、mobile total failure、桌面 disclosure、受保护文件 blob、Fireglow 未改和 Owner 保留。远端返回 `DONE` 后才进入下一阶段。
