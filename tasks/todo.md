@@ -1,3 +1,17 @@
+# 2026-09-29 P5-A Fireglow 专题 IA 与视觉减噪
+
+- [x] 接收远端 GPT 的 P5 长期路线与 P5-A/P5-B 顺序边界；基线锁定 `21d07ef1f72e3e307cd6f2880f3c1552939ee830`。
+- [x] 在隔离 worktree 创建 `codex/fireglow-topic-ia-v2-20260929`，Owner 脏 `main` 保持不动。
+- [x] 保留 Fireglow 空快照、stale fallback、phase-empty 与 threshold-empty 真值，修正专题呈现层优先级。
+- [x] 将桌面色阶/长口径和详情低频 Field Blueprint 改为默认收起的原生 disclosure。
+- [x] 补齐 Fireglow 专题 IA 的桌面/移动 RED→GREEN 回归。
+- [x] 运行 focused gates、`npm run check`、`git diff --check`，审阅 diff 与禁止文件边界。
+- [ ] 提交、推送并交回远端独立审核；按审核结果修复后再进入 P5-B。
+
+## Review
+
+待 P5-A 远端审核完成后填写精确提交、测试结果、未运行门禁和下一步交接。
+
 # 2026-09-23 手机内容密度与信息层级修复
 
 - [x] 识别一加 7 Pro（384 CSS px 估算宽度）；ADB 打开网页被自动审批拒绝，截图当前为其他应用，真机网站验证待完成。

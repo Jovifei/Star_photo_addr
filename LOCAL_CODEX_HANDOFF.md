@@ -333,3 +333,66 @@ device, CI and production: `NOT_RUN`. Remote verdict: `DONE`.
 P5 is the next package: Fireglow / CloudSea topic IA, while preserving their
 empty-snapshot and pressure-partial/degraded data semantics.
 
+## Next cycle — P5-A Fireglow topic IA and visual declutter
+
+Remote planning task: `c2c_d92e`
+Base: `codex/marker-label-disclosure-v2-20260929@21d07ef1f72e3e307cd6f2880f3c1552939ee830`
+Implementation branch: `codex/fireglow-topic-ia-v2-20260929`
+Package: `MOBILE-V2-P5A-FIREGLOW-TOPIC-IA`
+Final reviewed tip: pending remote review
+
+### Product result
+
+Fireglow presentation now keeps the existing data owners and fail-closed
+facts while separating loading, unavailable, stale/fallback, phase-empty and
+threshold-empty at the task surface. The permanent desktop colour legend and
+long scoring note move into a closed native `details` disclosure in the
+ranking panel. The selected detail keeps cloud-layer missing values explicit;
+the low-frequency Field Blueprint is a closed disclosure. Mobile keeps one
+`MobileDataSheet`; its peek conclusion says “数据不可用 · 请刷新重试” for a
+real empty/error snapshot and preserves “旧数据 · 不作推荐” for fallback.
+
+### Files changed
+
+- `src/app/fireglow/FireglowApp.tsx`
+- `src/app/fireglow/FireglowSiteDetail.tsx`
+- `src/app/fireglow/fireglow.css`
+- `tests/e2e/fireglow-topic-ia.spec.ts`
+- `tasks/todo.md`
+- `docs/engineering-change-log/2026-09-29-fireglow-topic-ia.md`
+
+### Protected boundaries
+
+Do not modify `src/lib/fireglow.ts`, `src/lib/scoreThreshold.ts`,
+`src/lib/fireglowOverlay.ts`, `src/app/api/fireglow/snapshot/route.ts`,
+provider/cache/weather, ranking/scoring, snapshot worker, or CloudSea in this
+package. `HTTP 200` with no usable scores remains unavailable; stale data is
+never fresh; unknown remains distinct from zero; a phase with no scores is not
+threshold-empty.
+
+### Evidence
+
+- `npm run check`: PASS — 65 Vitest files / 379 tests; lint, typecheck, build.
+- P5-A topic IA E2E: 3 PASS / 3 project skips; desktop empty snapshot and
+  disclosure, mobile empty peek at 390×844 and 812×375 with no horizontal
+  overflow.
+- Fireglow data integrity: 7 PASS / 5 project skips.
+- Fireglow score threshold: 2 PASS; unknown marker: 1 PASS; refresh loop:
+  1 PASS; Fireglow product integrity: 3 PASS / 3 project skips; mobile
+  map-first `/fireglow`: 1 PASS.
+- `git diff --check`: PASS.
+- Full Chromium, cross-browser, real device, CI, production: `NOT_RUN`.
+
+### Remote review handoff
+
+Remote ChatGPT must independently resolve the pushed branch tip and verify
+the empty snapshot boundary, stale/phase/threshold separation, map legend
+disclosure, detail disclosure, mobile peek truthfulness, unchanged Fireglow
+data owners, untouched CloudSea and Owner preservation. Return `DONE`,
+`CHANGES_REQUIRED`, or `BLOCKED`; this package must be closed before starting
+P5-B CloudSea evidence IA.
+
+PR: `NOT_CREATED — gh auth unavailable locally`
+Merged: `NO`
+Deployed: `NO`
+

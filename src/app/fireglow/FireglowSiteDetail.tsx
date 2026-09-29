@@ -341,13 +341,14 @@ export default function FireglowSiteDetail({
           </div>
         </section>
 
-        <section className="fg-detail-card fg-blueprint-card">
-          <div className="fg-card-header">
-            <div className="fg-card-title">
+        <details className="fg-detail-card fg-blueprint-card fg-blueprint-disclosure" data-testid="fireglow-field-blueprint">
+          <summary className="fg-card-header fg-blueprint-summary">
+            <span className="fg-card-title">
               <Camera size={14} className="fg-card-icon" />
               <span>摄影实战机位指南 (Field Blueprint)</span>
-            </div>
-          </div>
+            </span>
+            <span className="fg-blueprint-summary-hint">低频参考</span>
+          </summary>
 
           <div className="fg-gear-grid">
             <div className="fg-gear-item">
@@ -371,7 +372,7 @@ export default function FireglowSiteDetail({
               <small className="fg-gear-tip">持续观察余晖与高云颜色变化，不因太阳越过地平线立即收机</small>
             </div>
           </div>
-        </section>
+        </details>
       </div>
     </aside>
   );

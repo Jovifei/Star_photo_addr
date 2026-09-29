@@ -1159,6 +1159,59 @@
   border-color: rgba(224, 122, 47, 0.22);
 }
 
+.fg-blueprint-disclosure {
+  gap: 0;
+}
+
+.fg-blueprint-summary {
+  min-height: 48px;
+  cursor: pointer;
+  list-style: none;
+  outline: none;
+}
+
+.fg-blueprint-summary::-webkit-details-marker {
+  display: none;
+}
+
+.fg-blueprint-summary::after {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: 1px solid rgba(224, 122, 47, 0.35);
+  border-radius: 999px;
+  color: #ffaa6e;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.fg-blueprint-disclosure[open] {
+  gap: 10px;
+}
+
+.fg-blueprint-disclosure[open] .fg-blueprint-summary::after {
+  content: "−";
+}
+
+.fg-blueprint-summary:focus-visible {
+  outline: 2px solid #9ee9ee;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.fg-blueprint-summary-hint {
+  margin-left: auto;
+  color: #8f7467;
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .fg-gear-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1215,4 +1268,39 @@
   color: var(--muted, #aebbc4);
   font-size: 12px;
   line-height: 1.5;
+}
+.fireglow-reference-details {
+  margin-top: 14px;
+  border-top: 1px solid var(--fg-line);
+  padding-top: 8px;
+}
+.fireglow-reference-details > summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 700;
+  list-style-position: inside;
+}
+.fireglow-reference-details > summary:focus-visible {
+  outline: 2px solid #9ee9ee;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.fireglow-reference-details .fireglow-legend {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  max-width: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+}
+.fireglow-reference-details .fireglow-footnote {
+  margin: 10px 0 0;
 }

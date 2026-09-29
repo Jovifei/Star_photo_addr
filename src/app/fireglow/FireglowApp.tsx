@@ -300,8 +300,14 @@ export default function FireglowApp() {
       (date) => snapshots[date]?.sites[selectedSite.id]?.[phase] === selectedSite.window,
     ) ?? activeDates[0] ?? baseDate;
   }, [activeDates, baseDate, phase, selectedSite, snapshots]);
-  const activeDataDegraded = activeDates.some(
-    (date) => Boolean(dateErrors[date] || snapshots[date]?.stale || snapshots[date]?.refreshError),
+  const activeSnapshotsHaveUsableScores = activeDates.some((date) => {
+    const snapshot = snapshots[date];
+    return snapshot ? hasUsableFireGlowScores(snapshot) : false;
+  });
+  const activeDataDegraded = activeSnapshotsHaveUsableScores && (
+    activeDates.some(
+      (date) => Boolean(snapshots[date]?.stale || snapshots[date]?.refreshError),
+    ) || activeDates.some((date) => Boolean(dateErrors[date]))
   );
   const dataQualityNotice = activeDataDegraded
     ? "数据已降级：地图、排行与详情仅供参考，禁止作为新鲜推荐"
@@ -326,6 +332,22 @@ export default function FireglowApp() {
     visibleStatus !== "loading" && hasActiveSnapshot && !hasUsablePhaseData
       ? `当前${phase === "evening" ? "晚霞" : "朝霞"}时段暂无有效评分；请切换晨昏时段或刷新数据。`
       : "";
+  const mobileConclusion =
+    visibleStatus === "loading"
+      ? "正在读取所选日期的火烧云数据…"
+      : visibleStatus === "error" && !hasUsableData
+        ? "数据不可用 · 请刷新重试"
+        : dataQualityNotice
+          ? "旧数据 · 不作推荐"
+          : phaseUnavailableNotice
+            ? `当前${phase === "evening" ? "晚霞" : "朝霞"}数据不足`
+            : selectedSite
+              ? (selectedSite.window.probabilityLabel
+                ? `条件指数 ${selectedSite.window.probabilityLabel}`
+                : "条件数据不足")
+              : pickedPoint
+                ? "查看附近目录点位"
+                : "点地图查看点位";
 
   return (
     <div className="fireglow-root app-shell">
@@ -465,22 +487,6 @@ export default function FireglowApp() {
               {dataQualityNotice}
             </div>
           ) : null}
-          <div className="fireglow-legend" aria-label="火烧云条件指数等级色阶">
-            <span>火烧云条件指数</span>
-            {LEVEL_LABELS.map((entry) => (
-              <span key={entry.level}>
-                <i style={{ background: LEVEL_COLORS[entry.level] }} />
-                {entry.range}
-              </span>
-            ))}
-            <span>
-              <i
-                className="fireglow-legend-unknown"
-                style={{ background: UNKNOWN_MARKER_COLOR }}
-              />
-              数据不足
-            </span>
-          </div>
         </div>
 
         <aside className="fireglow-panel" aria-label="火烧云条件指数排行">
@@ -548,15 +554,34 @@ export default function FireglowApp() {
               <li className="fireglow-empty">{visibleStatus === "loading" ? "正在读取所选日期的数据…" : `暂无达到 ≥${scoreThreshold} 分的地点`}</li>
             )}
           </ol>
-          <p className="fireglow-footnote">
-            条件指数 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
-            + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项；该指数不是实拍校准概率。
-          </p>
+          <details className="fireglow-reference-details" data-testid="fireglow-reference-details">
+            <summary>指数口径与色阶</summary>
+            <div className="fireglow-legend" aria-label="火烧云条件指数等级色阶">
+              <span>火烧云条件指数</span>
+              {LEVEL_LABELS.map((entry) => (
+                <span key={entry.level}>
+                  <i style={{ background: LEVEL_COLORS[entry.level] }} />
+                  {entry.range}
+                </span>
+              ))}
+              <span>
+                <i
+                  className="fireglow-legend-unknown"
+                  style={{ background: UNKNOWN_MARKER_COLOR }}
+                />
+                数据不足
+              </span>
+            </div>
+            <p className="fireglow-footnote">
+              条件指数 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
+              + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项；该指数不是实拍校准概率。
+            </p>
+          </details>
         </aside>
 
         <MobileDataSheet
           title={selectedSite?.name ?? (pickedPoint ? `所点坐标 ${pickedPoint.latitude.toFixed(3)}, ${pickedPoint.longitude.toFixed(3)}` : "火烧云 · 选择点位")}
-          conclusion={dataQualityNotice ? "旧数据 · 不作推荐" : selectedSite ? (selectedSite.window.probabilityLabel ? `条件指数 ${selectedSite.window.probabilityLabel}` : "条件数据不足") : pickedPoint ? "查看附近目录点位" : "点地图查看点位"}
+          conclusion={mobileConclusion}
           bestTime={selectedSite?.window.peakTime ? `最佳 ${selectedSite.window.peakTime} · ${dateLabel(selectedDateKey)}` : `${phase === "evening" ? "晚霞" : "朝霞"} · ${rangeMode === 3 ? "三日" : dateLabel(activeDates[0])}`}
           status={visibleError || dataQualityNotice || phaseUnavailableNotice || (visibleStatus === "loading" ? "正在读取所选日期的火烧云数据…" : "")}
           selectionKey={selectedId ?? (pickedPoint ? `${pickedPoint.latitude.toFixed(4)},${pickedPoint.longitude.toFixed(4)}` : null)}
