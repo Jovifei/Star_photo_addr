@@ -315,6 +315,7 @@ Remote planning task: `c2c_c6d3`
 Base: `codex/map-status-safe-zones-v2-20260929@8d672172fbeee14f3a4b035935e03bfb4e39e184`
 Implementation branch: `codex/marker-label-disclosure-v2-20260929`
 Final reviewed tip: `a02aea9711072b9bbd8960dbbc066b1641dbe0ee`
+Final reviewed tip: `a02aea9711072b9bbd8960dbbc066b1641dbe0ee`
 
 P4-C keeps ObservingSitesLayer as the selected catalog marker and permanent
 label owner. SampleMarker remains for search/custom/map-sampling locations and
@@ -329,34 +330,6 @@ Evidence: `npm run check` PASS — 65 Vitest files / 379 tests; marker focused
 regressions 31 PASS / 19 project skips. Full Chromium, cross-browser, real
 device, CI and production: `NOT_RUN`. Remote verdict: `DONE`.
 
-## Next cycle — P4-C marker / label disclosure
-
-Remote planning task: `c2c_c6d3`
-Base: `codex/map-status-safe-zones-v2-20260929@8d672172fbeee14f3a4b035935e03bfb4e39e184`
-Implementation branch: `codex/marker-label-disclosure-v2-20260929`
-
-P4-C keeps `ObservingSitesLayer` as the selected catalog marker and permanent
-label owner. `SampleMarker` remains for search/custom/map-sampling locations;
-it is suppressed only when the catalog layer truly owns the selected catalog
-site. A selected catalog site may be pinned through Bortle/recommendation
-filters without changing the filtered browse count. Rank markers retain
-Leaflet 1.9.4 native hover/focus/click temporary Tooltip behavior; no
-permanent rank labels, clustering, new map engine, or global tooltip state.
-
-Files changed:
-
-- `src/components/MapCanvas.tsx`
-- `src/components/ObservingSitesLayer.tsx`
-- `tests/e2e/marker-label-disclosure.spec.ts`
-- `tests/unit/labelLayout.test.ts`
-- `docs/engineering-change-log/2026-09-29-marker-label-disclosure.md`
-
-P4-C must preserve `spacedLabelIndices`, rank/filter/score data, P4-B render
-status safe zones, and all P5 Fireglow/CloudSea boundaries. Full Chromium,
-cross-browser, device, CI and production remain `NOT_RUN`.
-
-Evidence: `npm run check` PASS (65 Vitest files / 378 tests); safe-zone E2E
-3 PASS / 3 project skips; map-canvas-status 5 PASS / 5 project skips;
-satellite product-integrity 1 PASS; app satellite regressions 4 PASS.
-Remote verdict: `DONE`; P4-C marker/label disclosure is the next package.
+P5 is the next package: Fireglow / CloudSea topic IA, while preserving their
+empty-snapshot and pressure-partial/degraded data semantics.
 
