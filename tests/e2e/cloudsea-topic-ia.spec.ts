@@ -11,6 +11,7 @@ type WindowOptions = {
   pressureStatus?: "available" | "partial" | "unavailable";
   humidity?: number | null;
   windSpeed?: number | null;
+  peakTime?: string | null;
 };
 
 function cloudWindow(date: string, options: WindowOptions = {}) {
@@ -40,7 +41,7 @@ function cloudWindow(date: string, options: WindowOptions = {}) {
     highCloud: 5,
     humidity: options.humidity ?? 90,
     windSpeed: options.windSpeed ?? 2,
-    peakTime: "06:00",
+    peakTime: options.peakTime ?? "06:00",
     pressureTime: pressureStatus === "unavailable" ? null : `${date}T06:00`,
     pressureStatus,
     pressureConfidence: pressureStatus === "available" ? "中" : null,
@@ -53,7 +54,7 @@ function cloudWindow(date: string, options: WindowOptions = {}) {
     },
     summary: cloudPosition === "unknown"
       ? "surface 低云条件存在，但压力层不足；不推断垂直层位。"
-      : "E2E CloudSea evidence fixture",
+      : `E2E CloudSea evidence fixture ${date}`,
   };
 }
 
@@ -187,6 +188,59 @@ test("CloudSea pressure partial keeps a selected numeric score above global cove
   await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100");
   await expect(page.locator(".mobile-data-sheet-status")).toContainText("压力层");
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toHaveText("数据降级 · 仅供参考");
+});
+
+test("CloudSea selected detail keeps the winning date window in three-day mode", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "三日 winning-window contract 在 desktop Chromium 验证一次");
+  const base = "2026-09-29";
+  const tomorrow = "2026-09-30";
+  const afterTomorrow = "2026-10-01";
+  await page.route("**/api/cloudsea/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? base;
+    const options = date === tomorrow
+      ? { score: 88, humidity: 93, peakTime: "06:40" }
+      : date === afterTomorrow
+        ? { score: 60, humidity: 72, peakTime: "06:00" }
+        : { score: 40, humidity: 61, peakTime: "05:30" };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(snapshot(date, options)),
+    });
+  });
+  await mockMapTiles(page);
+  await page.goto("/cloudsea");
+  await page.locator('[aria-label="预报日期选择"] button').nth(3).click();
+  const card = page.locator(".cloudsea-card").filter({ hasText: "临安太子尖" });
+  await expect(card).toContainText("88/100");
+  await card.click();
+  await expect(page.locator(".cloudsea-site-detail .cs-detail-summary")).toContainText(tomorrow);
+  await expect(page.locator(".cloudsea-site-detail .cs-date-chip")).toContainText(tomorrow);
+});
+
+test("CloudSea selected fresh winner is not downgraded by another stale date", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "三日 stale scope 在 desktop Chromium 切换到 mobile viewport 验证一次");
+  const base = "2026-09-29";
+  const tomorrow = "2026-09-30";
+  const afterTomorrow = "2026-10-01";
+  await page.route("**/api/cloudsea/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? base;
+    const body = date === base
+      ? snapshot(date, { score: 40, humidity: 61, peakTime: "05:30", stale: true, refreshError: "day1 stale fixture" })
+      : date === tomorrow
+        ? snapshot(date, { score: 60, humidity: 72, peakTime: "06:00" })
+        : snapshot(date, { score: 88, humidity: 93, peakTime: "06:40" });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await mockMapTiles(page);
+  await page.goto("/cloudsea");
+  await page.locator('[aria-label="预报日期选择"] button').nth(3).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "展开数据面板" }).click();
+  await page.locator(".mobile-sheet-ranking button").first().click();
+  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100");
+  await expect(page.locator(".mobile-key-metrics")).toContainText("93%");
+  await expect(page.locator(".mobile-data-sheet-status")).toContainText("day1 stale fixture");
 });
 
 test("CloudSea total surface failure is unavailable rather than pressure partial", async ({ page }, info) => {

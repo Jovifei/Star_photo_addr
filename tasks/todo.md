@@ -10,7 +10,7 @@
 
 ## Review
 
-待提交并推送后交给远端独立审核；当前本地证据为 `npm run check` PASS（65/379）、P5-B 专项 4 PASS / 4 skips、CloudSea pressure 4 PASS、unknown-only 1 PASS、threshold 2 PASS、request-order 1 PASS、day3 1 PASS、mobile map-first `/cloudsea` 1 PASS、unit/integration 41 PASS；Full Chromium、cross-browser、device、CI、production 为 `NOT_RUN`。
+待提交并推送 follow-up 后交给远端独立审核；当前本地证据为 `npm run check` PASS（65/379）、P5-B 专项 4 PASS / 4 skips、CloudSea pressure 4 PASS、unknown-only 1 PASS、threshold 2 PASS、request-order 1 PASS、day3 1 PASS、mobile map-first `/cloudsea` 1 PASS、unit/integration 41 PASS、三日 winning/stale scope 2 PASS；Full Chromium、cross-browser、device、CI、production 为 `NOT_RUN`。
 
 # 2026-09-29 P5-A Fireglow 专题 IA 与视觉减噪
 

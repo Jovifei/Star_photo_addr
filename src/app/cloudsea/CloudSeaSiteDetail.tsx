@@ -207,6 +207,7 @@ export default function CloudSeaSiteDetail({
             <span>
               {site.latitude.toFixed(2)}°N, {site.longitude.toFixed(2)}°E
             </span>
+            <span className="cs-date-chip">窗口 {dateKey}</span>
           </div>
         </div>
         <button

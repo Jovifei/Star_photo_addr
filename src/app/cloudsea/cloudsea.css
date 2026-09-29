@@ -596,6 +596,12 @@
   opacity: 0.5;
 }
 
+.cs-date-chip {
+  color: #7ce3e3;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+}
+
 .cs-detail-close-btn {
   display: inline-flex;
   align-items: center;

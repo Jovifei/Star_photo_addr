@@ -107,7 +107,7 @@ Remote planning task: `c2c_d92e`, iteration 2
 Base: `codex/fireglow-topic-ia-v2-20260929@47779d74b6fe1d160bc2d68c90b9712101b1de33`
 Implementation branch: `codex/cloudsea-evidence-ia-v2-20260929`
 Package: `MOBILE-V2-P5B-CLOUDSEA-EVIDENCE-IA`
-Final reviewed tip: pending remote review
+Product/test tip: pending remote follow-up review
 
 ### Product result
 
@@ -147,13 +147,15 @@ is introduced.
 - P5-B topic IA: 4 PASS / 4 project skips; CloudSea pressure: 4 PASS;
   unknown-only: 1 PASS; CloudSea threshold desktop/mobile: 2 PASS;
   request-order: 1 PASS; day3: 1 PASS; mobile map-first `/cloudsea`: 1 PASS.
+- Follow-up winning-date/stale-scope E2E: 2 PASS; selected context now binds
+  the winning `dateKey`, raw window and snapshot for mobile/detail output.
 - CloudSea unit/integration/release integrity: 41 PASS.
 - `git diff --check`: PASS.
 - Full Chromium, cross-browser, real device, CI, production: `NOT_RUN`.
 
 ### Remote review handoff
 
-Remote ChatGPT must independently resolve the pushed tip and verify surface /
+Remote ChatGPT must independently resolve the pushed follow-up tip and verify surface /
 pressure semantics, unknown-only versus threshold-empty, selected score under
 global partial coverage, mobile vertical-unknown and total-failure copy,
 desktop disclosures, protected blobs, Fireglow untouched and Owner

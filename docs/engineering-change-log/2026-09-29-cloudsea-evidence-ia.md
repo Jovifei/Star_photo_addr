@@ -24,6 +24,7 @@
 - `npm run check`：PASS（65 个 Vitest 文件、379 项；lint、typecheck、build）。
 - P5-B 专项 E2E：4 PASS / 4 project skips；pressure 4 PASS；unknown-only 1 PASS；threshold desktop/mobile 2 PASS；request-order 1 PASS；day3 1 PASS；mobile map-first `/cloudsea` 1 PASS。
 - CloudSea unit/integration/release integrity：41 PASS。
+- Follow-up RED→GREEN：三日 winning window 1 PASS、selected fresh winner under another stale date 1 PASS；selected context now binds `window + dateKey + snapshot`.
 - `git diff --check`：PASS。
 - Full Chromium、cross-browser、真实设备、CI、production：`NOT_RUN`。
 

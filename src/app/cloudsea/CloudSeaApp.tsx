@@ -394,14 +394,31 @@ export default function CloudSeaApp() {
   }, [rankedSites, selectedSiteId]);
   const hasActiveSnapshot = activeDates.some((date) => Boolean(snapshots[date]));
   const hasPublishedScore = rankedSites.some(({ window: windowScore }) => windowScore.score != null);
-  const selectedWindow = useMemo(() => {
+  const selectedContext = useMemo(() => {
     if (!selectedSiteId) return null;
-    const rawWindow = activeDates
-      .map((date) => snapshots[date]?.sites?.[selectedSiteId]?.[phase])
-      .find((windowScore): windowScore is CloudSeaWindowScore => Boolean(windowScore));
-    return rawWindow ?? selectedRanked?.window ?? null;
+    const winningDate = selectedRanked?.dateKey;
+    const datesBySelection = winningDate
+      ? [winningDate, ...activeDates.filter((date) => date !== winningDate)]
+      : activeDates;
+    const rawEntry = datesBySelection
+      .map((dateKey) => ({
+        dateKey,
+        snapshot: snapshots[dateKey],
+        window: snapshots[dateKey]?.sites?.[selectedSiteId]?.[phase],
+      }))
+      .find((entry): entry is { dateKey: string; snapshot: CloudSeaSnapshot; window: CloudSeaWindowScore } => Boolean(entry.window && entry.snapshot));
+    if (rawEntry) return rawEntry;
+    if (selectedRanked) {
+      return {
+        dateKey: selectedRanked.dateKey,
+        snapshot: snapshots[selectedRanked.dateKey],
+        window: selectedRanked.window,
+      };
+    }
+    return null;
   }, [activeDates, phase, selectedRanked, selectedSiteId, snapshots]);
-  const selectedSnapshot = selectedRanked ? snapshots[selectedRanked.dateKey] : undefined;
+  const selectedWindow = selectedContext?.window ?? null;
+  const selectedSnapshot = selectedContext?.snapshot;
   const selectedWindowHasSurfaceEvidence = Boolean(
     selectedWindow && (
       selectedWindow.lowCloud != null ||
@@ -414,15 +431,14 @@ export default function CloudSeaApp() {
   const snapshotStale = activeDates.some((date) => Boolean(
     snapshots[date]?.stale || snapshots[date]?.refreshError,
   ));
-  const selectedSnapshotStale = Boolean(
-    selectedSnapshot?.stale || selectedSnapshot?.refreshError,
-  );
+  const selectedSnapshotStale = Boolean(selectedSnapshot?.stale || selectedSnapshot?.refreshError);
+  const mainConclusionStale = selectedContext ? selectedSnapshotStale : snapshotStale;
   const mobileConclusion =
     loading && !hasActiveSnapshot
       ? "正在读取云海条件数据…"
       : !hasActiveSnapshot
         ? "数据不可用 · 请重试"
-        : selectedSnapshotStale || snapshotStale
+        : mainConclusionStale
           ? "旧数据 · 仅供参考"
           : selectedWindow?.score != null
             ? `条件指数 ${selectedWindow.conditionLabel ?? `${selectedWindow.score}/100`}`
@@ -836,7 +852,7 @@ export default function CloudSeaApp() {
         <MobileDataSheet
           title={selectedRanked?.site.name ?? (pickedPoint ? `所点坐标 ${pickedPoint.latitude.toFixed(3)}, ${pickedPoint.longitude.toFixed(3)}` : "云海 · 选择山峰")}
           conclusion={mobileConclusion}
-          bestTime={selectedWindow?.peakTime ? `最佳 ${selectedWindow.peakTime} · ${dateLabel(selectedRanked?.dateKey ?? primaryDate)}` : `${phase === "morning" ? "晨间" : "傍晚"} · ${range === 3 ? "三日" : dateLabel(primaryDate)}`}
+          bestTime={selectedWindow?.peakTime ? `最佳 ${selectedWindow.peakTime} · ${dateLabel(selectedContext?.dateKey ?? primaryDate)}` : `${phase === "morning" ? "晨间" : "傍晚"} · ${range === 3 ? "三日" : dateLabel(primaryDate)}`}
           status={dataNotice || (loading ? "正在读取云海条件数据…" : "")}
           selectionKey={selectedSiteId ?? (pickedPoint ? `${pickedPoint.latitude.toFixed(4)},${pickedPoint.longitude.toFixed(4)}` : null)}
         >{(level) => <>
@@ -855,7 +871,7 @@ export default function CloudSeaApp() {
             <span>湿度 <strong>{selectedWindow.humidity != null ? `${selectedWindow.humidity}%` : "—"}</strong></span>
             <span>近地风 <strong>{selectedWindow.windSpeed != null ? `${selectedWindow.windSpeed}m/s` : "—"}</strong></span>
           </div> : null}
-          {level === "full" && selectedRanked && selectedWindow ? <CloudSeaSiteDetail site={selectedRanked.site} window={selectedWindow} phase={phase} dateKey={selectedRanked.dateKey} onClose={() => setSelectedSiteId(null)} /> : null}
+          {level === "full" && selectedRanked && selectedWindow ? <CloudSeaSiteDetail site={selectedRanked.site} window={selectedWindow} phase={phase} dateKey={selectedContext?.dateKey ?? selectedRanked.dateKey} onClose={() => setSelectedSiteId(null)} /> : null}
           {level === "full" ? <details className="mobile-sheet-explainer">
             <summary>数据口径与地图色阶</summary>
             <p>条件指数综合 GFS 地面天气与压力层模式剖面；云底、云顶和逆温为模式推导，不是现场实测。地图色面是目录点位指数插值，缺失数据不推断分数。</p>
@@ -882,7 +898,7 @@ export default function CloudSeaApp() {
               site={selectedRanked.site}
               window={selectedWindow ?? selectedRanked.window}
               phase={phase}
-              dateKey={selectedRanked.dateKey}
+              dateKey={selectedContext?.dateKey ?? selectedRanked.dateKey}
               onClose={() => setSelectedSiteId(null)}
             />
           </ResponsiveTopicDetail>
