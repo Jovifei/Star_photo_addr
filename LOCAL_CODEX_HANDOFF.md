@@ -278,3 +278,33 @@ Remote review must resolve the final pushed branch tip and independently
 check overlay counts, details disclosure, no nested scroll, no old
 MapPanelManager mount, and unchanged P3/data owners. Do not merge or deploy.
 
+## Next cycle — P4-B map render status safe zones
+
+Remote planning task: `c2c_7b2f`
+Base: `codex/map-chrome-hierarchy-v2-20260929@4c7fc1dc18487e2679cb1eb7428fadeb1041a9d9`
+Implementation branch: `codex/map-status-safe-zones-v2-20260929`
+
+P4-B keeps MapTileStatus and SatelliteLayer as separate fact owners and
+shares only scoped visual lanes. Tile errors use a top-right lane below the
+MapLayerBar and retain the message that a render failure is not weather data
+absence. Satellite status uses a bottom-left lane; a preserved frame plus
+catalogue error is one status badge containing the degradation and
+“已保留上一帧”, rather than two role=status elements. Mobile and short
+landscape lanes avoid the Leaflet zoom, tool rail, and sibling MobileDataSheet;
+the drawer stacking context remains above map status.
+
+Files changed:
+
+- `src/components/MapTileStatus.tsx`
+- `src/components/SatelliteLayer.tsx`
+- `src/app/globals.css`
+- `src/app/ux-map-v2.css`
+- `src/app/mobile-map-first.css`
+- `tests/e2e/map-render-status-safe-zones.spec.ts`
+- `tests/e2e/product-integrity.spec.ts`
+- `docs/engineering-change-log/2026-09-29-map-render-status-safe-zones.md`
+
+P4-B must not modify P3 data semantics, scoring, provider/cache, snapshot/API,
+store requests, or begin P4-C/P5. Full Chromium, cross-browser, real device,
+CI and production remain `NOT_RUN` until separately authorized and executed.
+

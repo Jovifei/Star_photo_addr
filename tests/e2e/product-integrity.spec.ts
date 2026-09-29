@@ -237,6 +237,10 @@ test("卫星强制刷新失败时保留上一帧并标记降级", async ({ page 
   await page.getByRole("tab", { name: "图层与偏好", exact: true }).click();
   const refresh = page.getByRole("button", { name: "强制刷新天气、卫星目录和数据源状态" });
   await refresh.click();
-  await expect(page.locator(".satellite-layer-error")).toContainText("测试中的卫星上游不可用", { timeout: 15000 });
-  await expect(page.locator(".satellite-frame-badge")).toBeVisible();
+  const satelliteStatus = page.getByTestId("satellite-render-status");
+  await expect(satelliteStatus).toContainText("数据目录降级", { timeout: 15000 });
+  await expect(satelliteStatus).toContainText("测试中的卫星上游不可用");
+  await expect(satelliteStatus).toContainText("已保留上一帧");
+  await expect(page.locator(".satellite-frame-badge")).toHaveCount(1);
+  await expect(page.locator(".satellite-layer-error")).toHaveCount(0);
 });

@@ -959,3 +959,19 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - Static: `npm run check` PASS — 65 Vitest files / 378 tests；lint、typecheck、build PASS。
 - Browser: P4-A focused 6 PASS / 6 project skips；map-readability + workspace-shell + mobile-map-first 41 PASS / 25 project skips；0 failed。
 - Data boundary: scoring、provider/cache、forecastIntegrity、snapshot/API/store、MapTileStatus/SatelliteLayer loading unchanged。
+# 2026-09-29 P4-B 地图渲染状态安全区与徽章减噪
+
+- [ ] 从 P4-A `4c7fc1dc18487e2679cb1eb7428fadeb1041a9d9` 建立隔离 worktree。
+- [x] 保留 MapTileStatus/SatelliteLayer 事实 owner 与失败边界，只规划视觉 lane、badge 去重和几何安全区。
+- [x] 完成远端 PLAN：tile top-right、satellite bottom-left、移动 rail/data sheet 避让、preserved-frame 单一 badge。
+- [x] 新增 safe-zone/geometry E2E，更新 satellite degraded product-integrity contract。
+- [x] 运行 `npm run check`、P4-B focused、map-canvas-status、satellite/product-integrity、app satellite regressions。
+- [ ] 远端 ChatGPT 独立复审最终推送 tip 并返回 DONE / CHANGES_REQUIRED / BLOCKED。
+- [ ] Full Chromium、cross-browser、真实设备、CI、production 保持 `NOT_RUN`。
+
+## Review
+
+- Baseline: `origin/codex/map-chrome-hierarchy-v2-20260929@4c7fc1dc18487e2679cb1eb7428fadeb1041a9d9`。
+- Scope: only MapTileStatus/SatelliteLayer render markup/classes, map status CSS lanes, safe-zone geometry and regression contracts; no P3/data/scoring/provider/cache/snapshot/API/store changes.
+- Static: pending final commit; current `npm run check` PASS — 65 Vitest files / 378 tests.
+- Browser evidence: safe-zone 3 PASS / 3 project skips; map-canvas-status 5 PASS / 5 project skips; satellite/product-integrity and app satellite regressions PASS.

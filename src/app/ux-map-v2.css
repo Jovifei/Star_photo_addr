@@ -230,6 +230,37 @@
   background: transparent;
 }
 
+/* P4-B: render-layer status lanes. These classes describe visual placement
+   only; MapTileStatus and SatelliteLayer remain the fact owners. */
+.map-render-status {
+  position: absolute;
+  z-index: 900;
+}
+.map-stage .map-render-status--tile {
+  top: 116px;
+  right: 12px;
+  bottom: auto;
+  left: auto;
+  max-width: min(260px, calc(100% - 90px));
+}
+.map-stage .map-render-status--satellite {
+  top: auto;
+  right: auto;
+  bottom: 14px;
+  left: 14px;
+  max-width: min(300px, calc(100% - 28px));
+}
+.map-stage .map-render-status--satellite small {
+  display: block;
+  margin-top: 3px;
+  color: #ffd2c6;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.map-stage .map-render-status--tile button {
+  min-height: 40px;
+}
+
 .map-boundary-status {
   position: absolute;
   right: 18px;

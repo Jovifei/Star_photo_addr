@@ -377,6 +377,18 @@
     transform: none;
   }
   .workspace-canvas .mobile-map-panel-rail button { width: 48px; min-width: 48px; height: 48px; font-size: 11px; }
+  .workspace-canvas .map-viewport .map-render-status--tile {
+    top: 10px;
+    right: max(10px, env(safe-area-inset-right));
+    max-width: min(260px, calc(100% - 84px));
+  }
+  .workspace-canvas .map-viewport .map-render-status--satellite {
+    right: auto;
+    bottom: 10px;
+    left: max(10px, env(safe-area-inset-left));
+    max-width: min(280px, calc(100% - 84px));
+  }
+  .workspace-canvas .map-viewport .map-render-status--tile button { min-height: 48px; }
   .map-viewport .leaflet-control-zoom a,
   .fireglow-map .leaflet-control-zoom a,
   .cloudsea-map-pane .leaflet-control-zoom a { width: 48px; height: 48px; line-height: 48px; }

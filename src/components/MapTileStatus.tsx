@@ -52,12 +52,17 @@ export default function MapTileStatus() {
   }, [map]);
   if (!error) return null;
   return (
-    <div className="map-tile-error" role="status" ref={(element) => {
+    <div
+      className="map-tile-error map-render-status map-render-status--tile"
+      data-testid="map-tile-render-status"
+      role="status"
+      ref={(element) => {
       if (element) {
         DomEvent.disableClickPropagation(element);
         DomEvent.disableScrollPropagation(element);
       }
-    }}>
+      }}
+    >
       <span>地图底图或图层加载失败；当前画布不代表天气数据为空。</span>
       <button type="button" onClick={() => {
         for (const layer of [...failedLayers.current]) layer.redraw();

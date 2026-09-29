@@ -82,7 +82,7 @@
 .source-status-help summary:focus-visible { outline: 2px solid #79cfe2; outline-offset: 2px; border-radius: 4px; }
 .source-status-help ul { display: grid; gap: 5px; margin: 4px 0 0; padding: 8px 10px 8px 22px; border: 1px solid rgba(132, 158, 221, .18); border-radius: 8px; background: rgba(5, 16, 23, .55); }
 .source-status-help strong { color: #e9f2ff; font-weight: 600; }
-.satellite-layer-error { position: absolute; right: 18px; bottom: 285px; z-index: 900; max-width: 260px; padding: 8px 10px; border: 1px solid rgba(220, 120, 100, .45); border-radius: 8px; color: #ffd2c6; background: rgba(44, 20, 35, .9); font-size: 11px; }
+.satellite-layer-error { max-width: 260px; padding: 8px 10px; border: 1px solid rgba(220, 120, 100, .45); border-radius: 8px; color: #ffd2c6; background: rgba(44, 20, 35, .9); font-size: 11px; }
 
 :root {
   --bg: #02070b;

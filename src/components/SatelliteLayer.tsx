@@ -173,12 +173,17 @@ export default function SatelliteLayer() {
   if (activeMode === "forecast-cloud" || usesUnifiedViirs) return null;
   if (!displayedFrame) {
     return catalogue.mode === activeMode && catalogue.error ? (
-      <div className="satellite-layer-error" role="status">
+      <div
+        className="satellite-layer-error map-render-status map-render-status--satellite is-error"
+        data-testid="satellite-render-status"
+        role="status"
+      >
         {catalogue.error}
       </div>
     ) : (
       <div
-        className="satellite-layer-error satellite-layer-loading"
+        className="satellite-layer-error satellite-layer-loading map-render-status map-render-status--satellite is-loading"
+        data-testid="satellite-render-status"
         role="status"
       >
         正在刷新卫星观测…
@@ -203,19 +208,23 @@ export default function SatelliteLayer() {
         noWrap
         keepBuffer={4}
       />
-      <div className="satellite-frame-badge" role="status">
-        {activeMode === "satellite-cloud"
-          ? "卫星云观测"
-          : "卫星夜光 · 2016 基准"}
-        {" · "}
-        {formatFrameTime(displayedFrame.time, activeMode)}
-        {catalogue.error ? " · 数据目录降级" : " · 已同步"}
+      <div
+        className={`satellite-frame-badge map-render-status map-render-status--satellite${catalogue.error ? " is-degraded" : ""}`}
+        data-testid="satellite-render-status"
+        role="status"
+      >
+        <span>
+          {activeMode === "satellite-cloud"
+            ? "卫星云观测"
+            : "卫星夜光 · 2016 基准"}
+          {" · "}
+          {formatFrameTime(displayedFrame.time, activeMode)}
+          {catalogue.error ? " · 数据目录降级" : " · 已同步"}
+        </span>
+        {catalogue.error ? (
+          <small>{catalogue.error} · 已保留上一帧</small>
+        ) : null}
       </div>
-      {catalogue.error && (
-        <div className="satellite-layer-error satellite-layer-degraded" role="status">
-          {catalogue.error} · 已保留上一帧
-        </div>
-      )}
     </>
   );
 }
