@@ -93,10 +93,32 @@ test("排名 marker 保持临时 Tooltip，不创建永久排名文字", async (
   await expect(page.locator(".viewport-rank-tooltip:visible")).toHaveCount(0);
   await marker.hover();
   await expect(page.locator(".viewport-rank-tooltip:visible")).toHaveCount(1);
+  await page.mouse.move(4, 4);
+  await expect(page.locator(".viewport-rank-tooltip:visible")).toHaveCount(0);
   await marker.focus();
   await expect(page.locator(".viewport-rank-tooltip:visible")).toHaveCount(1);
-  await expect(marker).toHaveAttribute("aria-describedby", /.+/);
+  const describedBy = await marker.getAttribute("aria-describedby");
+  expect(describedBy).toBeTruthy();
+  await expect(page.locator(`#${describedBy}`)).toBeVisible();
+  await page.getByRole("tab", { name: "图层与偏好", exact: true }).focus();
+  await expect(page.locator(".viewport-rank-tooltip:visible")).toHaveCount(0);
+  await marker.focus();
   await marker.press("Enter");
   await expect(page.locator(".viewport-rank-tooltip:visible")).toHaveCount(1);
   await expect(page.locator(".viewport-rank-tooltip:visible")).toContainText("参考 B");
+});
+
+test("移动端排名 marker 点击保留选中目录点位的唯一 owner", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "移动端 click contract 只测移动端");
+  await page.goto("/?lat=30.2741&lng=120.1551&name=%E6%9D%AD%E5%B7%9E&model=gfs&view=combined&overlay=forecast-cloud");
+  await openMobileMapPanel(page, "recommendations");
+  await page.getByRole("button", { name: "生成区域推荐" }).click();
+  await expect(page.locator(".viewport-rank-marker").first()).toBeVisible({ timeout: 15000 });
+  await page.keyboard.press("Escape");
+  const marker = page.locator(".viewport-rank-marker").first();
+  const markerBox = await marker.boundingBox();
+  expect(markerBox).not.toBeNull();
+  await page.touchscreen.tap(markerBox!.x + markerBox!.width / 2, markerBox!.y + markerBox!.height / 2);
+  await expect(page.locator(".viewport-rank-tooltip:visible")).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 });
