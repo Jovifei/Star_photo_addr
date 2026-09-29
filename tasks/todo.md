@@ -948,6 +948,7 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - [x] 移动端图层默认只显示 MapLayerBar、BortleControl 和折叠入口，保留 AdaptiveSheet 单一滚动体。
 - [x] 新增 `map-chrome-hierarchy.spec.ts`，更新 mobile-panel-dock 的渐进披露断言。
 - [x] 运行 ESLint、TypeScript、Vitest、Next build、P4-A focused E2E 与三组地图/工作台回归。
+- [x] 按远端复审意见补齐移动 summary `min-height >= 48px`，并在 390×844、812×375 断言实际高度。
 - [ ] 远端 ChatGPT 独立复审当前推送 tip 并返回 DONE / CHANGES_REQUIRED / BLOCKED。
 - [ ] 未运行 full Chromium、cross-browser、真实设备、CI、production；不据此宣称发布完成。
 

@@ -243,6 +243,7 @@ The product-integrity stale/unknown assertion now checks
 Remote planning task: `c2c_d7b2`
 Base: `codex/data-state-surfaces-v2-20260928@90050e710829ea841b3774105506f27dcbf800b8`
 Implementation branch: `codex/map-chrome-hierarchy-v2-20260929`
+Latest follow-up tip: `ceea9189fd4a653913cbbaae155f110121eb195a`
 
 P4-A moves low-frequency map references into the new `MapReferenceTools`
 native details wrapper. Desktop canvas no longer mounts the duplicate
@@ -267,6 +268,9 @@ Evidence:
 
 - `npm run check`: PASS — 65 Vitest files / 378 tests; lint, typecheck, build.
 - P4-A focused E2E: 6 PASS / 6 project skips.
+- Remote review follow-up: mobile disclosure summary now has a measured
+  `min-height >= 48px` contract at 390×844 and 812×375; focused E2E 6 PASS / 6
+  project skips; `npm run check` remains PASS.
 - Map/readability/workspace/map-first regression: 41 PASS / 25 project skips.
 - Full Chromium, cross-browser, real device, CI and production: `NOT_RUN`.
 
