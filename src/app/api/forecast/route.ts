@@ -35,7 +35,7 @@ function readFromDiskCache(
   key: string,
   model: ForecastModel,
   count: number,
-  maxAgeMs = STALE_TTL_MS,
+  maxAgeMs: number,
 ): ForecastResponse | null {
   if (process.env.NODE_ENV === "test" && process.env.FORECAST_ENABLE_DISK_CACHE !== "1") return null;
   try {
@@ -138,7 +138,12 @@ export async function GET(request: NextRequest) {
         ),
       });
     }
-    const disk = readFromDiskCache(key, model, latitudes.length);
+    const disk = readFromDiskCache(
+      key,
+      model,
+      latitudes.length,
+      STALE_TTL_MS,
+    );
     if (disk) {
       return NextResponse.json(markStale(disk), {
         headers: responseHeaders(
@@ -204,7 +209,12 @@ export async function GET(request: NextRequest) {
         headers: { ...responseHeaders(true, model, days, "stale-memory", true, decision.suppressed, decision.retryAfterSeconds), Warning: '110 - "Response is stale"' },
       });
     }
-    const diskFallback = readFromDiskCache(key, model, latitudes.length);
+    const diskFallback = readFromDiskCache(
+      key,
+      model,
+      latitudes.length,
+      STALE_TTL_MS,
+    );
     if (diskFallback) {
       return NextResponse.json(markStale(diskFallback), {
         headers: { ...responseHeaders(true, model, days, "stale-disk", true, decision.suppressed, decision.retryAfterSeconds), Warning: '110 - "Response is stale from disk"' },
