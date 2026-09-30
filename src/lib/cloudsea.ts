@@ -14,9 +14,8 @@ import { CLOUD_SEA_SITES, type CloudSeaSite } from "@/lib/cloudseaSites";
 import {
   hasUsablePressureProfile,
   isCompletePressureLevelSample,
-  type PressureForecastResponse,
-  type PressureLevelSample,
-} from "@/lib/pressure";
+} from "@/lib/pressureIntegrity";
+import type { PressureForecastResponse, PressureLevelSample } from "@/lib/pressure";
 import type { CloudLayer, ForecastModel, PressureLevel } from "@/lib/types";
 
 export type CloudPosition = "above" | "in" | "below" | "clear" | "unknown";

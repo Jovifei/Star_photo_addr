@@ -1,3 +1,8 @@
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import { createHash } from "node:crypto";
+import { dataAgeMs } from "./forecastIntegrity";
 import {
   addFinderDays,
   FINDER_LOCATIONS,
@@ -155,6 +160,7 @@ function distanceKm(
 }
 
 interface BatchResult {
+  stale: boolean;
   hourlyByDate: Record<string, FinderHourlyData[]>;
   provenance: ForecastProvenance[];
 }
@@ -236,40 +242,96 @@ export function buildFinderWeatherUrl(
   return `${OPEN_METEO_FORECAST_URL}?${params.toString()}`;
 }
 
+const RAW_TTL_MS = 3 * 60 * 60_000;
+interface RawBatchCache { fetchedAt: string; forecasts: RawForecast[]; stale?: boolean; }
+const rawBatchCache = new Map<string, RawBatchCache>();
+const rawBatchInFlight = new Map<string, Promise<RawBatchCache>>();
+const rawCacheDirectory = path.join(process.env.OBSERVING_SNAPSHOT_DIR || os.tmpdir(), "finder-raw-cache-v1");
+
+function validRawCache(value: unknown, locations: FinderLocation[], dates: string[], maxAgeMs = RAW_TTL_MS): value is RawBatchCache {
+  try {
+    const candidate = value as RawBatchCache;
+    if (!candidate || dataAgeMs(candidate.fetchedAt) >= maxAgeMs || !Array.isArray(candidate.forecasts) || candidate.forecasts.length !== locations.length) return false;
+    candidate.forecasts.forEach((forecast, index) => {
+      validateFinderRawForecast(forecast);
+      if (distanceKm(locations[index]!.latitude, locations[index]!.longitude, Number(forecast.latitude), Number(forecast.longitude)) > 50) throw new Error("coordinate mismatch");
+      dates.forEach((date) => sliceHourly(forecast, date));
+    });
+    return true;
+  } catch { return false; }
+}
+
+async function cachedRawBatch(url: string, locations: FinderLocation[], dates: string[], signal: AbortSignal): Promise<RawBatchCache> {
+  const key = createHash("sha256").update(url).digest("hex");
+  const memory = rawBatchCache.get(key);
+  if (validRawCache(memory, locations, dates)) return memory;
+  let fallback: RawBatchCache | null = validRawCache(memory, locations, dates, 6 * 60 * 60_000) ? memory : null;
+  const diskEnabled = process.env.NODE_ENV !== "test" || process.env.FINDER_ENABLE_DISK_CACHE === "1";
+  if (diskEnabled) {
+    try {
+      const disk: unknown = JSON.parse(fs.readFileSync(path.join(rawCacheDirectory, `${key}.json`), "utf8"));
+      if (validRawCache(disk, locations, dates)) { rawBatchCache.set(key, disk); return disk; }
+      if (validRawCache(disk, locations, dates, 6 * 60 * 60_000)) fallback = disk;
+    } catch { /* Optional persistence never supplies invalid data. */ }
+  }
+  const existing = rawBatchInFlight.get(key);
+  if (existing) return existing;
+  const task = (async () => {
+    // Shared requests must survive cancellation of their first consumer.
+    const sharedSignal = AbortSignal.timeout(25_000);
+    const response = await withOpenMeteoProviderSlot(() => fetch(url, { signal: sharedSignal, headers: { Accept: "application/json" }, cache: "no-store" }));
+    if (!response.ok) {
+      const body = await response.json().catch(() => null) as { reason?: string } | null;
+      if (response.status === 429) throw noteOpenMeteoRateLimit(response.headers.get("Retry-After"), body?.reason ?? "");
+      throw new Error(`Open-Meteo 返回 ${response.status}：${body?.reason ?? "天气请求失败"}`);
+    }
+    const body: unknown = await response.json();
+    const entry = { forecasts: Array.isArray(body) ? body : [body], fetchedAt: new Date().toISOString() } as RawBatchCache;
+    // A provider may truncate the requested horizon. Such responses are still
+    // validated by the caller for its requested dates, but never persisted.
+    if (validRawCache(entry, locations, dates)) {
+      rawBatchCache.set(key, entry);
+      while (rawBatchCache.size > 128) rawBatchCache.delete(rawBatchCache.keys().next().value!);
+      if (diskEnabled) {
+        try {
+          fs.mkdirSync(rawCacheDirectory, { recursive: true });
+          const target = path.join(rawCacheDirectory, `${key}.json`);
+          const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
+          fs.writeFileSync(temporary, JSON.stringify(entry));
+          fs.renameSync(temporary, target);
+        } catch { /* Optional cache write failure does not change provenance. */ }
+      }
+    }
+    return entry;
+  })().catch((error: unknown) => {
+    if (!signal.aborted && fallback && validRawCache(fallback, locations, dates, 6 * 60 * 60_000)) {
+      return { ...fallback, stale: true };
+    }
+    throw error;
+  });
+  rawBatchInFlight.set(key, task);
+  try { return await task; } finally { if (rawBatchInFlight.get(key) === task) rawBatchInFlight.delete(key); }
+}
+
 async function requestBatch(
   locations: FinderLocation[],
   dates: string[],
   signal: AbortSignal,
   model: ForecastModel,
 ): Promise<BatchResult> {
-  const url = buildFinderWeatherUrl(locations, dates, model);
+  const today = getShanghaiDate();
+  const start = [...dates, today].sort()[0]!;
+  const horizonNight = addFinderDays(today, maxForecastDaysForModel(model) - 2);
+  const standardEnd = [addFinderDays(today, 3), horizonNight].sort()[0]!;
+  const end = [...dates, standardEnd].sort().at(-1)!;
+  const coverageDates: string[] = [];
+  for (let date = start; date <= end; date = addFinderDays(date, 1)) coverageDates.push(date);
+  const url = buildFinderWeatherUrl(locations, coverageDates, model);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const response = await withOpenMeteoProviderSlot(() => fetch(url, {
-        signal,
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      }));
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as
-          | { reason?: string }
-          | null;
-        lastError = new Error(
-          body?.reason
-            ? `Open-Meteo 返回 ${response.status}：${body.reason}`
-            : `Open-Meteo 返回 ${response.status}`,
-        );
-        if (response.status === 429) {
-          noteOpenMeteoRateLimit(response.headers.get("Retry-After"));
-          break;
-        }
-        if (response.status < 500) break;
-        await new Promise((resolve) => setTimeout(resolve, 250));
-        continue;
-      }
-      const body: unknown = await response.json();
-      const forecasts = Array.isArray(body) ? body : [body];
+      const raw = await cachedRawBatch(url, locations, coverageDates, signal);
+      const forecasts = raw.forecasts;
       if (forecasts.length !== locations.length) throw new Error("Open-Meteo 返回的地点数量与请求不匹配");
       forecasts.forEach(validateFinderRawForecast);
       if (forecasts.some((forecast, index) => distanceKm(
@@ -287,8 +349,9 @@ async function requestBatch(
       )) {
         throw new Error("Open-Meteo 批量响应的时间轴不一致");
       }
-      const sourceFetchedAt = new Date().toISOString();
+      const sourceFetchedAt = raw.fetchedAt;
       return {
+        stale: raw.stale === true,
         hourlyByDate: Object.fromEntries(
           dates.map((date) => [date, forecasts.map((forecast) => sliceHourly(forecast, date))]),
         ),
@@ -430,7 +493,7 @@ export async function fetchFinderWeatherRange(
           batch.forEach((location, index) => {
             dataByDate[date][location.id] = {
               hourly: hourly[index] ?? null,
-              status: hourly[index] ? "available" : "missing",
+              status: hourly[index] ? batchResult.stale ? "stale" : "available" : "missing",
               fetchedAt: sourceFetchedAt,
               model,
               timezone: provenance[index]?.timezone,
@@ -474,7 +537,7 @@ export async function fetchFinderWeatherRange(
       providerRunAt: null,
       source: `Open-Meteo Forecast API · ${model}`,
       stale: Object.values(data).some(
-        (record) => record.status === "error",
+        (record) => record.status === "error" || record.status === "stale",
       ),
       data,
     };
@@ -485,7 +548,7 @@ export async function fetchFinderWeatherRange(
     ) {
       responseCache.set(cacheKey, { savedAt: Date.now(), response });
       responses[date] = response;
-    } else if (cached) {
+    } else if (cached && dataAgeMs(cached.response.sourceFetchedAt ?? cached.response.fetchedAt) < 6 * 60 * 60_000) {
       responses[date] = staleResponse(cached.response);
     } else {
       responses[date] = response;

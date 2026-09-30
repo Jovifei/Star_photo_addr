@@ -1,17 +1,16 @@
 "use client";
 
-import { Suspense, useId, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import NavTabs, { NavTabsFallback } from "@/components/NavTabs";
 import ChangelogModal from "@/components/ChangelogModal";
 import { APP_VERSION_LABEL } from "@/lib/appVersion";
+import "./product-header.css";
 
 /**
  * The one header shared by every product workspace. Geometry lives here and
- * only here: brand block end-justified in column 1, the four product tabs
- * exactly centred in column 2, page-specific controls pinned right in
- * column 3. Pages inject their own controls through `children`; they cannot
- * drift the shared geometry anymore. Compact topic headers progressively disclose
- * date/phase controls while retaining their original active values and handlers.
+ * only here: brand at the left, four equal product tabs in the middle,
+ * and page controls on the right. Topic date/phase choices expand over the
+ * workspace while retaining their original active values and handlers.
  */
 export default function ProductHeader({
   mark,
@@ -30,10 +29,22 @@ export default function ProductHeader({
   const [controlsExpanded, setControlsExpanded] = useState(false);
   const controlsId = useId();
   const controlsButton = useRef<HTMLButtonElement>(null);
+  const controlsRoot = useRef<HTMLDivElement>(null);
   const topicControls = markClassName === "fireglow-mark" || markClassName === "cloudsea-mark";
 
+  useEffect(() => {
+    if (!controlsExpanded) return;
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !controlsRoot.current?.contains(event.target)) {
+        setControlsExpanded(false);
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, [controlsExpanded]);
+
   return (
-    <header className="app-header" data-controls-expanded={controlsExpanded}>
+    <header className="app-header product-header" data-controls-expanded={controlsExpanded}>
       <div className="app-header-brand">
         <span className={`app-header-mark${markClassName ? ` ${markClassName}` : ""}`} aria-hidden="true">
           {mark}
@@ -58,7 +69,13 @@ export default function ProductHeader({
         <NavTabs />
       </Suspense>
       {children != null && children !== false ? (
-        <div className="app-header-controls">
+        <div ref={controlsRoot} className="app-header-controls"
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            event.stopPropagation();
+            setControlsExpanded(false);
+            controlsButton.current?.focus({ preventScroll: true });
+          }}>
           {topicControls ? <>
           <button
             ref={controlsButton}
@@ -71,13 +88,7 @@ export default function ProductHeader({
           >
             {controlsExpanded ? "收起" : "调整"}
           </button>
-          <div id={controlsId} className="app-header-controls-content"
-            onKeyDown={(event) => {
-              if (event.key !== "Escape") return;
-              event.stopPropagation();
-              setControlsExpanded(false);
-              controlsButton.current?.focus({ preventScroll: true });
-            }}>
+          <div id={controlsId} className="app-header-controls-content">
             {children}
           </div>
           </> : children}

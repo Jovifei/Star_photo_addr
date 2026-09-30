@@ -480,3 +480,9 @@ PR: `NOT_CREATED — gh auth unavailable locally`
 Merged: `NO`
 Deployed: `NO`
 
+
+## 2026-10-01 Emergency repair handoff (supersedes previous P5 close)
+Base: d21165e88aa1a859aba917f24ea4c6c51c517edc. Branch: codex/restore-weather-unify-header-20260930.
+Scope: production daily429 request amplification + equal four-product header layout. See docs/engineering-change-log/2026-10-01-weather-header-repair.md for cause and boundaries.
+Local lint/typecheck and66files388tests passed;24development viewport/route combinations passed. Build/deploy/real-data acceptance still pending at this handoff version.
+Remote Project instructions now authorize remote GitHub repair commits on a separate branch followed by exact-SHA local reception/testing; unavailable remote execution is NOT_RUN. Dirty Owner main is preserved. This is not a claim that upstream quota has recovered.

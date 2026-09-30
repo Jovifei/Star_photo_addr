@@ -1,4 +1,8 @@
 // Server-only Open-Meteo forecast proxy logic.
+import fs from "node:fs";
+import path from "node:path";
+import { maxForecastDaysForModel } from "./forecastModelPolicy";
+export { FORECAST_MODEL_MAX_DAYS, maxForecastDaysForModel } from "./forecastModelPolicy";
 
 import type {
   ForecastMetadata,
@@ -79,14 +83,6 @@ const MODEL_PARAMETERS: Record<ForecastModel, string | null> = {
   aifs: "ecmwf_aifs025_single",
 };
 
-/** Provider horizons used to prevent invalid `forecast_days` requests. */
-export const FORECAST_MODEL_MAX_DAYS: Readonly<Record<ForecastModel, number>> =
-  Object.freeze({
-    best_match: 16,
-    icon: 8,
-    gfs: 16,
-    aifs: 15,
-  });
 
 const FORECAST_UNITS: Record<string, string> = {
   temperature: "°C",
@@ -102,9 +98,6 @@ export function openMeteoModelParameter(model: ForecastModel): string | null {
   return MODEL_PARAMETERS[model];
 }
 
-export function maxForecastDaysForModel(model: ForecastModel): number {
-  return FORECAST_MODEL_MAX_DAYS[model];
-}
 
 export function clampForecastDays(
   days: number,
@@ -194,25 +187,50 @@ export function validateRawForecast(
 const OPEN_METEO_MAX_CONCURRENCY = 2;
 let openMeteoActive = 0;
 let openMeteoCooldownUntil = 0;
+let openMeteoDailyLimit = false;
 const openMeteoQueue: Array<{
   run: () => Promise<unknown>;
   resolve: (value: unknown) => void;
   reject: (error: unknown) => void;
 }> = [];
 
+const quotaFile = process.env.OBSERVING_SNAPSHOT_DIR
+  ? path.join(process.env.OBSERVING_SNAPSHOT_DIR, "weather-quota-cooldown-v1.json") : null;
+const quotaDiskEnabled = Boolean(quotaFile) && (process.env.NODE_ENV !== "test" || process.env.FINDER_ENABLE_DISK_CACHE === "1");
+if (quotaDiskEnabled) {
+  try {
+    const value = JSON.parse(fs.readFileSync(quotaFile!, "utf8"));
+    const remaining = value.until - Date.now();
+    if (value.version === 1 && value.dailyLimit === true && Number.isFinite(remaining) && remaining > 0 && remaining <= 24 * 60 * 60_000) {
+      openMeteoCooldownUntil = value.until;
+      openMeteoDailyLimit = true;
+    }
+  } catch { /* Invalid or expired quota markers never block a request. */ }
+}
+
 export class OpenMeteoRateLimitError extends Error {
-  constructor(readonly retryAfterMs: number) {
-    super(`Open-Meteo 限流冷却中，请 ${Math.ceil(retryAfterMs / 1000)} 秒后重试`);
+  constructor(readonly retryAfterMs: number, readonly dailyLimit = false) {
+    super(`天气上游${dailyLimit ? "每日额度已用尽" : "限流冷却中"}，请 ${Math.ceil(retryAfterMs / 1000)} 秒后重试`);
     this.name = "OpenMeteoRateLimitError";
   }
+}
+
+export function currentOpenMeteoRateLimit(): OpenMeteoRateLimitError | null {
+  const remaining = openMeteoCooldownUntil - Date.now();
+  return remaining > 0 ? new OpenMeteoRateLimitError(remaining, openMeteoDailyLimit) : null;
+}
+
+export function openMeteoRateLimitHeaders(): Record<string, string> {
+  const limit = currentOpenMeteoRateLimit();
+  return limit ? { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)), "X-Weather-Limit": limit.dailyLimit ? "daily" : "temporary" } : {};
 }
 
 function openMeteoRetryAfterMs(value: string | null): number {
   if (!value) return 30_000;
   const seconds = Number(value);
-  if (Number.isFinite(seconds)) return Math.min(120_000, Math.max(1_000, seconds * 1_000));
+  if (Number.isFinite(seconds)) return Math.min(24 * 60 * 60_000, Math.max(1_000, seconds * 1_000));
   const date = Date.parse(value);
-  return Number.isFinite(date) ? Math.min(120_000, Math.max(1_000, date - Date.now())) : 30_000;
+  return Number.isFinite(date) ? Math.min(24 * 60 * 60_000, Math.max(1_000, date - Date.now())) : 30_000;
 }
 
 function drainOpenMeteoQueue(): void {
@@ -220,7 +238,7 @@ function drainOpenMeteoQueue(): void {
     const task = openMeteoQueue.shift()!;
     const remaining = openMeteoCooldownUntil - Date.now();
     if (remaining > 0) {
-      task.reject(new OpenMeteoRateLimitError(remaining));
+      task.reject(new OpenMeteoRateLimitError(remaining, openMeteoDailyLimit));
       continue;
     }
     openMeteoActive += 1;
@@ -233,15 +251,34 @@ function drainOpenMeteoQueue(): void {
 
 export function withOpenMeteoProviderSlot<T>(run: () => Promise<T>): Promise<T> {
   const remaining = openMeteoCooldownUntil - Date.now();
-  if (remaining > 0) return Promise.reject(new OpenMeteoRateLimitError(remaining));
+  if (remaining > 0) return Promise.reject(new OpenMeteoRateLimitError(remaining, openMeteoDailyLimit));
   return new Promise<T>((resolve, reject) => {
     openMeteoQueue.push({ run, resolve: resolve as (value: unknown) => void, reject });
     drainOpenMeteoQueue();
   });
 }
 
-export function noteOpenMeteoRateLimit(retryAfter: string | null): void {
-  openMeteoCooldownUntil = Math.max(openMeteoCooldownUntil, Date.now() + openMeteoRetryAfterMs(retryAfter));
+export function noteOpenMeteoRateLimit(retryAfter: string | null, reason = ""): OpenMeteoRateLimitError {
+  const dailyLimit = /daily.*limit|daily.*exceeded/i.test(reason);
+  // Without an explicit reset timestamp, wait a full quota window rather than
+  // repeatedly retrying an exhausted daily allowance every thirty seconds.
+  const seconds = retryAfter?.trim() ? Number(retryAfter) : NaN;
+  const resetDelay = Number.isFinite(seconds) ? seconds * 1000
+    : retryAfter ? Date.parse(retryAfter) - Date.now() : NaN;
+  const dailyDelay = Number.isFinite(resetDelay) && resetDelay > 0
+    ? Math.min(24 * 60 * 60_000, Math.max(1000, resetDelay)) : 24 * 60 * 60_000;
+  const delay = dailyLimit ? dailyDelay : openMeteoRetryAfterMs(retryAfter);
+  if (Date.now() + delay >= openMeteoCooldownUntil) openMeteoDailyLimit = dailyLimit;
+  openMeteoCooldownUntil = Math.max(openMeteoCooldownUntil, Date.now() + delay);
+  if (quotaDiskEnabled && openMeteoDailyLimit) {
+    try {
+      fs.mkdirSync(path.dirname(quotaFile!), { recursive: true });
+      const temporary = `${quotaFile}.${process.pid}.${Date.now()}.tmp`;
+      fs.writeFileSync(temporary, JSON.stringify({ version: 1, until: openMeteoCooldownUntil, dailyLimit: true }));
+      fs.renameSync(temporary, quotaFile!);
+    } catch { /* Persistence is optional. */ }
+  }
+  return new OpenMeteoRateLimitError(openMeteoCooldownUntil - Date.now(), openMeteoDailyLimit);
 }
 
 function distanceKm(
@@ -271,6 +308,7 @@ async function providerError(response: Response): Promise<Error> {
       `[forecast] Open-Meteo HTTP ${response.status}: ${detail.slice(0, 180)}`,
     );
   }
+  if (response.status === 429) return noteOpenMeteoRateLimit(response.headers.get("Retry-After"), detail ?? "");
   return new Error(`天气接口返回 HTTP ${response.status}`);
 }
 
@@ -298,7 +336,6 @@ async function requestJson(
       if (response.status === 429) {
         // Do not immediately retry a rate-limited request; the route-level
         // coordinator exposes Retry-After/cooldown to the caller instead.
-        noteOpenMeteoRateLimit(response.headers.get("Retry-After"));
         break;
       }
       if (response.status < 500) break;

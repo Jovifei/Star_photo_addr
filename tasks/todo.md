@@ -1020,3 +1020,10 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - Marker focused: 目录/筛选/search 5 PASS / 1 project skip；rank 1 PASS；viewport recommendations 2 PASS。
 - Regression: app/map-first/P4-B 31 PASS / 19 project skips。
 - Protected: P3/data/scoring/provider/cache/snapshot/API/store、P4-B safe zones、Fireglow/CloudSea P5 未改。
+
+## 2026-09-30 Production data and equal product layout repair
+- [x] Trace live weather failure through provider, cache and worker; preserve real stale data.
+- [x] Unify four product headers and compact desktop/mobile controls with equal typography.
+- [ ] Verify real data availability and route geometry, regression checks and build.
+- [ ] Publish, merge and deploy verified artifact; verify public behavior and return remote handoff.
+Design: retain the dark map workspace. All four products use identical navigation and title tokens. Date/phase settings use compact controls; details disclose on mobile. Never treat container health as usable weather evidence.
