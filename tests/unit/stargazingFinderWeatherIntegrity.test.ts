@@ -94,7 +94,14 @@ describe("finder weather batch integrity", () => {
     fetchMock.mockImplementation(async () => Response.json({ reason: "Daily API request limit exceeded" }, { status: 429 }));
     vi.resetModules();
     const failedRestart = await import("@/lib/stargazingFinderWeather");
-    const stale = (await failedRestart.fetchFinderWeatherRange([next], new AbortController().signal, true, "icon"))[next]!;
+    const abortedConsumer = new AbortController();
+    const abortedResult = failedRestart.fetchFinderWeatherRange([next], abortedConsumer.signal, true, "icon");
+    const otherResult = failedRestart.fetchFinderWeatherRange([next], new AbortController().signal, true, "icon");
+    abortedConsumer.abort();
+    const [, survivingResult] = await Promise.allSettled([abortedResult, otherResult]);
+    expect(survivingResult.status).toBe("fulfilled");
+    if (survivingResult.status !== "fulfilled") throw survivingResult.reason;
+    const stale = survivingResult.value[next]!;
     expect(stale.stale).toBe(true);
     expect(stale.sourceFetchedAt).toBe(refreshed.sourceFetchedAt);
     expect(Object.values(stale.data).every((record) => record.status === "stale" && record.hourly)).toBe(true);
