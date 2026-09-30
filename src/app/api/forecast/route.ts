@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { NextRequest, NextResponse } from "next/server";
-import { clampForecastDays, fetchForecastByCoords, OpenMeteoRateLimitError } from "@/lib/forecast";
+import { clampForecastDays, fetchForecastByCoords, OpenMeteoRateLimitError, openMeteoRateLimitHeaders } from "@/lib/forecast";
 import { MAX_FORECAST_AGE_MS, usableDiskForecast } from "@/lib/forecastIntegrity";
 import { TimedCache } from "@/lib/serverCache";
 import { parseCoordinateLists } from "@/lib/server/queryParams";
@@ -31,12 +31,17 @@ function saveToDiskCache(key: string, data: ForecastResponse) {
   }
 }
 
-function readFromDiskCache(key: string, model: ForecastModel, count: number): ForecastResponse | null {
+function readFromDiskCache(
+  key: string,
+  model: ForecastModel,
+  count: number,
+  maxAgeMs = STALE_TTL_MS,
+): ForecastResponse | null {
   if (process.env.NODE_ENV === "test" && process.env.FORECAST_ENABLE_DISK_CACHE !== "1") return null;
   try {
     const data: unknown = JSON.parse(fs.readFileSync(diskCachePath(key), "utf-8"));
     // Check ORIGINAL fetch time of every location; filesystem mtime is not provenance.
-    return usableDiskForecast(data, model, count, STALE_TTL_MS) ? data : null;
+    return usableDiskForecast(data, model, count, maxAgeMs) ? data : null;
   } catch {
     return null;
   }
@@ -116,26 +121,65 @@ export async function GET(request: NextRequest) {
         headers: responseHeaders(true, model, days, "cache-only-memory", stale),
       });
     }
+    const freshDisk = readFromDiskCache(
+      key,
+      model,
+      latitudes.length,
+      FRESH_TTL_MS,
+    );
+    if (freshDisk) {
+      return NextResponse.json(freshDisk, {
+        headers: responseHeaders(
+          true,
+          model,
+          days,
+          "cache-only-disk",
+          false,
+        ),
+      });
+    }
     const disk = readFromDiskCache(key, model, latitudes.length);
-    if (disk) return NextResponse.json(markStale(disk), {
-      headers: responseHeaders(true, model, days, "cache-only-disk", true),
-    });
+    if (disk) {
+      return NextResponse.json(markStale(disk), {
+        headers: responseHeaders(
+          true,
+          model,
+          days,
+          "cache-only-disk",
+          true,
+        ),
+      });
+    }
     return jsonError("天气上游冷却中，此地点暂无有效缓存", 429, {
-      "X-Forecast-Cache": "cache-only-miss", "Retry-After": "60",
+      "X-Forecast-Cache": "cache-only-miss",
+      ...openMeteoRateLimitHeaders(60),
     });
   }
   const decision = coordinator.decide(key, forceRefresh);
   if (decision.suppressed && cached && cached.ageMs <= STALE_TTL_MS) {
     const stale = cached.ageMs > FRESH_TTL_MS;
     return NextResponse.json(stale ? markStale(cached.value) : cached.value, {
-      headers: responseHeaders(true, model, days, "refresh-cooldown", stale, true, decision.retryAfterSeconds),
+      headers: {
+        ...responseHeaders(
+          true,
+          model,
+          days,
+          "refresh-cooldown",
+          stale,
+          true,
+          decision.retryAfterSeconds,
+        ),
+        ...openMeteoRateLimitHeaders(decision.retryAfterSeconds),
+      },
     });
   }
   if (decision.suppressed && !coordinator.hasInFlight(key) && (!cached || cached.ageMs > STALE_TTL_MS)) {
     return jsonError("天气强制刷新处于冷却保护，请稍后重试", 429, {
-      "X-Forecast-Cache": "refresh-cooldown", "X-Forecast-Model": model,
-      "X-Forecast-Days": String(days), "X-Refresh-Suppressed": "true",
-      ...(decision.retryAfterSeconds ? { "Retry-After": String(decision.retryAfterSeconds) } : {}),
+      "X-Forecast-Cache": "refresh-cooldown",
+      "X-Forecast-Model": model,
+      "X-Forecast-Days": String(days),
+      "X-Refresh-Suppressed": "true",
+      ...openMeteoRateLimitHeaders(decision.retryAfterSeconds),
     });
   }
   const coordinated = coordinator.run(key, async () => {
