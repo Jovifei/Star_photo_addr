@@ -484,5 +484,73 @@ Deployed: `NO`
 ## 2026-10-01 Emergency repair handoff (supersedes previous P5 close)
 Base: d21165e88aa1a859aba917f24ea4c6c51c517edc. Branch: codex/restore-weather-unify-header-20260930.
 Scope: production daily429 request amplification + equal four-product header layout. See docs/engineering-change-log/2026-10-01-weather-header-repair.md for cause and boundaries.
-Local lint/typecheck and66files388tests passed;24development viewport/route combinations passed. Build/deploy/real-data acceptance still pending at this handoff version.
+Local emergency evidence at 3d57fa4: lint/typecheck/build PASS; 66 Vitest files / 391 tests PASS; built header geometry 28 combinations PASS; mobile map-first 12/12 PASS. Deployment and fresh-provider recovery remain NOT_VERIFIED.
 Remote Project instructions now authorize remote GitHub repair commits on a separate branch followed by exact-SHA local reception/testing; unavailable remote execution is NOT_RUN. Dirty Owner main is preserved. This is not a claim that upstream quota has recovered.
+
+
+## 2026-10-01 Remote weather-route semantics follow-up
+
+Review base: `3d57fa494b8609c11df63f531154aac9ff98eb45` (`codex/restore-weather-unify-header-20260930`).
+Remote branch: `codex/weather-route-semantics-followup-20261001`.
+Remote implementation/test-source head: `c61bc8da52345a211fe1a8643578bffe69a4642c`.
+Engineering-log commit after implementation: `068e6b499af576e4fc4d586cb80b8bd9766b00b5`.
+Final handoff branch tip is the commit containing this section; use the exact SHA returned with the remote handoff.
+
+### Why this follow-up exists
+
+Exact-SHA review found two remaining truth/route gaps in the otherwise sound emergency repair:
+
+- direct `/api/stargazing-finder/weather` did not surface an active provider daily cooldown when no usable hourly data existed;
+- `/api/forecast?cache_only=1` changed a still-fresh persistent disk response to stale solely because the server process had restarted.
+
+A related header issue existed in the local refresh guards: their short cooldown could replace a longer provider daily `Retry-After`.
+
+### Remote changes
+
+- `src/lib/forecast.ts`
+  - `openMeteoRateLimitHeaders(minimumRetryAfterSeconds)` returns the longer of local refresh cooldown and active provider cooldown, preserving `X-Weather-Limit`.
+- `src/app/api/forecast/route.ts`
+  - fresh persistent disk cache remains fresh for cache-only reads when original source timestamps are inside `FORECAST_CACHE_TTL_MS`;
+  - stale-retained disk cache remains explicitly stale;
+  - cache-only miss and refresh-suppressed responses keep the longer provider cooldown.
+- `src/app/api/stargazing-finder/weather/route.ts`
+  - active provider cooldown + no usable hourly data returns `429` with long `Retry-After`;
+  - usable stale Finder data remains HTTP 200 but carries `X-Data-Stale:true` and provider cooldown metadata.
+- `src/app/api/observing/snapshot/route.ts`, `src/app/api/fireglow/snapshot/route.ts`
+  - local refresh suppression no longer overwrites a longer provider cooldown.
+- Regression sources:
+  - `tests/integration/stargazingFinderWeatherRoute.test.ts` (new)
+  - `tests/integration/forecastRoute.test.ts`
+  - `tests/unit/openMeteoRateLimit.test.ts`
+
+No scoring, ranking, CloudSea pressure/model logic, ProductHeader geometry, map behavior, provider URL/model choice, or freshness age thresholds were changed.
+
+### Test status and required local verification
+
+REMOTE TEST EXECUTION: `NOT_RUN` — remote GitHub write tools do not provide the repository command/test executor.
+
+Local Codex must run before integration:
+
+1. `npm run test -- tests/unit/openMeteoRateLimit.test.ts tests/integration/forecastRoute.test.ts tests/integration/stargazingFinderWeatherRoute.test.ts`
+2. `npm run check`
+3. `npx playwright test tests/e2e/product-header-geometry.spec.ts --project=desktop`
+4. `npx playwright test tests/e2e/mobile-map-first.spec.ts --project=mobile`
+5. `git diff --check`
+
+The header gates are regression checks because this remote follow-up does not edit header files.
+
+### Production acceptance after local integration/deploy
+
+Do not call weather PASS from build, container health, or page HTTP 200. Verify separately:
+
+- actual public weather API response status;
+- `Retry-After` and `X-Weather-Limit` under remaining daily quota cooldown;
+- `X-Data-Stale` / cache-source headers;
+- original `sourceFetchedAt` is unchanged on cache reuse;
+- fresh disk cache stays fresh after process restart, stale retained cache stays stale;
+- real usable hourly weather exists before declaring fresh-weather recovery.
+
+At remote handoff time the upstream provider was still daily-429 and production fresh weather remained `NOT_VERIFIED`.
+
+MERGED: `NO`.
+DEPLOYED: `NO`.
