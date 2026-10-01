@@ -1,5 +1,5 @@
 import type L from "leaflet";
-import { maxForecastDaysForModel } from "@/lib/forecast";
+import { maxForecastDaysForModel } from "@/lib/forecastModelPolicy";
 import { normalizeForecastDaysForModel, requestForecastResponse } from "@/lib/forecastClient";
 import type {
   CloudGridData,

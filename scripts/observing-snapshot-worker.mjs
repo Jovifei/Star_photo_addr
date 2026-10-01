@@ -1,4 +1,4 @@
-import { snapshotHealth } from "./observing-snapshot-worker-utils.mjs";
+import { snapshotHealth, retryAfterDelay } from "./observing-snapshot-worker-utils.mjs";
 
 const baseUrl = (
   process.env.SNAPSHOT_BASE_URL || "http://127.0.0.1:3000"
@@ -33,6 +33,7 @@ let timer = null;
 let activeController = null;
 let lastErrorWasRateLimit = false;
 let lastRefreshWasStale = false;
+let providerRetryUntil = 0;
 
 function shanghaiDate() {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -62,6 +63,7 @@ function shanghaiForecastTime() {
 
 async function refresh() {
   lastRefreshWasStale = false;
+  lastErrorWasRateLimit = false;
   const date = shanghaiDate();
   const params = new URLSearchParams({
     date,
@@ -88,6 +90,8 @@ async function refresh() {
       },
     );
     const payload = await response.json().catch(() => null);
+    providerRetryUntil = Math.max(providerRetryUntil, Date.now() + retryAfterDelay(response.headers.get("Retry-After")));
+    if (response.status === 429) lastErrorWasRateLimit = true;
     if (!response.ok) {
       throw new Error(payload?.error || `HTTP ${response.status}`);
     }
@@ -97,7 +101,7 @@ async function refresh() {
     console.log(`[snapshot-worker] observing ${date} ${model} ${params.get("time")} ${health.logLabel}`);
   } catch (error) {
     const errText = error instanceof Error ? error.message : String(error);
-    lastErrorWasRateLimit = /429|limit exceeded/i.test(errText);
+    lastErrorWasRateLimit = lastErrorWasRateLimit || /429|limit exceeded|每日额度|限流/i.test(errText);
     const timedOut =
       activeController?.signal.aborted ||
       (error instanceof Error && /aborted|timeout/i.test(error.message));
@@ -120,6 +124,7 @@ async function refresh() {
 async function prewarmFireglow() {
   const date = shanghaiDate();
   for (let offset = 0; offset < 3; offset += 1) {
+    if (providerRetryUntil > Date.now()) break;
     const value = new Date(`${date}T12:00:00Z`);
     value.setUTCDate(value.getUTCDate() + offset);
     const target = value.toISOString().slice(0, 10);
@@ -145,6 +150,8 @@ async function prewarmFireglow() {
         },
       );
       const payload = await response.json().catch(() => null);
+      providerRetryUntil = Math.max(providerRetryUntil, Date.now() + retryAfterDelay(response.headers.get("Retry-After")));
+      if (response.status === 429) lastErrorWasRateLimit = true;
       if (!response.ok) {
         throw new Error(payload?.error || `HTTP ${response.status}`);
       }
@@ -181,7 +188,7 @@ async function runLoop() {
     const nextWait = lastErrorWasRateLimit || lastRefreshWasStale
       ? Math.max(intervalMs, 2 * 60 * 60 * 1000)
       : intervalMs;
-    timer = setTimeout(runLoop, nextWait);
+    timer = setTimeout(runLoop, Math.max(nextWait, providerRetryUntil - Date.now()));
   }
 }
 

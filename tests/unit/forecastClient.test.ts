@@ -27,6 +27,24 @@ afterEach(() => {
 });
 
 describe("shared forecast client", () => {
+  it("honors a daily provider cooldown across coordinates and manual refresh", async () => {
+    vi.resetModules();
+    let now = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const fetchMock = vi.fn(async (url: string) => url.includes("cache_only=1") ? Response.json(payload()) : Response.json({ error: "daily quota" }, {
+      status: 429, headers: { "Retry-After": "3600" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { requestForecastResponse } = await import("@/lib/forecastClient");
+    await expect(requestForecastResponse([POINT], "icon")).rejects.toThrow("HTTP 429");
+    now += 3 * 60_000;
+    await expect(requestForecastResponse([POINT], "icon", 8, true)).resolves.toMatchObject({ stale: false });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1]![0]).toContain("cache_only=1");
+    now += 3600_000;
+    await expect(requestForecastResponse([POINT], "icon")).rejects.toThrow("HTTP 429");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
   it("coalesces identical store/grid requests and preserves metadata", async () => {
     vi.resetModules();
     const fetchMock = vi.fn(async () => Response.json(payload()));

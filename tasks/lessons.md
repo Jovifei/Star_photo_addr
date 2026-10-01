@@ -104,3 +104,5 @@
 - 2026-09-27: CI 的实时天气探针同时请求四个 Open-Meteo 模型和压力层，触发上游 `HTTP 429 · Too many concurrent requests`；本地单次通过不能证明 CI 探针稳定。探针应串行核验各必需来源，对 429 延长指数退避，持续失败仍让门禁失败；发布以当前提交的完整 CI 结果为准。
 - 2026-09-27: 首页静态预渲染会把构建时的时次写入 HTML，而 `StoreProvider` 在服务端与浏览器分别于模块加载时调用当前时钟；跨小时打开公网后首次水合内容不同，React 报 #418，CI 在构建后立即测试容易漏检。首屏时间必须由服务端序列化给客户端作为同一初始快照，挂载后再同步真实当前时次；回归用浏览器时钟跨小时/跨日验证，并单列真实公网与夹具测试。
 - 2026-09-27: 版本历史测试虽然从 `package.json` 读取当前版本，却把第 2 条历史卡写死为 v1.0.20；v1.0.22 正确新增 v1.0.21 历史卡后 CI 反而失败。测试应按当前语义版本推导相邻补丁版本，再只检查必要的更早历史项存在；发布前同步检查 Modal 真实卡片顺序。
+
+- 2026-09-30: Jovi reported unusable weather after release and unequal product headers. Release acceptance must verify actual usable weather and all four desktop/mobile rendered headers; HTTP 200/build/test fixtures cannot substitute for production data or visual acceptance. If a required data check fails, resolve and report it before claiming completed deployment.

@@ -1,3 +1,4 @@
+import { currentOpenMeteoRateLimit, openMeteoRateLimitHeaders } from "@/lib/forecast";
 import fs from "node:fs";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
@@ -147,6 +148,9 @@ export async function GET(request: NextRequest) {
     const last = lastForceAt.get(key) ?? 0;
     const elapsed = Date.now() - last;
     if (elapsed < FORCE_REFRESH_COOLDOWN_MS) {
+      const localRetryAfterSeconds = Math.ceil(
+        (FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000,
+      );
       const cached = cache.get(key);
       const cooldownFallback = cached?.snapshot ?? diskCached;
       if (cooldownFallback) {
@@ -156,7 +160,7 @@ export async function GET(request: NextRequest) {
             headers: {
               "Cache-Control": "no-store",
               "X-Fireglow-Cache": "refresh-cooldown",
-              "Retry-After": String(Math.ceil((FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000)),
+              ...openMeteoRateLimitHeaders(localRetryAfterSeconds),
             },
           },
         );
@@ -168,7 +172,7 @@ export async function GET(request: NextRequest) {
           headers: {
             "Cache-Control": "no-store",
             "X-Fireglow-Cache": "refresh-cooldown",
-            "Retry-After": String(Math.ceil((FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000)),
+            ...openMeteoRateLimitHeaders(localRetryAfterSeconds),
           },
         },
       );
@@ -248,11 +252,14 @@ export async function GET(request: NextRequest) {
           {
             headers: {
               "Cache-Control": "no-store",
+              ...openMeteoRateLimitHeaders(),
               "X-Fireglow-Cache": "empty-protected-fallback",
             },
           },
         );
       }
+      const limit = currentOpenMeteoRateLimit();
+      if (limit) return NextResponse.json({ error: limit.message }, { status: 429, headers: { "Cache-Control": "no-store", ...openMeteoRateLimitHeaders() } });
       return NextResponse.json(
         { error: "上游未返回有效火烧云评分，请稍后重试" },
         { status: 502, headers: { "Cache-Control": "no-store" } },
@@ -269,6 +276,7 @@ export async function GET(request: NextRequest) {
         {
           headers: {
             "Cache-Control": "no-store",
+              ...openMeteoRateLimitHeaders(),
             "X-Fireglow-Cache": "disk-protected-fallback",
           },
         },
@@ -300,6 +308,7 @@ export async function GET(request: NextRequest) {
         {
           headers: {
             "Cache-Control": "no-store",
+              ...openMeteoRateLimitHeaders(),
             "X-Fireglow-Cache": "stale-fallback",
           },
         },
@@ -308,6 +317,8 @@ export async function GET(request: NextRequest) {
     const timedOut =
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
+    const limit = currentOpenMeteoRateLimit();
+    if (limit) return NextResponse.json({ error: limit.message }, { status: 429, headers: { "Cache-Control": "no-store", ...openMeteoRateLimitHeaders() } });
     const providerMessage =
       error instanceof Error ? error.message : "火烧云上游请求失败";
     return NextResponse.json(

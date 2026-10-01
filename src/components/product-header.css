@@ -1,0 +1,39 @@
+/* A single desktop geometry for all four peer workspaces. Topic control
+   expansion overlays the map instead of resizing the entire workspace. */
+@media (min-width: 1200px) {
+  .app-shell > .app-header.product-header {
+    display: grid;
+    grid-template-columns: minmax(210px, 1fr) minmax(440px, 1.6fr) minmax(320px, 1fr);
+    grid-template-areas: "brand nav controls";
+    height: 65px;
+    min-height: 65px;
+    flex: 0 0 65px;
+    gap: 16px;
+    padding: 8px 18px;
+    backdrop-filter: none;
+  }
+  .product-header .app-header-brand { grid-area: brand; justify-self: start; gap: 8px; }
+  .product-header .app-header-mark { width: 32px; height: 32px; }
+  .product-header .app-header-title { font-size: 17px; line-height: 1.3; letter-spacing: .03em; }
+  .product-header .nav-tabs { grid-area: nav; width: 100%; min-width: 0; }
+  .product-header .nav-tabs .nav-tab { height: 44px; min-height: 44px; padding: 4px 8px; font-size: 13px; }
+  .product-header .nav-tab small { font-size: 10px; line-height: 1.3; }
+  .product-header .app-header-controls { grid-area: controls; position: relative; width: 100%; justify-self: end; gap: 6px; }
+  .product-header .topic-controls-toggle { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 48px; height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--night-1); color: var(--text); font-size: 13px; cursor: pointer; }
+  .product-header .app-header-controls-content { display: block; min-width: 0; flex: 1; }
+  .product-header :is(.fireglow-controls, .cloudsea-controls) { display: flex; width: 100%; min-width: 0; gap: 6px; flex-wrap: nowrap; }
+  .product-header :is(.fireglow-controls, .cloudsea-controls) .segmented { display: flex; min-width: 0; padding: 0; border: 0; border-radius: 6px; background: none; }
+  .product-header :is(.fireglow-controls, .cloudsea-controls) .segmented[data-mode="range"] { flex: 1; }
+  .product-header :is(.fireglow-controls, .cloudsea-controls) .segmented button { min-width: 0; min-height: 44px; padding: 4px 8px; font-size: 13px; line-height: 1.3; white-space: normal; box-shadow: none; transform: none; }
+  .product-header[data-controls-expanded="false"] .segmented button:not(.active),
+  .product-header[data-controls-expanded="false"] :is(.fireglow-refresh, .cloudsea-refresh) { display: none; }
+  .product-header[data-controls-expanded="false"] .segmented button.active { color: var(--text); background: transparent; border-radius: 6px; }
+  .product-header[data-controls-expanded="true"] .app-header-controls-content { position: absolute; top: 52px; right: 0; width: min(600px, calc(100vw - 36px)); padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #07141c; box-shadow: 0 12px 36px #0008; z-index: 100; }
+  .product-header[data-controls-expanded="true"] :is(.fireglow-controls, .cloudsea-controls) { flex-wrap: wrap; }
+  .product-header[data-controls-expanded="true"] .segmented[data-mode="range"] { flex: 1 1 100%; }
+  .product-header[data-controls-expanded="true"] .segmented button { flex: 1; }
+  .product-header[data-controls-expanded="true"] :is(.fireglow-refresh, .cloudsea-refresh) { min-height: 44px; font-size: 13px; }
+  .product-header .event-status { font-size: 12px; gap: 6px; }
+  .product-header .event-status b { font-size: 12px; }
+  .product-header .source-button { padding-inline: 8px; font-size: 11px; }
+}

@@ -35,7 +35,8 @@ beforeEach(() => {
   vi.stubEnv("FORECAST_STALE_TTL_MS", String(LIMIT));
   vi.spyOn(Date, "now").mockReturnValue(NOW);
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
-  vi.doMock("@/lib/forecast", () => ({
+  vi.doMock("@/lib/forecast", async () => ({
+    ...await vi.importActual<typeof import("@/lib/forecast")>("@/lib/forecast"),
     clampForecastDays: (days: number) => days,
     fetchForecastByCoords: vi.fn(async () => { throw new Error("天气接口返回 HTTP 429"); }),
   }));

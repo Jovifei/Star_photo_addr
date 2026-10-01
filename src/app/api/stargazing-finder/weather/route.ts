@@ -1,3 +1,4 @@
+import { currentOpenMeteoRateLimit, openMeteoRateLimitHeaders } from "@/lib/forecast";
 import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/data/observingSites/catalog";
 import {
@@ -110,9 +111,7 @@ export async function GET(request: NextRequest) {
       {
         "X-Finder-Cache": "refresh-cooldown",
         "X-Refresh-Suppressed": "true",
-        ...(retryAfterSeconds
-          ? { "Retry-After": String(retryAfterSeconds) }
-          : {}),
+        ...openMeteoRateLimitHeaders(retryAfterSeconds),
       },
     );
   }
@@ -152,24 +151,42 @@ export async function GET(request: NextRequest) {
 
   try {
     const response = await activeTask;
+    const hasUsableHourly = Object.values(response.data).some(
+      (entry) => Boolean(entry.hourly),
+    );
     const stale = Object.values(response.data).some(
       (entry) => entry.status === "stale" || entry.status === "error",
     );
+    const limit = currentOpenMeteoRateLimit();
+    if (limit && !hasUsableHourly) {
+      return noStoreError(limit.message, 429, {
+        "X-Finder-Cache": "provider-cooldown",
+        "X-Refresh-Suppressed": String(refreshSuppressed),
+        ...openMeteoRateLimitHeaders(retryAfterSeconds),
+      });
+    }
     return NextResponse.json(response, {
       headers: {
-        "Cache-Control": forceRefreshRequested
+        "Cache-Control": forceRefreshRequested || stale || response.stale
           ? "no-store, max-age=0"
           : "public, max-age=0, s-maxage=600, stale-while-revalidate=1800",
         "X-Finder-Source": "Open-Meteo",
         "X-Finder-Cache": cacheState,
         "X-Data-Stale": String(stale || response.stale),
         "X-Refresh-Suppressed": String(refreshSuppressed),
-        ...(retryAfterSeconds
-          ? { "Retry-After": String(retryAfterSeconds) }
+        ...((stale || response.stale || retryAfterSeconds)
+          ? openMeteoRateLimitHeaders(retryAfterSeconds)
           : {}),
       },
     });
   } catch (error) {
+    const limit = currentOpenMeteoRateLimit();
+    if (limit) {
+      return noStoreError(limit.message, 429, {
+        "X-Finder-Cache": "provider-cooldown",
+        ...openMeteoRateLimitHeaders(retryAfterSeconds),
+      });
+    }
     const timedOut =
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));

@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ForecastModel, ForecastResponse } from "@/lib/types";
@@ -6,6 +9,8 @@ const ENV_KEYS = [
   "FORECAST_CACHE_TTL_MS",
   "FORECAST_STALE_TTL_MS",
   "FORECAST_FORCE_REFRESH_COOLDOWN_MS",
+  "OBSERVING_SNAPSHOT_DIR",
+  "FORECAST_ENABLE_DISK_CACHE",
 ] as const;
 
 let fetchForecastByCoords: ReturnType<typeof vi.fn>;
@@ -68,7 +73,8 @@ function clampDays(days: number, model: ForecastModel): number {
 }
 
 async function loadRoute() {
-  vi.doMock("@/lib/forecast", () => ({
+  vi.doMock("@/lib/forecast", async () => ({
+    ...await vi.importActual<typeof import("@/lib/forecast")>("@/lib/forecast"),
     clampForecastDays: clampDays,
     fetchForecastByCoords,
   }));
@@ -88,6 +94,58 @@ afterEach(() => {
 });
 
 describe("GET /api/forecast", () => {
+  it("reads server cache during provider cooldown without calling upstream on a miss", async () => {
+    fetchForecastByCoords.mockResolvedValue(payload("icon"));
+    const { GET } = await loadRoute();
+    const query = "latitude=30.2741&longitude=120.1551&model=icon&days=2";
+    expect((await GET(request(`${query}&cache_only=1`))).status).toBe(429);
+    expect(fetchForecastByCoords).not.toHaveBeenCalled();
+    expect((await GET(request(query))).status).toBe(200);
+    const cached = await GET(request(`${query}&cache_only=1&refresh=1`));
+    expect(cached.status).toBe(200);
+    expect(cached.headers.get("X-Forecast-Cache")).toBe("cache-only-memory");
+    expect(fetchForecastByCoords).toHaveBeenCalledTimes(1);
+  });
+  it("keeps a fresh persistent disk cache fresh for cache-only reads after route restart", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "forecast-route-cache-"));
+    process.env.OBSERVING_SNAPSHOT_DIR = directory;
+    process.env.FORECAST_ENABLE_DISK_CACHE = "1";
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-20T00:05:00Z"));
+    try {
+      fetchForecastByCoords.mockResolvedValue(payload("icon"));
+      const firstRoute = await loadRoute();
+      const query = "latitude=30.2741&longitude=120.1551&model=icon&days=2";
+      const first = await firstRoute.GET(request(query));
+      expect(first.status).toBe(200);
+      expect(first.headers.get("X-Data-Stale")).toBe("false");
+      expect(fetchForecastByCoords).toHaveBeenCalledTimes(1);
+
+      vi.resetModules();
+      fetchForecastByCoords = vi.fn();
+      const restartedRoute = await loadRoute();
+      const cached = await restartedRoute.GET(request(`${query}&cache_only=1`));
+      const body = (await cached.json()) as ForecastResponse;
+
+      expect(cached.status).toBe(200);
+      expect(cached.headers.get("X-Forecast-Cache")).toBe("cache-only-disk");
+      expect(cached.headers.get("X-Data-Stale")).toBe("false");
+      expect(body.metadata?.stale).toBe(false);
+      expect(fetchForecastByCoords).not.toHaveBeenCalled();
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves daily quota status and Retry-After for the browser", async () => {
+    const { GET } = await loadRoute();
+    const { OpenMeteoRateLimitError } = await import("@/lib/forecast");
+    fetchForecastByCoords.mockRejectedValue(new OpenMeteoRateLimitError(86_400_000, true));
+    const response = await GET(new NextRequest("http://localhost/api/forecast?latitude=30&longitude=120&model=icon"));
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("86400");
+    expect(response.headers.get("X-Weather-Limit")).toBe("daily");
+  });
   it.each([
     "latitude=&longitude=&model=gfs",
     "latitude=30.2,&longitude=120.1,121.2&model=gfs",

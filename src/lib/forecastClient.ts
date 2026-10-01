@@ -17,15 +17,10 @@ const pending: Array<{ start: () => void; priority: number }> = [];
 let active = 0;
 let globalCooldownUntil = 0;
 
-function schedule<T>(operation: () => Promise<T>, allowDuringCooldown = false, priority = 0): Promise<T> {
+function schedule<T>(operation: () => Promise<T>, priority = 0): Promise<T> {
   if (pending.length >= MAX_PENDING) return Promise.reject(new Error("天气请求队列已满，请稍后重试"));
   return new Promise<T>((resolve, reject) => {
     const start = () => {
-      if (!allowDuringCooldown && globalCooldownUntil > Date.now()) {
-        reject(new Error(`天气上游限流冷却中，请 ${Math.ceil((globalCooldownUntil - Date.now()) / 1000)} 秒后重试`));
-        pending.shift()?.start();
-        return;
-      }
       active += 1;
       void operation().then(resolve, reject).finally(() => {
         active -= 1;
@@ -180,9 +175,6 @@ export function requestForecastResponse(
   }
   const now = Date.now();
   trimFailures(now);
-  if (!forceRefresh && globalCooldownUntil > now) {
-    return Promise.reject(new Error(`天气上游限流冷却中，请 ${Math.ceil((globalCooldownUntil - now) / 1000)} 秒后重试`));
-  }
   if (!forceRefresh && (failedUntil.get(key) ?? 0) > now) {
     return Promise.reject(new Error("天气请求失败冷却中，请稍后重试"));
   }
@@ -193,17 +185,22 @@ export function requestForecastResponse(
     model,
   });
   if (forceRefresh) params.set("refresh", "1");
-  const promise = schedule(() => fetch(`/api/forecast?${params.toString()}`, {
+  const promise = schedule(() => {
+    // A quota failure must not hide other points already cached on the server.
+    // Cache-only reads cannot spend provider quota, even for manual refresh.
+    if (globalCooldownUntil > Date.now()) params.set("cache_only", "1");
+    return fetch(`/api/forecast?${params.toString()}`, {
     cache: "no-store",
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(35_000),
-  }), forceRefresh, forceRefresh ? 1 : 0)
+    });
+  }, forceRefresh ? 1 : 0)
     .then(async (response) => {
       const body = await response.json().catch(() => null) as ForecastResponse | null;
       if (!response.ok) {
         if (response.status === 429) {
           const retryAfter = Number(response.headers.get("Retry-After"));
-          const delay = Number.isFinite(retryAfter) ? Math.max(1_000, Math.min(120_000, retryAfter * 1_000)) : FAILURE_COOLDOWN_MS;
+          const delay = Number.isFinite(retryAfter) ? Math.max(1_000, Math.min(24 * 60 * 60_000, retryAfter * 1_000)) : FAILURE_COOLDOWN_MS;
           globalCooldownUntil = Math.max(globalCooldownUntil, Date.now() + delay);
         }
         throw new Error(`天气请求失败（HTTP ${response.status}）`);

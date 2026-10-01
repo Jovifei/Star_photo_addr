@@ -1,3 +1,4 @@
+import { currentOpenMeteoRateLimit, openMeteoRateLimitHeaders } from "@/lib/forecast";
 import { NextRequest, NextResponse } from "next/server";
 import {
   addFinderDays,
@@ -182,9 +183,7 @@ export async function GET(request: NextRequest) {
           "X-Observation-Cache": "refresh-cooldown",
           "X-Data-Stale": String(stale),
           "X-Refresh-Suppressed": "true",
-          ...(retryAfterSeconds
-            ? { "Retry-After": String(retryAfterSeconds) }
-            : {}),
+          ...openMeteoRateLimitHeaders(retryAfterSeconds),
         },
       });
     }
@@ -201,9 +200,7 @@ export async function GET(request: NextRequest) {
         {
           "X-Observation-Cache": "refresh-cooldown",
           "X-Refresh-Suppressed": "true",
-          ...(retryAfterSeconds
-            ? { "Retry-After": String(retryAfterSeconds) }
-            : {}),
+          ...openMeteoRateLimitHeaders(retryAfterSeconds),
         },
       );
     }
@@ -233,6 +230,8 @@ export async function GET(request: NextRequest) {
             effectiveForceRefresh,
             model,
           );
+          const limit = currentOpenMeteoRateLimit();
+          if (limit && !Object.values(weather).some((response) => Object.values(response.data).some((record) => record.hourly))) throw limit;
           const weatherByDate = Object.fromEntries(
             Object.entries(weather).map(([night, response]) => [
               night,
@@ -266,10 +265,10 @@ export async function GET(request: NextRequest) {
           "Open-Meteo + curated dark-sky site metadata",
         "X-Observation-Cache": cacheState,
         "X-Data-Stale": String(snapshot.stale),
-        "X-Refresh-Suppressed": String(refreshSuppressed),
-        ...(retryAfterSeconds
-          ? { "Retry-After": String(retryAfterSeconds) }
+        ...((snapshot.stale || retryAfterSeconds)
+          ? openMeteoRateLimitHeaders(retryAfterSeconds)
           : {}),
+        "X-Refresh-Suppressed": String(refreshSuppressed),
       },
     });
   } catch (error) {
@@ -284,10 +283,13 @@ export async function GET(request: NextRequest) {
           "X-Observation-Cache": "stale-disk",
           "X-Data-Stale": "true",
           "X-Refresh-Suppressed": String(refreshSuppressed),
+          ...openMeteoRateLimitHeaders(retryAfterSeconds),
           Warning: '110 - "Response is stale"',
         },
       });
     }
+    const limit = currentOpenMeteoRateLimit();
+    if (limit) return jsonError(limit.message, 429, openMeteoRateLimitHeaders());
     const timedOut =
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));

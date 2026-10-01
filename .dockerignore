@@ -10,3 +10,4 @@ dist
 *.log
 design-qa-assets
 data/snapshots
+.deploy*

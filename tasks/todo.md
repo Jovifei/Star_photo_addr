@@ -1020,3 +1020,12 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - Marker focused: 目录/筛选/search 5 PASS / 1 project skip；rank 1 PASS；viewport recommendations 2 PASS。
 - Regression: app/map-first/P4-B 31 PASS / 19 project skips。
 - Protected: P3/data/scoring/provider/cache/snapshot/API/store、P4-B safe zones、Fireglow/CloudSea P5 未改。
+
+## 2026-09-30 Production data and equal product layout repair
+- [x] Trace production weather failure: Open-Meteo daily HTTP429, upstream cooldown was too short, prior point cache exceeded six hours.
+- [x] Unify the four product headers and compact mobile/desktop controls.
+- [x] Run `npm run check`: lint, typecheck, 67 test files / 395 tests and production build PASS; 28 header geometry combinations and 12 mobile map-first tests PASS.
+- [ ] Publish and merge the verified release to `main`, deploy it, then verify the public build identity and all four headers.
+- [ ] Wait for upstream quota recovery and verify fresh production weather, original timestamps, stale semantics and usable scores. Do not count stale rows or a healthy container as recovery.
+
+Design: retain the dark map workspace. All four products use identical navigation and title tokens. Date/phase settings expand over content. Preserve real stale data and fail-closed recommendation semantics.

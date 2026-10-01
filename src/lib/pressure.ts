@@ -1,3 +1,5 @@
+import { hasUsablePressureProfile } from "./pressureIntegrity";
+export { hasUsablePressureProfile, isCompletePressureLevelSample, usablePressureLevelCount } from "./pressureIntegrity";
 import {
   applyOpenMeteoApiKey,
   buildForecastUrl,
@@ -223,36 +225,6 @@ function valueAt(
 ): unknown {
   const values = hourly[key];
   return Array.isArray(values) ? values[index] : undefined;
-}
-
-export function isCompletePressureLevelSample(
-  sample: PressureLevelSample,
-): boolean {
-  return (
-    Number.isFinite(sample.pressure) &&
-    sample.cloudCover !== null &&
-    Number.isFinite(sample.cloudCover) &&
-    sample.humidity !== null &&
-    Number.isFinite(sample.humidity) &&
-    sample.temperature !== null &&
-    Number.isFinite(sample.temperature) &&
-    sample.heightMsl !== null &&
-    Number.isFinite(sample.heightMsl)
-  );
-}
-
-export function usablePressureLevelCount(
-  samples: PressureLevelSample[] | null | undefined,
-): number {
-  if (!samples) return 0;
-  return samples.filter(isCompletePressureLevelSample).length;
-}
-
-export function hasUsablePressureProfile(
-  samples: PressureLevelSample[] | null | undefined,
-  minimumLevels = MIN_USABLE_PRESSURE_LEVELS,
-): boolean {
-  return usablePressureLevelCount(samples) >= minimumLevels;
 }
 
 /**
