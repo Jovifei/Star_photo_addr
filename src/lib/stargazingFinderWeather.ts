@@ -261,7 +261,7 @@ function validRawCache(value: unknown, locations: FinderLocation[], dates: strin
   } catch { return false; }
 }
 
-async function cachedRawBatch(url: string, locations: FinderLocation[], dates: string[], signal: AbortSignal): Promise<RawBatchCache> {
+async function cachedRawBatch(url: string, locations: FinderLocation[], dates: string[]): Promise<RawBatchCache> {
   const key = createHash("sha256").update(url).digest("hex");
   const memory = rawBatchCache.get(key);
   if (validRawCache(memory, locations, dates)) return memory;
@@ -304,7 +304,7 @@ async function cachedRawBatch(url: string, locations: FinderLocation[], dates: s
     }
     return entry;
   })().catch((error: unknown) => {
-    if (!signal.aborted && fallback && validRawCache(fallback, locations, dates, 6 * 60 * 60_000)) {
+    if (fallback && validRawCache(fallback, locations, dates, 6 * 60 * 60_000)) {
       return { ...fallback, stale: true };
     }
     throw error;
@@ -330,7 +330,7 @@ async function requestBatch(
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const raw = await cachedRawBatch(url, locations, coverageDates, signal);
+      const raw = await cachedRawBatch(url, locations, coverageDates);
       const forecasts = raw.forecasts;
       if (forecasts.length !== locations.length) throw new Error("Open-Meteo 返回的地点数量与请求不匹配");
       forecasts.forEach(validateFinderRawForecast);
