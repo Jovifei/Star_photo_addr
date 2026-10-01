@@ -7,7 +7,9 @@
 - [x] Add unit and browser regressions for partial ICON visibility, fresh complete Best Match, stale data, source provenance, score withholding, and selected-point row coverage.
 - [x] Run focused regressions, `npm run check`, production build, and `git diff --check` before creating a commit.
 - [x] After confirming supplier cooldown and cache state, run one bounded production candidate batch; require `sourceFetchedAt`, `stale=false`, matching model, complete night fields, and non-null scores for the table to pass.
-- [ ] Only after all gates pass, commit/push for remote exact-SHA review, then follow the authorized merge/deploy handoff cycle.
+- [x] Commit the verified product tip and push branch; GitHub PR #41 is open for exact-SHA review.
+- [ ] Send the current PR head and handoff to the existing remote ChatGPT conversation, resolve any review findings, and discuss technical direction.
+- [ ] Merge and deploy only after remote review and a fresh post-deploy page/data acceptance; retain rollback image and snapshot volume.
 
 ## Review
 

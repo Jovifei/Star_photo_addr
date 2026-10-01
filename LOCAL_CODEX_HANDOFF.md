@@ -528,9 +528,9 @@ Production source gate against the currently deployed `buildRevision=bd23a7c442e
 
 Owner preservation: `E:\project\Star_photo_addr` remains on `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e` with its pre-existing dirty files; no Owner files were edited.
 
-PR: `NOT_CREATED`.
+PR: `#41 OPEN` — https://github.com/Jovifei/Star_photo_addr/pull/41.
 Merged: `NO`.
 Deployed: `NO`.
 Remote review of product SHA: `PENDING`.
 
-Next: push this isolated branch, create a reviewable PR, and send exact product SHA `f65f3b2349e2fb2a620c949fef9e7d09eb961922` with this handoff to the existing ChatGPT conversation. Ask it to verify the candidate data/scoring contract against the last handoff, review the model separation and quota behavior, and propose the next product phase. Resolve its findings, then merge and deploy only after the fresh real-data and page checks pass again on the deployed v1.0.23 build.
+Next: send PR #41's current head SHA and this handoff to the existing ChatGPT conversation. Ask it to verify the candidate data/scoring contract against the last handoff, review model separation and request economy, discuss any technical disagreement, and propose the next product phase. Resolve its findings, then merge and deploy only after the fresh real-data and page checks pass again on the deployed v1.0.23 build.
