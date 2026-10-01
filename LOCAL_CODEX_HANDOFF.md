@@ -481,8 +481,37 @@ Merged: `NO`
 Deployed: `NO`
 
 
-## 2026-10-01 Emergency repair handoff (supersedes previous P5 close)
-Base: d21165e88aa1a859aba917f24ea4c6c51c517edc. Branch: codex/restore-weather-unify-header-20260930.
-Scope: production daily429 request amplification + equal four-product header layout. See docs/engineering-change-log/2026-10-01-weather-header-repair.md for cause and boundaries.
-Local lint/typecheck and66files388tests passed;24development viewport/route combinations passed. Build/deploy/real-data acceptance still pending at this handoff version.
-Remote Project instructions now authorize remote GitHub repair commits on a separate branch followed by exact-SHA local reception/testing; unavailable remote execution is NOT_RUN. Dirty Owner main is preserved. This is not a claim that upstream quota has recovered.
+## 2026-10-01 Emergency repair handoff — release candidate verified
+
+Base: `d21165e88aa1a859aba917f24ea4c6c51c517edc`.
+Release branch: `codex/restore-weather-unify-header-20260930`.
+The route cooldown review follow-up was independently authored on `codex/weather-route-semantics-followup-20261001` and PR #38 was merged into the release branch. The release tree combines both histories and keeps the final shared-request cancellation fallback fix.
+
+## Completed changes
+
+- Unified the four product headers: desktop 65px, 17px title and 13px tabs; mobile 48px strip and equal tab targets. Removed short-desktop overrides that had split CloudSea/Fireglow geometry. Topic controls expand over content instead of increasing header height.
+- Added persistent, exact-parameter Finder raw-batch cache with cross-date reuse and request coalescing. Original upstream `sourceFetchedAt` is preserved. Freshness is 3h; real stale fallback is bounded at 6h; older or invalid data is rejected.
+- Propagated typed provider 429 and the longest Retry-After across point forecast, Finder, Fireglow and observing routes. Persisted quota cooldown, long client cooldown and cache-only server reads do not bypass provider limits.
+- The worker uses a 3h interval and respects Retry-After. Production Docker context excludes the old .deploy archives. Existing weather/scoring facts remain fail-closed.
+
+## Local verification on the merged release tree
+
+- `npm run check`: PASS — lint, TypeScript, 67 Vitest files / 395 tests, production build.
+- Header E2E: 28 route/viewport combinations PASS, including 1440×500 short desktop and four mobile widths.
+- Mobile map-first: 12 PASS.
+- Finder cache restart/reuse, original timestamp, 3–6h stale fallback, >6h rejection, daily 429 and first-consumer-cancel tests: included in the 395 passing tests.
+- Remote GPT executed no shell tests: NOT_RUN.
+- Owner `E:\project\Star_photo_addr` remains on dirty `main@3334e0c`; preserved.
+
+## Production status as last observed
+
+The public CloudSea page still reported Open-Meteo HTTP 429 for 2026-09-30 and 2026-10-01. The displayed candidate rows were not verified as fresh. Public build version still appeared to be the old v1.0.22 header; the merged release has NOT been deployed. Production fresh-weather recovery: NOT_VERIFIED. Do not infer recovery from local tests, container health, or HTTP 200.
+
+## Next actions
+
+1. Create and merge a PR from this release branch to `main`; main is currently at `d21165e`.
+2. Build the verified merge SHA locally, assemble the standalone overlay image using the existing low-memory deployment method, deploy while preserving the snapshot volume and rollback image.
+3. Verify public build identity and four header geometries, then check provider HTTP status, Retry-After, source timestamp, stale state and usable scores independently.
+4. Send the exact merged/deployed SHA and this updated handoff to the existing ChatGPT Project chat for final review. Continue the review/repair/plan/execute/commit/handoff loop on subsequent stages.
+
+Current docs-only handoff commit will not self-reference its SHA; resolve the release branch tip again after it is pushed.
