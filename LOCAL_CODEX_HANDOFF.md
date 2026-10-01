@@ -512,3 +512,25 @@ The previous active image remains on the host for rollback. App and worker both 
 PR #38 contains the remote route-semantics follow-up. The complete merged/deployed tip has not yet received a final `DONE` from the existing ChatGPT conversation: in this environment its connector returned internal errors and the in-app browser could not open ChatGPT. Do not mark the remote final audit complete until it reviews exact SHA bd23a7c442e18ae5eae449e46d5ed0a10a307c0d and returns its verdict.
 
 The recurring quiet heartbeat is configured to continue the weather/remote-handoff loop. The local Owner worktree `E:\project\Star_photo_addr` remains dirty on its original main and was preserved.
+
+## 2026-10-01 Candidate forecast evidence repair — local product tip
+
+Base: `main@7a572b538caad9a881066cdd8c301a161c1523d1`.
+Branch: `codex/candidate-weather-evidence-20261001`.
+Product commit: `f65f3b2349e2fb2a620c949fef9e7d09eb961922`.
+Version: `v1.0.23`.
+
+The candidate cards and seven-location matrix now retain fresh same-model cloud cover, precipitation probability, wind speed, model identity and `sourceFetchedAt` when night scoring is withheld. They state the missing field and continue to leave score/rank empty. Candidate scoring uses a separate model setting from the cloud raster; it defaults to Best Match and requests up to 64 candidates as one batch. The selected matrix row loads the same candidate-score model independently. The map raster remains on its existing ICON/GFS/AIFS model contract.
+
+Local evidence before commit: `npm run check` PASS — lint, TypeScript, 68 test files / 399 tests and production build; `git diff --check` PASS. Candidate evidence/client tests: 9/9. Candidate presentation: desktop and mobile Best Match/ICON transitions passed; desktop data-state presentation 4 passed / 1 project skip; version history v1.0.23/1.0.22 passed.
+
+Production source gate against the currently deployed `buildRevision=bd23a7c442e1`: no active quota marker was present; one bounded seven-location Best Match request across the public catalog areas shown in the screenshot returned `sourceFetchedAt=2026-10-01T10:08:25.354Z`, `stale=false`, and seven non-null night scores when evaluated by the local v1.0.23 scoring code. The following `cache_only=1` read returned HTTP 200 from memory with the same model and fresh state. Jovi's exact candidate coordinates are browser-local and were not read by this process, so this confirms the live source/scoring contract for those public area points rather than the exact saved list. v1.0.23 is not yet deployed and its page-level production acceptance remains pending.
+
+Owner preservation: `E:\project\Star_photo_addr` remains on `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e` with its pre-existing dirty files; no Owner files were edited.
+
+PR: `NOT_CREATED`.
+Merged: `NO`.
+Deployed: `NO`.
+Remote review of product SHA: `PENDING`.
+
+Next: push this isolated branch, create a reviewable PR, and send exact product SHA `f65f3b2349e2fb2a620c949fef9e7d09eb961922` with this handoff to the existing ChatGPT conversation. Ask it to verify the candidate data/scoring contract against the last handoff, review the model separation and quota behavior, and propose the next product phase. Resolve its findings, then merge and deploy only after the fresh real-data and page checks pass again on the deployed v1.0.23 build.
