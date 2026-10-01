@@ -481,37 +481,34 @@ Merged: `NO`
 Deployed: `NO`
 
 
-## 2026-10-01 Emergency repair handoff — release candidate verified
+## 2026-10-01 Emergency repair handoff — merged and deployed
 
 Base: `d21165e88aa1a859aba917f24ea4c6c51c517edc`.
-Release branch: `codex/restore-weather-unify-header-20260930`.
-The route cooldown review follow-up was independently authored on `codex/weather-route-semantics-followup-20261001` and PR #38 was merged into the release branch. The release tree combines both histories and keeps the final shared-request cancellation fallback fix.
+Merged `main` SHA: `bd23a7c442e18ae5eae449e46d5ed0a10a307c0d` (PR #39).
+Remote route semantics PR #38 was merged into the release branch before #39.
+Production image: `star-photo-addr:deploy-bd23a7c442e1`; public buildRevision: `bd23a7c442e1`.
+The previous active image remains on the host for rollback. App and worker both use the original `star-photo_observing-snapshots` volume.
 
-## Completed changes
+## Product result
 
-- Unified the four product headers: desktop 65px, 17px title and 13px tabs; mobile 48px strip and equal tab targets. Removed short-desktop overrides that had split CloudSea/Fireglow geometry. Topic controls expand over content instead of increasing header height.
-- Added persistent, exact-parameter Finder raw-batch cache with cross-date reuse and request coalescing. Original upstream `sourceFetchedAt` is preserved. Freshness is 3h; real stale fallback is bounded at 6h; older or invalid data is rejected.
-- Propagated typed provider 429 and the longest Retry-After across point forecast, Finder, Fireglow and observing routes. Persisted quota cooldown, long client cooldown and cache-only server reads do not bypass provider limits.
-- The worker uses a 3h interval and respects Retry-After. Production Docker context excludes the old .deploy archives. Existing weather/scoring facts remain fail-closed.
+- All four entry points now share desktop 65px header, 17px title, 13px navigation and 44px equal tabs. Phone uses the 48px top strip and four equal navigation targets; topic date/phase controls expand without increasing the top bar.
+- Finder raw forecast batches persist/share exact model, coordinates, variables and range. Source timestamps are preserved across cache hits. Fresh cache is 3h; failure fallback is explicitly stale and limited to 6h.
+- Provider 429 and the longest Retry-After propagate through point forecast, Finder, Fireglow and observing routes. Quota cooldown persists across process restart. Manual refresh does not bypass provider cooldown. Worker waits for provider Retry-After.
+- Forecast/pressure policy imports are separated from server file I/O so browser bundles do not import `node:fs`.
 
-## Local verification on the merged release tree
+## Verification
 
-- `npm run check`: PASS — lint, TypeScript, 67 Vitest files / 395 tests, production build.
-- Header E2E: 28 route/viewport combinations PASS, including 1440×500 short desktop and four mobile widths.
-- Mobile map-first: 12 PASS.
-- Finder cache restart/reuse, original timestamp, 3–6h stale fallback, >6h rejection, daily 429 and first-consumer-cancel tests: included in the 395 passing tests.
-- Remote GPT executed no shell tests: NOT_RUN.
-- Owner `E:\project\Star_photo_addr` remains on dirty `main@3334e0c`; preserved.
+- Local `npm run check`: PASS — lint, TypeScript, 67 test files / 395 tests and production build.
+- Product header E2E: 28 route/viewport combinations PASS, including 1440×500; mobile map-first: 12 PASS.
+- New route regressions cover fresh versus stale disk cache, daily quota Retry-After, stale Finder fallback and provider response handling.
+- Public CloudSea header was measured after deployment: 65px / 17px / 13px, 44px tabs.
+- Production `/healthz`: app `star-weather-planner`, version 1.0.22, buildRevision bd23a7c442e1; app/worker healthy, restart count 0, original data volume mounted.
+- Production best_match forecast for the sample location: HTTP 200, cache=memory, X-Data-Stale=false, 48 hourly records / 48 finite cloud values, model=best_match, sourceFetchedAt=2026-10-01T07:59:00Z.
+- Production CloudSea snapshot for 2026-10-01, GFS: HTTP 200 memory hit, stale=false, surface 54/54 available, pressure 54/54 available, 50 sites scoreable across phases; visible morning ranking lists 48.
+- The public page no longer shows the 429 banner and displays ranked sites. Fireglow worker had current-day fresh data; later fireglow dates remained stale on the last worker observation, so that multi-day range still needs observation.
 
-## Production status as last observed
+## Remote review status
 
-The public CloudSea page still reported Open-Meteo HTTP 429 for 2026-09-30 and 2026-10-01. The displayed candidate rows were not verified as fresh. Public build version still appeared to be the old v1.0.22 header; the merged release has NOT been deployed. Production fresh-weather recovery: NOT_VERIFIED. Do not infer recovery from local tests, container health, or HTTP 200.
+PR #38 contains the remote route-semantics follow-up. The complete merged/deployed tip has not yet received a final `DONE` from the existing ChatGPT conversation: in this environment its connector returned internal errors and the in-app browser could not open ChatGPT. Do not mark the remote final audit complete until it reviews exact SHA bd23a7c442e18ae5eae449e46d5ed0a10a307c0d and returns its verdict.
 
-## Next actions
-
-1. Create and merge a PR from this release branch to `main`; main is currently at `d21165e`.
-2. Build the verified merge SHA locally, assemble the standalone overlay image using the existing low-memory deployment method, deploy while preserving the snapshot volume and rollback image.
-3. Verify public build identity and four header geometries, then check provider HTTP status, Retry-After, source timestamp, stale state and usable scores independently.
-4. Send the exact merged/deployed SHA and this updated handoff to the existing ChatGPT Project chat for final review. Continue the review/repair/plan/execute/commit/handoff loop on subsequent stages.
-
-Current docs-only handoff commit will not self-reference its SHA; resolve the release branch tip again after it is pushed.
+The recurring quiet heartbeat is configured to continue the weather/remote-handoff loop. The local Owner worktree `E:\project\Star_photo_addr` remains dirty on its original main and was preserved.
