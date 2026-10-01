@@ -183,9 +183,7 @@ export async function GET(request: NextRequest) {
           "X-Observation-Cache": "refresh-cooldown",
           "X-Data-Stale": String(stale),
           "X-Refresh-Suppressed": "true",
-          ...(retryAfterSeconds
-            ? { "Retry-After": String(retryAfterSeconds) }
-            : {}),
+          ...openMeteoRateLimitHeaders(retryAfterSeconds),
         },
       });
     }
@@ -202,9 +200,7 @@ export async function GET(request: NextRequest) {
         {
           "X-Observation-Cache": "refresh-cooldown",
           "X-Refresh-Suppressed": "true",
-          ...(retryAfterSeconds
-            ? { "Retry-After": String(retryAfterSeconds) }
-            : {}),
+          ...openMeteoRateLimitHeaders(retryAfterSeconds),
         },
       );
     }
@@ -269,11 +265,10 @@ export async function GET(request: NextRequest) {
           "Open-Meteo + curated dark-sky site metadata",
         "X-Observation-Cache": cacheState,
         "X-Data-Stale": String(snapshot.stale),
-        ...(snapshot.stale ? openMeteoRateLimitHeaders() : {}),
-        "X-Refresh-Suppressed": String(refreshSuppressed),
-        ...(retryAfterSeconds
-          ? { "Retry-After": String(retryAfterSeconds) }
+        ...((snapshot.stale || retryAfterSeconds)
+          ? openMeteoRateLimitHeaders(retryAfterSeconds)
           : {}),
+        "X-Refresh-Suppressed": String(refreshSuppressed),
       },
     });
   } catch (error) {
@@ -288,7 +283,7 @@ export async function GET(request: NextRequest) {
           "X-Observation-Cache": "stale-disk",
           "X-Data-Stale": "true",
           "X-Refresh-Suppressed": String(refreshSuppressed),
-          ...openMeteoRateLimitHeaders(),
+          ...openMeteoRateLimitHeaders(retryAfterSeconds),
           Warning: '110 - "Response is stale"',
         },
       });

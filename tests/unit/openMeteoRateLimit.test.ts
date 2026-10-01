@@ -57,6 +57,24 @@ describe("provider quota cooldown", () => {
     expect(request).not.toHaveBeenCalled();
   });
 
+  it("keeps the longest Retry-After when a local refresh cooldown overlaps provider quota", async () => {
+    vi.resetModules();
+    vi.useFakeTimers();
+    const {
+      noteOpenMeteoRateLimit,
+      openMeteoRateLimitHeaders,
+    } = await import("@/lib/forecast");
+    noteOpenMeteoRateLimit("3600", "Daily API request limit exceeded");
+    expect(openMeteoRateLimitHeaders(60)).toEqual({
+      "Retry-After": "3600",
+      "X-Weather-Limit": "daily",
+    });
+    expect(openMeteoRateLimitHeaders(7200)).toEqual({
+      "Retry-After": "7200",
+      "X-Weather-Limit": "daily",
+    });
+  });
+
   it("keeps temporary concurrency limits short and obeys Retry-After", async () => {
     vi.resetModules();
     vi.useFakeTimers();

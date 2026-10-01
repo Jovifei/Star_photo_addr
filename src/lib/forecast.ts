@@ -220,9 +220,32 @@ export function currentOpenMeteoRateLimit(): OpenMeteoRateLimitError | null {
   return remaining > 0 ? new OpenMeteoRateLimitError(remaining, openMeteoDailyLimit) : null;
 }
 
-export function openMeteoRateLimitHeaders(): Record<string, string> {
+export function openMeteoRateLimitHeaders(
+  minimumRetryAfterSeconds: number | null = null,
+): Record<string, string> {
   const limit = currentOpenMeteoRateLimit();
-  return limit ? { "Retry-After": String(Math.ceil(limit.retryAfterMs / 1000)), "X-Weather-Limit": limit.dailyLimit ? "daily" : "temporary" } : {};
+  const providerRetryAfterSeconds = limit
+    ? Math.ceil(limit.retryAfterMs / 1000)
+    : 0;
+  const localRetryAfterSeconds =
+    typeof minimumRetryAfterSeconds === "number" &&
+    Number.isFinite(minimumRetryAfterSeconds)
+      ? Math.max(0, Math.ceil(minimumRetryAfterSeconds))
+      : 0;
+  const retryAfterSeconds = Math.max(
+    providerRetryAfterSeconds,
+    localRetryAfterSeconds,
+  );
+  return {
+    ...(retryAfterSeconds > 0
+      ? { "Retry-After": String(retryAfterSeconds) }
+      : {}),
+    ...(limit
+      ? {
+          "X-Weather-Limit": limit.dailyLimit ? "daily" : "temporary",
+        }
+      : {}),
+  };
 }
 
 function openMeteoRetryAfterMs(value: string | null): number {

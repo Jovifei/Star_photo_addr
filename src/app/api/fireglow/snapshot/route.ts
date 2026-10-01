@@ -148,6 +148,9 @@ export async function GET(request: NextRequest) {
     const last = lastForceAt.get(key) ?? 0;
     const elapsed = Date.now() - last;
     if (elapsed < FORCE_REFRESH_COOLDOWN_MS) {
+      const localRetryAfterSeconds = Math.ceil(
+        (FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000,
+      );
       const cached = cache.get(key);
       const cooldownFallback = cached?.snapshot ?? diskCached;
       if (cooldownFallback) {
@@ -156,9 +159,8 @@ export async function GET(request: NextRequest) {
           {
             headers: {
               "Cache-Control": "no-store",
-              ...openMeteoRateLimitHeaders(),
               "X-Fireglow-Cache": "refresh-cooldown",
-              "Retry-After": String(Math.ceil((FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000)),
+              ...openMeteoRateLimitHeaders(localRetryAfterSeconds),
             },
           },
         );
@@ -169,9 +171,8 @@ export async function GET(request: NextRequest) {
           status: 429,
           headers: {
             "Cache-Control": "no-store",
-              ...openMeteoRateLimitHeaders(),
             "X-Fireglow-Cache": "refresh-cooldown",
-            "Retry-After": String(Math.ceil((FORCE_REFRESH_COOLDOWN_MS - elapsed) / 1000)),
+            ...openMeteoRateLimitHeaders(localRetryAfterSeconds),
           },
         },
       );
