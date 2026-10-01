@@ -66,6 +66,10 @@
 .cloud-summary-card b { color: #8795bd; font-size: 10px; font-weight: 500; }
 .cloud-source-note { display: block; margin-top: 6px; color: #91a4c5; font-size: 10px; line-height: 1.4; }
 .candidate-provenance { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
+.candidate-model-select { display: inline-flex; align-items: center; gap: 7px; margin: 2px 0 8px; color: var(--muted); font-size: 10px; }
+.candidate-model-select select { min-height: 34px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 4px 26px 4px 9px; background: var(--panel-2); color: var(--text); font: inherit; }
+.candidate-model-switch-btn { display: block; min-height: 36px; margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--green); border-radius: var(--radius-sm); background: #0c2a33; color: var(--green-soft); font: inherit; font-size: 10px; cursor: pointer; }
+.candidate-model-switch-btn:hover { background: #103844; }
 .observation-provenance { margin: 12px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
 .observing-score-provenance { display: block; margin: 6px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
 .source-status-panel { display: grid; gap: 4px; margin: 8px 0; padding: 8px 10px; border: 1px solid rgba(132, 158, 221, .22); border-radius: 9px; color: #aebbd6; font-size: 10px; }
@@ -2350,6 +2354,7 @@
   font-size: 10px;
   margin-top: 2px;
 }
+.cell-evidence { display: block; margin-top: 3px; color: var(--muted); font-family: var(--font-sans); font-size: 9px; line-height: 1.25; white-space: normal; }
 .star-window-cell.good .cell-score { color: var(--green); }
 .star-window-cell.good .cell-status { color: var(--green); }
 .star-window-cell.warn .cell-score { color: var(--amber); }

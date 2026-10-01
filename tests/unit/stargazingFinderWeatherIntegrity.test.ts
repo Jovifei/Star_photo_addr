@@ -46,6 +46,9 @@ describe("finder weather batch integrity", () => {
   it("reuses covered raw batches across dates, persists fetch time over restart, and rejects expired disk data", async () => {
     vi.resetModules();
     vi.useFakeTimers();
+    // Keep the full 7.5-hour cache lifecycle before Shanghai midnight so the
+    // next request does not silently require an additional raw-forecast day.
+    vi.setSystemTime(new Date("2026-10-01T00:00:00.000Z"));
     rawTestDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "finder-raw-test-"));
     vi.stubEnv("OBSERVING_SNAPSHOT_DIR", rawTestDirectory);
     vi.stubEnv("FINDER_ENABLE_DISK_CACHE", "1");

@@ -7,6 +7,38 @@ function response(model = "icon", stale = false) {
 }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("bounded shared candidate loader", () => {
+  it("loads multiple candidate forecasts in one stable, coalesced request", async () => {
+    vi.resetModules();
+    const fetchMock = vi.fn(async (input: string | URL) => {
+      const url = new URL(String(input), "http://localhost");
+      const model = url.searchParams.get("model") ?? "icon";
+      const latitudes = (url.searchParams.get("latitude") ?? "").split(",");
+      const longitudes = (url.searchParams.get("longitude") ?? "").split(",");
+      const fetchedAt = new Date().toISOString();
+      const metadata = { source: "Open-Meteo", model, fetchedAt, sourceFetchedAt: fetchedAt, stale: false, units: {} };
+      return Response.json({ metadata, locations: latitudes.map((latitude, index) => ({
+        locationId: `loc-${index}`, requestedLatitude: Number(latitude), requestedLongitude: Number(longitudes[index]),
+        modelLatitude: Number(latitude), modelLongitude: Number(longitudes[index]), modelElevation: 100,
+        timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, fetchedAt, metadata,
+        hourly: [{ time: "2026-10-01T20:00", cloudCover: 35 }],
+      })) }, { headers: { "X-Data-Stale": "false", "X-Forecast-Model": model } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { requestCandidateForecastBatch } = await import("@/lib/candidateForecastClient");
+    const candidates = [
+      { id: "z", latitude: 31.6, longitude: 121.3 },
+      { id: "a", latitude: 30.1, longitude: 118.9 },
+    ];
+    const [first, second] = await Promise.all([
+      requestCandidateForecastBatch(candidates, "best_match"),
+      requestCandidateForecastBatch([...candidates].reverse(), "best_match"),
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(new URL(String(fetchMock.mock.calls[0]![0]), "http://localhost").searchParams.get("latitude")).toBe("30.1,31.6");
+    expect(first.map((entry) => entry.id)).toEqual(["a", "z"]);
+    expect(second.map((entry) => entry.forecast.metadata?.model)).toEqual(["best_match", "best_match"]);
+  });
+
   it("coalesces two components and repeated cache renders into one request", async () => {
     vi.resetModules(); const fetchMock = vi.fn(async () => response()); vi.stubGlobal("fetch", fetchMock);
     const { requestCandidateForecast } = await import("@/lib/candidateForecastClient");

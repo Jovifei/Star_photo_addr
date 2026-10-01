@@ -12,9 +12,27 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
+    date: "2026-10-01",
+    tag: "候选天气数据与评分",
+    current: true,
+    highlights: [
+      {
+        icon: CloudSun,
+        title: "评分暂缓时仍保留原始天气",
+        desc: "候选卡片和星空窗口表显示有效云量、降水、风速、源时间与缺失字段；缺项时继续不发布评分。",
+      },
+      {
+        icon: Layers,
+        title: "候选天气一次批量读取",
+        desc: "候选评分默认采用最佳匹配点位预报，与地图栅格模型分开标识，多个候选点共用一批天气请求。",
+      },
+    ],
+  },
+  {
+    version: "v1.0.22",
     date: "2026-09-27",
     tag: "手机首屏稳定性",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: ShieldCheck,

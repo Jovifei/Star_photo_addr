@@ -106,3 +106,4 @@
 - 2026-09-27: 版本历史测试虽然从 `package.json` 读取当前版本，却把第 2 条历史卡写死为 v1.0.20；v1.0.22 正确新增 v1.0.21 历史卡后 CI 反而失败。测试应按当前语义版本推导相邻补丁版本，再只检查必要的更早历史项存在；发布前同步检查 Modal 真实卡片顺序。
 
 - 2026-09-30: Jovi reported unusable weather after release and unequal product headers. Release acceptance must verify actual usable weather and all four desktop/mobile rendered headers; HTTP 200/build/test fixtures cannot substitute for production data or visual acceptance. If a required data check fails, resolve and report it before claiming completed deployment.
+- 2026-10-01: When a candidate score is withheld, keep valid same-model raw weather and `sourceFetchedAt` visible with a precise missing-field reason; do not collapse this into a blank “数据不足” card. Verify the target candidate path end to end: provider cooldown/cache, source timestamp, stale flag, required night fields, score count, and rendered page. Provider health or a fixture alone is not candidate-data acceptance.

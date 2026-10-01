@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { requestCandidateForecast } from "@/lib/candidateForecastClient";
+import { requestCandidateForecastBatch } from "@/lib/candidateForecastClient";
 import { cachedForecast, useStore } from "@/lib/store";
 
 /** Both views may mount; they share one request owner per model/coordinate/day key. */
 export function useCandidateForecasts(locations: Array<{ id: string; latitude: number; longitude: number }>): void {
   const { state, cacheForecast } = useStore();
-  const model = state.cloudState.model;
+  const model = state.candidateForecastModel;
   const revision = state.dataRefreshRevision;
   const cacheRef = useRef(state.forecastCache);
   useEffect(() => { cacheRef.current = state.forecastCache; }, [state.forecastCache]);
@@ -16,15 +16,19 @@ export function useCandidateForecasts(locations: Array<{ id: string; latitude: n
   useEffect(() => {
     let active = true;
     const requested = JSON.parse(locationsKey) as Array<{ id: string; latitude: number; longitude: number }>;
-    for (const location of requested) {
-      void requestCandidateForecast(location, model, 14, revision).then((forecast) => {
-        if (active) cacheForecast(location.id, forecast);
+    const maxLocationsPerRequest = 64;
+    for (let offset = 0; offset < requested.length; offset += maxLocationsPerRequest) {
+      const batch = requested.slice(offset, offset + maxLocationsPerRequest);
+      void requestCandidateForecastBatch(batch, model, 14, revision).then((results) => {
+        if (active) for (const result of results) cacheForecast(result.id, result.forecast);
       }).catch(() => {
-        // A failed refresh must also invalidate an older store entry; it must not keep its high score.
-        const previous = cachedForecast(cacheRef.current, location.id, model);
-        if (active && previous?.metadata?.model === model) cacheForecast(location.id, {
-          ...previous, metadata: { ...previous.metadata, stale: true },
-        });
+        // A failed batch invalidates only its members; old scores cannot survive a failed refresh.
+        for (const location of batch) {
+          const previous = cachedForecast(cacheRef.current, location.id, model);
+          if (active && previous?.metadata?.model === model) cacheForecast(location.id, {
+            ...previous, metadata: { ...previous.metadata, stale: true },
+          });
+        }
       });
     }
     return () => { active = false; };

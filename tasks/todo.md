@@ -1,3 +1,23 @@
+# 2026-10-01 Candidate weather evidence and scoring repair
+
+- [x] Read the latest `LOCAL_CODEX_HANDOFF.md`, `tasks/todo.md`, and merged `main@7a572b5`; production `/healthz` reports `buildRevision=bd23a7c442e1`.
+- [x] Trace the screenshot's “数据不足” state through candidate request, raw forecast, freshness/model gates, night scoring, and both candidate surfaces.
+- [x] Preserve same-model raw cloud/precipitation/wind evidence and source timestamp when score is withheld; show the exact night-field blocker and keep score/rank null.
+- [x] Keep the raster/cloud model and candidate scoring model separate; use one explicit candidate score model across the cards and table, with Best Match as the default and selectable alternatives.
+- [x] Add unit and browser regressions for partial ICON visibility, fresh complete Best Match, stale data, source provenance, score withholding, and selected-point row coverage.
+- [x] Run focused regressions, `npm run check`, production build, and `git diff --check` before creating a commit.
+- [x] After confirming supplier cooldown and cache state, run one bounded production candidate batch; require `sourceFetchedAt`, `stale=false`, matching model, complete night fields, and non-null scores for the table to pass.
+- [ ] Only after all gates pass, commit/push for remote exact-SHA review, then follow the authorized merge/deploy handoff cycle.
+
+## Review
+
+- Base: `main@7a572b538caad9a881066cdd8c301a161c1523d1`; isolated branch: `codex/candidate-weather-evidence-20261001`.
+- Baseline production: app and worker image `deploy-bd23a7c442e1`; `/healthz` build revision matches. `/api/data-status` last reported weather source available at `2026-10-01T09:00:12Z`; this is provider-health evidence only, not candidate-score acceptance.
+- Architecture finding: `CloudState.model` intentionally excludes `best_match` for the raster/map contract. Candidate scores will use a separate shared model state and must retain same-model identity across the cards and matrix.
+- Local gates: `npm run check` PASS — lint, typecheck, 68 test files / 399 tests, production build; `git diff --check` PASS. Candidate projection/client 9/9 focused unit tests; data-state presentation desktop 4 passed / 1 project skip; candidate data path on mobile 1 passed and desktop 1 passed; v1.0.23 history 1 passed.
+- Production data: no active quota marker at `2026-10-01T10:04Z`; production `/healthz` remains buildRevision `bd23a7c442e1`. One bounded seven-location Best Match response yielded `sourceFetchedAt=2026-10-01T10:08:25.354Z`, `stale=false`, and 7/7 valid night scores under the local scoring code. A follow-up `cache_only=1` read returned HTTP 200, memory cache, Best Match, and `stale=false`; no second supplier request was made.
+- Screenshot regression remains open until the page presents useful same-model raw weather and a valid score where the provider supplies every required field.
+
 # 2026-09-29 P5-B CloudSea Evidence IA
 
 - [x] 接收远端 P5-B 长期方案，基线锁定 `47779d74b6fe1d160bc2d68c90b9712101b1de33`，Fireglow/P5-A 不再修改。

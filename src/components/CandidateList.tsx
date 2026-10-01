@@ -4,8 +4,8 @@ import { useMemo, useCallback } from "react";
 import { Sparkles, Trash2, RotateCcw, Cloud, CloudRain, Wind, Clock } from "lucide-react";
 import { cachedForecast, useStore } from "@/lib/store";
 import { useCandidateForecasts } from "@/hooks/useCandidateForecasts";
-import { evaluateNight, statusMeta } from "@/lib/scoring";
-import { forecastTrustIssue } from "@/lib/forecastIntegrity";
+import { projectCandidateNight, type NightMetricSummary } from "@/lib/candidateNightEvidence";
+import { statusMeta } from "@/lib/scoring";
 import { formatCalendarDate, formatNightLabel } from "@/lib/nighttime";
 import { DEFAULT_CANDIDATE_SEEDS } from "@/lib/constants";
 import type { CityCandidate, Location } from "@/lib/types";
@@ -13,9 +13,20 @@ import type { CityCandidateStatus } from "@/data/cities";
 
 interface CandidateNightData {
   nightKey: string; score: number | null; statusTone: string; statusLabel: string;
-  windowLabel: string; windowLength: number; cloud: number | null;
-  precipitation: number | null; wind: number | null; loading: boolean;
+  reason: string; windowLabel: string; windowLength: number;
+  cloud: NightMetricSummary; precipitation: NightMetricSummary; wind: NightMetricSummary; loading: boolean;
   sourceFetchedAt: string | null; model: string | null; scoreTime: string | null; aggregation: string | null;
+  blockedFields: Array<{ label: string; missingHours: number; totalHours: number }>;
+}
+function formatMetric(metric: NightMetricSummary, unit: string, digits = 0): string {
+  if (metric.value === null) return "—";
+  const value = digits ? metric.value.toFixed(digits) : String(Math.round(metric.value));
+  const coverage = metric.totalHours > 0 && metric.validHours < metric.totalHours
+    ? ` · ${metric.validHours}/${metric.totalHours}` : "";
+  return `${value}${unit}${coverage}`;
+}
+function modelLabel(model: string | null): string {
+  return model === "best_match" ? "最佳匹配" : model?.toUpperCase() ?? "未识别模型";
 }
 function getDayShortLabel(dateKey: string, index: number): string {
   if (index === 0) return "今";
@@ -39,34 +50,30 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
   const evaluatedCandidates = useMemo(() => candidates.map((candidate) => {
     const location: Location = { id: candidate.id, name: candidate.name, latitude: candidate.latitude,
       longitude: candidate.longitude, elevation: candidate.elevation ?? null, source: "自定义", province: candidate.province };
-    const cached = cachedForecast(state.forecastCache, candidate.id, state.cloudState.model);
+    const cached = cachedForecast(state.forecastCache, candidate.id, state.candidateForecastModel);
     const sameSelectedPoint = state.selectedLocation && Math.abs(state.selectedLocation.latitude - candidate.latitude) < 1e-6 && Math.abs(state.selectedLocation.longitude - candidate.longitude) < 1e-6;
-    const available = cached?.metadata?.model === state.cloudState.model ? cached : sameSelectedPoint ? state.forecast : null;
-    const forecast = available?.metadata?.model === state.cloudState.model ? available : null;
-    const issue = forecastTrustIssue(forecast);
+    const available = cached?.metadata?.model === state.candidateForecastModel ? cached : sameSelectedPoint ? state.forecast : null;
+    const forecast = available?.metadata?.model === state.candidateForecastModel ? available : null;
     const nights = new Map<string, CandidateNightData>();
     nightKeys.forEach((nightKey, index) => {
-      const result = forecast && !issue ? evaluateNight(forecast, location, nightKey, index) : null;
-      if (result && forecast) {
-        const meta = statusMeta(result.status);
-        const hours = result.hours;
-        const probabilities = hours.map((hour) => hour.precipitationProbability);
-        nights.set(nightKey, { nightKey, score: result.score, statusTone: meta.tone, statusLabel: meta.label,
-          windowLabel: result.windowLabel, windowLength: result.window.length,
-          cloud: Math.round(hours.reduce((sum, hour) => sum + hour.cloudCover!, 0) / hours.length),
-          precipitation: probabilities.every((value) => typeof value === "number" && Number.isFinite(value)) ? Math.round(Math.max(...probabilities as number[])) : null,
-          wind: Math.round(Math.max(...hours.map((hour) => hour.windSpeed!)) * 10) / 10, loading: false,
-          sourceFetchedAt: forecast.metadata?.sourceFetchedAt ?? forecast.fetchedAt ?? null,
-          model: forecast.metadata?.model ?? null, scoreTime: result.scoreTime ?? null, aggregation: result.aggregation ?? null });
-      } else {
-        nights.set(nightKey, { nightKey, score: null, statusTone: "muted", statusLabel: "数据不足",
-          windowLabel: issue ?? "关键气象字段或夜间时次不完整", windowLength: 0,
-          cloud: null, precipitation: null, wind: null, loading: false, sourceFetchedAt: null, model: null, scoreTime: null, aggregation: null });
-      }
+      const evidence = projectCandidateNight(forecast, location, nightKey, index, state.candidateForecastModel);
+      const result = evidence.evaluation;
+      nights.set(nightKey, {
+        nightKey, score: result?.score ?? null, statusTone: result ? statusMeta(result.status).tone : "muted",
+        statusLabel: evidence.statusLabel, reason: evidence.reason,
+        windowLabel: result?.windowLabel ?? evidence.reason, windowLength: result?.window.length ?? 0,
+        cloud: evidence.metrics.cloudCover, precipitation: evidence.metrics.precipitationProbability,
+        wind: evidence.metrics.windSpeed, loading: false,
+        sourceFetchedAt: evidence.sourceFetchedAt, model: evidence.model,
+        scoreTime: result?.scoreTime ?? null, aggregation: result?.aggregation ?? null,
+        blockedFields: evidence.blockedFields,
+      });
     });
-    const currentNight = nights.get(selectedNight) ?? { nightKey: selectedNight, score: null, statusTone: "muted", statusLabel: "数据不足", windowLabel: "暂无数据", windowLength: 0, cloud: null, precipitation: null, wind: null, loading: false, sourceFetchedAt: null, model: null, scoreTime: null, aggregation: null };
+    const currentNight = nights.get(selectedNight) ?? { nightKey: selectedNight, score: null, statusTone: "muted", statusLabel: "数据不足", reason: "暂无天气数据", windowLabel: "暂无数据", windowLength: 0,
+      cloud: { value: null, validHours: 0, totalHours: 0 }, precipitation: { value: null, validHours: 0, totalHours: 0 }, wind: { value: null, validHours: 0, totalHours: 0 },
+      loading: false, sourceFetchedAt: null, model: null, scoreTime: null, aggregation: null, blockedFields: [] };
     return { candidate, nights, currentNight };
-  }), [candidates, nightKeys, selectedNight, state.forecastCache, state.selectedLocation, state.forecast, state.cloudState.model]);
+  }), [candidates, nightKeys, selectedNight, state.forecastCache, state.selectedLocation, state.forecast, state.candidateForecastModel]);
   const sortedCandidates = useMemo(() => [...evaluatedCandidates].sort((a, b) => {
     const left = a.currentNight.score, right = b.currentNight.score;
     if (left === null && right === null) return a.candidate.name.localeCompare(b.candidate.name, "zh-CN");
@@ -85,7 +92,7 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
         </div>
         <span className="candidate-count-badge">{hasCandidates ? `${sortedCandidates.length} 个候选地点` : "无数据"}</span>
       </div>
-      <p className="candidate-footer-hint" role="note">{state.cloudState.model.toUpperCase()} 单模型 · 整晚最佳连续 3 小时分，不是当前时次分或现场保证。缺失/过期数据不排名。</p>
+      <p className="candidate-footer-hint" role="note">{modelLabel(state.candidateForecastModel)} 单模型 · 整晚最佳连续 3 小时分，不是当前时次分或现场保证。缺失/过期数据不排名。</p>
       <div className="candidate-date-tabs" role="tablist" aria-label="7天日期切换">
         {nightKeys.map((key, index) => {
           const { title, sub } = getDateTabLabel(key, index);
@@ -107,17 +114,17 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
               </div>
               <div className="candidate-card-score-box" title={currentNight.windowLabel}>
                 <div className="candidate-score-number"><strong>{currentNight.score ?? "—"}</strong>{currentNight.score !== null && <small>分</small>}</div>
-                <span className={`candidate-status-pill tone-${currentNight.statusTone}`}>{currentNight.statusLabel}</span>
+                <span className={`candidate-status-pill tone-${currentNight.statusTone}`} title={currentNight.reason}>{currentNight.statusLabel}</span>
                 {onRemove && <button type="button" className="candidate-card-delete" onClick={(event) => { event.stopPropagation(); onRemove(candidate.id); }} aria-label={`从候选对比中移除 ${candidate.name}`} title="移出候选对比"><Trash2 size={13} /></button>}
               </div>
             </div>
             <div className="candidate-metrics-row">
-              <div className="candidate-metric-item" title="夜间平均总云量（不是当前时次）"><Cloud size={12} className="metric-icon" /><span>云量 {currentNight.cloud != null ? `${currentNight.cloud}%` : "—"}</span></div>
-              <div className="candidate-metric-item" title="夜间最高降水概率；缺失不填零"><CloudRain size={12} className="metric-icon" /><span>降水 {currentNight.precipitation != null ? `${currentNight.precipitation}%` : "—"}</span></div>
-              <div className="candidate-metric-item" title="夜间最大风速"><Wind size={12} className="metric-icon" /><span>风速 {currentNight.wind != null ? `${currentNight.wind}m/s` : "—"}</span></div>
+              <div className="candidate-metric-item" title={`夜间平均总云量；${currentNight.cloud.validHours}/${currentNight.cloud.totalHours} 时次有效`}><Cloud size={12} className="metric-icon" /><span>云量 {formatMetric(currentNight.cloud, "%")}</span></div>
+              <div className="candidate-metric-item" title={`夜间最高降水概率；${currentNight.precipitation.validHours}/${currentNight.precipitation.totalHours} 时次有效，缺失不填零`}><CloudRain size={12} className="metric-icon" /><span>降水 {formatMetric(currentNight.precipitation, "%")}</span></div>
+              <div className="candidate-metric-item" title={`夜间最大风速；${currentNight.wind.validHours}/${currentNight.wind.totalHours} 时次有效`}><Wind size={12} className="metric-icon" /><span>风速 {formatMetric(currentNight.wind, "m/s", 1)}</span></div>
               <div className="candidate-metric-item" title={currentNight.windowLabel}><Clock size={12} className="metric-icon" /><span>窗口 {currentNight.windowLength > 0 ? `${currentNight.windowLength} 个小时采样` : "无"}</span></div>
             </div>
-            <p className="candidate-provenance" data-testid="candidate-provenance">数据身份：{currentNight.model?.toUpperCase() ?? state.cloudState.model.toUpperCase()} · 原始抓取：{currentNight.sourceFetchedAt ?? "未提供"} · 评分：{currentNight.aggregation ?? "数据不足"}{currentNight.scoreTime ? `（${currentNight.scoreTime}）` : ""}（{currentNight.score ?? "—"}）</p>
+            <p className="candidate-provenance" data-testid="candidate-provenance">数据身份：{modelLabel(currentNight.model)} · 原始抓取：{currentNight.sourceFetchedAt ?? "未提供"} · 评分：{currentNight.aggregation ?? "暂缓"}{currentNight.scoreTime ? `（${currentNight.scoreTime}）` : ""}（{currentNight.score ?? "—"}） · {currentNight.reason}</p>
             <div className="candidate-7day-capsules">{nightKeys.map((key, dayIdx) => {
               const data = nights.get(key), score = data?.score ?? null;
               const tone = score === null ? "" : score >= 80 ? "capsule--great" : score >= 65 ? "capsule--good" : score >= 50 ? "capsule--fair" : "capsule--poor";
