@@ -1021,11 +1021,15 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - Regression: app/map-first/P4-B 31 PASS / 19 project skips。
 - Protected: P3/data/scoring/provider/cache/snapshot/API/store、P4-B safe zones、Fireglow/CloudSea P5 未改。
 
-## 2026-09-30 Production data and equal product layout repair
-- [x] Trace production weather failure: Open-Meteo daily HTTP429, upstream cooldown was too short, prior point cache exceeded six hours.
-- [x] Unify the four product headers and compact mobile/desktop controls.
-- [x] Run `npm run check`: lint, typecheck, 67 test files / 395 tests and production build PASS; 28 header geometry combinations and 12 mobile map-first tests PASS.
-- [ ] Publish and merge the verified release to `main`, deploy it, then verify the public build identity and all four headers.
-- [ ] Wait for upstream quota recovery and verify fresh production weather, original timestamps, stale semantics and usable scores. Do not count stale rows or a healthy container as recovery.
+## 2026-10-01 Production data and equal product layout repair — completed
+- [x] Trace production failure to daily Open-Meteo HTTP429 and repeated national forecast fanout.
+- [x] Persist/coalesce Finder raw batch forecasts with source timestamp preservation and 3h fresh / 6h stale bounds.
+- [x] Propagate persisted quota cooldown and longest Retry-After; keep valid cache-only reads available while blocked upstream.
+- [x] Unify and verify four product headers on desktop, short desktop and phone sizes.
+- [x] Full local check: lint, typecheck, 67 test files / 395 tests and build PASS; header 28 combinations and mobile map-first 12 PASS.
+- [x] Merge PR #39 to main at bd23a7c442e18ae5eae449e46d5ed0a10a307c0d and deploy image star-photo-addr:deploy-bd23a7c442e1.
+- [x] Verify public build identity, healthy app and worker, shared snapshot volume, current best_match forecast and CloudSea 54/54 surface + 54/54 pressure snapshot.
+- [ ] Remote ChatGPT final audit of merged/deployed SHA bd23a7c442e18ae5eae449e46d5ed0a10a307c0d. C2C/UI unavailable during this run; retry through the configured heartbeat.
+- [ ] Continue observing Fireglow multi-day freshness; last worker report had current date fresh and later dates stale.
 
-Design: retain the dark map workspace. All four products use identical navigation and title tokens. Date/phase settings expand over content. Preserve real stale data and fail-closed recommendation semantics.
+Review: production best_match returned HTTP 200 memory, stale=false, 48/48 finite cloud hours at sourceFetchedAt 2026-10-01T07:59:00Z. CloudSea 2026-10-01 GFS returned fresh snapshot with surface and pressure 54/54, 50 scoreable sites across both phases; morning visible list had 48. Do not label the remote final review DONE until ChatGPT returns its verdict.
