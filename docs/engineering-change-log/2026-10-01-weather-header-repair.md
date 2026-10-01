@@ -15,9 +15,9 @@ Desktop screenshots and Playwright measurement showed topic headers at189px whil
 - lint/typecheck PASS;66 test files391tests PASS at local gate (additional focused cache tests follow).
 - Development route geometry:28 combinations across1920/1440/1200/960/390/320 and1440x500 widths PASS; Escape and outside-pointer dismissal PASS.
 - Production build PASS (Next.js 16.3.4) on the locally merged release candidate. Header geometry E2E covers 28 viewport/route combinations; mobile map-first 12 PASS.
-- Publication to main / deployment: PENDING.
-- Public CloudSea page still reports Open-Meteo HTTP429 for 2026-09-30 and 2026-10-01; its existing ranked rows are not verified fresh. Public header remains v1.0.22 until deployment.
-- Real production fresh forecast: BLOCKED by upstream daily quota. No fresh-weather recovery claim is made from local fixtures, HTTP 200, or service health.
+- PR #39 merged to main at bd23a7c442e18ae5eae449e46d5ed0a10a307c0d; deployed image `star-photo-addr:deploy-bd23a7c442e1`.
+- The public page now uses the compact header (65px/17px/13px) and displays ranked CloudSea sites without the 429 banner. Public `/healthz` reports buildRevision bd23a7c442e1; app and worker healthy, restart count 0, snapshot volume preserved.
+- Real production forecast: PASS for bounded live checks: best_match point endpoint HTTP200, `X-Data-Stale=false`, 48 finite cloud hours, sourceFetchedAt 2026-10-01T07:59:00Z. CloudSea GFS daily snapshot was fresh with surface and pressure 54/54. Fireglow current date was fresh; later dates were still stale in the last worker log.
 
 ## Deployment method
 Use local Next standalone artifact with exact build revision, overlay the existing Linux runner image, preserve the snapshot volume and rollback image. Do not compile Next on the1.8GiB ECS while serving production (previous build caused OOM). After deployment verify public build identity, all four header geometries, provider/cache timestamps, stale semantics and429Retry-After separately.
