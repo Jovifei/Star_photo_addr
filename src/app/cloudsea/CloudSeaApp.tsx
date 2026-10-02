@@ -103,10 +103,11 @@ function dateLabel(date: string): string {
 
 function rangeOptionLabel(option: (typeof RANGE_OPTIONS)[number], baseDate: string): ReactNode {
   const selectedDate = shiftDate(baseDate, option.value === 3 ? 0 : option.value);
+  const compactDate = (date: string) => date.slice(5).split("-").map(Number).join(".");
   const dateText = option.value === 3
-    ? `${baseDate.slice(5).replace("-", ".")}—${shiftDate(baseDate, 2).slice(5).replace("-", ".")}`
-    : formatCompactCalendarDate(selectedDate);
-  return <><span>{option.label}</span><small>{dateText}</small></>;
+    ? `${compactDate(baseDate)}–${compactDate(shiftDate(baseDate, 2))}`
+    : compactDate(selectedDate);
+  return <><span>{option.label}</span><small title={formatCompactCalendarDate(selectedDate)}>{dateText}</small></>;
 }
 
 const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = [
