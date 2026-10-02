@@ -666,3 +666,7 @@ DEPLOYED: `NO`.
 
 Jovi要求日期/时段常驻顶部直接选择，禁止用调整按钮弹出核心操作。PR44/45已合并并部署6389bef784c12b4bc1c7aaee0fa3a93d852766a5。云海/火烧云使用普通文档流工具栏：桌面一行，手机时段+更新一行、4日期一行；手机移除48px空包装占位，底部四入口48px/13px保持一致。72files414tests/lint/typecheck/build PASS；28几何/6交互组合PASS、12手机地图手势PASS。线上手机390px搜索底56=工具栏顶56，工具栏底173.33<地图顶174，无横溢；日期时段默认全可见、toggle0，线上傍晚切换pressed即时生效。参考Windy与Ventusky官方时间轴原则，详见docs/engineering-change-log/2026-10-02-direct-date-toolbar.md。供应商数据/评分门禁未修改。原目录需同步本次文档tip并镜像知识库。旧远端聊天仍满额，后续远端审查仍待接力决定，不伪称远端DONE。
 
+
+## v1.0.25 compact toolbar delivered
+Jovi指出v24日期拉伸占满宽屏，明确要求紧凑。PR46已合并部署a74f7ee95d77f0a26ed30e47db0ff9e71ba05f41。内容宽度flex/单行日期，桌面32px；手机只自然换行，44px触摸高度。414测试及36几何/6交互组合PASS；线上3825px火烧云组483px、日期59px，云海组557px，不再铺满。后续UX不得恢复1fr/width100%日期拉伸或机械强制分行。原main同步；Docs/Obsidian同步最后文档tip。远端旧聊天仍满，未伪称新远端review。
+
