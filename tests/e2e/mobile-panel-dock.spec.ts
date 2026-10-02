@@ -28,6 +28,44 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
   await expect(dock).toBeVisible();
   await expect(drawer).toHaveAttribute("aria-hidden", "true");
 
+  await page.getByRole("button", { name: /展开观测详情/ }).click();
+  await expect(drawer).toHaveAttribute("aria-hidden", "false");
+
+  const initialLayout = await drawer.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const body = element.querySelector<HTMLElement>(".mobile-map-panel-body");
+    const close = element.querySelector<HTMLButtonElement>(
+      'button[aria-label="关闭地图工具侧边栏"]',
+    );
+    const restore = element.parentElement?.querySelector<HTMLElement>(
+      ":scope > .detail-restore",
+    );
+    const restoreStyle = restore ? getComputedStyle(restore) : null;
+    const closeRect = close?.getBoundingClientRect();
+    return {
+      x: rect.x,
+      width: rect.width,
+      viewportWidth: window.innerWidth,
+      bodyOverflowY: body ? getComputedStyle(body).overflowY : "",
+      restoreVisible: Boolean(
+        restore &&
+          restoreStyle?.display !== "none" &&
+          restore.getBoundingClientRect().width > 0,
+      ),
+      closeWidth: closeRect?.width ?? 0,
+      closeHeight: closeRect?.height ?? 0,
+    };
+  });
+  expect(initialLayout.x).toBeGreaterThanOrEqual(-0.5);
+  expect(initialLayout.width).toBeCloseTo(initialLayout.viewportWidth, 0);
+  expect(initialLayout.bodyOverflowY).toMatch(/auto|scroll/);
+  expect(initialLayout.restoreVisible).toBe(false);
+  expect(initialLayout.closeWidth).toBeGreaterThanOrEqual(48);
+  expect(initialLayout.closeHeight).toBeGreaterThanOrEqual(48);
+
+  await drawer.getByRole("button", { name: "关闭地图工具侧边栏" }).click();
+  await expect(drawer).toHaveAttribute("aria-hidden", "true");
+
   await page.getByTestId("mobile-map-panel-open-cloud").click();
   await expect(drawer).toHaveAttribute("aria-hidden", "false");
   await expect(drawer.locator(".cloud-control")).toBeVisible();

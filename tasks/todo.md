@@ -1,3 +1,73 @@
+# 2026-09-21 S3 移动端「今晚判断」详情面板修复、测试与发布
+
+- [x] 复核 S3-A～S3-D 截图证据、现有移动抽屉 CSS、焦点管理和安全区规则
+- [x] 依据 ui-ux-pro-max / Apple HIG / Material / WCAG 2.2 制定最小修复范围
+- [x] 手机竖屏详情面板改为全宽，并保留横屏侧栏行为
+- [x] 移除打开态悬浮「收起」按钮遮挡，压缩头部并明确唯一滚动区
+- [x] 补充 375px 竖屏与 812×375 横屏的几何、触控目标、无横向溢出回归测试
+- [x] 运行 lint、typecheck、单元/集成、构建及相关 Playwright 测试
+- [x] 审核差异并记录测试结果、提交 SHA 与部署验证
+
+## Review
+
+- Status: COMPLETE；候选、远端分支与生产均为 `ec5abdd72cb73666c12e655b829e275134420dbe`。
+- Scope: 仅处理审计报告 S3-A～S3-D；不混入 S1/S2/S4～S8 的后续优化。
+- Root cause: 竖屏抽屉固定为 `min(88vw, 420px)`，且打开 summary 时仍渲染 fixed `DetailRestore`，造成左侧露图与正文遮挡。
+- Verification: `npm run check` PASS（60 文件 / 352 项）；最终 Chromium E2E `126 passed / 42 skipped / 0 failed`；公网 375px 几何为 `x=0`、宽度=视口、无横向溢出、关闭键 48×48、悬浮恢复键隐藏。
+- Production: app/worker 均 healthy，镜像 `star-photo-addr:deploy-ec5abdd`，公网 `/healthz` 返回 `buildRevision=ec5abdd`；Open-Meteo 当前限流，火烧云快照 stale、云海后日一次 502，按数据降级而非发布成功处理。
+
+# 2026-09-21 八张移动端截图 UI/数据展示审计
+
+- [x] 逐张核对 8 张 iPhone Safari 截图：布局、参数文本、日期、地图画布、图例、错误态和固定层遮挡。
+- [x] 使用 `ui-ux-pro-max`、Apple HIG、Material Design、WCAG 2.2 建立审计标准。
+- [x] 为每张截图编号标记问题、严重等级、证据区域和待代码验证项。
+- [x] 生成审核文档，当前只做问题盘点，不修改页面代码、不提交、不部署。
+
+## Review
+
+- Report: `docs/ui-audit/2026-09-21-mobile-screenshot-audit.md`。
+- Scope: 截图证据审计；截图中显示的 HTTP 502/429、日期不一致、空画布和遮挡均记录为展示问题，但根因需后续运行态验证。
+- Decision gate: 等 Jovi 审核并确认优先级后，才进入 UI 修复计划。
+
+# 2026-09-20 发布后剩余事项审计与四页面回归
+
+- [x] 核对当前生产 exact SHA、隔离发布分支、历史任务清单和未闭环门禁。
+- [x] 在发布候选上运行完整静态门禁和全量 Chromium E2E。
+- [x] 运行 Firefox/WebKit 跨浏览器冒烟，并复核 375px、小屏横屏、平板和桌面四入口布局。
+- [x] 对生产 `/healthz`、火烧云/云海业务数据有效数、日期标签和容器健康做发布后复核。
+- [x] 修正过期 E2E 契约，提交推送并将最终 exact SHA 部署到生产。
+
+## Review
+
+- Status: `COMPLETE`；发布分支与远端一致为 `60c348b1c20d9ca1f775a0f7347eff8b28e64785`，生产 `buildRevision=60c348b`。
+- UI acceptance: 无横向页面溢出、主数据不遮挡、固定/悬浮控件不覆盖核心内容、触控目标可用、空数据与请求失败语义分离。
+- Evidence boundary: 浏览器模拟尺寸通过不等于真实手机 `DEVICE_VERIFIED`；真实手机仍由 Jovi 做最终验收。
+- Verification: ESLint、TypeScript、60 文件 / 352 项 Vitest、生产构建通过；Chromium `126 passed / 42 skipped / 0 failed`；Firefox/WebKit `4/4`。
+- Production: app/worker healthy；火烧云三天均有有效排行；云海三天恢复有效排行与压力层 `54/54`，期间一次冷请求 502 与一次后日压力降级均按重试机制恢复，未污染新鲜缓存。
+
+# 2026-09-19 四页面日期显示统一
+
+- [x] 读取并核对主页、候选对比、火烧云、云海四条日期显示链路。
+- [x] 补充共享日期格式的 RED 测试，并统一显示今日/明日/后日 + 月日 + 星期。
+- [ ] 完成四入口 focused E2E、移动窄屏溢出检查和完整门禁（当前本地服务器受沙箱端口权限阻断）。
+
+## Review
+
+- Scope: 只改日期展示文案与共享格式，不改变日期计算、评分、数据源、缓存或 URL 状态。
+- Authorization: Jovi 已明确指出云海之外的三个页面也必须同步更新。
+- Verification: ESLint、TypeScript、60 个测试文件 / 344 项 Vitest、生产构建通过；浏览器 E2E `NOT_RUN`，原因是沙箱禁止本地监听端口。
+
+# 2026-09-19 火烧云空快照修复
+
+- [x] 复现火烧云 HTTP 200 空评分快照和截图中的 0 点位假成功。
+- [x] 阻止空快照写入/覆盖缓存，保留最后有效快照并显示可重试状态。
+- [ ] 运行火烧云页面刷新、日期切换和浏览器 E2E（本地服务器端口受沙箱权限阻断）。
+
+## Review
+
+- Verification: 火烧云路由回归 2/2、火烧云纯函数与日期单元测试通过；生产 ECS 只读探测三天均 282 个站点 / 564 个有效评分字段。
+- Boundary: 当前改动尚未提交或部署；生产现有接口已恢复有效数据，但空快照保护需发布后才会生效。
+
 # 2026-09-10 UI 统一与专题排行门槛
 
 - [x] 将主页默认图层改为云量预报 + 光污染参考，实况时间轴只在用户主动选择时出现并保持收起。
@@ -704,3 +774,48 @@ Known follow-ups (not blockers): cloudsea has no E2E coverage yet (unit-only); c
 
 - 根因：上海时间凌晨仍属于前一晚观测夜，静态按当天 00:00 起始会漏掉 20:00–23:00。
 - 变更边界：仅测试夹具和版本记录；生产评分、天气 Provider、完整性门槛保持不变。
+
+# 2026-09-18 手机端响应式布局与参数显示优化
+
+- [x] 读取历史接力会话、当前源码、视觉规范和四个入口的现状。
+- [x] 完成 1A 决策：手机端采用底部详情抽屉。
+- [x] 完成 2A 决策：主页、暗夜选址、火烧云、云海统一优化。
+- [x] 写入详细实施计划 `tasks/plans/2026-09-18-mobile-responsive-layout.md`。
+- [x] 获得代码改动授权后，先补响应式 RED 回归，再改共享头部/断点/地图工具容器。
+- [x] 重排主页手机参数区，恢复地图可用高度并修复内部横向溢出。
+- [x] 统一火烧云/云海手机详情抽屉、参数层级和卡片换行行为。
+- [x] 完成固定 fixture 的多视口、桌面/移动、跨浏览器和截图验收。
+- [x] 更新隔离候选的工程变更记录；提交、推送、合并、部署仍另行授权。
+
+## Review
+
+- Status: `RESPONSIVE_CANDIDATE_VERIFIED_PENDING_HANDOFF`。
+- Baseline: `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e` / `v1.0.18`，计划创建前工作树干净。
+- Scope: 只改响应式布局、参数显示、详情交互可达性和测试；不改评分、数据源、缓存、地点目录、URL 状态或生产配置。
+- Evidence: 本地只读浏览器已确认主页 390px 命令栏/地图高度、导航压缩、地图内部溢出，以及云海详情 flex 压缩；Open-Meteo 429 仅作为数据降级边界。
+- Candidate: `C:\Users\Admin\.config\superpowers\worktrees\Star_photo_addr\mobile-responsive-layout-20260918`，分支 `codex/mobile-responsive-layout-20260918`；`npm run check`、Chromium `124 passed / 40 skips / 0 failed`、Firefox/WebKit `4 passed`。
+# 2026-09-21 手机/平板顶部占用与整页滑动
+
+- [x] 修复筛选常驻、整页无法滚动、地图吞手势、时间轴挤压；沿用 ui-ux-pro-max。
+- [x] 360/390/768/1024 浏览器触摸滚动、相关桌面/移动回归、Firefox/WebKit 冒烟。
+- [x] 提交推送并部署 `349db7b5ba320593724f2a084f6b2228489b6fb7`，公网滚动后页头 top=-844。
+- [ ] 一加 7 Pro 真机滑动：工具自动审批拒绝启动网页，NOT_RUN。
+
+Review: `docs/ui-audit/2026-09-21-mobile-scroll-release.md`。上游天气 502 仍存在，不作为本次布局已解决事项。
+
+# 2026-09-27 远端 ChatGPT 阶段规划与移动端 UI 重构
+
+- [ ] 完成本地文档、知识库与指定 Codex 聊天的事实对照，标出已完成、过期、阻塞和未验证内容。
+- [ ] 在已验证的 `逐星` Project/聊天中请求远端 ChatGPT 输出一个可执行的阶段级方案：目标、范围、架构、开源借鉴、分期、验收和回滚边界。
+- [ ] 审核远端方案是否与当前代码、脏工作区、Node/Next 版本和真实数据边界一致；不采纳无法在本地验证或会放松 fail-closed 规则的步骤。
+- [ ] 将批准的第一阶段拆成可回放的小步：移动端信息架构、弹窗/抽屉、地图手势、数据状态文案、响应式验收和必要的开源工具吸收。
+- [ ] 在隔离工作区实现第一阶段，保留 Owner 工作区未提交改动；先写 RED 回归，再修改共享组件和样式。
+- [ ] 运行 Node 24 下的 lint、typecheck、定向单元/集成、真实应用多视口 E2E、截图和跨浏览器检查；把真机、生产数据和第三方配额分别标成未验证或降级。
+- [ ] 根据验证结果更新工程变更记录、接力文档和项目状态；只有证据完整时才提交/推送，暂不擅自合并或部署。
+
+## Review
+
+- Status: `PLANNING_WITH_REMOTE_CHATGPT`。
+- Baseline: Owner 工作区存在未提交改动；当前远端主线与历史 UI/数据修复存在版本漂移，必须以本地当前树和远端实际连接器读取结果为准。
+- Gate: C2C 固定地址已恢复并通过 doctor；远端规划尚未返回，执行阶段尚未开始。
+

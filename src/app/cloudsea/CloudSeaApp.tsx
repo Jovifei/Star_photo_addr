@@ -37,6 +37,7 @@ import { buildProbabilityOverlay } from "@/lib/cloudseaOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
+import { formatCalendarDate, formatRelativeDateLabel } from "@/lib/nighttime";
 import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
 
@@ -82,11 +83,17 @@ function shiftDate(date: string, days: number): string {
 }
 
 function dateLabel(date: string): string {
-  const [, month, day] = date.split("-").map(Number);
-  const weekday = ["日", "一", "二", "三", "四", "五", "六"][
-    new Date(`${date}T12:00:00Z`).getUTCDay()
-  ];
-  return `${month}/${day} 周${weekday}`;
+  return formatCalendarDate(date);
+}
+
+function rangeOptionLabel(
+  option: (typeof RANGE_OPTIONS)[number],
+  baseDate: string,
+): string {
+  if (option.value === 3) {
+    return `${option.label} · ${formatCalendarDate(baseDate)}—${formatCalendarDate(shiftDate(baseDate, 2))}`;
+  }
+  return `${option.label} · ${formatRelativeDateLabel(shiftDate(baseDate, option.value), baseDate)}`;
 }
 
 const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = [
@@ -327,7 +334,7 @@ export default function CloudSeaApp() {
                 onClick={() => setRange(option.value)}
                 title={option.hint}
               >
-                <span>{option.label}</span>
+                <span>{rangeOptionLabel(option, baseDate)}</span>
               </button>
             ))}
           </div>

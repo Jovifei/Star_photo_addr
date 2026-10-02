@@ -47,6 +47,7 @@ function saveFireglowToDisk(date: string, model: string, snapshot: FireGlowSnaps
   if (process.env.NODE_ENV === "test") return;
   try {
     const newCount = countValidScores(snapshot);
+    if (newCount === 0) return;
     const existing = readFireglowFromDisk(date, model);
     const existingCount = countValidScores(existing);
 
@@ -90,7 +91,9 @@ export function fireglowSnapshotAgeMs(snapshot: FireGlowSnapshot): number {
 
 function readUsableFireglowDiskSnapshot(date: string, model: string): FireGlowSnapshot | null {
   const snapshot = readFireglowFromDisk(date, model);
-  return snapshot && fireglowSnapshotAgeMs(snapshot) <= DISK_STALE_TTL_MS ? snapshot : null;
+  return snapshot && countValidScores(snapshot) > 0 && fireglowSnapshotAgeMs(snapshot) <= DISK_STALE_TTL_MS
+    ? snapshot
+    : null;
 }
 
 const cache = new Map<string, { snapshot: FireGlowSnapshot; at: number }>();
@@ -100,6 +103,7 @@ const CACHE_MAX_ENTRIES = 32;
 
 function rememberSnapshot(key: string, date: string, model: string, snapshot: FireGlowSnapshot) {
   const newCount = countValidScores(snapshot);
+  if (newCount === 0) return;
   const existingMemory = cache.get(key)?.snapshot;
   const existingCount = countValidScores(existingMemory);
 
@@ -218,9 +222,35 @@ export async function GET(request: NextRequest) {
   try {
     const snapshot = await activeTask;
     const newCount = countValidScores(snapshot);
+    const memoryFallback = cache.get(key)?.snapshot;
     const latestDisk = readUsableFireglowDiskSnapshot(date, model);
-    const diskFallback = diskCached ?? latestDisk;
+    const diskFallback =
+      memoryFallback && countValidScores(memoryFallback) > 0
+        ? memoryFallback
+        : diskCached ?? latestDisk;
     const diskCount = countValidScores(diskFallback);
+
+    if (newCount === 0) {
+      if (diskCount > 0) {
+        return NextResponse.json(
+          {
+            ...diskFallback!,
+            stale: true,
+            refreshError: "上游未返回有效火烧云评分，已保留最近成功快照",
+          },
+          {
+            headers: {
+              "Cache-Control": "no-store",
+              "X-Fireglow-Cache": "empty-protected-fallback",
+            },
+          },
+        );
+      }
+      return NextResponse.json(
+        { error: "上游未返回有效火烧云评分，请稍后重试" },
+        { status: 502, headers: { "Cache-Control": "no-store" } },
+      );
+    }
 
     if (diskCount > 0 && newCount < diskCount * 0.7) {
       return NextResponse.json(

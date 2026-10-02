@@ -177,22 +177,40 @@ const NIGHT_WINDOW_TEXT = `${pad2(NIGHT_START)}:00–次日${pad2(NIGHT_END)}:00
  * 8/8 05:00, and is always keyed by "2026-08-07").
  *
  * - `compact = false` → "8月7日 周三 夜间（20:00–次日05:00）" (full, for tooltips)
- * - `compact = true`  → "8/7 周五夜" (short, with the weekday users plan around)
+ * - `compact = true`  → "8月7日 周五" (short, with the full calendar date)
  *
  * The explicit "夜间（…）" suffix makes the cross-midnight semantics obvious so
  * users never mistake a 01:00 reading for the same calendar day.
  */
 export function formatNightLabel(dateKey: string, compact = false): string {
+  const calendarDate = formatCalendarDate(dateKey);
+  if (calendarDate === dateKey) return dateKey;
+  if (compact) return calendarDate;
+  return `${calendarDate} 夜间（${NIGHT_WINDOW_TEXT}）`;
+}
+
+/** Calendar date label shared by all four product entry points. */
+export function formatCalendarDate(dateKey: string): string {
   const [, m, d] = dateKey.split("-");
   const month = Number(m);
   const day = Number(d);
-  if (!Number.isFinite(month) || !Number.isFinite(day)) return dateKey; // 兜底
+  if (!Number.isFinite(month) || !Number.isFinite(day)) return dateKey;
   const weekday = new Intl.DateTimeFormat("zh-CN", {
     timeZone: "Asia/Shanghai",
     weekday: "short",
-  }).format(new Date(`${dateKey}T12:00:00Z`)); // 12:00Z = 上海 20:00，锚定傍晚日
-  if (compact) return `${month}/${day} ${weekday}夜`;
-  return `${month}月${day}日 ${weekday} 夜间（${NIGHT_WINDOW_TEXT}）`;
+  }).format(new Date(`${dateKey}T12:00:00Z`));
+  return `${month}月${day}日 ${weekday}`;
+}
+
+/** Relative selector label, retaining the actual calendar date for clarity. */
+export function formatRelativeDateLabel(dateKey: string, referenceDate: string): string {
+  const target = Date.parse(`${dateKey}T12:00:00Z`);
+  const reference = Date.parse(`${referenceDate}T12:00:00Z`);
+  const offset = Number.isFinite(target) && Number.isFinite(reference)
+    ? Math.round((target - reference) / 86_400_000)
+    : null;
+  const relative = offset === 0 ? "今日" : offset === 1 ? "明日" : offset === 2 ? "后日" : null;
+  return relative ? `${relative} · ${formatCalendarDate(dateKey)}` : formatCalendarDate(dateKey);
 }
 
 /**
