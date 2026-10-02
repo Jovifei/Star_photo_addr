@@ -1153,3 +1153,12 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [ ] Fullcheck thenmerge/syncmain; exactrevisiondeploywithrollback.
 - [ ] ProductionUI/read-onlyweatheracceptance; updateDocs/knowledge.
 
+
+## v1.0.24完成
+
+- [x] 直接日期/晨晚选择，移除调整弹层。
+- [x] 28组合、6交互组合、12手机手势及72/414完整门禁。
+- [x] 合并PR44/45、原目录同步和构建、低内存部署与回滚保护。
+- [x] 线上真实控件与手机无空白占位/无覆盖/无横溢验收。
+- [x] 交付文档更新；最终同步知识库。
+

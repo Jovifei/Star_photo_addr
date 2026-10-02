@@ -661,3 +661,8 @@ DEPLOYED: `NO`.
 - Obsidian mapping registered under approved home root; filtered tracked engineering docs mirror applied, private guides/environment/credentials excluded. Refresh mirror after this receipt commit.
 - Remote exact review on a496632 returnedCHANGES_REQUIRED and created actual repair9c249d5; all repairs received/tested. Old chat reached length limit. Same-Project successor decision pending Jovi; no fabricated final remoteDONE or next phase execution.
 - This final receipt is documentation only. Runtime code SHA above remains authoritative; a later documentation SHA does not represent undeployed product-code changes.
+
+## 2026-10-02 v1.0.24 direct topic date controls delivered
+
+Jovi要求日期/时段常驻顶部直接选择，禁止用调整按钮弹出核心操作。PR44/45已合并并部署6389bef784c12b4bc1c7aaee0fa3a93d852766a5。云海/火烧云使用普通文档流工具栏：桌面一行，手机时段+更新一行、4日期一行；手机移除48px空包装占位，底部四入口48px/13px保持一致。72files414tests/lint/typecheck/build PASS；28几何/6交互组合PASS、12手机地图手势PASS。线上手机390px搜索底56=工具栏顶56，工具栏底173.33<地图顶174，无横溢；日期时段默认全可见、toggle0，线上傍晚切换pressed即时生效。参考Windy与Ventusky官方时间轴原则，详见docs/engineering-change-log/2026-10-02-direct-date-toolbar.md。供应商数据/评分门禁未修改。原目录需同步本次文档tip并镜像知识库。旧远端聊天仍满额，后续远端审查仍待接力决定，不伪称远端DONE。
+
