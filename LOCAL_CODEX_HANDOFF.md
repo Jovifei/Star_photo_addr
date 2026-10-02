@@ -553,3 +553,16 @@ Next: send PR #41's current head SHA and this handoff to the existing ChatGPT co
 - Created local isolated integration worktree `C:\Users\Admin\.codex\worktrees\starphoto-main-refresh-20261002\Star_photo_addr` from `origin/main`, then fast-forwarded the candidate feature branch. The resulting tree includes the previously tested 429 status fix and matching handoff changes.
 - Post-merge local verification passed: `npm run check` (lint, typecheck, 68 test files / 399 tests, Next build) and the desktop/mobile StarWindowTable 429 E2E (2/2) on temporary local port 3317. No weather-provider or production page requests were made by these tests.
 - The Owner checkout is still dirty and unchanged. It was not pulled, reset, stashed, or overwritten. The local integration branch has not been pushed; PR #41 remains open. Merge to remote/deploy remain gated on exact-coordinate production weather acceptance and remote ChatGPT review.
+
+## 2026-10-02 Functional consolidation release candidate
+
+Supersedes prior Oct02 statements that Owner main remains 100 commits behind or that production cooldown expiry is unverified.
+
+- Original E:\project\Star_photo_addr is clean main@7a572b538caad9a881066cdd8c301a161c1523d1. Owner changes backed up in ZIP and local snapshot ef15634ef7de914d6c5ea0a17f1189a666ec5194 before fast-forward.
+- Integration a496632630a50b7a11ef940c4d0dde100b80ee3a includes all previously outstanding branch ancestry after functional audit/migration; historical branches retained.
+- Candidate Best Match, request-error evidence, Next16.3.8, model-aware cloud/scoring capability, pressure shared persisted cooldown, strict pressure time axis, observing worker previous-night and timestamp/model/date checks integrated.
+- Complete npm check PASS:70 test files410 tests, lint/typecheck/production build. Browser run7 PASS5 SKIPPED2 CHANGES_REQUIRED desktop selected-data loading; investigating hydration cleanup race. No deploy until resolved and rerun.
+- Authoritative production cooldown marker absent; one bounded genuine Best Match request fresh sourceFetchedAt2026-10-02T05:23:26.681Z stalefalse. Saved response passes two-night actual scoring test. No fresh assertion about other points or rendered production page yet.
+- PR41 updated and existing remote ChatGPT exact-SHA review now actively reads workspace/GitHub sources. Final remote verdict pending.
+- Obsidian approved home profile incrementally registered star_photo_addr original root, retaining7 other mappings and backup. Mirror preview completed; no private deployment documents will be mirrored. Actual filtered sync follows final local main update.
+- Production remains bd23a7c442e1/v1.0.22. Retain existing rollback image and original snapshot volume on deployment.
