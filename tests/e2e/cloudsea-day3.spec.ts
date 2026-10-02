@@ -33,7 +33,7 @@ function dateLabel(date: string): string {
 }
 
 function compactDateLabel(date: string): string {
-  return dateLabel(date).replace(/^(\d+)月(\d+)日/, "$1.$2");
+  return dateLabel(date).replace(/^(\d+)月(\d+)日.*$/, "$1.$2");
 }
 
 function windowFor(date: string) {
@@ -126,7 +126,7 @@ test("云海日期控件显示日期，并实际请求后日与三日总览的�
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/cloudsea");
   await expect(page.locator(".cloudsea-sidebar-header")).toBeVisible();
-  await expect(page.locator(".cloudsea-beta-banner").first()).toContainText(
+  await expect(page.locator(".cloudsea-beta-banner p").first()).toContainText(
     "Open-Meteo GFS",
   );
 
@@ -146,6 +146,10 @@ test("云海日期控件显示日期，并实际请求后日与三日总览的�
     }),
   ).toBeVisible();
 
+  const dateButtons = page.locator('.cloudsea-controls .segmented[data-mode="range"] button');
+  for (let index = 0; index < 3; index += 1) {
+    await expect(dateButtons.nth(index).locator("small")).toHaveAttribute("title", dateLabel(dates[index]).replace(/^(\d+)月(\d+)日/, "$1.$2"));
+  }
   await page
     .getByRole("button", {
       name: new RegExp(`后日.*${compactDateLabel(dates[2])}`),

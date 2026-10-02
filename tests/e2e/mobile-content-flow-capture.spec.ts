@@ -80,11 +80,11 @@ test("完整应用手机/平板/横屏/桌面截图证据", async ({ page }, inf
     await page.touchscreen.tap(mapBox.x + mapBox.width * .28, mapBox.y + mapBox.height * .25);
     await expect(page.getByTestId("mobile-data-sheet")).toHaveAttribute("data-level", "half");
     await shot(`${name}-390-nearby`);
-    const adjust = page.getByRole("button", { name: "展开日期与时段设置" });
-    await expect(adjust).toBeVisible();
-    await adjust.click();
-    await shot(`${name}-390-settings-expanded`);
-    await page.getByRole("button", { name: "收起日期与时段设置" }).click();
+    await expect(page.locator(".topic-controls-toggle")).toHaveCount(0);
+    const choices = page.locator(".product-topic-toolbar .segmented button");
+    await expect(choices).toHaveCount(6);
+    for (const choice of await choices.all()) await expect(choice).toBeVisible();
+    await shot(`${name}-390-persistent-settings`);
     await page.setViewportSize({ width: 812, height: 375 });
     await page.goto(path);
     await shot(`${name}-812x375`);

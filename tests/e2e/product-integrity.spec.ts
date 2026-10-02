@@ -125,7 +125,7 @@ test("火烧云地图在宽屏占满工作区而不是被 1680px 中心限宽", 
   expect((panel?.x ?? 0) + (panel?.width ?? 0)).toBeGreaterThanOrEqual(1900);
 });
 
-test("火烧云主要控制保持至少 44px 触控高度", async ({ page }, testInfo) => {
+test("火烧云主要控制遵守紧凑桌面与粗指针触控高度", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "触控高度只需桌面项目验证一次");
   await page.goto("/fireglow");
   const controls = page.locator(".fireglow-controls button:visible");
@@ -133,7 +133,8 @@ test("火烧云主要控制保持至少 44px 触控高度", async ({ page }, tes
   const heights = await controls.evaluateAll((buttons) =>
     buttons.map((button) => button.getBoundingClientRect().height),
   );
-  expect(heights.every((height) => height >= 44)).toBe(true);
+  const coarse = await page.evaluate(() => matchMedia("(pointer: coarse)").matches);
+  expect(heights.every((height) => coarse ? height >= 44 : height >= 32 && height <= 36)).toBe(true);
 });
 
 test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo) => {

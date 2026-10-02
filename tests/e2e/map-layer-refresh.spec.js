@@ -55,6 +55,7 @@ test("手动刷新只启动一个云量网格请求并保留已有画布", async
     if (
       url.pathname === "/api/forecast" &&
       url.searchParams.get("refresh") === "1" &&
+      url.searchParams.get("model") === "gfs" &&
       (url.searchParams.get("latitude") ?? "").includes(",")
     ) {
       gridRefreshRequests += 1;

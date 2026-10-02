@@ -223,6 +223,13 @@ export async function installGeocodingMock(page) {
 
 /** Same-origin App Router contracts used by the integrated Next.js pages. */
 export async function installNextApiMock(page, fixture) {
+  // Specific fixture routes registered below (or by the test) take precedence.
+  // An omitted endpoint must never fall through to the real server/provider.
+  await page.route("**/api/**", (route) => route.fulfill({
+    status: 503,
+    contentType: "application/json",
+    body: JSON.stringify({ error: "E2E endpoint requires an explicit fixture" }),
+  }));
   await page.route("**/api/observing/snapshot**", async (route) => {
     const url = new URL(route.request().url());
     const date = url.searchParams.get("date") || "2026-08-09";

@@ -17,8 +17,8 @@ async function expectNoOverflow(page: Page) {
 }
 
 async function openTopicSettings(page: Page) {
-  const toggle = page.getByRole("button", { name: "展开日期与时段设置" });
-  if (await toggle.isVisible()) await toggle.click();
+  await expect(page.locator(".product-topic-toolbar")).toBeVisible();
+  await expect(page.locator(".topic-controls-toggle")).toHaveCount(0);
 }
 
 for (const width of [320, 390, 768, 1024]) {
@@ -58,30 +58,31 @@ for (const path of ["/fireglow", "/cloudsea"]) {
     test.skip(info.project.name !== "mobile", "compact topic disclosure");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(path);
-    const groups = page.locator(".app-header .segmented");
+    const groups = page.locator(".product-topic-toolbar .segmented");
     await expect(groups).toHaveCount(2);
     // Touch targets may be large; visual hierarchy and the document budget
     // must still give the forecast/map priority over navigation and settings.
     for (const [width, height] of [[320, 760], [384, 760], [430, 932], [768, 1024], [1024, 768], [812, 375]]) {
       await page.setViewportSize({ width, height });
-      await expect.poll(async () => (await page.locator('.app-header').boundingBox())!.height).toBeLessThanOrEqual(48);
+      await expect.poll(async () => await page.locator('.app-header').evaluate(element => element.getBoundingClientRect().height)).toBeLessThanOrEqual(48);
       const phaseBox = await groups.first().boundingBox();
       const dateBox = await groups.last().boundingBox();
-      expect(Math.abs(phaseBox!.y - dateBox!.y)).toBeLessThanOrEqual(1);
+      expect(dateBox!.y).toBeGreaterThanOrEqual(phaseBox!.y);
+      for (const choice of await groups.locator("button").all()) await expect(choice).toBeVisible();
       await expectNoOverflow(page);
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('.forecast-method-note')).toBeHidden();
-    const selected = await groups.last().locator("button.active").innerText();
+    const selected = (await groups.last().locator("button.active").textContent())!;
     await expect(groups.last().locator("button.active")).toBeVisible();
-    await expect(groups.last().locator("button:not(.active)").first()).toBeHidden();
+    await expect(groups.last().locator("button:not(.active)").first()).toBeVisible();
     await openTopicSettings(page);
     await expect(groups.last().locator("button:not(.active)").first()).toBeVisible();
     await expect(groups.last().locator("button.active")).toHaveText(selected);
     const requested = groups.last().locator("button").nth(1);
     await requested.click();
     await expect(requested).toHaveClass(/active/);
-    await page.getByRole("button", { name: "收起日期与时段设置" }).click();
+    await expect(page.locator(".topic-controls-toggle")).toHaveCount(0);
     await expect(requested).toBeVisible();
     const prefix = path.slice(1);
     await expect(page.locator(".leaflet-container").first()).toBeVisible();
