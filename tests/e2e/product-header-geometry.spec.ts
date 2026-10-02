@@ -10,7 +10,9 @@ test("four peer products retain the same compact header and navigation geometry"
     for (const path of ["/", "/sites", "/fireglow", "/cloudsea"]) {
       await page.goto(path);
       const header = page.locator(".product-header");
-      await expect(header).toBeVisible();
+      const topic = path === "/fireglow" || path === "/cloudsea";
+      await expect(header.locator(".nav-tabs")).toBeVisible();
+      if (width >= 1200 || !topic) await expect(header).toBeVisible();
       const geometry = await header.evaluate((element) => ({
         height: element.getBoundingClientRect().height,
         titleFont: getComputedStyle(element.querySelector("h1")!).fontSize,
@@ -21,7 +23,7 @@ test("four peer products retain the same compact header and navigation geometry"
         })),
         pageWidth: document.documentElement.scrollWidth,
       }));
-      expect(geometry.height, `${width} ${path}`).toBe(width >= 1200 ? 65 : 48);
+      expect(geometry.height, `${width} ${path}`).toBe(width >= 1200 ? 65 : topic ? 0 : 48);
       expect(geometry.titleFont).toBe(width >= 1200 ? "17px" : "16px");
       expect(geometry.pageWidth).toBeLessThanOrEqual(width);
       for (const tab of geometry.tabs) {
@@ -52,10 +54,14 @@ test("four peer products retain the same compact header and navigation geometry"
         });
         expect(["static", "relative"]).toContain(toolbarGeometry.position);
         expect(toolbarGeometry.scrollWidth).toBeLessThanOrEqual(toolbarGeometry.clientWidth + 1);
-        const headerBounds = (await header.boundingBox())!;
+        const headerBounds = await header.evaluate(e => ({ y: e.getBoundingClientRect().y, height: e.getBoundingClientRect().height }));
         expect(toolbarGeometry.top).toBeGreaterThanOrEqual(headerBounds.y + headerBounds.height - 1);
         expect(toolbarGeometry.bottom).toBeLessThanOrEqual((await map.boundingBox())!.y + 1);
-        expect(headerBounds.height).toBe(width >= 1200 ? 65 : 48);
+        expect(headerBounds.height).toBe(width >= 1200 ? 65 : 0);
+        if (width < 1200) {
+          const search = (await page.locator(".topic-map-search").boundingBox())!;
+          expect(toolbarGeometry.top - search.y - search.height).toBeLessThanOrEqual(8);
+        }
       }
     }
   }

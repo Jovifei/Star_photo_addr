@@ -26,7 +26,7 @@ export default function ProductHeader({
 
   return (
     <>
-    <header className="app-header product-header">
+    <header className="app-header product-header" data-topic-controls={topicControls || undefined}>
       <div className="app-header-brand">
         <span className={`app-header-mark${markClassName ? ` ${markClassName}` : ""}`} aria-hidden="true">
           {mark}

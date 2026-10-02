@@ -95,6 +95,15 @@
     min-height: 48px;
     flex: 0 0 48px;
   }
+  /* Compact topic navigation lives at the bottom; its empty wrapper must not
+     insert a blank row between search and the persistent date toolbar. */
+  .app-shell > .app-header.product-header[data-topic-controls="true"] {
+    height: 0;
+    min-height: 0;
+    flex: 0 0 0;
+    padding: 0;
+    border: 0;
+  }
   .app-shell > .product-topic-toolbar { padding: 6px max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left)); }
   .app-shell > .product-topic-toolbar :is(.fireglow-controls, .cloudsea-controls) {
     grid-template-columns: minmax(0, 1fr) auto;
