@@ -7,8 +7,8 @@ afterEach(() => { vi.doUnmock("@/lib/pressure"); vi.restoreAllMocks(); });
 async function route() {
   vi.doMock("@/lib/pressure", () => ({ fetchPressureForecast }));
   const { GET } = await import("@/app/api/pressure-forecast/route");
-  const { OpenMeteoRateLimitError } = await import("@/lib/forecast");
-  return { GET, OpenMeteoRateLimitError };
+  const { OpenMeteoRateLimitError, noteOpenMeteoRateLimit } = await import("@/lib/forecast");
+  return { GET, OpenMeteoRateLimitError, noteOpenMeteoRateLimit };
 }
 const request = (query = "") => new NextRequest(`http://localhost/api/pressure-forecast?latitude=30&longitude=120&model=icon${query}`);
 describe("pressure provider cooldown", () => {
@@ -20,6 +20,25 @@ describe("pressure provider cooldown", () => {
     expect(response.headers.get("retry-after")).toBe("120");
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
+  it("does not shorten a provider daily cooldown on repeated force refresh", async () => {
+    const { GET, OpenMeteoRateLimitError, noteOpenMeteoRateLimit } = await route();
+    noteOpenMeteoRateLimit("3600", "Daily API request limit exceeded");
+    fetchPressureForecast.mockRejectedValue(
+      new OpenMeteoRateLimitError(3_600_000, true),
+    );
+
+    const first = await GET(request("&refresh=1"));
+    expect(first.status).toBe(429);
+    expect(Number(first.headers.get("retry-after"))).toBeGreaterThan(3_500);
+    expect(first.headers.get("x-weather-limit")).toBe("daily");
+
+    const suppressed = await GET(request("&refresh=1"));
+    expect(suppressed.status).toBe(429);
+    expect(Number(suppressed.headers.get("retry-after"))).toBeGreaterThan(3_500);
+    expect(suppressed.headers.get("x-weather-limit")).toBe("daily");
+    expect(fetchPressureForecast).toHaveBeenCalledTimes(1);
+  });
+
   it("retains a cached snapshot as stale with provider retry-after", async () => {
     const { GET, OpenMeteoRateLimitError } = await route();
     fetchPressureForecast.mockResolvedValueOnce({ model: "icon", hourly: [], fetchedAt: "2026-10-02T00:00:00Z" });

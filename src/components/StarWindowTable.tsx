@@ -56,16 +56,31 @@ export default function StarWindowTable() {
         ? cached
         : !location.isCandidate ? state.forecast : null;
       const forecast = available?.metadata?.model === state.candidateForecastModel ? available : null;
+      const locationRequestError =
+        location.isCandidate || matchingCandidate
+          ? candidateForecastError
+          : selectedForecastError;
       nightKeys.forEach((night, leadIndex) => {
         row.set(night, {
           evidence: projectCandidateNight(forecast, location, night, leadIndex, state.candidateForecastModel),
-          loading: !location.isCandidate && state.loading,
+          // Candidate evidence owns its own request lifecycle. A slow raster
+          // request must not hide an already-resolved Best Match table row.
+          loading: !forecast && !locationRequestError,
         });
       });
       matrix.set(location.id, row);
     }
     return matrix;
-  }, [tableLocations, candidates, nightKeys, forecastCache, state.forecast, state.candidateForecastModel, state.loading]);
+  }, [
+    tableLocations,
+    candidates,
+    nightKeys,
+    forecastCache,
+    state.forecast,
+    state.candidateForecastModel,
+    candidateForecastError,
+    selectedForecastError,
+  ]);
   const sortedLocations = useMemo(() => {
     if (!sortKey) return tableLocations;
     const direction = sortDir === "asc" ? 1 : -1;
