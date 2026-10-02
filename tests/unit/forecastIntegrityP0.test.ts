@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { dataAgeMs, effectiveCloudForScore, forecastTrustIssue, MAX_FORECAST_AGE_MS, missingNightInputs, missingWeatherInputs, OBSERVATION_INTEGRITY_VERSION, sanitizeObservationSnapshot, usableDiskForecast, type IntegritySnapshot } from "@/lib/forecastIntegrity";
+import { dataAgeMs, effectiveCloudForScore, forecastTrustIssue, MAX_FORECAST_AGE_MS, missingNightInputs, missingWeatherInputs, OBSERVATION_INTEGRITY_VERSION, sanitizeObservationSnapshot, scoreCoreWeather, usableDiskForecast, type IntegritySnapshot } from "@/lib/forecastIntegrity";
 import { scoreObservingSiteAtTime, snapshotScoreAtTime } from "@/lib/observingSites";
 import { evaluateNight } from "@/lib/scoring";
 import type { HourWeather, LocationForecast, ObservingSite, RecommendationScore } from "@/lib/types";
@@ -121,6 +121,11 @@ describe("P0 layer-aware scoring gate", () => {
       expect(missingWeatherInputs({ ...hour(), [field]: null }).length).toBeGreaterThan(0);
     }
     expect(missingNightInputs({ ...hour(), dewPoint: null })).toContain("露点");
+  });
+  it("does not publish a core score when any canonical scoring field is missing", () => {
+    for (const field of ["temperature", "humidity", "dewPoint", "precipitationProbability"] as const) {
+      expect(scoreCoreWeather({ ...hour(), [field]: null })).toBeNull();
+    }
   });
   it("stale/missing records and incomplete exact-hour fields have no score", () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW);

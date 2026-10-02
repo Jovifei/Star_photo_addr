@@ -56,8 +56,9 @@ afterEach(() => {
 });
 
 describe("pressure forecast batch", () => {
-  it("backs off before retrying a transient provider throttle", async () => {
+  it("shares the provider cooldown and does not retry a throttle", async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(Date.now() - 60_000);
     let calls = 0;
     vi.stubGlobal(
       "fetch",
@@ -76,20 +77,16 @@ describe("pressure forecast batch", () => {
       }),
     );
 
-    const pending = fetchPressureForecastBatch(
-      [{ id: "retry", latitude: 30.1, longitude: 119.2 }],
-      "2026-09-08",
-      undefined,
-      "icon",
-    );
-    await vi.advanceTimersByTimeAsync(0);
+    const location = [{ id: "retry", latitude: 30.1, longitude: 119.2 }];
+    await expect(fetchPressureForecastBatch(location, "2026-09-08", undefined, "icon"))
+      .rejects.toThrow(/限流冷却/);
     expect(calls).toBe(1);
-    await vi.advanceTimersByTimeAsync(299);
+    await expect(fetchPressureForecastBatch(location, "2026-09-08", undefined, "icon"))
+      .rejects.toThrow(/限流冷却/);
     expect(calls).toBe(1);
-    await vi.advanceTimersByTimeAsync(1);
-    await expect(pending).resolves.toEqual(
-      expect.objectContaining({ data: expect.objectContaining({ retry: expect.any(Object) }) }),
-    );
+    await vi.advanceTimersByTimeAsync(30_001);
+    await expect(fetchPressureForecastBatch(location, "2026-09-08", undefined, "icon"))
+      .resolves.toEqual(expect.objectContaining({ data: expect.objectContaining({ retry: expect.any(Object) }) }));
     expect(calls).toBe(2);
   });
 
@@ -264,5 +261,16 @@ describe("pressure forecast batch", () => {
     expect(result.profiles["2026-09-08T05:00"]).toHaveLength(
       PRESSURE_LEVELS.length,
     );
+  });
+});
+
+
+describe("pressure time axis integrity", () => {
+  it("rejects duplicate, descending and malformed times", () => {
+    for (const time of [["2026-09-08T05:00", "2026-09-08T05:00"], ["2026-09-08T06:00", "2026-09-08T05:00"], ["garbage", "more"]]) {
+      const raw = rawPressure();
+      raw.hourly.time = time;
+      expect(() => parsePressureForecast(raw, "test", "icon")).toThrow(/时间轴/);
+    }
   });
 });

@@ -1,3 +1,4 @@
+import { OpenMeteoRateLimitError, withOpenMeteoProviderSlot, noteOpenMeteoRateLimit } from "./forecast";
 import { hasUsablePressureProfile } from "./pressureIntegrity";
 export { hasUsablePressureProfile, isCompletePressureLevelSample, usablePressureLevelCount } from "./pressureIntegrity";
 import {
@@ -120,6 +121,7 @@ async function providerError(response: Response): Promise<Error> {
   const body = (await response.json().catch(() => null)) as
     | { reason?: string }
     | null;
+  if (response.status === 429) return noteOpenMeteoRateLimit(response.headers.get("Retry-After"), body?.reason ?? "");
   return new Error(
     body?.reason
       ? `气压接口返回 ${response.status}：${body.reason}`
@@ -186,17 +188,19 @@ async function requestPressureJson(
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const request = pressureRequestSignal(signal);
     try {
-      const response = await fetch(url, {
+      const response = await withOpenMeteoProviderSlot(() => fetch(url, {
         signal: request.signal,
         cache: "no-store",
         headers: { Accept: "application/json" },
-      });
+      }));
       if (response.ok) return await response.json();
       lastError = await providerError(response);
+      if (lastError instanceof OpenMeteoRateLimitError) break;
       if (response.status < 500 && response.status !== 429) break;
     } catch (error) {
       if (signal?.aborted) throw error;
       lastError = error;
+      if (error instanceof OpenMeteoRateLimitError) break;
     } finally {
       request.cleanup();
     }
@@ -227,6 +231,13 @@ function valueAt(
   return Array.isArray(values) ? values[index] : undefined;
 }
 
+function validTimeAxis(value: unknown): value is string[] {
+  return Array.isArray(value) && value.length > 0 &&
+    value.every((time) => typeof time === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(time)) &&
+    new Set(value).size === value.length &&
+    value.every((time, index) => index === 0 || time > value[index - 1]!);
+}
+
 /**
  * Parse one Open-Meteo pressure response. A pressure level only counts toward
  * the schema reliability threshold when cloud cover, RH, temperature and
@@ -246,7 +257,7 @@ export function parsePressureForecast(
   if (
     !Array.isArray(rawTimes) ||
     rawTimes.length === 0 ||
-    !rawTimes.every((time): time is string => typeof time === "string")
+    !validTimeAxis(rawTimes)
   ) {
     throw new Error("气压上游返回了无效逐小时时间轴");
   }

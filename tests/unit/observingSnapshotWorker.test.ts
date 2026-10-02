@@ -9,9 +9,10 @@ const helperSource = readFileSync(
   new URL("../../scripts/observing-snapshot-worker-utils.mjs", import.meta.url),
   "utf8",
 );
-const { snapshotHealth, retryAfterDelay } = (await import("../../scripts/observing-snapshot-worker-utils.mjs")) as {
+const { snapshotHealth, retryAfterDelay, observingContext } = (await import("../../scripts/observing-snapshot-worker-utils.mjs")) as {
+  observingContext: (now: Date) => { date: string; calendarDate: string; time: string };
   retryAfterDelay: (value: string | null, now?: number) => number;
-  snapshotHealth: (payload: unknown) => { stale: boolean; logLabel: string; shouldPrewarm: boolean };
+  snapshotHealth: (payload: unknown, model?: string, date?: string) => { stale: boolean; logLabel: string; shouldPrewarm: boolean };
 };
 
 describe("observing snapshot worker stale contract", () => {
@@ -25,7 +26,7 @@ describe("observing snapshot worker stale contract", () => {
     expect(retryAfterDelay("999999", now)).toBe(24 * 3600_000);
   });
   it("classifies stale or identity-less snapshots as non-prewarmable", () => {
-    expect(helperSource).toContain('payload?.stale === true');
+    expect(helperSource).toContain('payload?.stale !== false');
     expect(helperSource).toContain('payload?.integrityVersion !== "weather-integrity-v2"');
     expect(helperSource).toContain("!hasSourceFetchedAt");
     expect(helperSource).toContain("shouldPrewarm: !stale");
@@ -43,5 +44,22 @@ describe("observing snapshot worker stale contract", () => {
     expect(workerSource).toContain("${health.logLabel}");
     expect(workerSource).toContain("!lastErrorWasRateLimit && !lastRefreshWasStale");
     expect(workerSource).toContain("lastErrorWasRateLimit || lastRefreshWasStale");
+  });
+});
+
+
+describe("worker observing identity", () => {
+  it("keeps midnight through 05:00 on the previous night", () => {
+    expect(observingContext(new Date("2026-10-01T16:00:00Z"))).toEqual({ date: "2026-10-01", calendarDate: "2026-10-02", time: "2026-10-02T00:00" });
+    expect(observingContext(new Date("2026-10-01T21:00:00Z")).date).toBe("2026-10-01");
+    expect(observingContext(new Date("2026-10-01T22:00:00Z")).date).toBe("2026-10-02");
+  });
+  it("withholds prewarm for malformed source time or mismatched model/date", () => {
+    const good = { stale: false, integrityVersion: "weather-integrity-v2", sourceFetchedAt: "2026-10-01T12:00:00Z", model: "icon", date: "2026-10-01" };
+    expect(snapshotHealth(good, "icon", "2026-10-01").shouldPrewarm).toBe(true);
+    expect(snapshotHealth(good, "gfs", "2026-10-01").shouldPrewarm).toBe(false);
+    expect(snapshotHealth(good, "icon", "2026-10-02").shouldPrewarm).toBe(false);
+    expect(snapshotHealth({ ...good, sourceFetchedAt: "not-a-date" }).shouldPrewarm).toBe(false);
+    expect(snapshotHealth({ ...good, sourceFetchedAt: "2026-10-01T12:00:00" }).shouldPrewarm).toBe(false);
   });
 });

@@ -1,0 +1,29 @@
+> Historical archive retained 2026-10-02 from `ef15634`. This records an earlier proposal or verification; current source, latest handoff and current release evidence take precedence. No historical PASS establishes current production acceptance.
+
+# 手机与平板顶部占用、滚动修复
+
+## 根因与修复
+
+1. 原 `.app-shell` 的固定视口高度和 `overflow:hidden` 把页面锁住。小于 1200px 改为自然文档高度，页头随页面滚动。
+2. 首屏始终展开全部筛选。手机/平板默认显示「时间与地点筛选」入口，展开后保留评分时次、暗空等级、分数门槛和推荐过滤的原功能。
+3. 地图默认拖拽会吞掉单指手势。现在单指上下滑动页面，点「移动地图」后进入拖图模式，点「完成 · 恢复页面滑动」退出。
+4. 移动详情原先受地图高度限制，现作为视口底部面板显示；云海和火烧云排行回归整页纵向阅读。
+5. 时间轴窄列挤压日期、播放与夜数，现分行排列，并完整换行显示预报来源。
+
+## 已有验证
+
+- 静态门禁和生产构建通过，Vitest 60 文件 / 352 项通过。
+- 360 / 390 / 768 / 1024 宽度的真实浏览器触摸事件验证：scrollY 增大、页头移出视口、无横向溢出、折叠筛选与地图切换通过。
+- 最终移动布局专项：11 passed / 2 skipped。
+- 桌面与手机工作台/推荐/筛选回归：22 passed / 16 skipped。
+- Firefox / WebKit 冒烟：4 passed。
+- 人工视觉复核：手机首页、下滑后的时间轴、云海日期、平板首页。
+- 一加 7 Pro 连接已识别；ADB 启动网页被工具自动审批拒绝，真机滑动 NOT_RUN。
+
+## 发布
+
+- 本地与远端提交一致：349db7b5ba320593724f2a084f6b2228489b6fb7。
+- 分支：codex/mobile-document-scroll-20260921。
+- 生产已部署 349db7b；公网 390px 已看到新筛选入口。滚动后 `scrollY=844`、页头 `top=-844`，顶部正常离开视口；命令栏高度约 115px。
+- 公网仍出现天气接口 502，数据恢复不属于本次布局发布的已通过项。
+- 截图和几何测试不能替代 iPhone Safari 或 Android 真机的手感验证。

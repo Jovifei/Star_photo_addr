@@ -1102,3 +1102,22 @@ Review: production best_match returned HTTP 200 memory, stale=false, 48/48 finit
 - Integrated-worktree verification after the fast-forward: `npm run check` PASS (68/399 and build), desktop/mobile 429 E2E 2/2 PASS on local port 3317, and `git diff --check` PASS.
 - The original Owner checkout remains dirty on `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`. Its 100-commit lag remains visible there so its uncommitted changes stay protected.
 - Production remains `bd23a7c442e1` / v1.0.22; exact-point Best Match cache miss and remote exact-SHA review `BLOCKED` remain release gates.
+
+# 2026-10-02 功能分支归并与原目录同步（当前状态）
+
+本节取代上方同日“Owner 仍落后、不得移动、等待授权”的状态描述；历史记录保留作为过程证据。Jovi 已明确授权推送、功能归并、原目录 main 同步、测试后部署和知识库更新。
+
+- [x] 备份原目录 20 个 dirty/untracked 文件及补丁；创建本地保护分支 `codex/owner-preserved-20261002@ef15634ef7de914d6c5ea0a17f1189a666ec5194`。
+- [x] 原目录 `E:\project\Star_photo_addr` 的 `main` 已 fast-forward 至 `7a572b538caad9a881066cdd8c301a161c1523d1`，工作树干净，原 100 条落后已消除。
+- [x] 隔离集成候选天气证据功能 `768300e` 和错误/Retry-After 可见性修复 `54abd71`。
+- [x] 集成生产依赖审计 `7ae6483`（Next 16.3.8）。
+- [x] 核对地点扩充、旧 UI、Owner 修改、widescreen 补丁的功能保留或等价性；保存缺失历史文档。
+- [x] 读取生产持久化冷却标记：无标记；一次有界真实 Best Match 请求 fresh、stale=false、sourceFetchedAt=2026-10-02T05:23:26.681Z。保存响应后用实际评分函数验证两个观测夜通过，未追加供应商请求。
+- [ ] 完成旧模型能力分支中仍缺失的健康、压力层和 worker 校验功能移植；保留当前持久化供应商熔断。
+- [ ] 对最终集成提交重跑 lint/typecheck/unit/build 及针对性 E2E。
+- [ ] 完成分支祖先归并，推送并合并 GitHub main；再次同步原目录 main。
+- [ ] 对合并后的精确 SHA 测试，通过后执行低内存部署，保留回滚镜像和共享快照卷。
+- [ ] 核验部署 revision、真实天气评分、候选表和四栏目页面；回传现有远端聊天审核。
+- [ ] 核验 Obsidian 映射，安全同步知识库；配置未映射时准确报告，不推断新目录。
+
+Review：此前 `npm run check` 68 文件/399 测试和 429 E2E 2/2 PASS 仅覆盖依赖升级/模型移植前版本。当前整合版本必须重新验证。真实单点评分通过并不等于整套候选表或部署验收。生产仍为 `bd23a7c442e1` / v1.0.22；本次 push、GitHub merge、deploy 均未宣称完成。
