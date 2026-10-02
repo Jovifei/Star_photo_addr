@@ -19,6 +19,7 @@ export function buildDecisionSummary(input: {
   evaluation: NightEvaluation | null;
   loading: boolean;
   updatedAt: string | null;
+  unavailableReason?: string | null;
 }): DecisionSummaryModel {
   const updatedLabel = formatUpdatedLabel(input.updatedAt);
 
@@ -43,7 +44,9 @@ export function buildDecisionSummary(input: {
       gradeTone: "muted",
       windowLabel: "—",
       riskTitle: "评分未知",
-      riskText: "正在同步该地点的逐小时气象预报，数据加载完成后将自动计算评分；若上游限流将自动回退最近快照。",
+      riskText: input.loading
+        ? "正在同步该地点的逐小时气象预报，数据加载完成后将自动计算评分；若上游限流将自动回退最近快照。"
+        : input.unavailableReason ?? "当前观测夜的评分数据不足，暂不发布推荐。",
       updatedLabel,
     };
   }

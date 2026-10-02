@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { evaluateNight } from "@/lib/scoring";
-import { forecastTrustIssue } from "@/lib/forecastIntegrity";
+import { forecastTrustIssue, missingNightInputs } from "@/lib/forecastIntegrity";
+import { isInNight } from "@/lib/nighttime";
 import { buildDecisionSummary } from "@/lib/decisionSummary";
 import { presentRecommendationEligibility, presentSelectedData } from "@/lib/dataPresentation";
 import type { InspectorTabId } from "@/components/workspace/ContextInspector";
@@ -29,21 +30,32 @@ export default function DecisionSummary({
     );
   }, [state.cloudState.model, state.forecast, state.selectedLocation, state.selectedNight, leadIndex]);
 
+  const rawForecast = state.forecast;
+  const forecast = rawForecast?.metadata?.model === state.cloudState.model
+    ? state.forecast
+    : null;
+  const forecastIssue = forecastTrustIssue(rawForecast, undefined, state.cloudState.model);
+  const unavailableReason = useMemo(() => {
+    if (forecastIssue) return forecastIssue;
+    if (state.forecastAvailability.error) return state.forecastAvailability.error;
+    const hours = forecast?.hourly.filter(hour => isInNight(hour.time, state.selectedNight)) ?? [];
+    if (!hours.length) return "当前观测夜没有逐小时预报数据，暂不发布推荐。";
+    const missing = [...new Set(hours.flatMap(missingNightInputs))];
+    return missing.length
+      ? `当前观测夜缺${missing.join("、")}，评分数据不足，暂不发布推荐。`
+      : "当前观测夜未满足完整评分条件，暂不发布推荐。";
+  }, [forecast, forecastIssue, state.forecastAvailability.error, state.selectedNight]);
   const model = buildDecisionSummary({
     location: state.selectedLocation,
     evaluation,
     loading: state.loading,
+    unavailableReason,
     updatedAt:
       state.forecast?.metadata?.fetchedAt ??
       state.forecast?.fetchedAt ??
       state.forecastAvailability.lastSuccessAt ??
       null,
   });
-  const rawForecast = state.forecast;
-  const forecast = rawForecast?.metadata?.model === state.cloudState.model
-    ? state.forecast
-    : null;
-  const forecastIssue = forecastTrustIssue(rawForecast, undefined, state.cloudState.model);
   const selectedForecastTime = state.cloudState.activeForecastTime;
   const selectedDataState = presentSelectedData({
     hasLocation: Boolean(state.selectedLocation),
