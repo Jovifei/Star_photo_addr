@@ -1,5 +1,21 @@
 # Codex 接力说明：逐星测试与项目跟踪
 
+## 当前接力状态：2026-10-02（集成中，尚未最终发布）
+
+最新事实以 [功能分支归并记录](../engineering-change-log/2026-10-02-branch-consolidation.md)、根 `LOCAL_CODEX_HANDOFF.md` 和当前源码/命令证据为准。本节取代下方旧快照中的“当前主线、候选和部署”表述；下方保留内容均为历史记录或仍待重新核验的长期任务。
+
+- 隔离集成分支：`codex/starphoto-main-refresh-20261002@78c107d`，包括候选 Best Match 证据、错误状态、Next 16.3.8、模型能力/压力/worker 修复和本地持久化地点天气水合修复。历史分支按功能保留/替代后已纳入祖先，远端 refs 均为集成历史祖先。
+- 原目录 `E:\project\Star_photo_addr`：干净 `main@7a572b538caad9a881066cdd8c301a161c1523d1`；Owner 原修改由 `ef15634` 和独立备份保护。最终功能合并后仍需再次同步原目录。
+- 完整本地 `npm run check`：lint/typecheck、71 个测试文件/411 测试和 build PASS。E2E 仍有 2 项桌面 loading 失败，第一轮水合修复后的相关单测通过；最终 UI 门禁保持 `CHANGES_REQUIRED`，不能用完整 check 代替。
+- 已有真实单点 Best Match 来源 `sourceFetchedAt=2026-10-02T05:23:26.681Z`、stale=false，两个观测夜评分验证通过；不代表全部候选或生产页面验收。
+- 远端实际修复分支 `candidate-pressure-review-followup@c3626d9` 仍在执行，尚未收到最终交接，也未合入最终 main。精确 SHA 的最终远端审核 `PENDING`。
+- 生产仍为 `bd23a7c442e1` / v1.0.22。本轮 GitHub main 合并、最终原目录同步、合并 SHA 验证及部署未完成。
+- 知识库已增量登记明确项目映射并保留其他 7 个映射及配置备份；安全 tracked 文档镜像待最终文档冻结后执行，不将注册视为镜像完成。
+
+下一步：修复 E2E loading 失败 → 接收远端真实修复与交接 → 对最终提交重跑针对性和完整门禁 → 合并 GitHub main / 同步原目录 → 合并 SHA 测试 → 保留回滚的低内存部署 → 公网数据与页面复核 → 安全知识库同步。
+
+## 以下为历史快照（请勿用作当前发布状态）
+
 > 当前事实源：仓库文档，不以聊天摘要代替。  
 > 当前主分支：`main@50496e61f0be1cb666f344f36d832029df2e988e`  
 > 当前跟踪分支：`test/ux-research-quality-v2-20260820`
