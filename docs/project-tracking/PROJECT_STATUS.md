@@ -1,3 +1,5 @@
+> **完整 CI 已关闭（2026-10-02）**：PR47精确测试headf7e5373，工作流36994802711五jobs全绿；Chromium228通过122适用性跳过0失败，Firefox/WebKit6通过。原main同步且无产品代码差异；生产仍v1.0.25a74f7ee。此前仅定向UI通过和旧CI失败记录保留为历史。详见[完整门禁终态](../engineering-change-log/2026-10-02-full-chromium-contract-closure.md)。PENDING_REMOTE_PLANNING仍未解除。
+
 > **最新：v1.0.25** 已修正日期选项过大的问题。运行代码a74f7ee95d77f0a26ed30e47db0ff9e71ba05f41；桌面32px内容宽度工具栏，手机仅自然换行。线上3825px火烧云整组约483px，日期约59px，已实测。72/414完整门禁及36几何/6交互组合通过。[紧凑工具栏交付](../engineering-change-log/2026-10-02-compact-topic-toolbar.md)。下方旧发布记录为历史。
 
 > **2026-10-02 v1.0.24 最新交付**：云海/火烧云日期、晨晚时段常驻顶部直接选择，移除调整弹层和手机空白占位。PR44/45已合并，运行代码6389bef784c12b4bc1c7aaee0fa3a93d852766a5。72文件414测试、28几何/6交互组合及12手机地图手势通过；线上390px工具栏紧接搜索，所有选项可见，无横溢或地图覆盖。完整记录见[日期工具栏交付](../engineering-change-log/2026-10-02-direct-date-toolbar.md)。以下旧版本事实仅供历史参考。

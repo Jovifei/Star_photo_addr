@@ -11,3 +11,8 @@
 ## 后续WebKit门禁
 当前CI36993020247的Chromium、quality、live-data、container实际SUCCESS；跨浏览器5PASS1WebKit失败，旧helper要求动画matrix精确相等后force点击。修改helper为普通稳定/可命中点击并核验aria状态，保留原测试时限。WebKit失败用例本地连续3PASS，Firefox/WebKit全6PASS；没有修改产品动画或业务源码。新GitHub最终head门禁仍需完整终态。
 
+
+## 最终门禁关闭
+精确测试SHAf7e5373c3be7e741081dc24a5727bab46924d021的GitHub工作流36994802711已完成SUCCESS，五项jobs全绿。远端完整Chromium350计划=228PASS122适用性SKIP0FAIL(13分钟)，Firefox/WebKit6/6PASS。PR47已合并main f98cf45dcd81ec661abc2f524f6d9799134059fd，原目录干净且main/origin0/0。src/scripts/package与生产a74f7ee完全一致，此次仅测试及文档无需产品重新部署。
+另核验生产冷却标记不存在后一次普通BestMatch请求：sourceFetchedAt2026-10-02T10:27:32.143Z、stale=false、336小时；保存响应经真实评分函数验证今夜10完整时次、45分、无缺字段。仅单点数据证据，不冒称所有生产页或预报准确率通过。
+

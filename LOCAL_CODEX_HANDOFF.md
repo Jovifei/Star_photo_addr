@@ -670,3 +670,7 @@ Jovi要求日期/时段常驻顶部直接选择，禁止用调整按钮弹出核
 ## v1.0.25 compact toolbar delivered
 Jovi指出v24日期拉伸占满宽屏，明确要求紧凑。PR46已合并部署a74f7ee95d77f0a26ed30e47db0ff9e71ba05f41。内容宽度flex/单行日期，桌面32px；手机只自然换行，44px触摸高度。414测试及36几何/6交互组合PASS；线上3825px火烧云组483px、日期59px，云海组557px，不再铺满。后续UX不得恢复1fr/width100%日期拉伸或机械强制分行。原main同步；Docs/Obsidian同步最后文档tip。远端旧聊天仍满，未伪称新远端review。
 
+
+## 2026-10-02 Full CI terminal closure
+PR47 actualtestedheadf7e5373c3be7e741081dc24a5727bab46924d021; CI36994802711 terminalSUCCESS(all5jobs), Chromium228PASS122SKIP0FAIL, Firefox/WebKit6PASS. Merged mainf98cf45dcd81ec661abc2f524f6d9799134059fd andoriginalmain synchronizedclean0/0. Productionv1.0.25a74f7ee runtimecode byte-equivalent under src/scripts/package; changes test/docs only, no redeploy. Normal boundedproductionBestMatch request afterauthoritativeNO_COOLDOWN_MARKER yieldedfreshsource2026-10-02T10:27:32.143Z andactualsavedresponse nightlyscore45/10hours/no blockers; noforcedrefresh/cacheclear/networkchange. PreviousPR46fullCI11fail ishistorical, notgreen; latestfullCIclosed. PENDING_REMOTE_PLANNING stays, oldchatfull/sourcehandoff decisionpending; no remoteGPT finalDONE claimed. Hub reporting adoptednewrootAGENTS andbound actualworktree/branch identities.
+
