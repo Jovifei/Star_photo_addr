@@ -1144,3 +1144,12 @@ Review：此前 `npm run check` 68 文件/399 测试和 429 E2E 2/2 PASS 仅覆�
 
 Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No claim that ICONvisibility or localdark-skylicense were restored.
 
+
+## 2026-10-02 Direct date and phase selection
+
+- [ ] Replace调整/收起 datepopover withpersistent top toolbar inCloudSea/Fireglow.
+- [ ] Keepfourpeerheadergeometry; desktopcompactrow/mobiletwo rows,all choicesdirectlyvisible.
+- [ ] Verifydate/phase/keyboardinteractions,multiwidth/shortviewport,mapnonoverlap,nooverflow usingfixtures.
+- [ ] Fullcheck thenmerge/syncmain; exactrevisiondeploywithrollback.
+- [ ] ProductionUI/read-onlyweatheracceptance; updateDocs/knowledge.
+

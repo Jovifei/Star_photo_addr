@@ -1,4 +1,5 @@
 "use client";
+import type { ReactNode } from "react";
 import MapViewportObserver from "@/components/MapViewportObserver";
 import MapTileStatus from "@/components/MapTileStatus";
 import BlankMapPicker from "@/components/BlankMapPicker";
@@ -27,7 +28,7 @@ import { fireGlowBandLabel } from "@/lib/fireglow";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
-import { formatCalendarDate, formatCompactCalendarDate, formatRelativeDateLabel } from "@/lib/nighttime";
+import { formatCalendarDate, formatCompactCalendarDate } from "@/lib/nighttime";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
 import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import FireglowSiteDetail from "./FireglowSiteDetail";
@@ -98,14 +99,12 @@ function dateLabel(date: string): string {
   return formatCalendarDate(date);
 }
 
-function rangeOptionLabel(
-  option: (typeof RANGE_OPTIONS)[number],
-  baseDate: string,
-): string {
-  if (option.value === 3) {
-    return `${option.label} · ${formatCompactCalendarDate(baseDate)}—${formatCompactCalendarDate(shiftDate(baseDate, 2))}`;
-  }
-  return formatRelativeDateLabel(shiftDate(baseDate, option.value), baseDate);
+function rangeOptionLabel(option: (typeof RANGE_OPTIONS)[number], baseDate: string): ReactNode {
+  const selectedDate = shiftDate(baseDate, option.value === 3 ? 0 : option.value);
+  const dateText = option.value === 3
+    ? `${baseDate.slice(5).replace("-", ".")}—${shiftDate(baseDate, 2).slice(5).replace("-", ".")}`
+    : formatCompactCalendarDate(selectedDate);
+  return <><span>{option.label}</span><small>{dateText}</small></>;
 }
 
 function hasUsableFireGlowScores(snapshot: FireGlowSnapshot): boolean {

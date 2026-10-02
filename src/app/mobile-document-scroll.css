@@ -1,10 +1,9 @@
+
 /* Compact browser contract: one document scroll, primary content before settings.
    This is the final compact-layout layer; desktop styles remain unchanged. */
 .mobile-filter-toggle,
-.topic-controls-toggle,
 .locate-label-compact { display: none; }
-.location-filter-controls,
-.app-header-controls-content { display: contents; }
+.location-filter-controls { display: contents; }
 
 .forecast-method-note > summary { cursor: pointer; }
 .forecast-method-note > p { margin: 0 0 8px; line-height: 1.6; }
@@ -91,72 +90,22 @@
   .workspace-commandbar .bortle-filter-bar-command button { min-height: 48px; }
   .workspace-commandbar .bortle-filter-bar-command button em { display: inline; font-size: 12px; white-space: normal; }
 
-  /* Preserve the real active date/phase. The disclosure never invents summary data. */
-  .app-header:has(.fireglow-controls),
-  .app-header:has(.cloudsea-controls) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "brand" "nav" "controls";
-  }
-  .app-header:has(.fireglow-controls) .app-header-controls,
-  .app-header:has(.cloudsea-controls) .app-header-controls {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 56px;
-    align-items: start;
-    gap: 8px;
-    width: 100%;
-  }
-  .app-header:has(.fireglow-controls) .topic-controls-toggle,
-  .app-header:has(.cloudsea-controls) .topic-controls-toggle {
-    display: block;
-    grid-column: 2;
-    grid-row: 1;
-    min-height: 48px;
-    padding: 6px 2px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--panel);
-    color: var(--text);
-    font-size: 13px;
-    cursor: pointer;
-    touch-action: manipulation;
-  }
-  .app-header .fireglow-controls,
-  .app-header .cloudsea-controls {
-    display: grid;
-    grid-column: 1;
-    grid-row: 1;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: stretch;
-    gap: 8px;
-    min-width: 0;
-  }
-  .app-shell .app-header .segmented { min-width: 0; display: flex; flex-wrap: wrap; border-radius: 8px; overflow: visible; }
-  .app-shell .app-header .segmented button { min-width: 0; min-height: 48px; padding: 6px; font-size: 13px; white-space: normal; line-height: 1.4; }
-  .app-header[data-controls-expanded="false"] :is(.fireglow-controls, .cloudsea-controls) .segmented button:not(.active),
-  .app-header[data-controls-expanded="false"] :is(.fireglow-refresh, .cloudsea-refresh) { display: none; }
-  .app-header[data-controls-expanded="false"] .segmented button.active { width: 100%; }
-  /* Explicit placement wins even when a topic stylesheet arrives after navigation. */
-  .app-shell .app-header .segmented[data-mode="phase"],
-  .app-shell .app-header .segmented[data-mode="range"] { grid-column: auto; grid-row: auto; }
-  .app-header[data-controls-expanded="false"] .segmented { padding: 0; border: 0; background: none; }
-  .app-shell .app-header[data-controls-expanded="false"] .segmented button.active {
-    justify-content: flex-start;
-    padding: 4px 2px;
-    color: var(--text);
-    background: none;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    font-weight: 500;
-  }
-  .app-header[data-controls-expanded="false"] .segmented[data-mode="phase"] button svg { width: 14px; height: 14px; flex-shrink: 0; }
-  .app-header[data-controls-expanded="true"] :is(.fireglow-controls, .cloudsea-controls) {
-    display: contents;
-  }
-  .app-header[data-controls-expanded="true"] .segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .app-shell .app-header[data-controls-expanded="true"] .segmented[data-mode="phase"] { grid-column: 1; grid-row: 1; }
-  .app-shell .app-header[data-controls-expanded="true"] .segmented[data-mode="range"] { grid-column: 1 / -1; grid-row: 2; }
-  .app-header[data-controls-expanded="true"] :is(.fireglow-refresh, .cloudsea-refresh) { min-height: 48px; min-width: 96px; grid-column: 1 / -1; grid-row: 3; justify-self: end; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   /* Stable map dimensions, with legends in flow instead of covering pixels/attribution. */
   .workspace-canvas .map-stage { flex: none; }
@@ -297,8 +246,7 @@
     cursor: pointer;
   }
   .leaflet-container.map-page-scroll { touch-action: pan-y pinch-zoom; }
-  .mobile-filter-toggle:focus-visible,
-  .topic-controls-toggle:focus-visible,
+.mobile-filter-toggle:focus-visible,
   .map-scroll-control:focus-visible { outline: 2px solid var(--green-soft); outline-offset: 2px; }
 }
 
@@ -327,17 +275,14 @@
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {
-  .app-shell > .app-header,
-  .app-shell > .app-header:has(.fireglow-controls),
-  .app-shell > .app-header:has(.cloudsea-controls) {
+.app-shell > .app-header {
     grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr);
     grid-template-areas: "brand nav" "controls controls";
     padding-inline: 16px;
   }
   .app-header-controls-empty { display: none; }
-  .app-header .fireglow-controls,
-  .app-header .cloudsea-controls { grid-template-columns: auto minmax(0, 1fr); }
-  .app-header[data-controls-expanded="true"] .segmented[data-mode="range"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+
 }
 
 @media (min-width: 768px) and (max-width: 1199px) and (min-height: 521px) {
