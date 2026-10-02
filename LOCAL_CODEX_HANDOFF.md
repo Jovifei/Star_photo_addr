@@ -553,3 +553,76 @@ Next: send PR #41's current head SHA and this handoff to the existing ChatGPT co
 - Created local isolated integration worktree `C:\Users\Admin\.codex\worktrees\starphoto-main-refresh-20261002\Star_photo_addr` from `origin/main`, then fast-forwarded the candidate feature branch. The resulting tree includes the previously tested 429 status fix and matching handoff changes.
 - Post-merge local verification passed: `npm run check` (lint, typecheck, 68 test files / 399 tests, Next build) and the desktop/mobile StarWindowTable 429 E2E (2/2) on temporary local port 3317. No weather-provider or production page requests were made by these tests.
 - The Owner checkout is still dirty and unchanged. It was not pulled, reset, stashed, or overwritten. The local integration branch has not been pushed; PR #41 remains open. Merge to remote/deploy remain gated on exact-coordinate production weather acceptance and remote ChatGPT review.
+
+
+## 2026-10-02 Remote exact-SHA review follow-up — candidate/raster loading + pressure cooldown
+
+Review source:
+- PR #41 exact reviewed head: `a496632630a50b7a11ef940c4d0dde100b80ee3a`
+- Base: `main@7a572b538caad9a881066cdd8c301a161c1523d1`
+- Remote repair branch: `codex/candidate-pressure-review-followup-20261002`
+- Product repair commits:
+  - `1603fd823f7972d96999f010d4c7278f5b5be083` — decouple StarWindow selected-row loading from raster loading
+  - `e69488a00e301ce21ada08516b752d643a273b97` — preserve shared provider cooldown on pressure refresh responses
+- Regression-source commits:
+  - `5300c7d1eb9883e9776be15975ec78480a1e0434` — selected-row/raster-loading browser contract
+  - `c3626d9afb35d75e4fbef87a3c5a93934ffb6e8a` — pressure provider-cooldown precedence
+- Consolidation review log commit: `fe8ad18f504bd1180454a78892d17d2300434f86`
+- Final handoff branch tip is the commit containing this section; use the exact SHA returned by remote ChatGPT.
+
+### Exact review result on a496632
+
+Accepted:
+- Candidate scoring is intentionally separate from the raster model. New sessions use `candidateForecastModel="best_match"`; `DEFAULT_CLOUD_STATE.model` remains `icon`. This is the preferred architecture because point-score completeness and map-raster continuity are different concerns. No Best Match fields are spliced into an ICON forecast.
+- The candidate loader is one stable bounded batch per model/day/location set; six saved candidates are one request. The selected table row uses the same candidate-score model, reusing a same-point candidate cache when possible and otherwise requesting the selected coordinate separately.
+- Fresh same-model ICON data with missing visibility retains raw cloud/precipitation/wind and original `sourceFetchedAt`, but `projectCandidateNight` keeps `evaluation=null`, reports the exact visibility blocker, and leaves score/rank withheld.
+- Stale, model mismatch, source age and missing required scoring fields remain fail-closed.
+- Pressure ingestion now uses the shared Open-Meteo provider slot / typed rate-limit error path.
+- Worker observing identity treats Shanghai 00:00–05:00 as the previous observing night while Fireglow prewarm remains on the calendar date.
+- Historical branch consolidation uses functional migration plus current-tree precedence; old branch contents are not allowed to overwrite newer provider/cache/UI semantics merely to create ancestry.
+
+Remaining defects repaired remotely:
+1. `StarWindowTable` selected rows still set `loading` from global raster `state.loading`. This could hide an already-ready Best Match candidate score while an independent ICON raster request was slow, matching the current desktop loading-timeout symptom. Loading now depends on the candidate forecast itself plus its own request error.
+2. `/api/pressure-forecast` early force-refresh suppression returned only the local coordinator retry window. Response headers now merge that local window with the shared provider cooldown via `openMeteoRateLimitHeaders()`, so a daily provider cooldown cannot be shortened by a 60-second local guard.
+
+Protected:
+- no score weights changed;
+- no required scoring fields changed;
+- no cross-model weather filling;
+- no candidate/raster default model change;
+- no pressure-profile derivation or CloudSea scoring change;
+- no ProductHeader/map layout change;
+- no merge/deploy.
+
+### Test status
+
+REMOTE TEST EXECUTION: `NOT_RUN`.
+
+The recorded local evidence at `a496632` (70 Vitest files / 410 tests, lint/typecheck/build PASS) applies only to that exact SHA. The PR browser gate was still unresolved at review time: 7 pass / 5 skip / 2 desktop loading failures. Those results do not validate this remote repair head.
+
+Local Codex must run, from the final remote head:
+
+1. `npm run test -- tests/integration/pressureRoute.test.ts tests/unit/candidateNightEvidence.test.ts tests/unit/candidateForecastClient.test.ts`
+2. Desktop + mobile candidate data presentation including the new selected-row/raster-loading case:
+   `npx playwright test tests/e2e/data-state-presentation.spec.ts --project=desktop --project=mobile`
+3. The browser gate set that previously produced the two desktop loading failures; confirm zero assertion/timeouts before integration.
+4. `npm run check`
+5. `git diff --check`
+
+Do not merge solely because static/unit tests pass. The browser loading failures must be reproduced/closed on the exact received head.
+
+### Production acceptance boundary
+
+Production remains the older deployed revision until local integration/deployment is explicitly completed. The recorded real Best Match source response (`sourceFetchedAt=2026-10-02T05:23:26.681Z`, `stale=false`, two nights scoring successfully) is useful provider/scoring evidence only; it is not post-deploy page acceptance for this branch.
+
+After deployment verify separately:
+- exact `/healthz` build revision/version;
+- candidate Best Match selected/card/table provenance and score on real page coordinates;
+- ICON raster remains independent;
+- missing visibility still withholds score rather than filling from Best Match;
+- pressure 429/fallback returns the shared long provider Retry-After when applicable;
+- stale/source timestamps remain original;
+- no browser loading timeout remains.
+
+MERGED: `NO`.
+DEPLOYED: `NO`.
