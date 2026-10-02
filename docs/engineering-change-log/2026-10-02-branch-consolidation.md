@@ -43,3 +43,8 @@ Jovi 授权按功能归并分支、更新 GitHub 主线、同步原目录 `main`
 ## 下一步验收
 
 完成模型/压力/worker 移植 → 最终集成门禁 → GitHub main 功能归并 → 原目录 main 同步 → 合并 SHA 门禁 → 低内存部署与回滚保护 → exact revision/真实评分/页面证据 → 远端交接审核 → 知识库安全镜像。
+
+## 合并门禁发现并修复的真实页面缺陷
+
+浏览器2项桌面失败定位为 StoreProvider persisted selection hydration race：自身 loading 更新触发 effect cleanup，完整HTTP200天气被丢弃。已移除该自取消标记，保留请求编号/模型/地点归属门禁。新增延迟响应组件测试修复前RED、修复后GREEN；完整检查和浏览器重新验收进行中。
+

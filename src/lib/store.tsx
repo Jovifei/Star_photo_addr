@@ -913,13 +913,14 @@ export function StoreProvider({
     // same location/model. Do not advance the shared request token here: doing
     // so could leave an explicit request's loading state stuck while both
     // calls coalesce on the same browser promise.
+    // Loading is an effect dependency, so the dispatch below rerenders this
+    // effect. Request identity guards own the completion; an effect cleanup
+    // flag would cancel this request because of its own loading transition.
     const hydrationRequestId = latestForecastRequestRef.current;
-    let cancelled = false;
     dispatch({ type: "SET_LOADING", loading: true });
     void fetchForecastFor(location, model)
       .then((forecast) => {
         if (
-          cancelled ||
           hydrationRequestId !== latestForecastRequestRef.current ||
           currentModelRef.current !== model ||
           !forecast ||
@@ -940,16 +941,13 @@ export function StoreProvider({
         }
       })
       .catch(() => {
-        if (forecastHydrationKeyRef.current === hydrationKey) {
+        if (hydrationRequestId === latestForecastRequestRef.current && forecastHydrationKeyRef.current === hydrationKey) {
           forecastHydrationKeyRef.current = null;
         }
-        if (!cancelled && currentModelRef.current === model && selectedLocationIdRef.current === location.id && hydrationRequestId === latestForecastRequestRef.current) {
+        if (currentModelRef.current === model && selectedLocationIdRef.current === location.id && hydrationRequestId === latestForecastRequestRef.current) {
           dispatch({ type: "SET_LOADING", loading: false });
         }
       });
-    return () => {
-      cancelled = true;
-    };
   }, [state.cloudState.model, state.forecast, state.loading, state.selectedLocation]);
 
   // Quiet periodic recheck: only while a location is selected, the tab is

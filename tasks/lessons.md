@@ -111,3 +111,5 @@
 - 2026-10-02: Candidate batch failures with no same-model cache must remain distinguishable from missing scoring fields. Preserve the sanitized server reason and `Retry-After` in the table, keep scores withheld, and never add an automatic provider retry just to replace “数据不足”.
 
 - 2026-10-02: Jovi 明确要求原目录 main 跟随远端；保护 Owner dirty 应先 ZIP/补丁备份并用本地保护分支保存，再安全 fast-forward 原目录。隔离分支集成后必须再次同步原目录 main，不能把“已保护”当成允许长期落后。旧分支按实际功能迁移或补丁等价性归并，不能整树覆盖新功能；最终 merge SHA 测试通过才可部署。
+
+- 2026-10-02: 合并前浏览器门禁必须覆盖原存储地点恢复。hydration effect 的 loading dispatch 会触发自身依赖重跑，不能用 cleanup cancelled 标记丢弃自身请求；响应归属用 request/model/location guards 验证，并用延迟响应组件回归测试证明加载最终结束。
