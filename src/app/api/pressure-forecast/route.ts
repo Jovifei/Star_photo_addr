@@ -1,4 +1,4 @@
-import { OpenMeteoRateLimitError } from "@/lib/forecast";
+import { OpenMeteoRateLimitError, openMeteoRateLimitHeaders } from "@/lib/forecast";
 import { NextRequest, NextResponse } from "next/server";
 import { clampForecastDays } from "@/lib/forecast";
 import {
@@ -42,9 +42,7 @@ function responseHeaders(
     "X-Pressure-Cache": cacheState,
     "X-Data-Stale": String(stale),
     "X-Refresh-Suppressed": String(refreshSuppressed),
-    ...(retryAfterSeconds
-      ? { "Retry-After": String(retryAfterSeconds) }
-      : {}),
+    ...openMeteoRateLimitHeaders(retryAfterSeconds),
   };
 }
 
