@@ -72,3 +72,8 @@ Two bounded defects remained:
 The remote follow-up removes those two couplings only. It does not change score weights, required scoring fields, candidate model defaults, raster model defaults, pressure-profile derivation, CloudSea scoring, provider model mapping, historical branch migration, or deployment behavior.
 
 Remote test execution for this follow-up is `NOT_RUN`; local Codex must run the targeted tests plus the full check/browser gates before integrating it. The prior `a496632` local evidence (70 files / 410 tests and build) remains evidence for that exact SHA only. The current PR browser gate was still not green at review time (7 pass / 5 skip / 2 desktop loading failures), so neither PR #41 nor this follow-up is approved for merge/deploy until the local rerun closes those failures.
+
+## 页面性能根因修复
+
+接收远端9c249d5后，同一浏览器门禁定位到日期格式器构造瓶颈。CPU profile显示约11.9秒耗在 localDateKey 每次创建Intl.DateTimeFormat。按时区复用并限制32项，保持日期算法不变；原两个桌面失败场景用原等待阈值分别1.7/2.0秒PASS。43项日期测试、类型和lint通过。临时诊断及非必要天文缓存已移除。最终完整门禁继续执行。
+

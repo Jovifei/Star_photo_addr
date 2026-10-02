@@ -25,14 +25,24 @@ export function parseProviderTime(
   return new Date(asIfUtc - utcOffsetSeconds * 1000);
 }
 
+// A formatter is reusable across dates. Creating one for every forecast hour
+// makes seven-night candidate comparison block the browser's main thread.
+const dateKeyFormatters = new Map<string, Intl.DateTimeFormat>();
+const DATE_KEY_FORMATTER_LIMIT = 32;
+
 /** Local date key (en-CA => YYYY-MM-DD) for a given Date in a timezone. */
 export function localDateKey(date: Date, timeZone = "UTC"): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
+  let formatter = dateKeyFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    });
+    dateKeyFormatters.set(timeZone, formatter);
+    if (dateKeyFormatters.size > DATE_KEY_FORMATTER_LIMIT) {
+      dateKeyFormatters.delete(dateKeyFormatters.keys().next().value!);
+    }
+  }
+  return formatter.format(date);
 }
 
 export function addDays(dateKey: string, count: number, timeZone = "UTC"): string {
