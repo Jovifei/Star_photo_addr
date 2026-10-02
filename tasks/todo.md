@@ -1,3 +1,25 @@
+# 2026-10-01 Candidate weather evidence and scoring repair
+
+- [x] Read the latest `LOCAL_CODEX_HANDOFF.md`, `tasks/todo.md`, and merged `main@7a572b5`; production `/healthz` reports `buildRevision=bd23a7c442e1`.
+- [x] Trace the screenshot's “数据不足” state through candidate request, raw forecast, freshness/model gates, night scoring, and both candidate surfaces.
+- [x] Preserve same-model raw cloud/precipitation/wind evidence and source timestamp when score is withheld; show the exact night-field blocker and keep score/rank null.
+- [x] Keep the raster/cloud model and candidate scoring model separate; use one explicit candidate score model across the cards and table, with Best Match as the default and selectable alternatives.
+- [x] Add unit and browser regressions for partial ICON visibility, fresh complete Best Match, stale data, source provenance, score withholding, and selected-point row coverage.
+- [x] Run focused regressions, `npm run check`, production build, and `git diff --check` before creating a commit.
+- [x] After confirming supplier cooldown and cache state, run one bounded production candidate batch; require `sourceFetchedAt`, `stale=false`, matching model, complete night fields, and non-null scores for the table to pass.
+- [x] Commit the verified product tip and push branch; GitHub PR #41 is open for exact-SHA review.
+- [ ] Send the current PR head and handoff to the existing remote ChatGPT conversation, resolve any review findings, and discuss technical direction.
+- [ ] Merge and deploy only after remote review and a fresh post-deploy page/data acceptance; retain rollback image and snapshot volume.
+
+## Review
+
+- Base: `main@7a572b538caad9a881066cdd8c301a161c1523d1`; isolated branch: `codex/candidate-weather-evidence-20261001`.
+- Baseline production: app and worker image `deploy-bd23a7c442e1`; `/healthz` build revision matches. `/api/data-status` last reported weather source available at `2026-10-01T09:00:12Z`; this is provider-health evidence only, not candidate-score acceptance.
+- Architecture finding: `CloudState.model` intentionally excludes `best_match` for the raster/map contract. Candidate scores will use a separate shared model state and must retain same-model identity across the cards and matrix.
+- Local gates: `npm run check` PASS — lint, typecheck, 68 test files / 399 tests, production build; `git diff --check` PASS. Candidate projection/client 9/9 focused unit tests; data-state presentation desktop 4 passed / 1 project skip; candidate data path on mobile 1 passed and desktop 1 passed; v1.0.23 history 1 passed.
+- Production data: no active quota marker at `2026-10-01T10:04Z`; production `/healthz` remains buildRevision `bd23a7c442e1`. One bounded Best Match response for seven public catalog points around the screenshot's named areas yielded `sourceFetchedAt=2026-10-01T10:08:25.354Z`, `stale=false`, and 7/7 valid night scores under the local scoring code. A follow-up `cache_only=1` read returned HTTP 200, memory cache, Best Match, and `stale=false`; no second supplier request was made. The exact browser-local saved coordinates remain unverified until post-deploy page acceptance.
+- Screenshot regression remains open until the page presents useful same-model raw weather and a valid score where the provider supplies every required field.
+
 # 2026-09-29 P5-B CloudSea Evidence IA
 
 - [x] 接收远端 P5-B 长期方案，基线锁定 `47779d74b6fe1d160bc2d68c90b9712101b1de33`，Fireglow/P5-A 不再修改。
@@ -1033,3 +1055,78 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - [ ] Continue observing Fireglow multi-day freshness; last worker report had current date fresh and later dates stale.
 
 Review: production best_match returned HTTP 200 memory, stale=false, 48/48 finite cloud hours at sourceFetchedAt 2026-10-01T07:59:00Z. CloudSea 2026-10-01 GFS returned fresh snapshot with surface and pressure 54/54, 50 scoreable sites across both phases; morning visible list had 48. Do not label the remote final review DONE until ChatGPT returns its verdict.
+
+# 2026-10-02 Screenshot follow-up — StarWindowTable weather data
+
+- [x] Identify the screenshot surface as `StarWindowTable`, separate from the candidate cards.
+- [x] Read production `/healthz`: `bd23a7c442e1` / v1.0.22; v1.0.23 remains unmerged and undeployed.
+- [x] Run cache-only reads for the exact selected point from the open page URL; do not request the supplier.
+- [x] Read the safe cooldown signal from the cache-only route: generic `Retry-After=60`, no `X-Weather-Limit`; this does not prove the persisted marker's absolute deadline.
+- [ ] Obtain authoritative confirmation that the persisted provider cooldown has expired, or receive approval for one live request while that marker remains unverified.
+- [ ] Once the provider cooldown is confirmed expired, make one bounded real-weather request for the exact saved candidate set and verify model, `sourceFetchedAt`, `stale`, required night fields, valid score count, and rendered table.
+- [x] Add a RED mobile/desktop E2E for a Best Match HTTP 429 and preserve the score-withheld state.
+- [x] Surface the sanitized server error and `Retry-After` in `StarWindowTable`; keep freshness/model/score gates unchanged and do not auto-retry.
+- [x] Run targeted 429 E2E on mobile and desktop (2/2), `npm run check` (lint, typecheck, 68 test files / 399 tests, Next build), and `git diff --check`.
+- [x] Record current evidence and code changes in this local handoff; no commit was made.
+- [ ] Commit and request exact-SHA remote review after the real-data check and remote source access are available.
+- [ ] Merge and deploy with rollback protection only after remote review and production-data acceptance.
+
+## Review
+
+- Production cache-only evidence for selected point `(31.633617, 120.234375)`: ICON HTTP 200 from memory, `stale=true`, `sourceFetchedAt=2026-10-01T14:17:00.742Z`, 192 hourly rows, cloud/precipitation/wind 189 valid each, visibility 0. Best Match returned 429 `cache-only-miss`; neither request called the supplier.
+- Root-cause evidence: screenshot page is still v1.0.22 and scores against ICON, whose exact selected-point cache is stale and lacks visibility. Current deployed page has no Best Match cache for that exact point. This is not proof that the provider is currently cooling down.
+- Provider cooldown deadline: absolute persisted `until` `NOT_VERIFIED`; cache-only returned its generic 60-second minimum and no active limit header. No Star Photo server alias exists in the available SSH config.
+- One normal Best Match request was rejected by automatic approval review because the cooldown marker was not reliably confirmed expired. No supplier request was dispatched.
+- Code audit found the candidate forecast hook silently dropped request failure when no same-model cache exists. The isolated branch now passes the sanitized API error and Retry-After to `StarWindowTable`; local mocked E2E reports the quota reason and keeps score blank.
+- Verification: 429 E2E 2/2 (desktop/mobile); `npm run check` PASS (lint, typecheck, 68 files / 399 tests, production build); `git diff --check` PASS. These are code/UI fixtures, not production weather acceptance.
+- Remote exact-SHA review: `BLOCKED`; existing ChatGPT conversation could not read the PR compare page or immutable raw files. The follow-up code is uncommitted and has not been sent to GitHub.
+- Production live data request: pending Jovi's answer to the async approval question; no request has been dispatched.
+- Owner `E:\project\Star_photo_addr` remains untouched and dirty.
+
+# 2026-10-02 Local main refresh and candidate feature integration
+
+- [x] Fetch `origin` refs without pruning; confirm local Owner `main@3334e0c` is 100 commits behind `origin/main@7a572b5` and 0 commits ahead.
+- [x] Confirm `origin/codex/candidate-weather-evidence-20261001@768300e` is 3 commits ahead of `origin/main`, with merge base `7a572b5`.
+- [x] Create an isolated local integration worktree from `origin/main` and fast-forward the candidate feature branch into it.
+- [x] Apply the already-tested local 429 status fix and handoff update; its tracked diff matches the previously verified worktree byte-for-byte; `git diff --check` passes.
+- [x] In the integrated worktree, run `npm run check`: lint, typecheck, 68 test files / 399 tests, and Next build PASS.
+- [x] In the integrated worktree, run the desktop/mobile 429 E2E on local port 3317: 2/2 PASS; no production/provider calls.
+- [x] Preserve Owner dirty `main`; do not reset, stash, or overwrite its files.
+- [ ] Push/merge the updated feature to GitHub or deploy only after Jovi's pending production-data decision and exact-SHA remote review gate are resolved.
+
+## Review
+
+- Local integration workspace: `C:\Users\Admin\.codex\worktrees\starphoto-main-refresh-20261002\Star_photo_addr`.
+- Branch: `codex/starphoto-main-refresh-20261002`; base `origin/main@7a572b538caad9a881066cdd8c301a161c1523d1`; integrated candidate tip `768300e02956e7437970b28a8f5f2e709aac9573`.
+- Candidate feature merge is local fast-forward only. New local error-status edits remain uncommitted; no GitHub PR state changed.
+- Integrated-worktree verification after the fast-forward: `npm run check` PASS (68/399 and build), desktop/mobile 429 E2E 2/2 PASS on local port 3317, and `git diff --check` PASS.
+- The original Owner checkout remains dirty on `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`. Its 100-commit lag remains visible there so its uncommitted changes stay protected.
+- Production remains `bd23a7c442e1` / v1.0.22; exact-point Best Match cache miss and remote exact-SHA review `BLOCKED` remain release gates.
+
+# 2026-10-02 功能分支归并与原目录同步（当前状态）
+
+本节取代上方同日“Owner 仍落后、不得移动、等待授权”的状态描述；历史记录保留作为过程证据。Jovi 已明确授权推送、功能归并、原目录 main 同步、测试后部署和知识库更新。
+
+- [x] 备份原目录 20 个 dirty/untracked 文件及补丁；创建本地保护分支 `codex/owner-preserved-20261002@ef15634ef7de914d6c5ea0a17f1189a666ec5194`。
+- [x] 原目录 `E:\project\Star_photo_addr` 的 `main` 已 fast-forward 至 `7a572b538caad9a881066cdd8c301a161c1523d1`，工作树干净，原 100 条落后已消除。
+- [x] 隔离集成候选天气证据功能 `768300e` 和错误/Retry-After 可见性修复 `54abd71`。
+- [x] 集成生产依赖审计 `7ae6483`（Next 16.3.8）。
+- [x] 核对地点扩充、旧 UI、Owner 修改、widescreen 补丁的功能保留或等价性；保存缺失历史文档。
+- [x] 读取生产持久化冷却标记：无标记；一次有界真实 Best Match 请求 fresh、stale=false、sourceFetchedAt=2026-10-02T05:23:26.681Z。保存响应后用实际评分函数验证两个观测夜通过，未追加供应商请求。
+- [ ] 完成旧模型能力分支中仍缺失的健康、压力层和 worker 校验功能移植；保留当前持久化供应商熔断。
+- [ ] 对最终集成提交重跑 lint/typecheck/unit/build 及针对性 E2E。
+- [ ] 完成分支祖先归并，推送并合并 GitHub main；再次同步原目录 main。
+- [ ] 对合并后的精确 SHA 测试，通过后执行低内存部署，保留回滚镜像和共享快照卷。
+- [ ] 核验部署 revision、真实天气评分、候选表和四栏目页面；回传现有远端聊天审核。
+- [ ] 核验 Obsidian 映射，安全同步知识库；配置未映射时准确报告，不推断新目录。
+
+Review：此前 `npm run check` 68 文件/399 测试和 429 E2E 2/2 PASS 仅覆盖依赖升级/模型移植前版本。当前整合版本必须重新验证。真实单点评分通过并不等于整套候选表或部署验收。生产仍为 `bd23a7c442e1` / v1.0.22；本次 push、GitHub merge、deploy 均未宣称完成。
+
+## 2026-10-02 Final release gates
+
+- [x] Integrate every functional branch and remote repair9c249d5.
+- [x] Final full check72files413tests and built browser10PASS6SKIP; audit0.
+- [ ] Merge PR41 and synchronize original main/dependencies.
+- [ ] Verify mergedSHA and deploy with rollback.
+- [ ] Verify real production data and page; update repository and knowledge receipts.
+

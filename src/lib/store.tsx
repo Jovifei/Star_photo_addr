@@ -71,6 +71,8 @@ interface AppState {
   selectedNight: string;
   bortleEnabled: boolean;
   cloudState: CloudState;
+  /** Single model used by the candidate comparison surfaces, independent of the raster model. */
+  candidateForecastModel: ForecastModel;
   candidates: CityCandidate[];
   detailOpen: boolean;
   loading: boolean;
@@ -117,6 +119,7 @@ function createInitialState(initialNow: string): AppState {
       activeForecastTime: homeForecastTime,
       timeIndex: nightHourIndex(homeForecastTime),
     },
+    candidateForecastModel: "best_match",
     candidates: [...DEFAULT_CANDIDATE_SEEDS],
     detailOpen: false,
     loading: false,
@@ -158,6 +161,7 @@ type Action =
     }
   | { type: "SET_BORTLE"; enabled: boolean }
   | { type: "SET_CLOUD"; partial: Partial<CloudState> }
+  | { type: "SET_CANDIDATE_FORECAST_MODEL"; model: ForecastModel }
   | { type: "SET_CANDIDATES"; candidates: CityCandidate[] }
   | { type: "ADD_CANDIDATE"; candidate: CityCandidate }
   | { type: "REMOVE_CANDIDATE"; id: string }
@@ -244,6 +248,8 @@ function reducer(state: AppState, action: Action): AppState {
         };
       }
       return { ...state, cloudState: { ...state.cloudState, ...action.partial } };
+    case "SET_CANDIDATE_FORECAST_MODEL":
+      return state.candidateForecastModel === action.model ? state : { ...state, candidateForecastModel: action.model };
     case "SET_CANDIDATES":
       return {
         ...state,
@@ -379,6 +385,7 @@ interface StoreContextValue {
   selectNight: (nightKey: string) => void;
   toggleBortle: () => void;
   setCloud: (partial: Partial<CloudState>) => void;
+  setCandidateForecastModel: (model: ForecastModel) => void;
   setCandidates: (candidates: CityCandidate[]) => void;
   addCandidate: (location: Location) => void;
   removeCandidate: (id: string) => void;
@@ -847,6 +854,9 @@ export function StoreProvider({
   const setCloud = useCallback((partial: Partial<CloudState>) => {
     dispatch({ type: "SET_CLOUD", partial });
   }, []);
+  const setCandidateForecastModel = useCallback((model: ForecastModel) => {
+    dispatch({ type: "SET_CANDIDATE_FORECAST_MODEL", model });
+  }, []);
   const setCandidates = useCallback((candidates: CityCandidate[]) => {
     dispatch({ type: "SET_CANDIDATES", candidates });
   }, []);
@@ -903,13 +913,14 @@ export function StoreProvider({
     // same location/model. Do not advance the shared request token here: doing
     // so could leave an explicit request's loading state stuck while both
     // calls coalesce on the same browser promise.
+    // Loading is an effect dependency, so the dispatch below rerenders this
+    // effect. Request identity guards own the completion; an effect cleanup
+    // flag would cancel this request because of its own loading transition.
     const hydrationRequestId = latestForecastRequestRef.current;
-    let cancelled = false;
     dispatch({ type: "SET_LOADING", loading: true });
     void fetchForecastFor(location, model)
       .then((forecast) => {
         if (
-          cancelled ||
           hydrationRequestId !== latestForecastRequestRef.current ||
           currentModelRef.current !== model ||
           !forecast ||
@@ -930,16 +941,13 @@ export function StoreProvider({
         }
       })
       .catch(() => {
-        if (forecastHydrationKeyRef.current === hydrationKey) {
+        if (hydrationRequestId === latestForecastRequestRef.current && forecastHydrationKeyRef.current === hydrationKey) {
           forecastHydrationKeyRef.current = null;
         }
-        if (!cancelled && currentModelRef.current === model && selectedLocationIdRef.current === location.id && hydrationRequestId === latestForecastRequestRef.current) {
+        if (currentModelRef.current === model && selectedLocationIdRef.current === location.id && hydrationRequestId === latestForecastRequestRef.current) {
           dispatch({ type: "SET_LOADING", loading: false });
         }
       });
-    return () => {
-      cancelled = true;
-    };
   }, [state.cloudState.model, state.forecast, state.loading, state.selectedLocation]);
 
   // Quiet periodic recheck: only while a location is selected, the tab is
@@ -1107,6 +1115,7 @@ export function StoreProvider({
       selectNight,
       toggleBortle,
       setCloud,
+      setCandidateForecastModel,
       setCandidates,
       addCandidate,
       removeCandidate,
@@ -1134,6 +1143,7 @@ export function StoreProvider({
       selectNight,
       toggleBortle,
       setCloud,
+      setCandidateForecastModel,
       setCandidates,
       addCandidate,
       removeCandidate,

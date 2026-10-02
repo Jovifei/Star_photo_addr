@@ -1,4 +1,4 @@
-import { snapshotHealth, retryAfterDelay } from "./observing-snapshot-worker-utils.mjs";
+import { snapshotHealth, retryAfterDelay, observingContext } from "./observing-snapshot-worker-utils.mjs";
 
 const baseUrl = (
   process.env.SNAPSHOT_BASE_URL || "http://127.0.0.1:3000"
@@ -35,41 +35,15 @@ let lastErrorWasRateLimit = false;
 let lastRefreshWasStale = false;
 let providerRetryUntil = 0;
 
-function shanghaiDate() {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(
-    parts.map((part) => [part.type, part.value]),
-  );
-  return `${values.year}-${values.month}-${values.day}`;
-}
-
-function shanghaiForecastTime() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}T${values.hour}:00`;
-}
-
 async function refresh() {
   lastRefreshWasStale = false;
   lastErrorWasRateLimit = false;
-  const date = shanghaiDate();
+  const { date, time } = observingContext();
   const params = new URLSearchParams({
     date,
     days: String(days),
     model,
-    time: shanghaiForecastTime(),
+    time,
     refresh: "1",
   });
   activeController = new AbortController();
@@ -95,7 +69,7 @@ async function refresh() {
     if (!response.ok) {
       throw new Error(payload?.error || `HTTP ${response.status}`);
     }
-    const health = snapshotHealth(payload);
+    const health = snapshotHealth(payload, model, date);
     lastRefreshWasStale = health.stale;
     lastErrorWasRateLimit = false;
     console.log(`[snapshot-worker] observing ${date} ${model} ${params.get("time")} ${health.logLabel}`);
@@ -122,7 +96,7 @@ async function refresh() {
 // instead of a cold 257-point upstream fan-out. Serial and non-fatal: a
 // failed date must never block the observing snapshot or the other dates.
 async function prewarmFireglow() {
-  const date = shanghaiDate();
+  const { calendarDate: date } = observingContext();
   for (let offset = 0; offset < 3; offset += 1) {
     if (providerRetryUntil > Date.now()) break;
     const value = new Date(`${date}T12:00:00Z`);

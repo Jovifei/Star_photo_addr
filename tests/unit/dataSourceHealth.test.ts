@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  assessWeatherCapabilities,
   missingCloudFields,
   sanitizeProbeError,
 } from "@/lib/dataSourceHealth";
@@ -30,6 +31,32 @@ describe("data source health validation", () => {
     expect(missingCloudFields({ ...complete, time: [] })).toEqual([
       "逐小时时间",
     ]);
+  });
+
+  it("separates cloud viewing capability from complete scoring capability", () => {
+    const scoringFields = {
+      ...complete,
+      relative_humidity_2m: [60, 62],
+      dew_point_2m: [8, 9],
+      precipitation_probability: [0, 0],
+      weather_code: [0, 0],
+      precipitation: [0, 0],
+      visibility: [20_000, 21_000],
+      wind_speed_10m: [1, 2],
+      wind_gusts_10m: [2, 3],
+      temperature_2m: [15, 16],
+    };
+    expect(assessWeatherCapabilities(scoringFields)).toMatchObject({
+      cloudAvailable: true,
+      scoringAvailable: true,
+      missingCloudFields: [],
+      missingScoringFields: [],
+    });
+    expect(assessWeatherCapabilities({ ...scoringFields, visibility: [null, null] })).toMatchObject({
+      cloudAvailable: true,
+      scoringAvailable: false,
+      missingScoringFields: ["能见度"],
+    });
   });
 
   it("sanitizes provider failures without reflecting URLs or response bodies", () => {

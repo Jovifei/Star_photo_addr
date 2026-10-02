@@ -106,3 +106,13 @@
 - 2026-09-27: 版本历史测试虽然从 `package.json` 读取当前版本，却把第 2 条历史卡写死为 v1.0.20；v1.0.22 正确新增 v1.0.21 历史卡后 CI 反而失败。测试应按当前语义版本推导相邻补丁版本，再只检查必要的更早历史项存在；发布前同步检查 Modal 真实卡片顺序。
 
 - 2026-09-30: Jovi reported unusable weather after release and unequal product headers. Release acceptance must verify actual usable weather and all four desktop/mobile rendered headers; HTTP 200/build/test fixtures cannot substitute for production data or visual acceptance. If a required data check fails, resolve and report it before claiming completed deployment.
+- 2026-10-01: When a candidate score is withheld, keep valid same-model raw weather and `sourceFetchedAt` visible with a precise missing-field reason; do not collapse this into a blank “数据不足” card. Verify the target candidate path end to end: provider cooldown/cache, source timestamp, stale flag, required night fields, score count, and rendered page. Provider health or a fixture alone is not candidate-data acceptance.
+- 2026-10-02: A passing candidate-card test or live sample from nearby catalog points does not verify the screenshot's `StarWindowTable` or user-saved coordinates. Bind production acceptance to the deployed build and exact selected/candidate coordinates; use cache-only reads while cooldown status is unknown, and require same-model freshness, source time, required fields, valid scores, and rendered table before submission.
+- 2026-10-02: Candidate batch failures with no same-model cache must remain distinguishable from missing scoring fields. Preserve the sanitized server reason and `Retry-After` in the table, keep scores withheld, and never add an automatic provider retry just to replace “数据不足”.
+
+- 2026-10-02: Jovi 明确要求原目录 main 跟随远端；保护 Owner dirty 应先 ZIP/补丁备份并用本地保护分支保存，再安全 fast-forward 原目录。隔离分支集成后必须再次同步原目录 main，不能把“已保护”当成允许长期落后。旧分支按实际功能迁移或补丁等价性归并，不能整树覆盖新功能；最终 merge SHA 测试通过才可部署。
+
+- 2026-10-02: 合并前浏览器门禁必须覆盖原存储地点恢复。hydration effect 的 loading dispatch 会触发自身依赖重跑，不能用 cleanup cancelled 标记丢弃自身请求；响应归属用 request/model/location guards 验证，并用延迟响应组件回归测试证明加载最终结束。
+
+- 2026-10-02：浏览器接口成功但页面更新迟到时，先区分 Store 完成与 DOM commit，再用 CPU profile 找瓶颈。本轮 localDateKey 重复创建 Intl.DateTimeFormat 占用约11.9秒；按时区有界复用后原失败场景1.7/2.0秒通过。不得靠延长等待冒充修复。
+

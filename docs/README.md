@@ -23,3 +23,7 @@
 ## 当前版本索引
 
 代码版本与用户可见更新以根目录 `package.json` 和 [`CHANGELOG.md`](../CHANGELOG.md) 为准；生产部署状态必须用 `/healthz` 的 `version` 与 `buildRevision` 实测确认，不能从源码版本推断。v1.0.19 更新移动端内容流与数据覆盖 fail-closed；每次生产验收应记录实际运行版本、build revision 和数据源状态。
+
+## 最新主线整合记录
+
+- [2026-10-02 功能分支归并与原目录同步](./engineering-change-log/2026-10-02-branch-consolidation.md)：当前集成状态、Owner 备份、分支功能处置和未完成发布门禁。

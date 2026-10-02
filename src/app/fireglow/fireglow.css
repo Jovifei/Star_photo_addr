@@ -430,6 +430,8 @@
   .fireglow-root {
     height: auto;
     min-height: calc(100vh - 58px);
+    width: 100%;
+    max-width: 100%;
     overflow: visible;
   }
 

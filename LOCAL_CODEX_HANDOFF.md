@@ -512,3 +512,139 @@ The previous active image remains on the host for rollback. App and worker both 
 PR #38 contains the remote route-semantics follow-up. The complete merged/deployed tip has not yet received a final `DONE` from the existing ChatGPT conversation: in this environment its connector returned internal errors and the in-app browser could not open ChatGPT. Do not mark the remote final audit complete until it reviews exact SHA bd23a7c442e18ae5eae449e46d5ed0a10a307c0d and returns its verdict.
 
 The recurring quiet heartbeat is configured to continue the weather/remote-handoff loop. The local Owner worktree `E:\project\Star_photo_addr` remains dirty on its original main and was preserved.
+
+## 2026-10-01 Candidate forecast evidence repair — local product tip
+
+Base: `main@7a572b538caad9a881066cdd8c301a161c1523d1`.
+Branch: `codex/candidate-weather-evidence-20261001`.
+Product commit: `f65f3b2349e2fb2a620c949fef9e7d09eb961922`.
+Version: `v1.0.23`.
+
+The candidate cards and seven-location matrix now retain fresh same-model cloud cover, precipitation probability, wind speed, model identity and `sourceFetchedAt` when night scoring is withheld. They state the missing field and continue to leave score/rank empty. Candidate scoring uses a separate model setting from the cloud raster; it defaults to Best Match and requests up to 64 candidates as one batch. The selected matrix row loads the same candidate-score model independently. The map raster remains on its existing ICON/GFS/AIFS model contract.
+
+Local evidence before commit: `npm run check` PASS — lint, TypeScript, 68 test files / 399 tests and production build; `git diff --check` PASS. Candidate evidence/client tests: 9/9. Candidate presentation: desktop and mobile Best Match/ICON transitions passed; desktop data-state presentation 4 passed / 1 project skip; version history v1.0.23/1.0.22 passed.
+
+Production source gate against the currently deployed `buildRevision=bd23a7c442e1`: no active quota marker was present; one bounded seven-location Best Match request across the public catalog areas shown in the screenshot returned `sourceFetchedAt=2026-10-01T10:08:25.354Z`, `stale=false`, and seven non-null night scores when evaluated by the local v1.0.23 scoring code. The following `cache_only=1` read returned HTTP 200 from memory with the same model and fresh state. Jovi's exact candidate coordinates are browser-local and were not read by this process, so this confirms the live source/scoring contract for those public area points rather than the exact saved list. v1.0.23 is not yet deployed and its page-level production acceptance remains pending.
+
+Owner preservation: `E:\project\Star_photo_addr` remains on `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e` with its pre-existing dirty files; no Owner files were edited.
+
+PR: `#41 OPEN` — https://github.com/Jovifei/Star_photo_addr/pull/41.
+Merged: `NO`.
+Deployed: `NO`.
+Remote review of product SHA: `PENDING`.
+
+Next: send PR #41's current head SHA and this handoff to the existing ChatGPT conversation. Ask it to verify the candidate data/scoring contract against the last handoff, review model separation and request economy, discuss any technical disagreement, and propose the next product phase. Resolve its findings, then merge and deploy only after the fresh real-data and page checks pass again on the deployed v1.0.23 build.
+
+## 2026-10-02 Screenshot follow-up — current production evidence
+
+- Screenshot surface: `StarWindowTable`. Production `/healthz` still reports `bd23a7c442e1` / v1.0.22; PR #41/v1.0.23 is not deployed.
+- The open page URL gives the selected point `(31.633617, 120.234375)`. A `cache_only=1` read for ICON returned HTTP 200 from memory, `stale=true`, `sourceFetchedAt=2026-10-01T14:17:00.742Z`, 192 hourly rows, cloud/precipitation/wind 189 valid each, and visibility 0. Best Match returned HTTP 429 `cache-only-miss` for this exact point. These reads did not call the supplier.
+- A second Best Match cache-only read returned generic `Retry-After: 60` with no `X-Weather-Limit`. The 60 seconds is the route's cache-miss minimum and does not prove the persisted cooldown marker's absolute deadline.
+- One ordinary Best Match request was attempted as a bounded production check, but automatic approval review rejected it because cooldown expiry was not reliably verified. The request was not dispatched; no supplier quota was consumed.
+- Read-only source review found that failed candidate batches were silently caught when there is no same-model cache; the table then rendered generic `数据不足` without the request failure/retry state. The isolated worktree now preserves the safe server error and Retry-After in a status row while leaving scores/ranking withheld.
+- RED/GREEN evidence: the new 429 test failed before the UI status existed, then passed on desktop and mobile (2/2). Final `npm run check` PASS: lint, typecheck, 68 test files / 399 tests, Next build. `git diff --check` PASS. These are local fixture/code checks only.
+- Existing ChatGPT conversation attempted the exact PR #41 SHA review through the compare page and immutable raw-file URLs; it could not read their contents and returned `BLOCKED`. No exact remote review, new commit, merge, or deployment is claimed.
+- Next gate: the async approval request is pending. The attempted ordinary Best Match request was rejected before dispatch by automatic approval review because the generic cache-miss `Retry-After: 60` could not prove that the persisted provider cooldown had expired. No supplier request was sent. Once Jovi supplies a read-only cooldown access path or authorizes one bounded single-point request, verify fresh exact-coordinate fields and score. The follow-up code is uncommitted; do not commit, merge, or deploy until production data passes and the remote exact-SHA review can read the source.
+
+## 2026-10-02 Local integration for main refresh
+
+- Fetched current `origin` refs. Local Owner `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e` is 100 commits behind `origin/main@7a572b538caad9a881066cdd8c301a161c1523d1` and has no local-only commits. The 100 count is commit history, not 100 file changes.
+- Candidate feature branch `origin/codex/candidate-weather-evidence-20261001@768300e02956e7437970b28a8f5f2e709aac9573` is exactly 3 commits ahead of current `origin/main`, based directly on `7a572b5`.
+- Created local isolated integration worktree `C:\Users\Admin\.codex\worktrees\starphoto-main-refresh-20261002\Star_photo_addr` from `origin/main`, then fast-forwarded the candidate feature branch. The resulting tree includes the previously tested 429 status fix and matching handoff changes.
+- Post-merge local verification passed: `npm run check` (lint, typecheck, 68 test files / 399 tests, Next build) and the desktop/mobile StarWindowTable 429 E2E (2/2) on temporary local port 3317. No weather-provider or production page requests were made by these tests.
+- The Owner checkout is still dirty and unchanged. It was not pulled, reset, stashed, or overwritten. The local integration branch has not been pushed; PR #41 remains open. Merge to remote/deploy remain gated on exact-coordinate production weather acceptance and remote ChatGPT review.
+
+## 2026-10-02 Functional consolidation release candidate
+
+Supersedes prior Oct02 statements that Owner main remains 100 commits behind or that production cooldown expiry is unverified.
+
+- Original E:\project\Star_photo_addr is clean main@7a572b538caad9a881066cdd8c301a161c1523d1. Owner changes backed up in ZIP and local snapshot ef15634ef7de914d6c5ea0a17f1189a666ec5194 before fast-forward.
+- Integration a496632630a50b7a11ef940c4d0dde100b80ee3a includes all previously outstanding branch ancestry after functional audit/migration; historical branches retained.
+- Candidate Best Match, request-error evidence, Next16.3.8, model-aware cloud/scoring capability, pressure shared persisted cooldown, strict pressure time axis, observing worker previous-night and timestamp/model/date checks integrated.
+- Complete npm check PASS:70 test files410 tests, lint/typecheck/production build. Browser run7 PASS5 SKIPPED2 CHANGES_REQUIRED desktop selected-data loading; investigating hydration cleanup race. No deploy until resolved and rerun.
+- Authoritative production cooldown marker absent; one bounded genuine Best Match request fresh sourceFetchedAt2026-10-02T05:23:26.681Z stalefalse. Saved response passes two-night actual scoring test. No fresh assertion about other points or rendered production page yet.
+- PR41 updated and existing remote ChatGPT exact-SHA review now actively reads workspace/GitHub sources. Final remote verdict pending.
+- Obsidian approved home profile incrementally registered star_photo_addr original root, retaining7 other mappings and backup. Mirror preview completed; no private deployment documents will be mirrored. Actual filtered sync follows final local main update.
+- Production remains bd23a7c442e1/v1.0.22. Retain existing rollback image and original snapshot volume on deployment.
+
+## 2026-10-02 Remote exact-SHA review follow-up — candidate/raster loading + pressure cooldown
+
+Review source:
+- PR #41 exact reviewed head: `a496632630a50b7a11ef940c4d0dde100b80ee3a`
+- Base: `main@7a572b538caad9a881066cdd8c301a161c1523d1`
+- Remote repair branch: `codex/candidate-pressure-review-followup-20261002`
+- Product repair commits:
+  - `1603fd823f7972d96999f010d4c7278f5b5be083` — decouple StarWindow selected-row loading from raster loading
+  - `e69488a00e301ce21ada08516b752d643a273b97` — preserve shared provider cooldown on pressure refresh responses
+- Regression-source commits:
+  - `5300c7d1eb9883e9776be15975ec78480a1e0434` — selected-row/raster-loading browser contract
+  - `c3626d9afb35d75e4fbef87a3c5a93934ffb6e8a` — pressure provider-cooldown precedence
+- Consolidation review log commit: `fe8ad18f504bd1180454a78892d17d2300434f86`
+- Final handoff branch tip is the commit containing this section; use the exact SHA returned by remote ChatGPT.
+
+### Exact review result on a496632
+
+Accepted:
+- Candidate scoring is intentionally separate from the raster model. New sessions use `candidateForecastModel="best_match"`; `DEFAULT_CLOUD_STATE.model` remains `icon`. This is the preferred architecture because point-score completeness and map-raster continuity are different concerns. No Best Match fields are spliced into an ICON forecast.
+- The candidate loader is one stable bounded batch per model/day/location set; six saved candidates are one request. The selected table row uses the same candidate-score model, reusing a same-point candidate cache when possible and otherwise requesting the selected coordinate separately.
+- Fresh same-model ICON data with missing visibility retains raw cloud/precipitation/wind and original `sourceFetchedAt`, but `projectCandidateNight` keeps `evaluation=null`, reports the exact visibility blocker, and leaves score/rank withheld.
+- Stale, model mismatch, source age and missing required scoring fields remain fail-closed.
+- Pressure ingestion now uses the shared Open-Meteo provider slot / typed rate-limit error path.
+- Worker observing identity treats Shanghai 00:00–05:00 as the previous observing night while Fireglow prewarm remains on the calendar date.
+- Historical branch consolidation uses functional migration plus current-tree precedence; old branch contents are not allowed to overwrite newer provider/cache/UI semantics merely to create ancestry.
+
+Remaining defects repaired remotely:
+1. `StarWindowTable` selected rows still set `loading` from global raster `state.loading`. This could hide an already-ready Best Match candidate score while an independent ICON raster request was slow, matching the current desktop loading-timeout symptom. Loading now depends on the candidate forecast itself plus its own request error.
+2. `/api/pressure-forecast` early force-refresh suppression returned only the local coordinator retry window. Response headers now merge that local window with the shared provider cooldown via `openMeteoRateLimitHeaders()`, so a daily provider cooldown cannot be shortened by a 60-second local guard.
+
+Protected:
+- no score weights changed;
+- no required scoring fields changed;
+- no cross-model weather filling;
+- no candidate/raster default model change;
+- no pressure-profile derivation or CloudSea scoring change;
+- no ProductHeader/map layout change;
+- no merge/deploy.
+
+### Test status
+
+REMOTE TEST EXECUTION: `NOT_RUN`.
+
+The recorded local evidence at `a496632` (70 Vitest files / 410 tests, lint/typecheck/build PASS) applies only to that exact SHA. The PR browser gate was still unresolved at review time: 7 pass / 5 skip / 2 desktop loading failures. Those results do not validate this remote repair head.
+
+Local Codex must run, from the final remote head:
+
+1. `npm run test -- tests/integration/pressureRoute.test.ts tests/unit/candidateNightEvidence.test.ts tests/unit/candidateForecastClient.test.ts`
+2. Desktop + mobile candidate data presentation including the new selected-row/raster-loading case:
+   `npx playwright test tests/e2e/data-state-presentation.spec.ts --project=desktop --project=mobile`
+3. The browser gate set that previously produced the two desktop loading failures; confirm zero assertion/timeouts before integration.
+4. `npm run check`
+5. `git diff --check`
+
+Do not merge solely because static/unit tests pass. The browser loading failures must be reproduced/closed on the exact received head.
+
+### Production acceptance boundary
+
+Production remains the older deployed revision until local integration/deployment is explicitly completed. The recorded real Best Match source response (`sourceFetchedAt=2026-10-02T05:23:26.681Z`, `stale=false`, two nights scoring successfully) is useful provider/scoring evidence only; it is not post-deploy page acceptance for this branch.
+
+After deployment verify separately:
+- exact `/healthz` build revision/version;
+- candidate Best Match selected/card/table provenance and score on real page coordinates;
+- ICON raster remains independent;
+- missing visibility still withholds score rather than filling from Best Match;
+- pressure 429/fallback returns the shared long provider Retry-After when applicable;
+- stale/source timestamps remain original;
+- no browser loading timeout remains.
+
+MERGED: `NO`.
+DEPLOYED: `NO`.
+
+## 2026-10-02 Final pre-merge receipt
+
+- Integrated remote repair/handoff9c249d59c6d21a661d1971f2c53f6e9d7f2dec54 with local hydration and measured date formatter fix42ee347accd53ed37500a0b30afaad3b5fc492e2.
+- Final npm run check PASS:72 files413 tests, lint/typecheck/production build.
+- Same browser gate plus remote selected-row regression PASS:10 passed6 applicability skips,29.2s. No failing tests, no waits extended. Four-product desktop/mobile header geometry included.
+- Production dependency audit:0 vulnerabilities.
+- Every local/remote branch ref is an ancestor of the integration head at this receipt; historical branches retained.
+- Remote exact-source review returned CHANGES_REQUIRED on a496632 and produced real repairs9c249d5. Repairs now locally tested. Existing remote conversation reached its length limit; next audit requires Jovi's pending same-Project chat handoff decision. Do not claim a later remote DONE verdict.
+- Next authorized steps:merge PR41,ff original main,install matching deps,verify merged code,deploy local exact-revision standalone overlay,retain rollbackimage and originalvolume,verify genuine API+page and sync filtered knowledge docs.

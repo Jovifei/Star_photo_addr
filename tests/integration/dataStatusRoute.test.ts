@@ -26,6 +26,8 @@ function response(
 ): DataSourceHealthResponse {
   return {
     status: "ok",
+    model: "icon", cloudAvailable: true, scoringAvailable: true,
+    missingCloudFields: [], missingScoringFields: [],
     checkedAt: "2026-08-20T00:00:00.000Z",
     cached: false,
     sources: {
@@ -63,7 +65,7 @@ describe("GET /api/data-status", () => {
     expect(result.status).toBe(200);
     expect(result.headers.get("x-data-source-cache")).toBe("memory");
     expect(result.headers.get("cache-control")).toContain("s-maxage=300");
-    expect(getDataSourceHealth).toHaveBeenCalledWith(false);
+    expect(getDataSourceHealth).toHaveBeenCalledWith(false, "icon");
   });
 
   it("marks a coalesced provider probe", async () => {
@@ -91,6 +93,24 @@ describe("GET /api/data-status", () => {
     );
     expect(result.headers.get("x-refresh-suppressed")).toBe("true");
     expect(result.headers.get("x-next-refresh-at")).toBe(nextRefreshAt);
-    expect(getDataSourceHealth).toHaveBeenCalledWith(true);
+    expect(getDataSourceHealth).toHaveBeenCalledWith(true, "icon");
+  });
+});
+
+
+describe("model-aware diagnostic routing", () => {
+  it("keeps an explicit model and does not cache degraded capability", async () => {
+    getDataSourceHealth.mockResolvedValue(response({ status: "degraded", model: "gfs", scoringAvailable: false }));
+    const { GET } = await loadRoute();
+    const result = await GET(request("?model=gfs"));
+    expect(getDataSourceHealth).toHaveBeenCalledWith(false, "gfs");
+    expect(result.headers.get("x-weather-probe-model")).toBe("gfs");
+    expect(result.headers.get("cache-control")).toContain("no-store");
+  });
+  it("rejects an unknown model without probing", async () => {
+    const { GET } = await loadRoute();
+    const result = await GET(request("?model=invalid"));
+    expect(result.status).toBe(400);
+    expect(getDataSourceHealth).not.toHaveBeenCalled();
   });
 });
