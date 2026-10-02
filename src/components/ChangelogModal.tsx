@@ -13,8 +13,17 @@ const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
     date: "2026-10-02",
-    tag: "日期与时段直接选择",
+    tag: "紧凑日期工具栏",
     current: true,
+    highlights: [
+      { icon: Layers, title: "选项按内容宽度排列", desc: "日期、晨晚时段与刷新组成紧凑工具栏，不再把日期按钮拉伸铺满宽屏；保持直接可选。" },
+    ],
+  },
+  {
+    version: "v1.0.24",
+    date: "2026-10-02",
+    tag: "日期与时段直接选择",
+    current: false,
     highlights: [
       { icon: CloudSun, title: "顶部直接选择日期和晨晚时段", desc: "火烧云与云海的全部日期、时段选项常驻顶部，点击直接切换，不再先打开调整弹层。" },
       { icon: Layers, title: "手机两行紧凑工具栏", desc: "时段与日期分两行显示，保留统一导航和触摸尺寸，工具栏正常占位，不覆盖地图。" },

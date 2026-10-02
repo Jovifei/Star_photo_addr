@@ -5,7 +5,7 @@ test("four peer products retain the same compact header and navigation geometry"
   test.skip(testInfo.project.name !== "desktop", "This case covers desktop and mobile viewports explicitly.");
   // Layout verification must never spend live provider quotas.
   await page.route("**/api/**", (route) => route.fulfill({ status: 503, contentType: "application/json", body: "{}" }));
-  for (const { width, height } of [{ width: 1920, height: 900 }, { width: 1440, height: 900 }, { width: 1440, height: 500 }, { width: 1200, height: 900 }, { width: 960, height: 540 }, { width: 390, height: 900 }, { width: 320, height: 900 }]) {
+  for (const { width, height } of [{ width: 3840, height: 1100 }, { width: 3825, height: 1100 }, { width: 1920, height: 900 }, { width: 1440, height: 900 }, { width: 1440, height: 500 }, { width: 1200, height: 900 }, { width: 960, height: 540 }, { width: 390, height: 900 }, { width: 320, height: 900 }]) {
     await page.setViewportSize({ width, height });
     for (const path of ["/", "/sites", "/fireglow", "/cloudsea"]) {
       await page.goto(path);
@@ -42,18 +42,34 @@ test("four peer products retain the same compact header and navigation geometry"
         for (const button of [...await phases.all(), ...await dates.all()]) {
           await expect(button).toBeVisible();
           const bounds = (await button.boundingBox())!;
+          expect(bounds.height, `${width} ${path} compact choice height`).toBeLessThanOrEqual(width >= 1200 ? 36 : 44);
+          if (width >= 1200) {
+            expect(bounds.height, `${width} ${path} desktop choice height`).toBeGreaterThanOrEqual(32);
+            expect(bounds.width, `${width} ${path} desktop choice width`).toBeLessThanOrEqual(150);
+          }
           expect(bounds.x, `${width} ${path} choice left edge`).toBeGreaterThanOrEqual(0);
           expect(bounds.x + bounds.width, `${width} ${path} choice right edge`).toBeLessThanOrEqual(width + 1);
+        }
+        if (width >= 1200) {
+          // Bound the occupied choices, rather than an intentionally full-width toolbar background.
+          const groups = await controls.locator('.segmented').evaluateAll((elements) => {
+            const boxes = elements.map((element) => element.getBoundingClientRect());
+            return { span: Math.max(...boxes.map((box) => box.right)) - Math.min(...boxes.map((box) => box.left)),
+              widths: boxes.map((box) => box.width) };
+          });
+          expect(groups.span, `${width} ${path} compact phase/date groups`).toBeLessThanOrEqual(760);
+          for (const groupWidth of groups.widths) expect(groupWidth).toBeLessThanOrEqual(760);
         }
         const map = page.locator(".leaflet-container").first();
         await expect(map).toBeVisible();
         const toolbarGeometry = await controls.evaluate((element) => {
           const box = element.getBoundingClientRect();
-          return { top: box.top, bottom: box.bottom, position: getComputedStyle(element).position,
+          return { top: box.top, bottom: box.bottom, height: box.height, position: getComputedStyle(element).position,
             scrollWidth: element.scrollWidth, clientWidth: element.clientWidth };
         });
         expect(["static", "relative"]).toContain(toolbarGeometry.position);
         expect(toolbarGeometry.scrollWidth).toBeLessThanOrEqual(toolbarGeometry.clientWidth + 1);
+        expect(toolbarGeometry.height).toBeLessThanOrEqual(width >= 1200 ? 40 : 104);
         const headerBounds = await header.evaluate(e => ({ y: e.getBoundingClientRect().y, height: e.getBoundingClientRect().height }));
         expect(toolbarGeometry.top).toBeGreaterThanOrEqual(headerBounds.y + headerBounds.height - 1);
         expect(toolbarGeometry.bottom).toBeLessThanOrEqual((await map.boundingBox())!.y + 1);
