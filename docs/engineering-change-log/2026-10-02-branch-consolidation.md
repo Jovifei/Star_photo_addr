@@ -48,3 +48,27 @@ Jovi 授权按功能归并分支、更新 GitHub 主线、同步原目录 `main`
 
 浏览器2项桌面失败定位为 StoreProvider persisted selection hydration race：自身 loading 更新触发 effect cleanup，完整HTTP200天气被丢弃。已移除该自取消标记，保留请求编号/模型/地点归属门禁。新增延迟响应组件测试修复前RED、修复后GREEN；完整检查和浏览器重新验收进行中。
 
+
+## Remote exact-SHA review follow-up
+
+Remote review base: `a496632630a50b7a11ef940c4d0dde100b80ee3a` (PR #41 head at review time).
+Remote repair branch: `codex/candidate-pressure-review-followup-20261002`.
+
+The exact-source audit accepted the main direction of the consolidated tree:
+
+- candidate comparison uses a separate `candidateForecastModel` with Best Match as the new-session default, while the raster `cloudState.model` remains ICON by default;
+- six saved candidates fit in one bounded candidate batch (the loader supports up to 64 per request), and an independently selected point uses the same candidate-score model without borrowing the raster forecast;
+- fresh same-model ICON weather with missing visibility keeps raw cloud/precipitation/wind and source timestamp but withholds score/rank with an exact visibility blocker;
+- stale/model/freshness gates remain fail-closed;
+- pressure requests enter the shared Open-Meteo provider slot and propagate typed 429 errors;
+- Shanghai 00:00–05:00 belongs to the previous observing night for the snapshot worker, while Fireglow prewarm continues to use the calendar date;
+- historical branches are migrated by functional ownership and current-tree precedence rather than overwriting the current tree with old branch contents.
+
+Two bounded defects remained:
+
+1. `StarWindowTable` selected-row rendering still used global raster `state.loading`. A slow ICON selected-location request could therefore keep an already-resolved Best Match candidate row stuck at `…`, violating the intended model/lifecycle separation and matching the observed desktop loading-timeout symptom.
+2. `/api/pressure-forecast` used only the local refresh coordinator's short `Retry-After` in its early suppression path. During an active shared provider daily cooldown, a repeated force refresh could expose a shorter retry window than the provider circuit.
+
+The remote follow-up removes those two couplings only. It does not change score weights, required scoring fields, candidate model defaults, raster model defaults, pressure-profile derivation, CloudSea scoring, provider model mapping, historical branch migration, or deployment behavior.
+
+Remote test execution for this follow-up is `NOT_RUN`; local Codex must run the targeted tests plus the full check/browser gates before integrating it. The prior `a496632` local evidence (70 files / 410 tests and build) remains evidence for that exact SHA only. The current PR browser gate was still not green at review time (7 pass / 5 skip / 2 desktop loading failures), so neither PR #41 nor this follow-up is approved for merge/deploy until the local rerun closes those failures.
