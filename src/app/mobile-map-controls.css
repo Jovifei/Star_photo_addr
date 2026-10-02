@@ -440,20 +440,7 @@
     display: none;
   }
 
-  .app-header:has(.cloudsea-controls),
-  .app-header:has(.fireglow-controls) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "brand"
-      "controls"
-      "nav";
-  }
 
-  .app-header:has(.cloudsea-controls) .app-header-controls,
-  .app-header:has(.fireglow-controls) .app-header-controls {
-    width: 100%;
-    justify-self: stretch;
-  }
 }
 
 @media (max-width: 600px) {

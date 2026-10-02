@@ -12,9 +12,19 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
+    date: "2026-10-02",
+    tag: "日期与时段直接选择",
+    current: true,
+    highlights: [
+      { icon: CloudSun, title: "顶部直接选择日期和晨晚时段", desc: "火烧云与云海的全部日期、时段选项常驻顶部，点击直接切换，不再先打开调整弹层。" },
+      { icon: Layers, title: "手机两行紧凑工具栏", desc: "时段与日期分两行显示，保留统一导航和触摸尺寸，工具栏正常占位，不覆盖地图。" },
+    ],
+  },
+  {
+    version: "v1.0.23",
     date: "2026-10-01",
     tag: "候选天气数据与评分",
-    current: true,
+    current: false,
     highlights: [
       {
         icon: CloudSun,

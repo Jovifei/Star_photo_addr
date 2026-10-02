@@ -1,4 +1,5 @@
 "use client";
+import type { ReactNode } from "react";
 import MapViewportObserver from "@/components/MapViewportObserver";
 import MapTileStatus from "@/components/MapTileStatus";
 import BlankMapPicker from "@/components/BlankMapPicker";
@@ -46,7 +47,7 @@ import { buildProbabilityOverlay } from "@/lib/cloudseaOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
 import ScoreThresholdControl from "@/components/ScoreThresholdControl";
-import { formatCompactCalendarDate, formatRelativeDateLabel } from "@/lib/nighttime";
+import { formatCompactCalendarDate } from "@/lib/nighttime";
 import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
 import "./cloudsea.css";
@@ -100,14 +101,12 @@ function dateLabel(date: string): string {
   return `${month}月${day}日 周${weekday}`;
 }
 
-function rangeOptionLabel(
-  option: (typeof RANGE_OPTIONS)[number],
-  baseDate: string,
-): string {
-  if (option.value === 3) {
-    return `${option.label} · ${formatCompactCalendarDate(baseDate)}—${formatCompactCalendarDate(shiftDate(baseDate, 2))}`;
-  }
-  return formatRelativeDateLabel(shiftDate(baseDate, option.value), baseDate);
+function rangeOptionLabel(option: (typeof RANGE_OPTIONS)[number], baseDate: string): ReactNode {
+  const selectedDate = shiftDate(baseDate, option.value === 3 ? 0 : option.value);
+  const dateText = option.value === 3
+    ? `${baseDate.slice(5).replace("-", ".")}—${shiftDate(baseDate, 2).slice(5).replace("-", ".")}`
+    : formatCompactCalendarDate(selectedDate);
+  return <><span>{option.label}</span><small>{dateText}</small></>;
 }
 
 const RANGE_OPTIONS: Array<{ value: RangeMode; label: string; hint: string }> = [
@@ -496,6 +495,7 @@ export default function CloudSeaApp() {
           <div className="segmented" role="group" aria-label="云海时段选择" data-mode="phase">
             <button
               type="button"
+              aria-pressed={phase === "morning"}
               className={phase === "morning" ? "active" : ""}
               onClick={() => setPhase("morning")}
               title="日出与清晨时段（05:00-08:00）"
@@ -505,6 +505,7 @@ export default function CloudSeaApp() {
             </button>
             <button
               type="button"
+              aria-pressed={phase === "evening"}
               className={phase === "evening" ? "active" : ""}
               onClick={() => setPhase("evening")}
               title="日落与黄昏时段（17:00-19:00）"
@@ -519,11 +520,12 @@ export default function CloudSeaApp() {
               <button
                 key={option.value}
                 type="button"
+                aria-pressed={range === option.value}
                 className={range === option.value ? "active" : ""}
                 onClick={() => setRange(option.value)}
                 title={option.hint}
               >
-                <span>{rangeOptionLabel(option, baseDate)}</span>
+                {rangeOptionLabel(option, baseDate)}
               </button>
             ))}
           </div>

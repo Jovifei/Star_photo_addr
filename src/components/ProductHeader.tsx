@@ -1,17 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import NavTabs, { NavTabsFallback } from "@/components/NavTabs";
 import ChangelogModal from "@/components/ChangelogModal";
 import { APP_VERSION_LABEL } from "@/lib/appVersion";
 import "./product-header.css";
 
-/**
- * The one header shared by every product workspace. Geometry lives here and
- * only here: brand at the left, four equal product tabs in the middle,
- * and page controls on the right. Topic date/phase choices expand over the
- * workspace while retaining their original active values and handlers.
- */
+/** Shared compact peer navigation, followed by persistent topic controls. */
 export default function ProductHeader({
   mark,
   markClassName,
@@ -26,25 +21,12 @@ export default function ProductHeader({
   children?: ReactNode;
 }) {
   const [changelogOpen, setChangelogOpen] = useState(false);
-  const [controlsExpanded, setControlsExpanded] = useState(false);
-  const controlsId = useId();
-  const controlsButton = useRef<HTMLButtonElement>(null);
-  const controlsRoot = useRef<HTMLDivElement>(null);
   const topicControls = markClassName === "fireglow-mark" || markClassName === "cloudsea-mark";
-
-  useEffect(() => {
-    if (!controlsExpanded) return;
-    const dismiss = (event: PointerEvent) => {
-      if (event.target instanceof Node && !controlsRoot.current?.contains(event.target)) {
-        setControlsExpanded(false);
-      }
-    };
-    document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
-  }, [controlsExpanded]);
+  const hasControls = children != null && children !== false;
 
   return (
-    <header className="app-header product-header" data-controls-expanded={controlsExpanded}>
+    <>
+    <header className="app-header product-header">
       <div className="app-header-brand">
         <span className={`app-header-mark${markClassName ? ` ${markClassName}` : ""}`} aria-hidden="true">
           {mark}
@@ -68,35 +50,18 @@ export default function ProductHeader({
       <Suspense fallback={<NavTabsFallback />}>
         <NavTabs />
       </Suspense>
-      {children != null && children !== false ? (
-        <div ref={controlsRoot} className="app-header-controls"
-          onKeyDown={(event) => {
-            if (event.key !== "Escape") return;
-            event.stopPropagation();
-            setControlsExpanded(false);
-            controlsButton.current?.focus({ preventScroll: true });
-          }}>
-          {topicControls ? <>
-          <button
-            ref={controlsButton}
-            type="button"
-            className="topic-controls-toggle"
-            aria-label={controlsExpanded ? "收起日期与时段设置" : "展开日期与时段设置"}
-            aria-expanded={controlsExpanded}
-            aria-controls={controlsId}
-            onClick={() => setControlsExpanded((value) => !value)}
-          >
-            {controlsExpanded ? "收起" : "调整"}
-          </button>
-          <div id={controlsId} className="app-header-controls-content">
-            {children}
-          </div>
-          </> : children}
-        </div>
+      {hasControls && !topicControls ? (
+        <div className="app-header-controls">{children}</div>
       ) : (
         <div className="app-header-controls app-header-controls-empty" aria-hidden="true" />
       )}
       <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </header>
+    {topicControls && hasControls ? (
+      <section className="product-topic-toolbar" aria-label="预报日期与时段设置">
+        {children}
+      </section>
+    ) : null}
+    </>
   );
 }
