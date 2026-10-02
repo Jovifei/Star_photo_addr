@@ -58,7 +58,7 @@ describe("buildDecisionSummary", () => {
     expect(model.gradeLabel).toBe("数据不足");
     expect(model.locationName).toBe("天荒坪");
     expect(model.riskTitle).toBe("评分未知");
-    expect(model.riskText).not.toMatch(/一般|安全|无主要安全门禁/);
+    expect(model.riskText).not.toMatch(/一般|安全|无主要安全门禁|正在同步/);
   });
 
   it("lists real blockers and never claims safety when blockers are empty", () => {
@@ -91,5 +91,16 @@ describe("buildDecisionSummary", () => {
     expect(clear.riskText).toContain("降水");
     expect(clear.riskText).toContain("当地预警");
     expect(clear.riskText).not.toMatch(/安全|无雷暴|无主要安全门禁/);
+  });
+});
+
+
+describe("finished unavailable decision", () => {
+  it("shows the actual missing field after loading finishes", () => {
+    const model = buildDecisionSummary({ location, evaluation: null, loading: false, updatedAt: null, unavailableReason: "当前观测夜缺能见度，暂不发布推荐。" });
+    expect(model.riskText).toContain("缺能见度");
+    expect(model.riskText).not.toContain("正在同步");
+    expect(model.gradeLabel).toBe("数据不足");
+    expect(buildDecisionSummary({ location, evaluation: null, loading: true, updatedAt: null, unavailableReason: "缺能见度" }).riskText).toContain("正在同步");
   });
 });

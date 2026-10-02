@@ -87,3 +87,10 @@ Remote test execution for this follow-up is `NOT_RUN`; local Codex must run the 
 - Every local/remote branch ref is an ancestor of the integration head at this receipt; historical branches retained.
 - Remote exact-source review returned CHANGES_REQUIRED on a496632 and produced real repairs9c249d5. Repairs now locally tested. Existing remote conversation reached its length limit; next audit requires Jovi's pending same-Project chat handoff decision. Do not claim a later remote DONE verdict.
 - Next authorized steps:merge PR41,ff original main,install matching deps,verify merged code,deploy local exact-revision standalone overlay,retain rollbackimage and originalvolume,verify genuine API+page and sync filtered knowledge docs.
+
+## 已部署实证与提示修正
+
+PR41已合并main c669fd501e4e9f8444bf61ed093531aa16d08475。原目录main干净，与origin/main领先/落后0/0；依赖与原目录完整检查72文件413项通过。线上v1.0.23同revision，app/worker健康，原数据卷和rollback镜像保留。真实浏览器12行84个BestMatch有效分，上海取样点今晚45分，源抓取2026-10-02T06:09:55.44Z，stale=false；手机390px四tab均90px/13px字体，header48px，无页面横溢。桌面header65px。
+
+线上验收发现加载完成但ICON缺能见度时主提示仍写正在同步。已增加结束状态的精确字段缺口说明，不改变评分或模型。跟进候选完整检查72文件414项PASS，缺能见度且不声称同步的E2E1/1PASS；待跟进合并部署。
+

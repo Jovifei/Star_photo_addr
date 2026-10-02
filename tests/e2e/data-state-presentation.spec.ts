@@ -54,6 +54,8 @@ test("HTTP 200 with incomplete scoring fields is partial and withholds recommend
   });
   await page.goto(selectedUrl);
   await expect(page.getByTestId("selected-data-state")).toContainText("数据部分可用", { timeout: 20_000 });
+  await expect(page.getByTestId("observation-reason-card")).toContainText("缺能见度");
+  await expect(page.getByTestId("observation-reason-card")).not.toContainText("正在同步");
   await expect(page.getByTestId("recommendation-eligibility")).toContainText("不发布推荐");
   await expect(page.locator(".candidate-score-number strong").filter({ hasText: "94" })).toHaveCount(0);
 });
