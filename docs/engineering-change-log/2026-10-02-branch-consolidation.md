@@ -94,3 +94,16 @@ PR41已合并main c669fd501e4e9f8444bf61ed093531aa16d08475。原目录main干净
 
 线上验收发现加载完成但ICON缺能见度时主提示仍写正在同步。已增加结束状态的精确字段缺口说明，不改变评分或模型。跟进候选完整检查72文件414项PASS，缺能见度且不声称同步的E2E1/1PASS；待跟进合并部署。
 
+
+## 2026-10-02 Delivery complete — current receipt
+
+- Functional consolidation PR41 and scoring-gap presentation PR43 merged. All existing local/remote functional refs are ancestors of main; historical refs retained.
+- Deployed code SHA:4460382fc2991b3af5555816f307c2318f5b962a; version1.0.23; app/worker image star-photo-addr:deploy-4460382fc299 both healthy. Existing snapshot volume retained; rollback-before-4460382fc299 and older image retained.
+- Original E:\project\Star_photo_addr clean main synchronized to origin/main; matching Next16.3.8 dependencies installed and original-directory build refreshed. Owner snapshot ef15634 and ZIP retained.
+- Final merged code full check:72files414tests,lint/typecheck/build PASS. Prior combined browser gates10PASS6SKIP; final truthful-missing-field E2E1/1PASS. Production dependency audit0 vulnerabilities.
+- Real post-deploy API cache-only read:BestMatch,336hours,stale=false,sourceFetchedAt2026-10-02T06:23:56.895Z. Real browser12rows84validscores; exact selected point tonight45. Data/cards/table source metadata retained; ICON raster independent.
+- Actual desktop header65px; phone390px header48px, four90px navigation targets and13px font, no page horizontal overflow.
+- ICON still lacks visibility; finished-load reason explicitly says缺能见度 and withholds ICON score. This is a field capability boundary, not ongoing sync. No cross-model field filling. Local dark-sky raster license remains unqualified and no Bortle/SQM fabricated.
+- Obsidian mapping registered under approved home root; filtered tracked engineering docs mirror applied, private guides/environment/credentials excluded. Refresh mirror after this receipt commit.
+- Remote exact review on a496632 returnedCHANGES_REQUIRED and created actual repair9c249d5; all repairs received/tested. Old chat reached length limit. Same-Project successor decision pending Jovi; no fabricated final remoteDONE or next phase execution.
+- This final receipt is documentation only. Runtime code SHA above remains authoritative; a later documentation SHA does not represent undeployed product-code changes.
