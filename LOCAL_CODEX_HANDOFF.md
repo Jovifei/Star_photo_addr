@@ -534,3 +534,22 @@ Deployed: `NO`.
 Remote review of product SHA: `PENDING`.
 
 Next: send PR #41's current head SHA and this handoff to the existing ChatGPT conversation. Ask it to verify the candidate data/scoring contract against the last handoff, review model separation and request economy, discuss any technical disagreement, and propose the next product phase. Resolve its findings, then merge and deploy only after the fresh real-data and page checks pass again on the deployed v1.0.23 build.
+
+## 2026-10-02 Screenshot follow-up — current production evidence
+
+- Screenshot surface: `StarWindowTable`. Production `/healthz` still reports `bd23a7c442e1` / v1.0.22; PR #41/v1.0.23 is not deployed.
+- The open page URL gives the selected point `(31.633617, 120.234375)`. A `cache_only=1` read for ICON returned HTTP 200 from memory, `stale=true`, `sourceFetchedAt=2026-10-01T14:17:00.742Z`, 192 hourly rows, cloud/precipitation/wind 189 valid each, and visibility 0. Best Match returned HTTP 429 `cache-only-miss` for this exact point. These reads did not call the supplier.
+- A second Best Match cache-only read returned generic `Retry-After: 60` with no `X-Weather-Limit`. The 60 seconds is the route's cache-miss minimum and does not prove the persisted cooldown marker's absolute deadline.
+- One ordinary Best Match request was attempted as a bounded production check, but automatic approval review rejected it because cooldown expiry was not reliably verified. The request was not dispatched; no supplier quota was consumed.
+- Read-only source review found that failed candidate batches were silently caught when there is no same-model cache; the table then rendered generic `数据不足` without the request failure/retry state. The isolated worktree now preserves the safe server error and Retry-After in a status row while leaving scores/ranking withheld.
+- RED/GREEN evidence: the new 429 test failed before the UI status existed, then passed on desktop and mobile (2/2). Final `npm run check` PASS: lint, typecheck, 68 test files / 399 tests, Next build. `git diff --check` PASS. These are local fixture/code checks only.
+- Existing ChatGPT conversation attempted the exact PR #41 SHA review through the compare page and immutable raw-file URLs; it could not read their contents and returned `BLOCKED`. No exact remote review, new commit, merge, or deployment is claimed.
+- Next gate: the async approval request is pending. The attempted ordinary Best Match request was rejected before dispatch by automatic approval review because the generic cache-miss `Retry-After: 60` could not prove that the persisted provider cooldown had expired. No supplier request was sent. Once Jovi supplies a read-only cooldown access path or authorizes one bounded single-point request, verify fresh exact-coordinate fields and score. The follow-up code is uncommitted; do not commit, merge, or deploy until production data passes and the remote exact-SHA review can read the source.
+
+## 2026-10-02 Local integration for main refresh
+
+- Fetched current `origin` refs. Local Owner `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e` is 100 commits behind `origin/main@7a572b538caad9a881066cdd8c301a161c1523d1` and has no local-only commits. The 100 count is commit history, not 100 file changes.
+- Candidate feature branch `origin/codex/candidate-weather-evidence-20261001@768300e02956e7437970b28a8f5f2e709aac9573` is exactly 3 commits ahead of current `origin/main`, based directly on `7a572b5`.
+- Created local isolated integration worktree `C:\Users\Admin\.codex\worktrees\starphoto-main-refresh-20261002\Star_photo_addr` from `origin/main`, then fast-forwarded the candidate feature branch. The resulting tree includes the previously tested 429 status fix and matching handoff changes.
+- Post-merge local verification passed: `npm run check` (lint, typecheck, 68 test files / 399 tests, Next build) and the desktop/mobile StarWindowTable 429 E2E (2/2) on temporary local port 3317. No weather-provider or production page requests were made by these tests.
+- The Owner checkout is still dirty and unchanged. It was not pulled, reset, stashed, or overwritten. The local integration branch has not been pushed; PR #41 remains open. Merge to remote/deploy remain gated on exact-coordinate production weather acceptance and remote ChatGPT review.

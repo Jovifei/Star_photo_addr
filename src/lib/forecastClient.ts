@@ -196,14 +196,22 @@ export function requestForecastResponse(
     });
   }, forceRefresh ? 1 : 0)
     .then(async (response) => {
-      const body = await response.json().catch(() => null) as ForecastResponse | null;
+      const body = await response.json().catch(() => null) as (ForecastResponse & { error?: unknown }) | null;
       if (!response.ok) {
+        const serverError = body?.error;
+        const message = typeof serverError === "string"
+          ? serverError
+          : `天气请求失败（HTTP ${response.status}）`;
         if (response.status === 429) {
           const retryAfter = Number(response.headers.get("Retry-After"));
           const delay = Number.isFinite(retryAfter) ? Math.max(1_000, Math.min(24 * 60 * 60_000, retryAfter * 1_000)) : FAILURE_COOLDOWN_MS;
           globalCooldownUntil = Math.max(globalCooldownUntil, Date.now() + delay);
+          const retryHint = /\d+\s*秒后重试/.test(message)
+            ? ""
+            : `；建议 ${Math.ceil(delay / 1000)} 秒后重试`;
+          throw new Error(`${message}${retryHint}`);
         }
-        throw new Error(`天气请求失败（HTTP ${response.status}）`);
+        throw new Error(message);
       }
       return normalizeResponse(body as ForecastResponse, response, model, locations);
     })

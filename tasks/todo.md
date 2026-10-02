@@ -1055,3 +1055,50 @@ Review：62 文件/362 项测试、lint/typecheck/build 通过；212项 Chromium
 - [ ] Continue observing Fireglow multi-day freshness; last worker report had current date fresh and later dates stale.
 
 Review: production best_match returned HTTP 200 memory, stale=false, 48/48 finite cloud hours at sourceFetchedAt 2026-10-01T07:59:00Z. CloudSea 2026-10-01 GFS returned fresh snapshot with surface and pressure 54/54, 50 scoreable sites across both phases; morning visible list had 48. Do not label the remote final review DONE until ChatGPT returns its verdict.
+
+# 2026-10-02 Screenshot follow-up — StarWindowTable weather data
+
+- [x] Identify the screenshot surface as `StarWindowTable`, separate from the candidate cards.
+- [x] Read production `/healthz`: `bd23a7c442e1` / v1.0.22; v1.0.23 remains unmerged and undeployed.
+- [x] Run cache-only reads for the exact selected point from the open page URL; do not request the supplier.
+- [x] Read the safe cooldown signal from the cache-only route: generic `Retry-After=60`, no `X-Weather-Limit`; this does not prove the persisted marker's absolute deadline.
+- [ ] Obtain authoritative confirmation that the persisted provider cooldown has expired, or receive approval for one live request while that marker remains unverified.
+- [ ] Once the provider cooldown is confirmed expired, make one bounded real-weather request for the exact saved candidate set and verify model, `sourceFetchedAt`, `stale`, required night fields, valid score count, and rendered table.
+- [x] Add a RED mobile/desktop E2E for a Best Match HTTP 429 and preserve the score-withheld state.
+- [x] Surface the sanitized server error and `Retry-After` in `StarWindowTable`; keep freshness/model/score gates unchanged and do not auto-retry.
+- [x] Run targeted 429 E2E on mobile and desktop (2/2), `npm run check` (lint, typecheck, 68 test files / 399 tests, Next build), and `git diff --check`.
+- [x] Record current evidence and code changes in this local handoff; no commit was made.
+- [ ] Commit and request exact-SHA remote review after the real-data check and remote source access are available.
+- [ ] Merge and deploy with rollback protection only after remote review and production-data acceptance.
+
+## Review
+
+- Production cache-only evidence for selected point `(31.633617, 120.234375)`: ICON HTTP 200 from memory, `stale=true`, `sourceFetchedAt=2026-10-01T14:17:00.742Z`, 192 hourly rows, cloud/precipitation/wind 189 valid each, visibility 0. Best Match returned 429 `cache-only-miss`; neither request called the supplier.
+- Root-cause evidence: screenshot page is still v1.0.22 and scores against ICON, whose exact selected-point cache is stale and lacks visibility. Current deployed page has no Best Match cache for that exact point. This is not proof that the provider is currently cooling down.
+- Provider cooldown deadline: absolute persisted `until` `NOT_VERIFIED`; cache-only returned its generic 60-second minimum and no active limit header. No Star Photo server alias exists in the available SSH config.
+- One normal Best Match request was rejected by automatic approval review because the cooldown marker was not reliably confirmed expired. No supplier request was dispatched.
+- Code audit found the candidate forecast hook silently dropped request failure when no same-model cache exists. The isolated branch now passes the sanitized API error and Retry-After to `StarWindowTable`; local mocked E2E reports the quota reason and keeps score blank.
+- Verification: 429 E2E 2/2 (desktop/mobile); `npm run check` PASS (lint, typecheck, 68 files / 399 tests, production build); `git diff --check` PASS. These are code/UI fixtures, not production weather acceptance.
+- Remote exact-SHA review: `BLOCKED`; existing ChatGPT conversation could not read the PR compare page or immutable raw files. The follow-up code is uncommitted and has not been sent to GitHub.
+- Production live data request: pending Jovi's answer to the async approval question; no request has been dispatched.
+- Owner `E:\project\Star_photo_addr` remains untouched and dirty.
+
+# 2026-10-02 Local main refresh and candidate feature integration
+
+- [x] Fetch `origin` refs without pruning; confirm local Owner `main@3334e0c` is 100 commits behind `origin/main@7a572b5` and 0 commits ahead.
+- [x] Confirm `origin/codex/candidate-weather-evidence-20261001@768300e` is 3 commits ahead of `origin/main`, with merge base `7a572b5`.
+- [x] Create an isolated local integration worktree from `origin/main` and fast-forward the candidate feature branch into it.
+- [x] Apply the already-tested local 429 status fix and handoff update; its tracked diff matches the previously verified worktree byte-for-byte; `git diff --check` passes.
+- [x] In the integrated worktree, run `npm run check`: lint, typecheck, 68 test files / 399 tests, and Next build PASS.
+- [x] In the integrated worktree, run the desktop/mobile 429 E2E on local port 3317: 2/2 PASS; no production/provider calls.
+- [x] Preserve Owner dirty `main`; do not reset, stash, or overwrite its files.
+- [ ] Push/merge the updated feature to GitHub or deploy only after Jovi's pending production-data decision and exact-SHA remote review gate are resolved.
+
+## Review
+
+- Local integration workspace: `C:\Users\Admin\.codex\worktrees\starphoto-main-refresh-20261002\Star_photo_addr`.
+- Branch: `codex/starphoto-main-refresh-20261002`; base `origin/main@7a572b538caad9a881066cdd8c301a161c1523d1`; integrated candidate tip `768300e02956e7437970b28a8f5f2e709aac9573`.
+- Candidate feature merge is local fast-forward only. New local error-status edits remain uncommitted; no GitHub PR state changed.
+- Integrated-worktree verification after the fast-forward: `npm run check` PASS (68/399 and build), desktop/mobile 429 E2E 2/2 PASS on local port 3317, and `git diff --check` PASS.
+- The original Owner checkout remains dirty on `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e`. Its 100-commit lag remains visible there so its uncommitted changes stay protected.
+- Production remains `bd23a7c442e1` / v1.0.22; exact-point Best Match cache miss and remote exact-SHA review `BLOCKED` remain release gates.

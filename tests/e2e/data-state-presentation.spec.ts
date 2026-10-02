@@ -127,6 +127,37 @@ test("candidate comparison uses one Best Match batch and preserves ICON facts wh
   await expect.poll(async () => selectedRow.locator(".cell-score").first().textContent(), { timeout: 20_000 }).toMatch(/^\d+$/);
 });
 
+test("StarWindowTable explains a Best Match quota failure while keeping scores withheld", async ({ page }, info) => {
+  const mobile = info.project.name === "mobile";
+  test.skip(!mobile && info.project.name !== "desktop", "candidate request failure presentation runs on desktop and mobile");
+  await page.addInitScript(() => {
+    localStorage.setItem("perseids-custom-candidates-v1", JSON.stringify([{
+      id: "quota-candidate", name: "额度测试点", province: "上海", city: "上海",
+      latitude: 31.6, longitude: 121.3, elevation: null, source: "自定义",
+    }]));
+  });
+  const requestedModels: string[] = [];
+  await page.route("**/api/forecast?**", async (route) => {
+    const url = new URL(route.request().url());
+    const model = url.searchParams.get("model") ?? "icon";
+    requestedModels.push(model);
+    await route.fulfill({
+      status: 429,
+      headers: { "Retry-After": "7200", "X-Weather-Limit": "daily" },
+      contentType: "application/json",
+      body: JSON.stringify({ error: "天气上游每日额度已用尽", stale: false }),
+    });
+  });
+  await page.goto(selectedUrl);
+  if (mobile) await expandMobileDataSheet(page);
+  await expect.poll(() => requestedModels, { timeout: 20_000 }).toContain("best_match");
+  const tableRow = page.locator(".star-window-table tbody tr").filter({ hasText: "额度测试点" });
+  await expect(tableRow).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("candidate-forecast-request-status")).toContainText("天气上游每日额度已用尽");
+  await expect(page.getByTestId("candidate-forecast-request-status")).toContainText("7200 秒后重试");
+  await expect(tableRow.locator(".cell-score").first()).toContainText("—");
+});
+
 test("provider degradation stays separate from selected-data eligibility", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "provider/data axis separation runs once on desktop");
   await page.route("**/api/data-status**", (route) => route.fulfill({

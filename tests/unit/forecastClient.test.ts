@@ -36,13 +36,13 @@ describe("shared forecast client", () => {
     }));
     vi.stubGlobal("fetch", fetchMock);
     const { requestForecastResponse } = await import("@/lib/forecastClient");
-    await expect(requestForecastResponse([POINT], "icon")).rejects.toThrow("HTTP 429");
+    await expect(requestForecastResponse([POINT], "icon")).rejects.toThrow(/daily quota.*3600 秒后重试/);
     now += 3 * 60_000;
     await expect(requestForecastResponse([POINT], "icon", 8, true)).resolves.toMatchObject({ stale: false });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1]![0]).toContain("cache_only=1");
     now += 3600_000;
-    await expect(requestForecastResponse([POINT], "icon")).rejects.toThrow("HTTP 429");
+    await expect(requestForecastResponse([POINT], "icon")).rejects.toThrow(/daily quota.*3600 秒后重试/);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
   it("coalesces identical store/grid requests and preserves metadata", async () => {

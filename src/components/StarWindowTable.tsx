@@ -24,12 +24,13 @@ function samePoint(a: { latitude: number; longitude: number }, b: { latitude: nu
 export default function StarWindowTable() {
   const { state, addCandidate, removeCandidate, selectLocation, setCandidateForecastModel } = useStore();
   const { candidates, nightKeys, forecastCache, selectedLocation } = state;
-  useCandidateForecasts(candidates);
+  const candidateForecastError = useCandidateForecasts(candidates);
   const selectedForecastRequest = useMemo(() => {
     if (!selectedLocation || candidates.some((candidate) => samePoint(candidate, selectedLocation))) return [];
     return [{ id: `selected:${selectedLocation.id}`, latitude: selectedLocation.latitude, longitude: selectedLocation.longitude }];
   }, [selectedLocation, candidates]);
-  useCandidateForecasts(selectedForecastRequest);
+  const selectedForecastError = useCandidateForecasts(selectedForecastRequest);
+  const requestError = candidateForecastError ?? selectedForecastError;
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
   const [addInput, setAddInput] = useState("");
@@ -106,6 +107,7 @@ export default function StarWindowTable() {
         </select>
       </label>
       {state.candidateForecastModel !== "best_match" && missingVisibility && <button type="button" className="candidate-model-switch-btn" onClick={() => setCandidateForecastModel("best_match")} title="以同一套最佳匹配点位预报重新计算候选评分；如必需字段仍缺失，继续暂缓评分。">切换到最佳匹配模型重算</button>}
+      {requestError && <p className="candidate-request-status" data-testid="candidate-forecast-request-status" role="status">天气请求未完成（{formatModel(state.candidateForecastModel)}）：{requestError}。当前没有新鲜的同模型天气可用于评分，分数和排序继续暂缓。</p>}
       <div className="star-window-table-wrap"><table className="star-window-table">
         <thead><tr><th className="star-window-loc-col">地点</th>{nightKeys.map((night) => <th key={night} className={`star-window-date-col${sortKey === night ? " sorted" : ""}`} aria-sort={sortKey === night ? sortDir === "asc" ? "ascending" : "descending" : "none"}>
           <button type="button" title={`${formatNightLabel(night, false)}；点击按该夜评分排序地点`} onClick={() => handleSort(night)}><span>{formatNightLabel(night, true)}</span>{sortKey === night ? sortDir === "asc" ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" /> : null}</button>
