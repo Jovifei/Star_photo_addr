@@ -12,9 +12,18 @@ interface ChangelogModalProps {
 const VERSIONS = [
   {
     version: APP_VERSION_LABEL,
+    date: "2026-10-03",
+    tag: "跨午夜预报时次恢复",
+    current: true,
+    highlights: [
+      { icon: CloudSun, title: "凌晨保留昨晚的预报时次", desc: "点位预报包含前一天的模型时次，避免凌晨查看今夜窗口时丢失昨晚数据；缺失或过期时仍暂缓评分。" },
+    ],
+  },
+  {
+    version: "v1.0.25",
     date: "2026-10-02",
     tag: "紧凑日期工具栏",
-    current: true,
+    current: false,
     highlights: [
       { icon: Layers, title: "选项按内容宽度排列", desc: "日期、晨晚时段与刷新组成紧凑工具栏，不再把日期按钮拉伸铺满宽屏；保持直接可选。" },
     ],

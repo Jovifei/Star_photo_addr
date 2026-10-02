@@ -109,7 +109,8 @@ export async function GET(request: NextRequest) {
   const model = modelRaw as ForecastModel;
   const daysRaw = Number(searchParams.get("days") ?? "14");
   const days = clampForecastDays(Number.isFinite(daysRaw) ? daysRaw : 14, model);
-  const key = `${model}|${days}|${normalizedCoordinateKey(latitudes)}|${normalizedCoordinateKey(longitudes)}`;
+  const legacyKey = `${model}|${days}|${normalizedCoordinateKey(latitudes)}|${normalizedCoordinateKey(longitudes)}`;
+  const key = `surface-v2-past1|${legacyKey}`;
   const cached = forecastCache.read(key);
   if (!forceRefresh && cached && cached.ageMs <= FRESH_TTL_MS) {
     return NextResponse.json(cached.value, { headers: responseHeaders(false, model, days, "memory", false) });
@@ -144,8 +145,9 @@ export async function GET(request: NextRequest) {
       latitudes.length,
       STALE_TTL_MS,
     );
-    if (disk) {
-      return NextResponse.json(markStale(disk), {
+    const retained = disk ?? readFromDiskCache(legacyKey, model, latitudes.length, STALE_TTL_MS);
+    if (retained) {
+      return NextResponse.json(markStale(retained), {
         headers: responseHeaders(
           true,
           model,
@@ -214,7 +216,7 @@ export async function GET(request: NextRequest) {
       model,
       latitudes.length,
       STALE_TTL_MS,
-    );
+    ) ?? readFromDiskCache(legacyKey, model, latitudes.length, STALE_TTL_MS);
     if (diskFallback) {
       return NextResponse.json(markStale(diskFallback), {
         headers: { ...responseHeaders(true, model, days, "stale-disk", true, decision.suppressed, decision.retryAfterSeconds), Warning: '110 - "Response is stale from disk"' },

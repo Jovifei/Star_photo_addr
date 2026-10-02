@@ -15,17 +15,17 @@ function payload(fetchedAt: string) {
     modelLongitude: 108.88, modelElevation: 1402, timezone: "Asia/Shanghai",
     utcOffsetSeconds: 28800, fetchedAt, metadata, hourly: [{ time: "2026-09-13T21:00", cloudCover: 8 }] }] };
 }
-function writeDisk(value: unknown): void {
+function writeDisk(value: unknown, key = KEY): void {
   const folder = path.join(directory, "forecast-cache");
   fs.mkdirSync(folder, { recursive: true });
-  const filename = path.join(folder, `${Buffer.from(KEY).toString("base64url")}.json`);
+  const filename = path.join(folder, `${Buffer.from(key).toString("base64url")}.json`);
   fs.writeFileSync(filename, JSON.stringify(value), "utf8");
   // A recently touched file must never rejuvenate old source data.
   fs.utimesSync(filename, new Date(NOW), new Date(NOW));
 }
-async function request() {
+async function request(cacheOnly = false) {
   const { GET } = await import("@/app/api/forecast/route");
-  return GET(new NextRequest("http://localhost/api/forecast?latitude=30.182&longitude=108.882&days=1&model=icon"));
+  return GET(new NextRequest("http://localhost/api/forecast?latitude=30.182&longitude=108.882&days=1&model=icon" + (cacheOnly ? "&cache_only=1" : "")));
 }
 beforeEach(() => {
   vi.resetModules();
@@ -48,6 +48,26 @@ afterEach(() => {
   fs.rmSync(directory, { recursive: true, force: true });
 });
 describe("forecast disk fallback original-age gate", () => {
+  it("retains legacy fresh data only as stale in cache-only reads", async () => {
+    writeDisk(payload(new Date(NOW - 60_000).toISOString()));
+    const response = await request(true);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-data-stale")).toBe("true");
+    expect((await response.json()).locations[0].metadata.stale).toBe(true);
+  });
+  it("accepts fresh data only under the expanded coverage cache key", async () => {
+    writeDisk(payload(new Date(NOW - 60_000).toISOString()), `surface-v2-past1|${KEY}`);
+    const response = await request(true);
+    expect(response.status).toBe(200);
+    expect((await response.json()).locations[0].metadata.stale).toBe(false);
+  });
+  it("never treats a recently fetched legacy record as a fresh normal response", async () => {
+    writeDisk(payload(new Date(NOW - 60_000).toISOString()));
+    const response = await request();
+    expect(response.headers.get("x-forecast-cache")).toBe("stale-disk");
+    expect((await response.json()).locations[0].metadata.stale).toBe(true);
+  });
+
   it("allows the exact six-hour boundary only as explicitly stale raw data", async () => {
     const timestamp = new Date(NOW - LIMIT).toISOString();
     writeDisk(payload(timestamp));

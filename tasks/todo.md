@@ -1193,3 +1193,13 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [x] Single boundedfreshBestMatch actualscore45/source10:27:32.143Z verified.
 - [ ] PENDING_REMOTE_PLANNING preserved until successorchat decision.
 
+
+## Oct03 overnightcoverage recovery
+- [x] RealfreshAPIstartsOct3T00,ongoingOct2night6/nullscore RED; nextnight10/44.
+- [x] Newisolatedworktree attached,branchcodex/overnight-forecast-coverage-20261003;subagentunavailable,parenttakesover.
+- [x] Providerpast_days1 +versioncachekey,legacyonlystalefallback(no clear).
+- [x] URL/routecache/previousnight focused37PASS; full lint/typecheck72files418tests/buildPASS.
+- [ ] Exact GitHub full CI terminal success before merge/deploy.
+- [ ] Merge/sync/deployrollback thenboundedreal10hours/score/pageacceptance.
+- [ ] Docs/knowledge/Hub;PENDING_REMOTE_PLANNING stays.
+

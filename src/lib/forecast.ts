@@ -118,6 +118,9 @@ export function buildForecastUrl(
     hourly: SURFACE_VARIABLES.join(","),
     timezone: "auto",
     forecast_days: String(clampForecastDays(days, model)),
+    // The observing night continues until 05:00 on the following calendar day.
+    // Keep its evening hours when the provider rolls its default start to 00:00.
+    past_days: "1",
     wind_speed_unit: "ms",
   });
   const providerModel = MODEL_PARAMETERS[model];
