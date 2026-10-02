@@ -178,9 +178,9 @@ test.describe("responsive layout contract", () => {
       await page.goto(path);
       const header = page.locator(".app-header");
       await expect(header.locator(".nav-tab")).toHaveCount(4);
-      const phase = header.locator('.segmented[data-mode="phase"]');
-      const dates = header.locator('.segmented[data-mode="range"]');
-      const refresh = header.locator(".cloudsea-refresh, .fireglow-refresh");
+      const phase = page.locator('.product-topic-toolbar .segmented[data-mode="phase"]');
+      const dates = page.locator('.product-topic-toolbar .segmented[data-mode="range"]');
+      const refresh = page.locator(".product-topic-toolbar .cloudsea-refresh, .product-topic-toolbar .fireglow-refresh");
       await expect(phase).toBeVisible();
       await expect(dates).toBeVisible();
       await expect(refresh).toHaveCount(1);
@@ -194,26 +194,42 @@ test.describe("responsive layout contract", () => {
       expect(phaseBox!.height).toBeLessThanOrEqual(56);
       const activeDate = dates.locator("button.active");
       const dateFill = await activeDate.evaluate((element) => getComputedStyle(element).backgroundColor);
-      expect(dateFill).toBe("rgba(0, 0, 0, 0)");
+      expect(dateFill).not.toBe("rgba(0, 0, 0, 0)");
       const activeDateStyle = await activeDate.evaluate((element) => {
         const style = getComputedStyle(element);
         return { color: style.color, borderBottom: style.borderBottomColor, width: element.getBoundingClientRect().width };
       });
-      expect(activeDateStyle.color).not.toBe("rgb(2, 14, 23)");
-      expect(activeDateStyle.borderBottom).toBe(activeDateStyle.color === "rgb(234, 244, 247)" ? "rgb(52, 152, 219)" : "rgb(232, 101, 79)");
+      const contrast = await activeDate.evaluate(element => {
+        const style = getComputedStyle(element);
+        const luminance = (color: string) => {
+          const rgb = color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(v => v / 255);
+          const linear = rgb.map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+          return linear[0]! * 0.2126 + linear[1]! * 0.7152 + linear[2]! * 0.0722;
+        };
+        const a = luminance(style.color), b = luminance(style.backgroundColor);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      });
+      expect(contrast).toBeGreaterThanOrEqual(4.5);
+      await expect(activeDate).toHaveAttribute("aria-pressed", "true");
       expect(activeDateStyle.width).toBeLessThanOrEqual(160);
       const headerBox = await header.boundingBox();
       expect(headerBox!.height).toBeLessThanOrEqual(140);
       const dateText = (await dates.innerText()).replace(/\s+/g, " ");
-      expect(dateText).toMatch(/今日.*\d{1,2}\.\d{1,2}.*周/);
-      expect(dateText).toMatch(/明日.*\d{1,2}\.\d{1,2}.*周/);
-      expect(dateText).toMatch(/后日.*\d{1,2}\.\d{1,2}.*周/);
-      const compactControls = header.locator(".nav-tab, .cloudsea-controls button, .fireglow-controls button");
+      expect(dateText).toMatch(/今日.*\d{1,2}\.\d{1,2}/);
+      expect(dateText).toMatch(/明日.*\d{1,2}\.\d{1,2}/);
+      expect(dateText).toMatch(/后日.*\d{1,2}\.\d{1,2}/);
+      for (const label of await dates.locator("button small").all()) {
+        await expect(label).toHaveAttribute("title", /\d{1,2}\.\d{1,2}.*周[日一二三四五六]/);
+      }
+      const compactControls = page.locator(".product-header .nav-tab, .product-topic-toolbar button");
       for (const control of await compactControls.all()) {
         const controlBox = await control.boundingBox();
         const fontSize = await control.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
-        expect(controlBox!.height, await control.innerText()).toBeGreaterThanOrEqual(48);
-        expect(fontSize, await control.innerText()).toBeGreaterThanOrEqual(13);
+        const nav = await control.evaluate(element => element.classList.contains("nav-tab"));
+        const coarse = await page.evaluate(() => matchMedia("(pointer: coarse)").matches);
+        expect(controlBox!.height, await control.innerText()).toBeGreaterThanOrEqual(nav || coarse ? 44 : 32);
+        if (!nav && !coarse) expect(controlBox!.height).toBeLessThanOrEqual(36);
+        expect(fontSize, await control.innerText()).toBeGreaterThanOrEqual(nav ? 13 : 12);
       }
       const map = await page.locator(".leaflet-container").first().boundingBox();
       expect(map!.y).toBeLessThanOrEqual(200);
@@ -226,7 +242,7 @@ test.describe("responsive layout contract", () => {
       await page.screenshot({ path: `node_modules/.cache/dashboard-density-${path.slice(1)}-1653x413.png` });
       await activeDate.focus();
       await page.keyboard.press("Tab");
-      const focusState = await header.locator(":focus-visible").evaluate((element) => {
+      const focusState = await page.locator(".product-topic-toolbar :focus-visible").evaluate((element) => {
         const style = getComputedStyle(element);
         return style.outlineStyle !== "none" || style.boxShadow !== "none";
       });

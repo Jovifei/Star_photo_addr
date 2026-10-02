@@ -76,7 +76,6 @@ test("手机火烧云三日最佳排行逐行标明高分所属日期", async ({
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/fireglow");
-  await page.getByRole("button", { name: "展开日期与时段设置" }).click();
   await page.locator('.fireglow-controls .segmented[data-mode="range"] button').nth(3).click();
   await page.getByRole("button", { name: "展开数据面板" }).click();
   const sheet = page.getByTestId("mobile-data-sheet");
@@ -104,7 +103,6 @@ test("手机云海三日最优排行逐行标明最高指数日期", async ({ pa
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/cloudsea");
-  await page.getByRole("button", { name: "展开日期与时段设置" }).click();
   await page.locator('.cloudsea-controls .segmented[data-mode="range"] button').nth(3).click();
   await page.getByRole("button", { name: "展开数据面板" }).click();
   const sheet = page.getByTestId("mobile-data-sheet");

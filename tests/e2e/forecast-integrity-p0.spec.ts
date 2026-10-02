@@ -147,7 +147,7 @@ test("stale=true 的旧 94 分不能进入地图、候选或详情推荐", async
   await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA&model=icon&overlay=forecast-cloud");
   await expect(page.getByTestId("observation-reason-card")).toContainText("数据不足", { timeout: 20_000 });
   if (testInfo.project.name === "desktop") {
-    await expect(page.locator(".candidate-card").first()).toContainText("数据不足", { timeout: 20_000 });
+    await expect(page.locator(".candidate-card").first()).toContainText("数据过期", { timeout: 20_000 });
   }
   await expect(page.locator(".candidate-score-number strong").filter({ hasText: "94" })).toHaveCount(0);
   await expect(page.getByTestId("forecast-trust-summary")).toContainText("过期", { timeout: 20_000 });

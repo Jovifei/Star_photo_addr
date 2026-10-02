@@ -178,6 +178,7 @@ test("historical home links are normalized without re-running the bridge", async
   await page.route("**/api/forecast?**", async (route) => {
     const requestUrl = new URL(route.request().url());
     if (
+      requestUrl.searchParams.get("model") === "gfs" &&
       requestUrl.searchParams.get("latitude") === "30.1234" &&
       requestUrl.searchParams.get("longitude") === "120.5678"
     ) {
