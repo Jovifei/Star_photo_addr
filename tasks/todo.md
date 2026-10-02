@@ -1121,3 +1121,12 @@ Review: production best_match returned HTTP 200 memory, stale=false, 48/48 finit
 - [ ] 核验 Obsidian 映射，安全同步知识库；配置未映射时准确报告，不推断新目录。
 
 Review：此前 `npm run check` 68 文件/399 测试和 429 E2E 2/2 PASS 仅覆盖依赖升级/模型移植前版本。当前整合版本必须重新验证。真实单点评分通过并不等于整套候选表或部署验收。生产仍为 `bd23a7c442e1` / v1.0.22；本次 push、GitHub merge、deploy 均未宣称完成。
+
+## 2026-10-02 Final release gates
+
+- [x] Integrate every functional branch and remote repair9c249d5.
+- [x] Final full check72files413tests and built browser10PASS6SKIP; audit0.
+- [ ] Merge PR41 and synchronize original main/dependencies.
+- [ ] Verify mergedSHA and deploy with rollback.
+- [ ] Verify real production data and page; update repository and knowledge receipts.
+

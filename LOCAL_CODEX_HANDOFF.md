@@ -638,3 +638,13 @@ After deployment verify separately:
 
 MERGED: `NO`.
 DEPLOYED: `NO`.
+
+## 2026-10-02 Final pre-merge receipt
+
+- Integrated remote repair/handoff9c249d59c6d21a661d1971f2c53f6e9d7f2dec54 with local hydration and measured date formatter fix42ee347accd53ed37500a0b30afaad3b5fc492e2.
+- Final npm run check PASS:72 files413 tests, lint/typecheck/production build.
+- Same browser gate plus remote selected-row regression PASS:10 passed6 applicability skips,29.2s. No failing tests, no waits extended. Four-product desktop/mobile header geometry included.
+- Production dependency audit:0 vulnerabilities.
+- Every local/remote branch ref is an ancestor of the integration head at this receipt; historical branches retained.
+- Remote exact-source review returned CHANGES_REQUIRED on a496632 and produced real repairs9c249d5. Repairs now locally tested. Existing remote conversation reached its length limit; next audit requires Jovi's pending same-Project chat handoff decision. Do not claim a later remote DONE verdict.
+- Next authorized steps:merge PR41,ff original main,install matching deps,verify merged code,deploy local exact-revision standalone overlay,retain rollbackimage and originalvolume,verify genuine API+page and sync filtered knowledge docs.
