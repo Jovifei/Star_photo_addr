@@ -127,6 +127,53 @@ test("candidate comparison uses one Best Match batch and preserves ICON facts wh
   await expect.poll(async () => selectedRow.locator(".cell-score").first().textContent(), { timeout: 20_000 }).toMatch(/^\d+$/);
 });
 
+test("selected StarWindow row does not inherit raster loading while Best Match evidence is ready", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "selected-row model separation is covered once on desktop");
+  let releaseRaster: () => void = () => {};
+  const rasterGate = new Promise<void>((resolve) => { releaseRaster = resolve; });
+  await page.route("**/api/forecast?**", async (route) => {
+    const url = new URL(route.request().url());
+    const latitudes = (url.searchParams.get("latitude") ?? "").split(",").filter(Boolean);
+    const longitudes = (url.searchParams.get("longitude") ?? "").split(",").filter(Boolean);
+    const model = url.searchParams.get("model") ?? "icon";
+    const selectedRaster =
+      model === "icon" &&
+      latitudes.length === 1 &&
+      latitudes[0] === "30.4694" &&
+      longitudes[0] === "119.5978";
+    if (selectedRaster) await rasterGate;
+    const locations = buildNormalizedForecasts(
+      fixture,
+      latitudes,
+      longitudes,
+      14,
+      model,
+    );
+    for (const location of locations) {
+      location.hourly = location.hourly.map((hour: HourWeather) => ({
+        ...hour,
+        visibility: 20_000,
+      }));
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ locations, metadata: locations[0]?.metadata }),
+    });
+  });
+
+  await page.goto(selectedUrl);
+  const selectedRow = page.locator(".star-window-table tbody tr").first();
+  await expect(selectedRow).toBeVisible({ timeout: 20_000 });
+  await expect.poll(
+    async () => selectedRow.locator(".cell-score").first().textContent(),
+    { timeout: 20_000 },
+  ).toMatch(/^\d+$/);
+  await expect(selectedRow.locator(".cell-loading")).toHaveCount(0);
+
+  releaseRaster();
+});
+
 test("StarWindowTable explains a Best Match quota failure while keeping scores withheld", async ({ page }, info) => {
   const mobile = info.project.name === "mobile";
   test.skip(!mobile && info.project.name !== "desktop", "candidate request failure presentation runs on desktop and mobile");
