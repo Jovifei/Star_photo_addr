@@ -20,14 +20,12 @@ export async function openMobileMapPanel(page, panel) {
   }
   await page.getByTestId("mobile-map-panel-dock").waitFor({ state: "visible", timeout: 15000 });
   const drawer = page.getByTestId("mobile-map-panel-drawer");
-  const waitForDrawerMotion = async () => expect.poll(
-    () => drawer.evaluate((element) => getComputedStyle(element).transform),
-    { timeout: 5000 },
-  ).toBe("matrix(1, 0, 0, 1, 0, 0)");
+  // A usable drawer must accept a real click. Playwright checks visibility,
+  // geometry stability and hit testing; computed transform strings can report
+  // an intermediate compositor sample in WebKit even after controls are usable.
   if ((await drawer.count()) > 0 && (await drawer.getAttribute("aria-hidden")) === "false") {
-    await waitForDrawerMotion();
     const tab = drawer.locator(".mobile-map-panel-tabs").getByRole("tab", { name: mobileLabels[panel] });
-    await tab.click({ force: true });
+    await tab.click();
     await expect(tab).toHaveAttribute("aria-selected", "true");
     await expect(drawer).toHaveAttribute("aria-hidden", "false");
     return true;
@@ -35,12 +33,11 @@ export async function openMobileMapPanel(page, panel) {
   const trigger = page.getByTestId("mobile-map-panel-open-tools");
   if ((await trigger.count()) === 0) return false;
   if ((await trigger.getAttribute("aria-expanded")) !== "true") {
-    await trigger.click({ force: true });
+    await trigger.click();
   }
   await expect(drawer).toHaveAttribute("aria-hidden", "false", { timeout: 5000 });
-  await waitForDrawerMotion();
   const tab = drawer.locator(".mobile-map-panel-tabs").getByRole("tab", { name: mobileLabels[panel] });
-  await tab.click({ force: true });
+  await tab.click();
   await expect(tab).toHaveAttribute("aria-selected", "true");
   return true;
 }
