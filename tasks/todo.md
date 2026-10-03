@@ -1220,3 +1220,13 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [x] Real previous/currentnight10hours and validscore verified.
 - [ ] Browser visual acceptance pending CUA runtime repair.
 - [ ] Remote successor decision PENDING_REMOTE_PLANNING.
+
+
+## 2026-10-03 build dependency boundary
+- [x] Reproduce the main production audit failure and verify the shadcn runtime/build boundary.
+- [x] Preserve versions, CSS and runtime behavior; classify the CLI chain as development-only.
+- [x] Add RED/GREEN dependency boundary regression; full check 73 files / 421 tests and production build pass.
+- [x] Production audit zero; actual production install and standalone/trace inspection exclude the CLI chain.
+- [x] Independent review passed; development audit eight high entries remain explicitly documented.
+- [ ] Push the existing branch and verify exact-commit draft PR full CI.
+- [ ] Existing production visual acceptance and PENDING_REMOTE_PLANNING remain open.
