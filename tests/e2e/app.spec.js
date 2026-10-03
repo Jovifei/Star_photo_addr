@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("跨日期进入首页时首屏水合、日期与导航一致", async ({ page }, testInfo) => {
-  const browserTime = new Date(Date.now() + 48 * 60 * 60 * 1000);
+  const browserTime = new Date("2026-10-05T05:30:00+08:00");
   await page.clock.setFixedTime(browserTime);
   const hydrationErrors = [];
   page.on("pageerror", (error) => {
@@ -46,10 +46,10 @@ test("跨日期进入首页时首屏水合、日期与导航一致", async ({ pa
     month: "numeric",
     day: "numeric",
     hour: "numeric",
-    hour12: false,
+    hourCycle: "h23",
   }).formatToParts(browserTime);
   const browserHour = Number(dateParts.find((part) => part.type === "hour")?.value ?? "0");
-  const eventDate = browserHour < 5
+  const eventDate = browserHour <= 5
     ? new Date(browserTime.getTime() - 24 * 60 * 60 * 1000)
     : browserTime;
   const eventDateParts = new Intl.DateTimeFormat("en-CA", {

@@ -29,6 +29,17 @@ function forecast(model: ForecastModel, visibility: number | null, stale = false
 }
 
 describe("candidate night evidence", () => {
+  it("needs the previous evening after midnight instead of scoring six truncated hours", () => {
+    const full = forecast("best_match", 20_000);
+    const truncated = { ...full, hourly: full.hourly.slice(4) };
+    const incomplete = projectCandidateNight(truncated, LOCATION, NIGHT, 0, "best_match", NOW);
+    expect(incomplete.evaluation).toBeNull();
+    expect(incomplete.reason).toContain("6/7");
+    const complete = projectCandidateNight(full, LOCATION, NIGHT, 0, "best_match", NOW);
+    expect(complete.metrics.cloudCover.totalHours).toBe(10);
+    expect(complete.evaluation?.score).toEqual(expect.any(Number));
+  });
+
   it("keeps fresh same-model raw facts and source time while withholding an ICON score for missing visibility", () => {
     const result = projectCandidateNight(forecast("icon", null), LOCATION, NIGHT, 0, "icon", NOW);
     expect(result.evaluation).toBeNull();

@@ -79,6 +79,11 @@ describe("forecast model routing", () => {
   });
 
   it("clamps forecast_days to each provider horizon", () => {
+    for (const model of ["best_match", "icon", "gfs", "aifs"] as const) {
+      const params = new URL(buildForecastUrl([location], 14, model)).searchParams;
+      expect(params.get("past_days")).toBe("1");
+      expect(params.get("forecast_days")).toBe(String(clampForecastDays(14, model)));
+    }
     expect(maxForecastDaysForModel("icon")).toBe(8);
     expect(maxForecastDaysForModel("gfs")).toBe(16);
     expect(maxForecastDaysForModel("aifs")).toBe(15);
