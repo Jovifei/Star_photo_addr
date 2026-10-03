@@ -22,7 +22,9 @@ The visible application version was v1.0.26. The browser could not open `/health
 - `STAR_BUILD_CPUS=2 NEXT_TELEMETRY_DISABLED=1 npm run check`: PASS, lint, TypeScript, 74 files / 428 tests and production build.
 - Rebuilt local Firefox: PASS, all six smoke cases including UTC, America/Los_Angeles and Asia/Shanghai timestamp scenarios. The original regression is GREEN in all three contexts; raw UTC evidence remains unchanged.
 - Independent read-only final review: PASS; checked final source/test diff, aggregate results and all six Firefox terminal results.
-- Exact-commit GitHub full CI for this follow-up: PENDING. The earlier [run 37098113035](https://github.com/Jovifei/Star_photo_addr/actions/runs/37098113035) passed all five jobs for dependency-only `30fbead` (73 files/421 tests, Chromium228 passed/122 applicability skips, Firefox/WebKit6 passed); those results do not validate this new source change.
+- Published commit `2c143f72f0601da5b2e0559ce96374e67fe7be5d`: [CI 37138879197](https://github.com/Jovifei/Star_photo_addr/actions/runs/37138879197) finished SUCCESS in all five jobs. Quality: 74 files / 428 tests, lint, types, build and production audit zero. Chromium: 234 passed / 122 applicability skips / zero failures. Firefox/WebKit: 12 passed. Container and live-data smoke passed. The PR merge-test ref was `7de48cf6166d3b76a0db80ac6c428fbb4e0895aa` for this exact head and main `19fcee2`.
+- Restored cloud executor reran lint/types/74 files/428 tests/build successfully. Its local Firefox/Chromium launch is blocked by framebuffer/IPC restrictions; no new local browser pass is claimed.
+- Historical dependency-only evidence: the earlier [run 37098113035](https://github.com/Jovifei/Star_photo_addr/actions/runs/37098113035) passed all five jobs for dependency-only `30fbead` (73 files/421 tests, Chromium228 passed/122 applicability skips, Firefox/WebKit6 passed); those results do not validate this new source change.
 
 ## Public-page inspection boundaries
 

@@ -1238,5 +1238,13 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [x] Share Shanghai-time formatting across the three timestamp surfaces, preserving original ISO evidence and fallback text.
 - [x] Add null/midnight/offset unit coverage and three real browser timezone contexts.
 - [x] Final aggregate checks74files428tests/build and rebuilt Firefox6/6 passed; independent diff review found no blockers.
-- [ ] Publish a separate commit on the existing branch and verify exact-head full CI.
+- [x] Publish `2c143f72` on the existing branch; exact-head CI37138879197 five jobs SUCCESS (Chromium234PASS122SKIP, Firefox/WebKit12PASS).
 - [ ] Keep merge/deployment, physical-device QA and production overnight acceptance separate.
+
+
+## 2026-10-03 A11Y-AXE-001 initial slice
+- [x] Verify documented secondary scope and official dependency metadata; preserve runtime and lock boundaries.
+- [x] Add six desktop/mobile fixture checks with whole-document scans, full result attachments and keyboard focus assertions.
+- [x] Local lint/types/74 files428 tests/build and production audit zero; test discovery six cases.
+- [ ] Independent review and exact-head hosted browser CI; local browser launch BLOCKED, not passed.
+- [ ] Retain physical-device, screen-reader, real-imagery and remaining-route boundaries.
