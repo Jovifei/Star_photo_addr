@@ -1203,3 +1203,8 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [ ] Merge/sync/deployrollback thenboundedreal10hours/score/pageacceptance.
 - [ ] Docs/knowledge/Hub;PENDING_REMOTE_PLANNING stays.
 
+
+## PR48 full CI correction
+- [x] CI37068463514:4jobsPASS; Chromium226PASS122SKIP2FAIL at hydration test.
+- [x] Root cause test expected today at05:xx but currentNightKey includes hour05; pinned05:30 regression and h23.
+- [ ] Focused Chromium desktop/mobile and exact new fullCI before merge/deploy.
