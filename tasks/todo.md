@@ -1230,3 +1230,13 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [x] Independent review passed; development audit eight high entries remain explicitly documented.
 - [ ] Push the existing branch and verify exact-commit draft PR full CI.
 - [ ] Existing production visual acceptance and PENDING_REMOTE_PLANNING remain open.
+
+
+## 2026-10-03 source-update timezone consistency
+- [x] Complete bounded public-page QA and identify the source-update timezone mismatch.
+- [x] Reproduce the timestamp mismatch in a Firefox UTC context before the source fix.
+- [x] Share Shanghai-time formatting across the three timestamp surfaces, preserving original ISO evidence and fallback text.
+- [x] Add null/midnight/offset unit coverage and three real browser timezone contexts.
+- [x] Final aggregate checks74files428tests/build and rebuilt Firefox6/6 passed; independent diff review found no blockers.
+- [ ] Publish a separate commit on the existing branch and verify exact-head full CI.
+- [ ] Keep merge/deployment, physical-device QA and production overnight acceptance separate.

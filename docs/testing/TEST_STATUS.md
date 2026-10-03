@@ -1,3 +1,5 @@
+> **2026-10-03 时区显示修复候选**：生产公开页面发现同一抓取时次分别显示13:15/22:15；新增统一上海时区格式器和三浏览器时区回归。此跟进与依赖分类提交30fbead分开，尚未部署；此前30fbead的5项CI已通过，但不替代本次源码修改的精确提交验证。[范围与验证](../engineering-change-log/2026-10-03-source-timestamp-timezone.md)
+
 > **2026-10-03 依赖边界修复候选**：main `19fcee2` 的 CI 因 shadcn 构建工具链的 braces high 公告失败。本候选保留所有锁定版本，仅纠正开发/生产依赖分类；生产 audit 0、73 文件/421 测试及构建通过，开发 audit 仍有 8 high。精确提交 GitHub 全量 CI 待验证；本地 Chromium 被运行环境 socket 限制阻断，未称全量通过。未合并、未部署，线上视觉验收与远端接力仍待完成。[完整证据](../engineering-change-log/2026-10-03-build-dependency-boundary.md)
 
 > **完整 CI 已关闭（2026-10-02）**：PR47精确测试headf7e5373，工作流36994802711五jobs全绿；Chromium228通过122适用性跳过0失败，Firefox/WebKit6通过。原main同步且无产品代码差异；生产仍v1.0.25a74f7ee。此前仅定向UI通过和旧CI失败记录保留为历史。详见[完整门禁终态](../engineering-change-log/2026-10-02-full-chromium-contract-closure.md)。PENDING_REMOTE_PLANNING仍未解除。
