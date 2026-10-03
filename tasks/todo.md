@@ -1220,3 +1220,31 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [x] Real previous/currentnight10hours and validscore verified.
 - [ ] Browser visual acceptance pending CUA runtime repair.
 - [ ] Remote successor decision PENDING_REMOTE_PLANNING.
+
+
+## 2026-10-03 build dependency boundary
+- [x] Reproduce the main production audit failure and verify the shadcn runtime/build boundary.
+- [x] Preserve versions, CSS and runtime behavior; classify the CLI chain as development-only.
+- [x] Add RED/GREEN dependency boundary regression; full check 73 files / 421 tests and production build pass.
+- [x] Production audit zero; actual production install and standalone/trace inspection exclude the CLI chain.
+- [x] Independent review passed; development audit eight high entries remain explicitly documented.
+- [ ] Push the existing branch and verify exact-commit draft PR full CI.
+- [ ] Existing production visual acceptance and PENDING_REMOTE_PLANNING remain open.
+
+
+## 2026-10-03 source-update timezone consistency
+- [x] Complete bounded public-page QA and identify the source-update timezone mismatch.
+- [x] Reproduce the timestamp mismatch in a Firefox UTC context before the source fix.
+- [x] Share Shanghai-time formatting across the three timestamp surfaces, preserving original ISO evidence and fallback text.
+- [x] Add null/midnight/offset unit coverage and three real browser timezone contexts.
+- [x] Final aggregate checks74files428tests/build and rebuilt Firefox6/6 passed; independent diff review found no blockers.
+- [x] Publish `2c143f72` on the existing branch; exact-head CI37138879197 five jobs SUCCESS (Chromium234PASS122SKIP, Firefox/WebKit12PASS).
+- [ ] Keep merge/deployment, physical-device QA and production overnight acceptance separate.
+
+
+## 2026-10-03 A11Y-AXE-001 initial slice
+- [x] Verify documented secondary scope and official dependency metadata; preserve runtime and lock boundaries.
+- [x] Add six desktop/mobile fixture checks with whole-document scans, full result attachments and keyboard focus assertions.
+- [x] Local lint/types/74 files428 tests/build and production audit zero; test discovery six cases.
+- [ ] Independent review and exact-head hosted browser CI; local browser launch BLOCKED, not passed.
+- [ ] Retain physical-device, screen-reader, real-imagery and remaining-route boundaries.

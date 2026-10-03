@@ -1,3 +1,7 @@
+> **2026-10-03 A11Y-AXE-001 候选**：沿用 PR49 分支，完成时区 `2c143f72` 五项 CI 闭环后加入六项整页 axe 测试与 dev-only 依赖；应用源码不变，首轮 hosted 浏览器验证待执行。[工程记录](../engineering-change-log/2026-10-03-accessibility-gate.md)
+
+> **2026-10-03 依赖边界修复候选**：main `19fcee2` 的 CI 因 shadcn 构建工具链的 braces high 公告失败。本候选保留所有锁定版本，仅纠正开发/生产依赖分类；生产 audit 0、73 文件/421 测试及构建通过，开发 audit 仍有 8 high。精确提交 GitHub 全量 CI 待验证；本地 Chromium 被运行环境 socket 限制阻断，未称全量通过。未合并、未部署，线上视觉验收与远端接力仍待完成。[完整证据](../engineering-change-log/2026-10-03-build-dependency-boundary.md)
+
 > **2026-10-02 当前交付已完成**：PR41/43 已合并并同步原目录 main；部署代码 `4460382fc2991b3af5555816f307c2318f5b962a` / v1.0.23。完整检查72文件414测试、lint/typecheck/build通过；浏览器10PASS6适用性SKIP，最终缺字段提示回归1PASS。真实线上12行84评分，取样点今晚45，BestMatch源抓取2026-10-02T06:23:56.895Z，stale=false；app/worker健康，原卷和回滚镜像保留。ICON缺能见度仍暂缓该模型评分，已明确说明原因。远端真实修复9c249d5已接收验证；旧聊天长度上限，接力聊天待Jovi决定。以下旧候选/失败状态仅为历史。详见[当前交付记录](../engineering-change-log/2026-10-02-branch-consolidation.md)。
 
 # 逐星提交与变更台账

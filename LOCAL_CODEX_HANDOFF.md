@@ -681,3 +681,8 @@ PR47 actualtestedheadf7e5373c3be7e741081dc24a5727bab46924d021; CI36994802711 ter
 - After authoritative NO_COOLDOWN_MARKER, one normal bounded real Best Match response: sourceFetchedAt2026-10-03T03:39:29.63Z, stale=false, firstTime2026-10-02T00:00,360rows. Saved response evaluated by actual projectCandidateNight: Oct2/Oct3 each10hours and numeric score PASS. Previous-day modeled hours are forecasts, not observations. No force/cache clearing/network edits.
 - Browser visual acceptance BLOCKED: CUA initialization failed with kernel-assets path missing. API and real scoring verification do not replace page visual acceptance; follow up next available browser session.
 - PENDING_REMOTE_PLANNING remains: old remote conversation full; successor decision pending. No remote final DONE claimed.
+
+
+## 2026-10-03 production dependency inventory correction
+
+Continue `codex/overnight-forecast-coverage-20261003` from main `19fcee2`. shadcn remains locked at 4.16.2, but its CLI / build stylesheet and glob/AST chain are now development-only. No application or CSS changes. Production audit zero, 73 files / 421 tests and production build pass; standalone and a clean production-only install contain none of the CLI chain. Full development audit retains eight high entries. Local browser execution is blocked by environment Unix-socket permissions; exact-commit GitHub full CI is pending. No merge, deploy or provider request. See [dependency boundary evidence](docs/engineering-change-log/2026-10-03-build-dependency-boundary.md). Existing production visual acceptance and PENDING_REMOTE_PLANNING remain open.

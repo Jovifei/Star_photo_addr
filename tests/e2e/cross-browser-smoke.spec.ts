@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import {
+  buildNormalizedForecasts,
   installGeocodingMock,
   installNextApiMock,
   installOpenMeteoMock,
@@ -31,6 +32,54 @@ test.beforeEach(async ({ page }) => {
     route.fulfill({ status: 200, contentType: "image/png", body: onePixelPng }),
   );
 });
+
+for (const timezoneId of ["UTC", "America/Los_Angeles", "Asia/Shanghai"]) {
+  test.describe(`forecast update timezone ${timezoneId}`, () => {
+    test.use({ timezoneId });
+
+    test("all update labels use Shanghai time and preserve raw UTC evidence", async ({ page }) => {
+      const fetchedAt = "2026-10-03T05:15:00.573Z";
+      await page.clock.setFixedTime(new Date("2026-10-03T05:16:00Z"));
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.route("**/api/forecast?**", async (route) => {
+        const url = new URL(route.request().url());
+        const locations = buildNormalizedForecasts(
+          fixture,
+          (url.searchParams.get("latitude") ?? "").split(",").filter(Boolean),
+          (url.searchParams.get("longitude") ?? "").split(",").filter(Boolean),
+          14,
+          url.searchParams.get("model") ?? "icon",
+        );
+        for (const location of locations) {
+          location.fetchedAt = fetchedAt;
+          location.metadata.fetchedAt = fetchedAt;
+          location.metadata.sourceFetchedAt = fetchedAt;
+          // Keep the hourly fixture aligned to the frozen observation date,
+          // independent of when CI is run or its process timezone.
+          location.hourly.forEach((hour: { time: string }, index: number) => {
+            hour.time = new Date(Date.parse("2026-10-03T00:00:00Z") + index * 3_600_000)
+              .toISOString().slice(0, 16);
+          });
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ locations, metadata: locations[0]?.metadata }),
+        });
+      });
+      await page.goto("/?lat=30.4694&lng=119.5978&name=timezone-test&model=icon&overlay=forecast-cloud");
+      const strip = page.getByTestId("home-context-strip");
+      await expect(strip).toHaveAttribute("data-updated-at", fetchedAt);
+      await expect(strip).toContainText("数据更新 13:15");
+      const sheet = await expandMobileDataSheet(page);
+      const summary = sheet.getByTestId("observation-reason-card");
+      await expect(summary).toContainText("更新时间13:15");
+      await expect(sheet.getByTestId("forecast-availability")).toHaveText("数据更新 13:15");
+      await summary.getByTestId("forecast-trust-summary").click();
+      await expect(summary.getByTestId("forecast-evidence-details")).toContainText(fetchedAt);
+    });
+  });
+}
 
 test("product navigation and source dialog remain keyboard operable", async ({
   page,

@@ -3,13 +3,7 @@
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useStore, FORECAST_SAMPLE_COOLDOWN_MS } from "@/lib/store";
-
-function formatTime(iso: string | null): string | null {
-  if (!iso) return null;
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-}
+import { formatSourceUpdateTime } from "@/lib/sourceTime";
 
 /**
  * Explicit upstream-state line for the selected location's forecast: why the
@@ -48,7 +42,7 @@ export default function ForecastAvailability() {
   if (!availability.error && !availability.lastSuccessAt) return null;
 
   if (availability.error) {
-    const lastSuccess = formatTime(availability.lastSuccessAt);
+    const lastSuccess = formatSourceUpdateTime(availability.lastSuccessAt);
     const tone = availability.staleInUse ? "stale" : "unavailable";
     return (
       <p
@@ -100,7 +94,7 @@ export default function ForecastAvailability() {
     );
   }
 
-  const updated = formatTime(availability.lastSuccessAt);
+  const updated = formatSourceUpdateTime(availability.lastSuccessAt);
   return (
     <p className="forecast-availability" role="status" data-testid="forecast-availability" data-tone="ready">
       数据更新 {updated ?? "时间未知"}

@@ -1,3 +1,11 @@
+> **2026-10-03 次级质量候选**：A11Y-AXE-001 首批六项桌面/手机测试已加入，默认规则整页扫描并保存全部结果，serious/critical 阻断。本地完整代码检查通过，浏览器首轮执行等待 hosted CI；真机、地图真实影像和完整无障碍合规边界未关闭。[范围](../engineering-change-log/2026-10-03-accessibility-gate.md)
+
+> **2026-10-03 时区修复 CI 闭环**：现有 PR49 的 `2c143f72` 五项 CI 全部通过：74 文件/428 测试，Chromium 234 PASS/122 适用性跳过/0 FAIL，Firefox/WebKit 12 PASS，生产 audit 0；未合并、未部署。[精确提交证据](../engineering-change-log/2026-10-03-source-timestamp-timezone.md)
+
+> **2026-10-03 时区显示修复候选**：生产公开页面发现同一抓取时次分别显示13:15/22:15；新增统一上海时区格式器和三浏览器时区回归。此跟进与依赖分类提交30fbead分开，尚未部署；此前30fbead的5项CI已通过，但不替代本次源码修改的精确提交验证。[范围与验证](../engineering-change-log/2026-10-03-source-timestamp-timezone.md)
+
+> **2026-10-03 依赖边界修复候选**：main `19fcee2` 的 CI 因 shadcn 构建工具链的 braces high 公告失败。本候选保留所有锁定版本，仅纠正开发/生产依赖分类；生产 audit 0、73 文件/421 测试及构建通过，开发 audit 仍有 8 high。精确提交 GitHub 全量 CI 待验证；本地 Chromium 被运行环境 socket 限制阻断，未称全量通过。未合并、未部署，线上视觉验收与远端接力仍待完成。[完整证据](../engineering-change-log/2026-10-03-build-dependency-boundary.md)
+
 > **完整 CI 已关闭（2026-10-02）**：PR47精确测试headf7e5373，工作流36994802711五jobs全绿；Chromium228通过122适用性跳过0失败，Firefox/WebKit6通过。原main同步且无产品代码差异；生产仍v1.0.25a74f7ee。此前仅定向UI通过和旧CI失败记录保留为历史。详见[完整门禁终态](../engineering-change-log/2026-10-02-full-chromium-contract-closure.md)。PENDING_REMOTE_PLANNING仍未解除。
 
 > **最新：v1.0.25** 已修正日期选项过大的问题。运行代码a74f7ee95d77f0a26ed30e47db0ff9e71ba05f41；桌面32px内容宽度工具栏，手机仅自然换行。线上3825px火烧云整组约483px，日期约59px，已实测。72/414完整门禁及36几何/6交互组合通过。[紧凑工具栏交付](../engineering-change-log/2026-10-02-compact-topic-toolbar.md)。下方旧发布记录为历史。

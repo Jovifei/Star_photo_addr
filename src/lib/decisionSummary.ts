@@ -1,5 +1,6 @@
 import { statusMeta } from "@/lib/scoring";
 import type { Location, NightEvaluation } from "@/lib/types";
+import { formatSourceUpdateTime } from "@/lib/sourceTime";
 
 export type DecisionSummaryKind = "empty" | "unknown" | "ready";
 
@@ -70,13 +71,5 @@ export function buildDecisionSummary(input: {
 }
 
 function formatUpdatedLabel(iso: string | null): string {
-  if (!iso) return "尚未更新";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "尚未更新";
-  return new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(date);
+  return formatSourceUpdateTime(iso) ?? "尚未更新";
 }
