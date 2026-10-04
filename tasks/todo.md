@@ -1226,3 +1226,16 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [x] Fix stranded hook after failure:one normal retry after max(client cooldown,provider cooldown),clear errors on success,cleanup timers.
 - [x] Desktop/mobile recovery2PASS; client longcooldown3PASS; priorfullcheck418PASS.
 - [ ] v27fullcheck/exactCI,merge/sync/deploy/productionpage receipt.
+
+## 2026-10-04 Final candidate recovery and batch persistence receipt
+- Root cause confirmed: failed candidate hook did not recover after cooldown; large coordinate-derived filenames silently failed persistence. The original screenshot request's first network failure reason was not recovered from logs, so it is not labelled a proven429.
+- PR50 head d6785fd426eaffb8f98362325f33dfc390301b05 /CI37174401726 all5SUCCESS, Chromium230PASS122SKIP0FAIL. PR51 head4e867ecf2aa03e945de535ddb3e6066e8f3ae898 /CI37175774737 terminalSUCCESS. PR51 merged ee7269f7964603b342411354d0f36ee100654d70; source/scripts/package byte-equal to tested runtimehead4e867ec.
+- v1.0.27 runtime4e867ecf2aa03e945de535ddb3e6066e8f3ae898 deployed; image star-photo-addr:deploy-4e867ecf2aa0. App/worker healthy, rollback-before-4e867ecf2aa0 and original star-photo_observing-snapshots volume retained. Original directory main synchronized and matching dependencies installed.
+- Local fullcheck72files420tests/lint/typecheck/buildPASS; cache route/integrity23PASS including1/64locations after module restart. Client recovery desktop/mobile2PASS and manual-revision normal retry unitPASS. Source/model/age gates retained.
+- Actual production page12rows84numeric score cells,no candidate request errors; BestMatch source2026-10-04T04:17:57.136Z.17-location batch persisted in69-character hash filename,source2026-10-04T04:17:56.820Z,allFresh=true.
+- Isolated cold container with network=none,memory192MB,originalvolume read-only: HTTP200,X-Forecast-Cache=cache-only-disk,X-Data-Stale=false,count17,original source2026-10-04T04:17:56.820Z. No provider access. Probe container removed; volume retained.
+- Prior guidance exists in2026-10-01-weather-header-repair.md and2026-10-02-branch-consolidation.md; knowledge search found prior429/cooldown cases. Previous single-point-only acceptance did not close whole-page recovery. New regression and receipt correct that gap.
+- PENDING_REMOTE_PLANNING preserved: old remote chat full,successor decision pending; no remote finalDONE claimed. ICON missing-visibility and unlicensed dark-sky fields remain explicit missing-data gates, not filled from another model.
+
+- [x] Candidate recovery,large batch persistence,tests,merge,originalmain sync,deployment and realpage/coldcache acceptance.
+- [ ] Remote successor decision PENDING_REMOTE_PLANNING.
