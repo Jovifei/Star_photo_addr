@@ -7,6 +7,19 @@ function response(model = "icon", stale = false) {
 }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("bounded shared candidate loader", () => {
+  it("recovers a failed manual revision using a normal request after cooldown", async () => {
+    vi.resetModules();
+    let now = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json({error:"temporary"},{status:503})).mockImplementation(async()=>response());
+    vi.stubGlobal("fetch",fetchMock);
+    const { requestCandidateForecast } = await import("@/lib/candidateForecastClient");
+    await expect(requestCandidateForecast(POINT,"icon",14,1)).rejects.toThrow("temporary");
+    now += 61_000;
+    await requestCandidateForecast(POINT,"icon",14,0);
+    expect(fetchMock.mock.calls[0][0]).toContain("refresh=1");
+    expect(fetchMock.mock.calls[1][0]).not.toContain("refresh=1");
+  });
   it("loads multiple candidate forecasts in one stable, coalesced request", async () => {
     vi.resetModules();
     const fetchMock = vi.fn(async (input: string | URL) => {

@@ -35,7 +35,7 @@ export function useCandidateForecasts(locations: Array<{ id: string; latitude: n
     for (let offset = 0; offset < requested.length; offset += maxLocationsPerRequest) {
       const batch = requested.slice(offset, offset + maxLocationsPerRequest);
       const attempt = (recovery = false) => {
-      void requestCandidateForecastBatch(batch, model, 14, revision).then((results) => {
+      void requestCandidateForecastBatch(batch, model, 14, recovery ? 0 : revision).then((results) => {
         if (!active) return;
         for (const result of results) cacheForecast(result.id, result.forecast);
         failures.delete(offset);
