@@ -106,21 +106,28 @@ describe("GET /api/forecast", () => {
     expect(cached.headers.get("X-Forecast-Cache")).toBe("cache-only-memory");
     expect(fetchForecastByCoords).toHaveBeenCalledTimes(1);
   });
-  it("keeps a fresh persistent disk cache fresh for cache-only reads after route restart", async () => {
+  it.each([1, 64])("keeps %i fresh locations persistent for cache-only reads after route restart", async (count) => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "forecast-route-cache-"));
     process.env.OBSERVING_SNAPSHOT_DIR = directory;
     process.env.FORECAST_ENABLE_DISK_CACHE = "1";
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-20T00:05:00Z"));
     try {
-      fetchForecastByCoords.mockResolvedValue(payload("icon"));
+      const data = payload("icon");
+      data.locations = Array.from({ length: count }, (_, index) => ({ ...data.locations[0], locationId: `loc-${index}` }));
+      fetchForecastByCoords.mockResolvedValue(data);
       const firstRoute = await loadRoute();
-      const query = "latitude=30.2741&longitude=120.1551&model=icon&days=2";
+      const latitudes = Array.from({ length: count }, (_, index) => 30.2741 + index / 1000).join(",");
+      const longitudes = Array.from({ length: count }, (_, index) => 120.1551 + index / 1000).join(",");
+      const query = `latitude=${latitudes}&longitude=${longitudes}&model=icon&days=2`;
       const first = await firstRoute.GET(request(query));
       expect(first.status).toBe(200);
       expect(first.headers.get("X-Data-Stale")).toBe("false");
       expect(fetchForecastByCoords).toHaveBeenCalledTimes(1);
 
+      const files = fs.readdirSync(path.join(directory, "forecast-cache"));
+      expect(files).toHaveLength(1);
+      expect(files[0].length).toBeLessThanOrEqual(80);
       vi.resetModules();
       fetchForecastByCoords = vi.fn();
       const restartedRoute = await loadRoute();
