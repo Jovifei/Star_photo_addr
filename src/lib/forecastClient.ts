@@ -225,3 +225,10 @@ export function requestForecastResponse(
   inFlight.set(key, { promise, forceRefresh });
   return promise;
 }
+
+/** Earliest safe client recovery; provider cooldown is never bypassed. */
+export function forecastRecoveryDelay(locations: Coordinates[], model: ForecastModel, days = 14): number {
+  const now = Date.now();
+  const key = forecastRequestKey(locations, model, normalizeForecastDaysForModel(days, model));
+  return Math.max(FAILURE_COOLDOWN_MS, (failedUntil.get(key) ?? 0) - now, globalCooldownUntil - now) + 1_000;
+}

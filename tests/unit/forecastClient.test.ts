@@ -35,8 +35,9 @@ describe("shared forecast client", () => {
       status: 429, headers: { "Retry-After": "3600" },
     }));
     vi.stubGlobal("fetch", fetchMock);
-    const { requestForecastResponse } = await import("@/lib/forecastClient");
+    const { requestForecastResponse, forecastRecoveryDelay } = await import("@/lib/forecastClient");
     await expect(requestForecastResponse([POINT], "icon")).rejects.toThrow(/daily quota.*3600 秒后重试/);
+    expect(forecastRecoveryDelay([POINT], "icon")).toBe(3600_000 + 1_000);
     now += 3 * 60_000;
     await expect(requestForecastResponse([POINT], "icon", 8, true)).resolves.toMatchObject({ stale: false });
     expect(fetchMock).toHaveBeenCalledTimes(2);

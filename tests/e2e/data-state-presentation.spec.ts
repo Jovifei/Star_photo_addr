@@ -233,3 +233,25 @@ test("provider degradation stays separate from selected-data eligibility", async
   await expect(page.locator('.source-status-row[data-status="degraded"]').first()).toContainText("上游检测降级");
   await expect(page.getByTestId("provider-health-scope")).toContainText("上游探测只说明");
 });
+
+test("candidate batch recovers once after transient failure without manual refresh", async ({ page }, info) => {
+  await page.clock.install();
+  let attempts = 0;
+  await page.route("**/api/forecast?**", async route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get("model") !== "best_match") return route.fallback();
+    attempts += 1;
+    expect(url.searchParams.has("refresh")).toBe(false);
+    if (attempts === 1) return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"天气服务暂时不可用"})});
+    return route.fallback();
+  });
+  await page.goto(selectedUrl);
+  if (info.project.name === "mobile") await expandMobileDataSheet(page);
+  await expect(page.getByTestId("candidate-forecast-request-status")).toContainText("天气服务暂时不可用");
+  await page.clock.fastForward(59_000);
+  expect(attempts).toBe(1);
+  await page.clock.fastForward(3_000);
+  await expect.poll(()=>attempts).toBe(2);
+  await expect(page.getByTestId("candidate-forecast-request-status")).toHaveCount(0);
+  await expect(page.locator(".star-window-table .cell-score").first()).toHaveText(/^\d+$/);
+});

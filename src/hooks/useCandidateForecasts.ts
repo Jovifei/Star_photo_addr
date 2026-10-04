@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { forecastRecoveryDelay } from "@/lib/forecastClient";
 import { requestCandidateForecastBatch } from "@/lib/candidateForecastClient";
 import { cachedForecast, useStore } from "@/lib/store";
 
@@ -26,13 +27,26 @@ export function useCandidateForecasts(locations: Array<{ id: string; latitude: n
     let active = true;
     const requested = JSON.parse(locationsKey) as Array<{ id: string; latitude: number; longitude: number }>;
     const maxLocationsPerRequest = 64;
+    const timers: Array<ReturnType<typeof setTimeout>> = [];
+    const failures = new Map<number, string>();
+    const publishFailure = () => setRequestFailure(failures.size
+      ? { key: requestKey, message: failures.values().next().value! }
+      : null);
     for (let offset = 0; offset < requested.length; offset += maxLocationsPerRequest) {
       const batch = requested.slice(offset, offset + maxLocationsPerRequest);
+      const attempt = (recovery = false) => {
       void requestCandidateForecastBatch(batch, model, 14, revision).then((results) => {
-        if (active) for (const result of results) cacheForecast(result.id, result.forecast);
+        if (!active) return;
+        for (const result of results) cacheForecast(result.id, result.forecast);
+        failures.delete(offset);
+        publishFailure();
       }).catch((error: unknown) => {
         if (!active) return;
-        setRequestFailure({ key: requestKey, message: safeRequestError(error) });
+        failures.set(offset, safeRequestError(error));
+        publishFailure();
+        if (!recovery) timers.push(setTimeout(() => {
+          if (active) attempt(true);
+        }, forecastRecoveryDelay(batch, model, 14)));
         // A failed batch invalidates only its members; old scores cannot survive a failed refresh.
         for (const location of batch) {
           const previous = cachedForecast(cacheRef.current, location.id, model);
@@ -41,8 +55,10 @@ export function useCandidateForecasts(locations: Array<{ id: string; latitude: n
           });
         }
       });
+      };
+      attempt();
     }
-    return () => { active = false; };
+    return () => { active = false; timers.forEach(clearTimeout); };
   }, [locationsKey, model, revision, requestKey, cacheForecast]);
   return requestFailure?.key === requestKey ? requestFailure.message : null;
 }
