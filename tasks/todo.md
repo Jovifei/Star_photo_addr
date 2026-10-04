@@ -1220,3 +1220,9 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 - [x] Real previous/currentnight10hours and validscore verified.
 - [ ] Browser visual acceptance pending CUA runtime repair.
 - [ ] Remote successor decision PENDING_REMOTE_PLANNING.
+
+## Oct04 candidate bounded recovery
+- [x] Historical429/cache guidance reviewed; production no cooldown,3pointbatch200 and actual page scores visible.
+- [x] Fix stranded hook after failure:one normal retry after max(client cooldown,provider cooldown),clear errors on success,cleanup timers.
+- [x] Desktop/mobile recovery2PASS; client longcooldown3PASS; priorfullcheck418PASS.
+- [ ] v27fullcheck/exactCI,merge/sync/deploy/productionpage receipt.
