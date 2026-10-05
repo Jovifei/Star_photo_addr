@@ -35,28 +35,73 @@ async function openForecast(page: Page) {
 // the error span, and full mobile sheets lazily mount candidates/timeline.
 async function measureTextScale(page: Page, multiplier: number, evidence: Evidence) {
   const measured = await page.evaluate(async ({ selector, multiplier }) => {
+    const startedAt = performance.now();
+    const totalBudgetMs = 10_000;
+    const totalDeadline = startedAt + totalBudgetMs;
     const state = window as Window & {
       __controlReadabilityOriginalFonts?: WeakMap<HTMLElement, { value: string; priority: string }>;
     };
     const originals = state.__controlReadabilityOriginalFonts ??= new WeakMap();
-    const targets = [...document.querySelectorAll<HTMLElement>(selector)];
+    const knownTargets = new Set<HTMLElement>();
+    const targetIds = new WeakMap<HTMLElement, number>();
+    let nextTargetId = 0;
+    let attempt = 0;
+    let targets: HTMLElement[] = [];
+    const currentTargets = () => [...document.querySelectorAll<HTMLElement>(selector)];
+    const describe = (element: HTMLElement) => {
+      let id = targetIds.get(element);
+      if (id === undefined) { id = ++nextTargetId; targetIds.set(element, id); }
+      return {
+        id, tagName: element.tagName, className: element.className,
+        text: element.textContent?.trim().slice(0, 120) ?? "",
+        ariaLabel: element.getAttribute("aria-label"), title: element.getAttribute("title"),
+        ownerTitle: element.closest("[title]")?.getAttribute("title") ?? null,
+      };
+    };
+    let descriptions = new Map<HTMLElement, ReturnType<typeof describe>>();
+    const churn: {
+      attempt: number; phase: string; elapsedMs: number; previousCount: number; currentCount: number;
+      removed: ReturnType<typeof describe>[]; added: ReturnType<typeof describe>[]; reordered: boolean;
+    }[] = [];
     const transitionEvidence: {
-      phase: string; targetIndex: number; className: string; property: string;
+      attempt: number; phase: string; targetIndex: number; className: string; property: string;
       duration: number | string | null; delay: number | null; easing: string | null;
-      startTime: number | null; initialPlayState: string; finalPlayState?: string;
-      outcome?: string;
+      startTime: number | null; initialPlayState: string; finalPlayState?: string; outcome?: string;
     }[] = [];
     const failures: string[] = [];
-    const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     const sizes = () => targets.map((element) => parseFloat(getComputedStyle(element).fontSize));
-    const environment = () => ({ multiplier, innerWidth, innerHeight, dpr: devicePixelRatio, scale: visualViewport?.scale });
-    const settleFontTransitions = async (phase: string) => {
-      const deadline = performance.now() + 5000;
+    const environment = () => ({
+      multiplier, innerWidth, innerHeight, dpr: devicePixelRatio, scale: visualViewport?.scale,
+      totalBudgetMs, elapsedMs: performance.now() - startedAt, attempts: attempt,
+      measuredTargetCount: targets.length, currentTargetCount: currentTargets().length,
+    });
+    // A deadline is a failure bound, never the duration of a successful wait.
+    const nextFrame = (deadline: number) => new Promise<boolean>((resolve) => {
+      const frame = requestAnimationFrame(() => { clearTimeout(timer); resolve(true); });
+      const timer = window.setTimeout(() => { cancelAnimationFrame(frame); resolve(false); }, Math.max(0, deadline - performance.now()));
+    });
+    const membershipChanged = (phase: string) => {
+      const live = currentTargets();
+      if (live.length === targets.length && live.every((element, index) => element === targets[index] && element.isConnected)) return false;
+      const previousSet = new Set(targets);
+      const liveSet = new Set(live);
+      const removed = targets.filter((element) => !liveSet.has(element));
+      const added = live.filter((element) => !previousSet.has(element));
+      churn.push({
+        attempt, phase, elapsedMs: performance.now() - startedAt,
+        previousCount: targets.length, currentCount: live.length,
+        removed: removed.map((element) => descriptions.get(element) ?? describe(element)),
+        added: added.map(describe), reordered: !removed.length && !added.length,
+      });
+      return true;
+    };
+    const settleFontTransitions = async (phase: string): Promise<"settled" | "churn" | "timeout"> => {
+      const deadline = Math.min(totalDeadline, performance.now() + 5000);
       let quietFrames = 0;
       const observed = new Map<Animation, number>();
       while (performance.now() < deadline) {
-        // Flush the changed styles before looking for transitions. A same-task
-        // computed-style read can still report the animation's starting size.
+        if (membershipChanged(phase)) return "churn";
+        // Flush changed styles before inspecting real font-size transitions.
         sizes();
         const active = targets.flatMap((element, targetIndex) => element.getAnimations()
           .filter((animation): animation is CSSTransition => animation instanceof CSSTransition && animation.transitionProperty === "font-size" && animation.playState !== "finished" && animation.playState !== "idle")
@@ -67,7 +112,7 @@ async function measureTextScale(page: Page, multiplier: number, evidence: Eviden
               recordIndex = transitionEvidence.length;
               observed.set(animation, recordIndex);
               transitionEvidence.push({
-                phase, targetIndex, className: element.className,
+                attempt, phase, targetIndex, className: element.className,
                 property: animation.transitionProperty,
                 duration: typeof timing.duration === "number" ? timing.duration : timing.duration?.toString() ?? null,
                 delay: timing.delay ?? null, easing: timing.easing ?? null,
@@ -78,10 +123,8 @@ async function measureTextScale(page: Page, multiplier: number, evidence: Eviden
             return { animation, recordIndex };
           }));
         if (!active.length) {
-          // Require two successive rendering opportunities without a font
-          // transition, including replacements triggered by a cancelled one.
-          if (++quietFrames >= 2) return true;
-          await nextFrame();
+          if (++quietFrames >= 2) return "settled";
+          if (!await nextFrame(deadline)) return "timeout";
           continue;
         }
         quietFrames = 0;
@@ -95,8 +138,6 @@ async function measureTextScale(page: Page, multiplier: number, evidence: Eviden
           }
           transitionEvidence[recordIndex].finalPlayState = animation.playState;
         }));
-        // This timer only bounds a stuck/paused transition; successful runs
-        // wait for actual Animation.finished, never a fixed sleep interval.
         const outcome = await Promise.race([
           terminal.then(() => "settled" as const),
           new Promise<"timeout">((resolve) => { timer = window.setTimeout(() => resolve("timeout"), Math.max(0, deadline - performance.now())); }),
@@ -107,51 +148,77 @@ async function measureTextScale(page: Page, multiplier: number, evidence: Eviden
             transitionEvidence[recordIndex].finalPlayState = animation.playState;
             transitionEvidence[recordIndex].outcome ??= "timeout";
           }
-          return false;
+          return "timeout";
         }
-        await nextFrame();
+        if (!await nextFrame(deadline)) return "timeout";
       }
-      return false;
+      return "timeout";
     };
-    for (const element of targets) {
-      const original = originals.get(element);
-      if (original) {
+    while (performance.now() < totalDeadline) {
+      attempt++;
+      targets = currentTargets();
+      descriptions = new Map(targets.map((element) => [element, describe(element)]));
+      for (const element of targets) {
+        if (!originals.has(element)) originals.set(element, {
+          value: element.style.getPropertyValue("font-size"), priority: element.style.getPropertyPriority("font-size"),
+        });
+        knownTargets.add(element);
+      }
+      // Restore every target from earlier attempts as well as every current
+      // target before reading any new node's inherited computed baseline.
+      // No decorative node or visible text/control is excluded from selector.
+      for (const element of knownTargets) {
+        const original = originals.get(element)!;
         if (original.value) element.style.setProperty("font-size", original.value, original.priority);
         else element.style.removeProperty("font-size");
-      } else originals.set(element, { value: element.style.getPropertyValue("font-size"), priority: element.style.getPropertyPriority("font-size") });
+      }
+      const restored = await settleFontTransitions("restore-baseline");
+      if (restored === "churn") continue;
+      if (restored === "timeout") { failures.push("Original font-size transitions exceeded the measurement deadline"); break; }
+      if (membershipChanged("before-baseline")) continue;
+      const baseline = sizes();
+      if (baseline.some((size) => !Number.isFinite(size) || size <= 0)) {
+        failures.push("A current target has a non-finite or non-positive baseline font size");
+        break;
+      }
+      const requested = baseline.map((size) => size * multiplier);
+      targets.forEach((element, index) => element.style.setProperty("font-size", `${requested[index]}px`, "important"));
+      const immediate = sizes();
+      const scaled = await settleFontTransitions("apply-multiplier");
+      if (scaled === "churn") continue;
+      if (scaled === "timeout") { failures.push("Enlarged font-size transitions exceeded the measurement deadline"); break; }
+      if (membershipChanged("before-final-sample")) continue;
+      const settled = sizes();
+      const samples = targets.map((element, index) => {
+        const style = getComputedStyle(element);
+        return {
+          ...describe(element), connected: element.isConnected,
+          before: baseline[index], requested: requested[index],
+          immediate: immediate[index], settled: settled[index], after: settled[index],
+          ratio: settled[index] / baseline[index],
+          transition: { property: style.transitionProperty, duration: style.transitionDuration, delay: style.transitionDelay },
+        };
+      });
+      // Check the complete current membership once more in the same task as
+      // final reads, rather than claiming a detached node is still measured.
+      if (membershipChanged("after-final-sample")) continue;
+      if (performance.now() >= totalDeadline) break;
+      return { ...environment(), transitionEvidence, churn, failures, samples };
     }
-    if (!await settleFontTransitions("restore-baseline")) {
-      failures.push("Original font-size transitions did not settle; no enlarged sizes were applied");
-      return { ...environment(), transitionEvidence, failures, samples: [] };
-    }
-    const baseline = sizes();
-    const requested = baseline.map((size) => size * multiplier);
-    targets.forEach((element, index) => element.style.setProperty("font-size", `${requested[index]}px`, "important"));
-    const immediate = sizes();
-    if (!await settleFontTransitions("apply-multiplier")) failures.push("Enlarged font-size transitions did not settle");
-    const settled = sizes();
-    const samples = targets.map((element, index) => {
-      const style = getComputedStyle(element);
-      if (!element.isConnected) failures.push(`Measured target detached: ${element.className}`);
-      return {
-        className: element.className,
-        text: element.textContent?.trim().slice(0, 120) ?? "",
-        before: baseline[index], requested: requested[index],
-        immediate: immediate[index], settled: settled[index], after: settled[index],
-        ratio: settled[index] / baseline[index],
-        transition: { property: style.transitionProperty, duration: style.transitionDuration, delay: style.transitionDelay },
-      };
-    });
-    return { ...environment(), transitionEvidence, failures, samples };
+    if (!failures.length) failures.push(`DOM membership did not stabilize within ${totalBudgetMs}ms; no complete current-target measurement`);
+    return { ...environment(), transitionEvidence, churn, failures, samples: [] };
   }, { selector: textSelector, multiplier });
   evidence.push({ kind: "measured-text", ...measured });
   const round = evidence.filter((record) => record.kind === "measured-text").length;
-  // Keep both the requested and observed sizes, including transition evidence,
-  // even if the strict ratio assertion below stops the test before its state capture.
+  // Failed stabilization and strict ratio failures retain their full evidence.
   await capture(page, test.info(), `text-scale-${multiplier * 100}-round-${round}`, evidence);
   expect(measured.failures).toEqual([]);
   expect(measured.samples.length).toBeGreaterThan(4);
-  for (const sample of measured.samples) expect(sample.ratio, `${sample.className}: ${sample.text}`).toBeCloseTo(multiplier, 2);
+  expect(measured.measuredTargetCount).toBe(measured.currentTargetCount);
+  for (const sample of measured.samples) {
+    expect(sample.connected, `${sample.className}: detached final target`).toBe(true);
+    expect(sample.ratio, `${sample.className}: ${sample.text}`).toBeCloseTo(multiplier, 2);
+  }
   expect(measured.innerWidth).toBe(page.viewportSize()!.width);
   expect(measured.innerHeight).toBe(page.viewportSize()!.height);
   expect(measured.scale).toBe(1);
@@ -392,6 +459,7 @@ for (const multiplier of [1, 2]) {
       await expect(sheet).toHaveAttribute("data-level", "peek");
     }
     const map = page.locator(".map-viewport");
+    const mapCanvas = map.locator(".leaflet-container");
     const status = page.getByTestId("map-tile-render-status");
     const retry = status.getByRole("button", { name: "重试地图图层", exact: true });
     const inspectFailure = async (state: string) => {
@@ -422,17 +490,49 @@ for (const multiplier of [1, 2]) {
       await capture(page, info, `map-${state}-${multiplier * 100}`, evidence);
     };
     await inspectFailure("failed");
-    const beforeRetry = failedRequests;
-    await retry.click();
-    await expect.poll(() => failedRequests).toBeGreaterThan(beforeRetry);
-    await inspectFailure("failed-again");
+    const locationKey = "perseids-selected-location-v2";
+    const locationIdentity = () => page.evaluate(key => {
+      const location = JSON.parse(localStorage.getItem(key) ?? "null");
+      return location && { id: location.id, name: location.name, latitude: location.latitude, longitude: location.longitude };
+    }, locationKey);
+    await expect.poll(locationIdentity).toMatchObject({ name: "release-audit", latitude: 30.4694, longitude: 119.5978 });
+    const beforeLocation = await locationIdentity();
+    const beforeView = { center: await mapCanvas.getAttribute("data-map-center"), zoom: await mapCanvas.getAttribute("data-map-zoom") };
+    expect(beforeView.center).toMatch(/^-?\d+\.\d+,-?\d+\.\d+$/);
+    const pointRequests: string[] = [];
+    page.on("request", request => {
+      const url = new URL(request.url());
+      const latitude = url.searchParams.get("latitude");
+      if (url.pathname === "/api/forecast" && latitude && !latitude.includes(",")) pointRequests.push(url.toString());
+    });
+    const assertSameSelection = async (state: string) => {
+      const afterLocation = await locationIdentity();
+      const afterView = { center: await mapCanvas.getAttribute("data-map-center"), zoom: await mapCanvas.getAttribute("data-map-zoom") };
+      evidence.push({ kind: "retry-selection-invariance", state, beforeLocation, afterLocation, beforeView, afterView, pointRequests: [...pointRequests] });
+      await capture(page, info, `map-selection-${state}-${multiplier * 100}`, evidence);
+      expect(afterLocation, `${state}: retry changed location identity`).toEqual(beforeLocation);
+      await expect(page.locator(mobile ? ".mobile-data-sheet-location" : ".panel-location-name").first()).toHaveText("release-audit");
+      expect(afterView, `${state}: retry recentered or zoomed the map`).toEqual(beforeView);
+      expect(pointRequests, `${state}: retry triggered a new point forecast`).toEqual([]);
+    };
+    // Real pointer activation covers mouse on desktop and touch on mobile;
+    // native Enter/Space activation and repeated still-failing retries follow.
+    for (const activation of ["pointer", "Enter", "Space"] as const) {
+      const beforeRetry = failedRequests;
+      if (activation === "pointer") { if (mobile) await retry.tap(); else await retry.click(); }
+      else await retry.press(activation);
+      await expect.poll(() => failedRequests).toBeGreaterThan(beforeRetry);
+      await inspectFailure(`failed-after-${activation}`);
+      await assertSameSelection(`failed-after-${activation}`);
+    }
     fail = false;
-    await retry.click();
+    if (mobile) await retry.tap(); else await retry.click();
     await expect.poll(() => recoveredRequests).toBeGreaterThan(0);
     await expect(status).toHaveCount(0);
     if (mobile) await expect(page.getByTestId("mobile-map-panel-drawer")).toHaveAttribute("aria-hidden", "true");
     await measureTextScale(page, multiplier, evidence);
     evidence.push({ kind: "tile-requests", state: "recovered", failedRequests, recoveredRequests });
     await capture(page, info, `map-recovered-${multiplier * 100}`, evidence);
+    await assertSameSelection("recovered");
   });
 }

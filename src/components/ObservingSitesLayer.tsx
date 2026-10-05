@@ -1,7 +1,7 @@
 "use client";
 
 import L from "leaflet";
-import { Marker, Tooltip, useMap } from "react-leaflet";
+import { Marker, Tooltip, useMap, type MarkerProps } from "react-leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
@@ -22,6 +22,15 @@ function markerIcon(color: string, selected: boolean, bortle: number): L.DivIcon
     iconAnchor: [14, 14],
     html: `<span class="observing-site-dot" data-bortle="${bortle}" style="--site-color:${color};--site-scale:${selected ? "1.28" : "1"}"></span>`,
   });
+}
+
+export function ObservingSiteMarker({ color, selected, bortle, ...props }: Omit<MarkerProps, "icon"> & {
+  color: string; selected: boolean; bortle: number;
+}) {
+  // One icon belongs to this mounted marker. Unrelated grid/store renders
+  // keep its DOM intact; actual visual changes replace it. No global cache.
+  const icon = useMemo(() => markerIcon(color, selected, bortle), [color, selected, bortle]);
+  return <Marker {...props} icon={icon} />;
 }
 
 export default function ObservingSitesLayer() {
@@ -178,10 +187,12 @@ export default function ObservingSitesLayer() {
             ? siteBortleColor(site.bortle)
             : recommendationColor(band);
         return (
-          <Marker
+          <ObservingSiteMarker
             key={site.id}
             position={[site.latitude, site.longitude]}
-            icon={markerIcon(color, selected, site.bortle)}
+            color={color}
+            selected={selected}
+            bortle={site.bortle}
             title={site.name}
             eventHandlers={{
               click: () => {
@@ -204,7 +215,7 @@ export default function ObservingSitesLayer() {
                 <span className="observing-site-label">{site.name}</span>
               </Tooltip>
             )}
-          </Marker>
+          </ObservingSiteMarker>
         );
       })}
     </>

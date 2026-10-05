@@ -4754,6 +4754,11 @@
   overflow-wrap: anywhere;
 }
 
+/* Preserve the normal 21px rows, but grow them with enlarged glyphs rather
+   than letting name/province text escape the identity button's line boxes. */
+.candidate-name,
+.candidate-meta { line-height: max(21px, 1.5em); }
+
 .candidate-meta {
   font-size: 10px;
   color: #79919b;
