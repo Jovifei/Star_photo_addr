@@ -1,3 +1,5 @@
+> **2026-10-04 最新续做基线**：main `48f5562` 已含 v1.0.27 候选恢复/哈希缓存与生产验收回执；原 PR49 `8c53ded` 的时区/axe 增量尚未合入。旧 CI37141820492 有5项 nested-interactive 失败，正在原分支整合新 main 并修复候选独立键盘操作。详见[当前修复记录](../engineering-change-log/2026-10-04-candidate-keyboard-accessibility.md)。本批未合并/部署，下方“最新”字样属于历史快照。
+
 > **2026-10-03 次级质量候选**：A11Y-AXE-001 首批六项桌面/手机测试已加入，默认规则整页扫描并保存全部结果，serious/critical 阻断。本地完整代码检查通过，浏览器首轮执行等待 hosted CI；真机、地图真实影像和完整无障碍合规边界未关闭。[范围](../engineering-change-log/2026-10-03-accessibility-gate.md)
 
 > **2026-10-03 时区修复 CI 闭环**：现有 PR49 的 `2c143f72` 五项 CI 全部通过：74 文件/428 测试，Chromium 234 PASS/122 适用性跳过/0 FAIL，Firefox/WebKit 12 PASS，生产 audit 0；未合并、未部署。[精确提交证据](../engineering-change-log/2026-10-03-source-timestamp-timezone.md)

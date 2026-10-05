@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import os from "node:os";
 import { NextRequest, NextResponse } from "next/server";
@@ -14,7 +15,7 @@ const SNAPSHOT_DIR = process.env.OBSERVING_SNAPSHOT_DIR || os.tmpdir();
 const DISK_CACHE_DIR = path.join(SNAPSHOT_DIR, "forecast-cache");
 
 function diskCachePath(key: string): string {
-  return path.join(DISK_CACHE_DIR, `${Buffer.from(key).toString("base64url")}.json`);
+  return path.join(DISK_CACHE_DIR, `${createHash("sha256").update(key).digest("hex")}.json`);
 }
 
 function saveToDiskCache(key: string, data: ForecastResponse) {
@@ -38,13 +39,18 @@ function readFromDiskCache(
   maxAgeMs: number,
 ): ForecastResponse | null {
   if (process.env.NODE_ENV === "test" && process.env.FORECAST_ENABLE_DISK_CACHE !== "1") return null;
-  try {
-    const data: unknown = JSON.parse(fs.readFileSync(diskCachePath(key), "utf-8"));
-    // Check ORIGINAL fetch time of every location; filesystem mtime is not provenance.
-    return usableDiskForecast(data, model, count, maxAgeMs) ? data : null;
-  } catch {
-    return null;
+  // Retain existing short-name caches during migration; never clear stored facts.
+  const legacyName = `${Buffer.from(key).toString("base64url")}.json`;
+  const candidates = [diskCachePath(key)];
+  if (legacyName.length <= 255) candidates.push(path.join(DISK_CACHE_DIR, legacyName));
+  for (const filename of candidates) {
+    try {
+      const data: unknown = JSON.parse(fs.readFileSync(filename, "utf-8"));
+      // Check ORIGINAL fetch time; filesystem mtime is not provenance.
+      if (usableDiskForecast(data, model, count, maxAgeMs)) return data;
+    } catch { /* Missing or invalid cache entries do not fabricate data. */ }
   }
+  return null;
 }
 
 const MODELS = new Set<ForecastModel>(["best_match", "icon", "gfs", "aifs"]);

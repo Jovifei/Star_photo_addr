@@ -106,12 +106,12 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
         </div> : sortedCandidates.map(({ candidate, currentNight, nights }, index) => {
           const rank = index + 1;
           const rankClass = currentNight.score === null ? "rank-badge--default" : rank === 1 ? "rank-badge--gold" : rank === 2 ? "rank-badge--silver" : rank === 3 ? "rank-badge--bronze" : "rank-badge--default";
-          return <div key={candidate.id} className={`candidate-card ${activeId === candidate.id ? "candidate-card--active" : ""}`} onClick={() => onPick(candidate)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onPick(candidate); } }}>
+          return <div key={candidate.id} className={`candidate-card ${activeId === candidate.id ? "candidate-card--active" : ""}`} onClick={() => onPick(candidate)} role="group" aria-label={`${candidate.name} 候选预报`}>
             <div className="candidate-card-top">
-              <div className="candidate-card-identity">
+              <button type="button" className="candidate-card-identity" aria-label={`选择候选地点 ${candidate.name}`} aria-pressed={activeId === candidate.id} onClick={(event) => { event.stopPropagation(); onPick(candidate); }}>
                 <span className={`candidate-rank-badge ${rankClass}`}>{currentNight.score === null ? "—" : `#${rank}`}</span>
-                <div className="candidate-name-box"><span className="candidate-name">{candidate.name}</span><span className="candidate-meta">{candidate.province || "未知"}{candidate.elevation != null ? ` · ${candidate.elevation}m` : ""}</span></div>
-              </div>
+                <span className="candidate-name-box"><span className="candidate-name">{candidate.name}</span><span className="candidate-meta">{candidate.province || "未知"}{candidate.elevation != null ? ` · ${candidate.elevation}m` : ""}</span></span>
+              </button>
               <div className="candidate-card-score-box" title={currentNight.windowLabel}>
                 <div className="candidate-score-number"><strong>{currentNight.score ?? "—"}</strong>{currentNight.score !== null && <small>分</small>}</div>
                 <span className={`candidate-status-pill tone-${currentNight.statusTone}`} title={currentNight.reason}>{currentNight.statusLabel}</span>

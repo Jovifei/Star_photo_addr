@@ -99,3 +99,33 @@ test("dark-sky compatibility view has no serious accessibility violations", asyn
   expect(new URL(page.url()).searchParams.get("name")).toBe("accessibility-fixture");
   await scanDocument(page, testInfo, "dark-sky-compatibility");
 });
+
+test("candidate keyboard actions keep selection, date changes and removal independent", async ({ page }, testInfo) => {
+  await openSelectedForecast(page);
+  const cards = page.locator(testInfo.project.name === "mobile"
+    ? ".mobile-sheet-candidates .candidate-card" : ".candidate-card");
+  const first = cards.first();
+  await expect(first).toBeVisible();
+  const pick = first.getByRole("button", { name: /^选择候选地点 / });
+  const name = (await pick.getAttribute("aria-label"))!.replace("选择候选地点 ", "");
+  await pick.focus();
+  await page.keyboard.press("Enter");
+  const selectedLabel = page.locator(testInfo.project.name === "mobile"
+    ? ".mobile-data-sheet-location" : ".panel-location-name");
+  await expect(selectedLabel).toContainText(name);
+  if (testInfo.project.name === "mobile") await expandMobileDataSheet(page);
+  // Act on a different candidate, so accidental parent selection is observable.
+  const other = cards.filter({ hasNot: page.getByRole("button", { name: `选择候选地点 ${name}`, exact: true }) }).first();
+  const otherName = (await other.locator(".candidate-name").textContent())!;
+  const card = cards.filter({ has: page.getByRole("button", { name: `选择候选地点 ${otherName}`, exact: true }) });
+  const date = card.locator(".mini-capsule").nth(1);
+  await date.focus();
+  await page.keyboard.press("Space");
+  await expect(date).toHaveClass(/mini-capsule--active/);
+  await expect(selectedLabel).toContainText(name);
+  const count = await cards.count();
+  await card.getByRole("button", { name: `从候选对比中移除 ${otherName}`, exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(cards).toHaveCount(count - 1);
+  await expect(selectedLabel).toContainText(name);
+});

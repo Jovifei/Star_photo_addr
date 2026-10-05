@@ -4683,11 +4683,24 @@
 }
 
 .candidate-card-identity {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
   flex: 1;
   min-width: 0;
+}
+
+.candidate-card-identity:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .candidate-rank-badge {

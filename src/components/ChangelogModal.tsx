@@ -11,10 +11,14 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL,
+    version: APP_VERSION_LABEL, date: "2026-10-04", tag: "候选天气失败恢复", current: true,
+    highlights: [{ icon: CloudSun, title: "冷却结束后恢复候选天气", desc: "临时失败后按冷却期限补一次普通请求，成功后清除错误；仍失败则停止自动重试，保留缺失和过期说明。" }],
+  },
+  {
+    version: "v1.0.26",
     date: "2026-10-03",
     tag: "跨午夜预报时次恢复",
-    current: true,
+    current: false,
     highlights: [
       { icon: CloudSun, title: "凌晨保留昨晚的预报时次", desc: "点位预报包含前一天的模型时次，避免凌晨查看今夜窗口时丢失昨晚数据；缺失或过期时仍暂缓评分。" },
     ],
