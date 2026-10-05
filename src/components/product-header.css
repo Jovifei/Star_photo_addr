@@ -4,23 +4,24 @@
     display: grid;
     grid-template-columns: minmax(210px, 1fr) minmax(440px, 1.6fr) minmax(320px, 1fr);
     grid-template-areas: "brand nav controls";
-    height: 65px;
+    height: auto;
     min-height: 65px;
-    flex: 0 0 65px;
+    flex: 0 0 auto;
     gap: 16px;
-    padding: 8px 18px;
+    /* 44px tabs + 8px nav chrome + 12px padding + 1px border = 65px. */
+    padding: 6px 18px;
     backdrop-filter: none;
   }
   .product-header .app-header-brand { grid-area: brand; justify-self: start; gap: 8px; }
   .product-header .app-header-mark { width: 32px; height: 32px; }
-  .product-header .app-header-title { font-size: 17px; line-height: 1.3; letter-spacing: .03em; }
+  .product-header .app-header-title { font-size: 17px; line-height: 1.3; letter-spacing: .03em; white-space: normal; overflow-wrap: anywhere; }
   .product-header .nav-tabs { grid-area: nav; width: 100%; min-width: 0; }
-  .product-header .nav-tabs .nav-tab { height: 44px; min-height: 44px; padding: 4px 8px; font-size: 13px; }
+  .product-header .nav-tabs .nav-tab { height: auto; min-height: 44px; padding: 4px 8px; font-size: 13px; white-space: normal; }
   .product-header .nav-tab small { font-size: 10px; line-height: 1.3; }
-  .product-header .app-header-controls { grid-area: controls; position: relative; width: 100%; justify-self: end; gap: 6px; }
-  .product-header .event-status { font-size: 12px; gap: 6px; }
+  .product-header .app-header-controls { grid-area: controls; position: relative; width: 100%; justify-self: end; gap: 6px; flex-wrap: wrap; }
+  .product-header .event-status { flex: 1 0 180px; min-width: 0; font-size: 12px; gap: 6px; }
   .product-header .event-status b { font-size: 12px; }
-  .product-header .source-button { padding-inline: 8px; font-size: 11px; }
+  .product-header .source-button { flex: 0 0 auto; padding-inline: 8px; font-size: 11px; }
 }
 
 /* The topic toolbar is a normal-flow sibling; it never covers map content. */

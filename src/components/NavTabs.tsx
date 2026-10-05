@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useStore } from "@/lib/store";
 import { buildProductHref, type ProductLinkContext } from "@/lib/productRoutes";
 
@@ -26,6 +26,22 @@ export function NavTabsFallback() {
 
 /** Shared navigation with explicit workspace purpose, not three look-alike labels. */
 export default function NavTabs() {
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    const shell = nav?.closest<HTMLElement>(".app-shell");
+    if (!nav || !shell) return;
+    // The compact bar can grow when labels wrap or text size changes. Reserve
+    // its measured height instead of covering the last data-sheet controls.
+    const update = () => shell.style.setProperty("--product-navigation-height", `${Math.ceil(nav.getBoundingClientRect().height)}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(nav);
+    return () => {
+      observer.disconnect();
+      shell.style.removeProperty("--product-navigation-height");
+    };
+  }, []);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { state } = useStore();
@@ -97,7 +113,7 @@ export default function NavTabs() {
   ];
 
   return (
-    <nav className="nav-tabs" aria-label="页面导航">
+    <nav ref={navRef} className="nav-tabs" aria-label="页面导航">
       {tabs.map((tab) => (
         <Link
           key={tab.id}

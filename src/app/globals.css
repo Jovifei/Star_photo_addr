@@ -4837,8 +4837,8 @@
 }
 
 .candidate-metrics-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background: rgba(5, 15, 22, 0.55);
   border: 1px solid rgba(165, 205, 216, 0.08);
@@ -4848,13 +4848,18 @@
 
 .candidate-metric-item {
   display: flex;
+  flex: 1 1 max-content;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 3px;
   font-size: 10px;
   color: #8da3ad;
-  white-space: nowrap;
-  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
+
+.candidate-metric-item > span { min-width: 0; line-height: 1.5; }
 
 .candidate-metric-item .metric-icon {
   opacity: 0.65;

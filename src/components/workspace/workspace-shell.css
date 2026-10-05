@@ -842,3 +842,8 @@
     min-height: 160px;
   }
 }
+
+/* Allow enlarged filter text to reflow within its existing grid cell. */
+.workspace-commandbar .recommendation-quick-toggle { white-space: normal; overflow-wrap: anywhere; }
+.workspace-commandbar .recommendation-quick-slider > span { flex-wrap: wrap; }
+.workspace-commandbar .bortle-filter-bar-command button > span { flex-wrap: wrap; }
