@@ -4677,6 +4677,7 @@
 
 .candidate-card-top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
@@ -4693,8 +4694,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
+  flex: 1 1 max-content;
   min-width: 0;
+  max-width: 100%;
 }
 
 .candidate-card-identity:focus-visible {
@@ -4748,9 +4750,8 @@
   font-size: 13px;
   font-weight: 700;
   color: #f8fafc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .candidate-meta {

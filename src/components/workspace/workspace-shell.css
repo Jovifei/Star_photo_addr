@@ -538,6 +538,51 @@
   overflow: visible;
 }
 
+/* Keep toolbar groups in source order. The former grid gave the speed buttons
+   the track's flexible column and squeezed the actual time into an ellipsis.
+   Groups wrap only when their content no longer fits, including enlarged text. */
+@media (min-width: 1200px) {
+  .workspace-shell .cloud-timeline-bar {
+    display: flex;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .workspace-shell .cloud-timeline-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .workspace-shell .cloud-timeline-speed,
+  .workspace-shell .cloud-timeline-range {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+  .workspace-shell .cloud-timeline-range button { white-space: nowrap; }
+  .workspace-shell .cloud-track {
+    flex: 1 1 6em;
+    min-width: min(100%, 6em);
+  }
+  .workspace-shell .cloud-timeline-current {
+    flex: 0 0 auto;
+    max-width: 100%;
+    margin-left: auto;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+  .workspace-shell .cloud-timeline-data-card { flex-shrink: 0; }
+  .workspace-shell .cloud-timeline.is-collapsed {
+    flex: 0 0 auto;
+    max-height: none;
+  }
+}
+
+/* The track remains a local horizontal scroller. Its labels must not shrink
+   into one another when the text size grows. */
+.workspace-shell .cloud-track-seg { flex: 0 0 auto; min-width: max-content; }
+.workspace-shell .cloud-tick { flex: 1 0 auto; }
+
 .workspace-shell .cloud-timeline-toggle {
   position: absolute;
   z-index: 4;

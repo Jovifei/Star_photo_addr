@@ -338,10 +338,11 @@
 
   .workspace-canvas .mobile-map-panel-rail {
     position: absolute; z-index: 500; inset: auto 8px 8px auto;
-    display: block; width: 52px; max-width: none; padding: 2px;
+    display: block; width: max-content; min-width: 52px; max-width: none; padding: 2px;
     transform: none;
   }
-  .workspace-canvas .mobile-map-panel-rail button { width: 48px; min-width: 48px; height: 48px; font-size: 11px; }
+  .workspace-canvas .mobile-map-panel-rail button { width: auto; min-width: 48px; height: auto; min-height: 48px; font-size: 11px; }
+  .workspace-canvas .mobile-map-panel-rail button > span { white-space: nowrap; }
   .workspace-canvas .map-viewport .map-render-status--tile {
     top: 10px;
     right: max(10px, env(safe-area-inset-right));
@@ -355,8 +356,11 @@
   }
   .workspace-canvas .map-viewport .map-render-status--tile button { min-height: 48px; }
   .workspace-canvas .map-viewport .map-render-status--tile {
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
   }
+  .workspace-canvas .map-viewport .map-render-status--tile > span { flex-basis: auto; }
   .workspace-canvas .map-viewport .map-render-status--tile button {
     margin-top: 6px;
   }
