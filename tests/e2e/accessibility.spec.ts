@@ -130,3 +130,32 @@ test("candidate keyboard actions keep selection, date changes and removal indepe
   await expect(cards).toHaveCount(count - 1);
   await expect(selectedLabel).toContainText(name);
 });
+
+test("fallback map tooltips retain a name through movement and fade-out", async ({ page }) => {
+  await page.addInitScript(() => {
+    const audit = { unnamed: [] as string[], seen: 0, retiredNamed: 0 };
+    const populated = new WeakSet<Element>();
+    (window as unknown as { tooltipNameAudit: typeof audit }).tooltipNameAudit = audit;
+    new MutationObserver(() => {
+      for (const element of document.querySelectorAll<HTMLElement>(".chinese-fallback-label[role=tooltip]")) {
+        audit.seen += 1;
+        if (element.textContent?.trim()) populated.add(element);
+        else if (populated.has(element) && element.style.opacity === "0" && element.getAttribute("aria-label")?.trim()) audit.retiredNamed += 1;
+        if (!(element.getAttribute("aria-label")?.trim() || element.textContent?.trim())) audit.unnamed.push(element.outerHTML);
+      }
+    }).observe(document, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ["aria-label", "style"] });
+  });
+  await page.goto(`/sites?${selectedPoint}`);
+  const map = page.locator(".leaflet-container").first();
+  await expect(map).toHaveAttribute("data-map-zoom", /\d+/);
+  await expect(page.getByTestId("home-context-strip")).toHaveAttribute("data-updated-at", /\d{4}-/);
+  for (let step = 0; step < 2; step++) {
+    const zoom = Number(await map.getAttribute("data-map-zoom"));
+    await page.locator(".leaflet-control-zoom-in").first().click();
+    await expect(map).toHaveAttribute("data-map-zoom", String(zoom + 1));
+  }
+  await expect.poll(() => page.evaluate(() => (window as unknown as { tooltipNameAudit: { retiredNamed: number } }).tooltipNameAudit.retiredNamed)).toBeGreaterThan(0);
+  const audit = await page.evaluate(() => (window as unknown as { tooltipNameAudit: { seen: number; unnamed: string[]; retiredNamed: number } }).tooltipNameAudit);
+  expect(audit.seen).toBeGreaterThan(0);
+  expect(audit.unnamed).toEqual([]);
+});

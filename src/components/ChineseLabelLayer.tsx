@@ -55,6 +55,13 @@ export default function ChineseLabelLayer() {
               direction="center"
               opacity={1}
               className="chinese-fallback-label"
+              eventHandlers={{
+                // Leaflet retains fading tooltip hosts after React removes the
+                // portal text. Keep the same real place name on that host.
+                add: ({ target }) => {
+                  target.getElement()?.setAttribute("aria-label", label.name);
+                },
+              }}
             >
               {label.name}
             </Tooltip>

@@ -83,5 +83,5 @@ for (const multiplier of [1, 2]) test(`${multiplier * 100}% measured text keeps 
     expect(geometry.navOverlapsControls).toBeLessThanOrEqual(0.5);
   }
   await info.attach(`text-${multiplier * 100}-metadata`, { body: Buffer.from(JSON.stringify({ measured, geometry })), contentType: "application/json" });
-  await info.attach(`text-${multiplier * 100}-view`, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
+  await info.attach(`text-${multiplier * 100}-view`, { body: await page.screenshot({ fullPage: false }), contentType: "image/png" });
 });
