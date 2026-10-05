@@ -557,12 +557,17 @@
     flex: 0 0 auto;
     max-width: 100%;
   }
-  .workspace-shell .cloud-timeline-range button { white-space: nowrap; }
+  .workspace-shell .cloud-timeline-range button {
+    white-space: nowrap;
+    line-height: max(21px, 1.5em);
+  }
   .workspace-shell .cloud-track {
     flex: 1 1 6em;
     min-width: min(100%, 6em);
   }
   .workspace-shell .cloud-timeline-current {
+    /* Normal 14px text keeps its 21px row; enlarged glyphs grow the toolbar. */
+    line-height: max(21px, 1.5em);
     flex: 0 0 auto;
     max-width: 100%;
     margin-left: auto;
