@@ -69,6 +69,8 @@ interface AppState {
   forecast: LocationForecast | null;
   nightKeys: string[];
   selectedNight: string;
+  /** Stable page-session start shared by the forward rail and score slider. */
+  forecastWindowStart: string;
   bortleEnabled: boolean;
   cloudState: CloudState;
   /** Single model used by the candidate comparison surfaces, independent of the raster model. */
@@ -113,6 +115,7 @@ function createInitialState(initialNow: string): AppState {
     forecast: null,
     nightKeys: nightRangeKeys(homeNight, 7),
     selectedNight: homeNight,
+    forecastWindowStart: homeForecastTime,
     bortleEnabled: hasDarkSkyLayer(),
     cloudState: {
       ...DEFAULT_CLOUD_STATE,
@@ -223,9 +226,10 @@ function reducer(state: AppState, action: Action): AppState {
       if (
         state.selectedNight !== action.expectedNight ||
         state.cloudState.activeForecastTime !== action.expectedForecastTime
-      ) return state;
+      ) return { ...state, forecastWindowStart: action.forecastTime };
       return {
         ...state,
+        forecastWindowStart: action.forecastTime,
         nightKeys: nightRangeKeys(action.night, 7),
         selectedNight: action.night,
         cloudState: {

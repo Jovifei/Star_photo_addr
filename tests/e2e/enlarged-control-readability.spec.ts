@@ -34,12 +34,85 @@ async function openForecast(page: Page) {
 // Restore prior overrides before another state is measured: retry can remount
 // the error span, and full mobile sheets lazily mount candidates/timeline.
 async function measureTextScale(page: Page, multiplier: number, evidence: Evidence) {
-  const measured = await page.evaluate(({ selector, multiplier }) => {
+  const measured = await page.evaluate(async ({ selector, multiplier }) => {
     const state = window as Window & {
       __controlReadabilityOriginalFonts?: WeakMap<HTMLElement, { value: string; priority: string }>;
     };
     const originals = state.__controlReadabilityOriginalFonts ??= new WeakMap();
     const targets = [...document.querySelectorAll<HTMLElement>(selector)];
+    const transitionEvidence: {
+      phase: string; targetIndex: number; className: string; property: string;
+      duration: number | string | null; delay: number | null; easing: string | null;
+      startTime: number | null; initialPlayState: string; finalPlayState?: string;
+      outcome?: string;
+    }[] = [];
+    const failures: string[] = [];
+    const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const sizes = () => targets.map((element) => parseFloat(getComputedStyle(element).fontSize));
+    const environment = () => ({ multiplier, innerWidth, innerHeight, dpr: devicePixelRatio, scale: visualViewport?.scale });
+    const settleFontTransitions = async (phase: string) => {
+      const deadline = performance.now() + 5000;
+      let quietFrames = 0;
+      const observed = new Map<Animation, number>();
+      while (performance.now() < deadline) {
+        // Flush the changed styles before looking for transitions. A same-task
+        // computed-style read can still report the animation's starting size.
+        sizes();
+        const active = targets.flatMap((element, targetIndex) => element.getAnimations()
+          .filter((animation): animation is CSSTransition => animation instanceof CSSTransition && animation.transitionProperty === "font-size" && animation.playState !== "finished" && animation.playState !== "idle")
+          .map((animation) => {
+            let recordIndex = observed.get(animation);
+            if (recordIndex === undefined) {
+              const timing = animation.effect!.getTiming();
+              recordIndex = transitionEvidence.length;
+              observed.set(animation, recordIndex);
+              transitionEvidence.push({
+                phase, targetIndex, className: element.className,
+                property: animation.transitionProperty,
+                duration: typeof timing.duration === "number" ? timing.duration : timing.duration?.toString() ?? null,
+                delay: timing.delay ?? null, easing: timing.easing ?? null,
+                startTime: typeof animation.startTime === "number" ? animation.startTime : null,
+                initialPlayState: animation.playState,
+              });
+            }
+            return { animation, recordIndex };
+          }));
+        if (!active.length) {
+          // Require two successive rendering opportunities without a font
+          // transition, including replacements triggered by a cancelled one.
+          if (++quietFrames >= 2) return true;
+          await nextFrame();
+          continue;
+        }
+        quietFrames = 0;
+        let timer: number | undefined;
+        const terminal = Promise.all(active.map(async ({ animation, recordIndex }) => {
+          try {
+            await animation.finished;
+            transitionEvidence[recordIndex].outcome = "finished";
+          } catch {
+            transitionEvidence[recordIndex].outcome = "cancelled; recheck replacement";
+          }
+          transitionEvidence[recordIndex].finalPlayState = animation.playState;
+        }));
+        // This timer only bounds a stuck/paused transition; successful runs
+        // wait for actual Animation.finished, never a fixed sleep interval.
+        const outcome = await Promise.race([
+          terminal.then(() => "settled" as const),
+          new Promise<"timeout">((resolve) => { timer = window.setTimeout(() => resolve("timeout"), Math.max(0, deadline - performance.now())); }),
+        ]);
+        if (timer !== undefined) clearTimeout(timer);
+        if (outcome === "timeout") {
+          for (const { animation, recordIndex } of active) {
+            transitionEvidence[recordIndex].finalPlayState = animation.playState;
+            transitionEvidence[recordIndex].outcome ??= "timeout";
+          }
+          return false;
+        }
+        await nextFrame();
+      }
+      return false;
+    };
     for (const element of targets) {
       const original = originals.get(element);
       if (original) {
@@ -47,24 +120,41 @@ async function measureTextScale(page: Page, multiplier: number, evidence: Eviden
         else element.style.removeProperty("font-size");
       } else originals.set(element, { value: element.style.getPropertyValue("font-size"), priority: element.style.getPropertyPriority("font-size") });
     }
-    const sizes = targets.map((element) => parseFloat(getComputedStyle(element).fontSize));
-    targets.forEach((element, index) => element.style.setProperty("font-size", `${sizes[index] * multiplier}px`, "important"));
-    const samples = targets.map((element, index) => ({
-      className: element.className,
-      text: element.textContent?.trim().slice(0, 120) ?? "",
-      before: sizes[index],
-      after: parseFloat(getComputedStyle(element).fontSize),
-      ratio: parseFloat(getComputedStyle(element).fontSize) / sizes[index],
-    }));
-    return { multiplier, innerWidth, innerHeight, dpr: devicePixelRatio, scale: visualViewport?.scale, samples };
+    if (!await settleFontTransitions("restore-baseline")) {
+      failures.push("Original font-size transitions did not settle; no enlarged sizes were applied");
+      return { ...environment(), transitionEvidence, failures, samples: [] };
+    }
+    const baseline = sizes();
+    const requested = baseline.map((size) => size * multiplier);
+    targets.forEach((element, index) => element.style.setProperty("font-size", `${requested[index]}px`, "important"));
+    const immediate = sizes();
+    if (!await settleFontTransitions("apply-multiplier")) failures.push("Enlarged font-size transitions did not settle");
+    const settled = sizes();
+    const samples = targets.map((element, index) => {
+      const style = getComputedStyle(element);
+      if (!element.isConnected) failures.push(`Measured target detached: ${element.className}`);
+      return {
+        className: element.className,
+        text: element.textContent?.trim().slice(0, 120) ?? "",
+        before: baseline[index], requested: requested[index],
+        immediate: immediate[index], settled: settled[index], after: settled[index],
+        ratio: settled[index] / baseline[index],
+        transition: { property: style.transitionProperty, duration: style.transitionDuration, delay: style.transitionDelay },
+      };
+    });
+    return { ...environment(), transitionEvidence, failures, samples };
   }, { selector: textSelector, multiplier });
   evidence.push({ kind: "measured-text", ...measured });
+  const round = evidence.filter((record) => record.kind === "measured-text").length;
+  // Keep both the requested and observed sizes, including transition evidence,
+  // even if the strict ratio assertion below stops the test before its state capture.
+  await capture(page, test.info(), `text-scale-${multiplier * 100}-round-${round}`, evidence);
+  expect(measured.failures).toEqual([]);
   expect(measured.samples.length).toBeGreaterThan(4);
   for (const sample of measured.samples) expect(sample.ratio, `${sample.className}: ${sample.text}`).toBeCloseTo(multiplier, 2);
   expect(measured.innerWidth).toBe(page.viewportSize()!.width);
   expect(measured.innerHeight).toBe(page.viewportSize()!.height);
   expect(measured.scale).toBe(1);
-  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 }
 
 // Range rectangles include the original glyphs hidden behind CSS ellipsis.

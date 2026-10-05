@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo } from "react";
 import { useStore } from "@/lib/store";
-import { forecastTimeWindow, formatNightLabel, isInNight } from "@/lib/nighttime";
+import { forecastTimeWindow, formatHourWithDate, formatNightLabel, isInNight } from "@/lib/nighttime";
 import BortleFilterBar from "@/components/BortleFilterBar";
 
 function describeScoreTime(time: string, start: string): string {
@@ -24,12 +24,8 @@ export default function RecommendationQuickControls() {
     setRecommendationThreshold,
     setRecommendedOnly,
   } = useStore();
-  const [scoreWindowStart, setScoreWindowStart] = useState("");
-  const initialScoreWindowRef = useRef(state.cloudState.activeForecastTime ?? "");
-
-  useEffect(() => {
-    queueMicrotask(() => setScoreWindowStart(initialScoreWindowRef.current));
-  }, []);
+  const scoreWindowStart = state.forecastWindowStart;
+  const windowNoteId = useId();
 
   const scoreTimes = useMemo(
     () => (scoreWindowStart ? forecastTimeWindow(scoreWindowStart, 72) : []),
@@ -39,6 +35,11 @@ export default function RecommendationQuickControls() {
     ? state.cloudState.activeForecastTime!
     : scoreTimes[0] ?? "";
   const activeScoreLabel = describeScoreTime(activeScoreTime, scoreWindowStart);
+  const selectedTime = state.cloudState.activeForecastTime;
+  const selectedNightOutsideWindow = Boolean(selectedTime && !scoreTimes.includes(selectedTime) && isInNight(selectedTime, state.selectedNight));
+  const selectedScoreLabel = selectedNightOutsideWindow
+    ? `观测夜 · ${formatNightLabel(state.selectedNight, true)} ${formatHourWithDate(selectedTime!, state.selectedNight)}`
+    : activeScoreLabel;
 
   useEffect(() => {
     if (!activeScoreTime) return;
@@ -65,7 +66,7 @@ export default function RecommendationQuickControls() {
       <label className="recommendation-quick-slider">
         <span>
           <span>评分时间</span>
-          <strong>{activeScoreLabel}</strong>
+          <strong>{selectedScoreLabel}</strong>
         </span>
         <input
           type="range"
@@ -75,8 +76,10 @@ export default function RecommendationQuickControls() {
           onChange={(event) => setScoreTime(Number(event.target.value))}
           aria-label="观星评分时间滑窗"
           aria-valuetext={activeScoreLabel}
+          aria-describedby={selectedNightOutsideWindow ? windowNoteId : undefined}
           disabled={!scoreTimes.length}
         />
+        {selectedNightOutsideWindow && <small id={windowNoteId}>当前选择来自观测夜，拖动滑窗切回未来72小时</small>}
       </label>
       <div className="recommendation-quick-bortle">
         <span className="recommendation-quick-label">暗空参考</span>

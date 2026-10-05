@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { NIGHT_END, NIGHT_START } from "@/lib/constants";
-import { formatHourWithDate, formatNightLabel, nightRangeKeys } from "@/lib/nighttime";
+import { forecastTimeWindow, formatHourWithDate, formatNightLabel, nightRangeKeys } from "@/lib/nighttime";
 import { HOURS_PER_NIGHT } from "@/lib/nighttime";
 import { isInNight } from "@/lib/nighttime";
 import { aggregateForecastHour, getValuesAtTime } from "@/lib/cloudGrid";
@@ -92,11 +92,11 @@ function buildTrackSegments(
     return [{ key: "obs-24h", kind: "night", label: "过去 24 小时", ticks }];
   }
   const segments: TrackSegment[] = [];
-  for (const item of items) {
+  for (const [index, item] of items.entries()) {
     const hour = Number(item.time.slice(11, 13));
     const isDayHour = hour >= 6 && hour <= 19;
     if (isDayHour) {
-      if (hour % 6 !== 0) continue;
+      if (hour % 6 !== 0 && index !== 0 && index !== items.length - 1) continue;
       let day = segments[segments.length - 1];
       if (!day || day.kind !== "day") {
         day = { key: `day-${item.time.slice(0, 10)}`, kind: "day", label: "白天", ticks: [] };
@@ -146,9 +146,16 @@ export default function CloudTimeline() {
     () => pointForecast?.hourly ?? gridForecast?.hourly ?? [],
     [gridForecast, pointForecast],
   );
+  const forwardTimes = useMemo(
+    () => forecastTimeWindow(state.forecastWindowStart, 72),
+    [state.forecastWindowStart],
+  );
   const forecastTimeline = useMemo(
-    () => forecastHours.slice(0, 73).map((hour) => ({ time: hour.time, nightKey: selectedNight })),
-    [forecastHours, selectedNight],
+    () => {
+      const available = new Set(forecastHours.map(hour => hour.time));
+      return forwardTimes.filter(time => available.has(time)).map(time => ({ time, nightKey: nightKeyOfTime(time) }));
+    },
+    [forecastHours, forwardTimes],
   );
   const observationTimeline = state.satelliteFrames;
   const timelineItems = useMemo(
@@ -161,9 +168,9 @@ export default function CloudTimeline() {
   const safeTimelineIndex = timelineItems.length
     ? Math.min(Math.max(activeTimelineIndex >= 0 ? activeTimelineIndex : 0, 0), timelineItems.length - 1)
     : 0;
-  const activeTimelineTime = isSatelliteMode
+  const activeTimelineTime = isNightLightsMode ? null : isSatelliteMode
     ? (timelineItems[safeTimelineIndex] as SatelliteFrame | undefined)?.time ?? null
-    : timelineItems[safeTimelineIndex]?.time ?? null;
+    : cloudState.activeForecastTime ?? timelineItems[safeTimelineIndex]?.time ?? null;
   const activeScheduleIndex = cloudState.activeForecastTime
     ? schedule.findIndex((item) => item.time === cloudState.activeForecastTime)
     : -1;
@@ -178,6 +185,9 @@ export default function CloudTimeline() {
       ? { time: cloudState.activeForecastTime, nightKey: selectedNight }
       : schedule[safeIndex];
   const displayNight = current?.nightKey ?? selectedNight;
+  const activeLabelNight = activeTimelineTime && !isInNight(activeTimelineTime, displayNight)
+    ? nightKeyOfTime(activeTimelineTime)
+    : displayNight;
   const matrixTimes = useMemo(() => buildNightTimes(displayNight), [displayNight]);
   const matrixHours = useMemo(() => matrixTimes.map((time) => {
     const selectedHour = pointForecast?.hourly.find((hour) => hour.time === time);
@@ -193,7 +203,7 @@ export default function CloudTimeline() {
   // The expanded matrix is intentionally one night, while the compact rail is
   // a 72-hour forecast. Keep the summary/card bound to the actual active hour
   // even when the selected hour is outside the currently expanded night.
-  const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime) ?? matrixHours[0];
+  const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime);
   const selectedWeatherScore = selectedHour ? scoreCoreWeather(selectedHour)?.weatherScore ?? null : null;
   const forecastStale = pointForecast
     ? Boolean(pointForecast.metadata?.stale)
@@ -267,12 +277,15 @@ export default function CloudTimeline() {
       return;
     }
     if (!forecastTimeline.length) return;
-    const forecastIndex = forecastTimeline.findIndex((item) => item.time === cloudState.activeForecastTime);
-    const selectedMatrixTimeIsInNight = matrixTimes.includes(cloudState.activeForecastTime ?? "");
-    if (forecastIndex < 0 && !selectedMatrixTimeIsInNight) {
+    // A missing source hour is still a valid slider selection and must remain
+    // explicitly missing. The rail only offers available hours in this same
+    // window; the selected observation-night matrix remains independently valid.
+    const inForwardWindow = forwardTimes.includes(cloudState.activeForecastTime ?? "");
+    const inSelectedNight = isInNight(cloudState.activeForecastTime ?? "", selectedNight);
+    if (!inForwardWindow && !inSelectedNight) {
       setCloud({ activeForecastTime: forecastTimeline[0].time });
     }
-  }, [cloudState.activeForecastTime, cloudState.activeObservationTime, forecastTimeline, isNightLightsMode, isSatelliteMode, matrixTimes, observationTimeline, safeTimelineIndex, setCloud]);
+  }, [cloudState.activeForecastTime, cloudState.activeObservationTime, forecastTimeline, forwardTimes, isNightLightsMode, isSatelliteMode, observationTimeline, safeTimelineIndex, selectedNight, setCloud]);
 
   useEffect(() => {
     if (isSatelliteMode || isNightLightsMode || !schedule.length) return;
@@ -304,6 +317,13 @@ export default function CloudTimeline() {
     const index = schedule.findIndex((item) => item.time === time);
     setCloud({ activeForecastTime: time, timeIndex: index >= 0 ? index : cloudState.timeIndex, playing: false });
   }, [cloudState.timeIndex, isSatelliteMode, schedule, setCloud]);
+
+  const selectMatrixTime = useCallback((time: string) => {
+    // A rail selection can display a later night before it is the store's
+    // selected night. An explicit matrix choice carries that visible night.
+    selectNight(displayNight);
+    setActiveTime(time);
+  }, [displayNight, selectNight, setActiveTime]);
 
   const setTimelineIndex = useCallback((value: number) => {
     const item = timelineItems[Math.min(Math.max(value, 0), Math.max(0, timelineItems.length - 1))];
@@ -411,7 +431,7 @@ export default function CloudTimeline() {
           {!isSatelliteMode && !isNightLightsMode && <div className="cloud-timeline-range" role="group" aria-label="预报夜数">
            {RANGE_OPTIONS.map((option) => <button key={option.value} type="button" className={cloudState.range === option.value ? "active" : ""} aria-pressed={cloudState.range === option.value} onClick={() => changeRange(option.value)}>{option.label}</button>)}
           </div>}
-          <span className="cloud-timeline-current" title={activeTimelineTime ?? undefined}>{isNightLightsMode ? "静态参考，无时间轴" : activeTimelineTime ? (isSatelliteMode ? formatTimelineTime(activeTimelineTime) : `${formatNightLabel(current.nightKey, true)} ${formatHourWithDate(activeTimelineTime, current.nightKey)}`) : "暂无时次"}</span>
+          <span className="cloud-timeline-current" title={activeTimelineTime ?? undefined}>{isNightLightsMode ? "静态参考，无时间轴" : activeTimelineTime ? (isSatelliteMode ? formatTimelineTime(activeTimelineTime) : `${formatNightLabel(activeLabelNight, true)} ${formatHourWithDate(activeTimelineTime, activeLabelNight)}`) : "暂无时次"}</span>
         {canExpandDetails ? <button
           type="button"
           className="cloud-timeline-toggle"
@@ -457,7 +477,7 @@ export default function CloudTimeline() {
             <span><b>暗夜窗口</b>{nightSummary?.windowLabel ?? "—"}</span>
           </div>}
 
-           {isSatelliteMode ? <div className="cloud-observation-note">当前为卫星观测时间轴；切换到“云量预报”后查看未来 72 小时逐小时矩阵。</div> : isNightLightsMode ? <div className="cloud-observation-note">当前为 VIIRS 2023 光污染静态参考图层；它没有逐小时时间域，不参与天气评分。</div> : <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} onSelectTime={setActiveTime} loading={state.cloudGridLoading} />}
+           {isSatelliteMode ? <div className="cloud-observation-note">当前为卫星观测时间轴；切换到“云量预报”后查看未来 72 小时逐小时矩阵。</div> : isNightLightsMode ? <div className="cloud-observation-note">当前为 VIIRS 2023 光污染静态参考图层；它没有逐小时时间域，不参与天气评分。</div> : <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} onSelectTime={selectMatrixTime} loading={state.cloudGridLoading} />}
           {state.cloudGridLoading && <div className="cloud-timeline-loading" role="status">正在采样云图数据…</div>}
         </div>
       )}
