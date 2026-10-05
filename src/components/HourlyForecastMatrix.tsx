@@ -130,7 +130,7 @@ export default function HourlyForecastMatrix({
               ? <span className="hourly-matrix-status" role="status">地面参数暂未返回，缺失值显示为“—”</span>
             : null}
       </div>
-      <div className="hourly-matrix-scroll" tabIndex={0} role="region" aria-label="逐小时参数，可上下及左右滚动">
+      <div className="hourly-matrix-scroll" tabIndex={0} role="region" aria-label={`${title}，${nightKey}，逐小时参数，可上下及左右滚动`}>
         <table>
           <thead>
             <tr>

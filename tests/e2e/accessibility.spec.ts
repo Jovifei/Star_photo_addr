@@ -43,12 +43,13 @@ async function scanDocument(page: Page, testInfo: TestInfo, state: string) {
     contentType: "application/json",
   });
   const blockers = results.violations.filter((violation) =>
-    violation.impact === "serious" || violation.impact === "critical",
+    violation.impact === "serious" || violation.impact === "critical" ||
+    violation.id === "empty-table-header" || violation.id === "landmark-unique",
   );
   expect(blockers.map(({ id, impact, help, helpUrl, nodes }) => ({
     id, impact, help, helpUrl,
     nodes: nodes.map(({ target, failureSummary }) => ({ target, failureSummary })),
-  })), `Serious/critical accessibility violations in ${state}; see complete axe attachment`).toEqual([]);
+  })), `Serious/critical or targeted table/landmark accessibility violations in ${state}; see complete axe attachment`).toEqual([]);
 }
 
 async function openSelectedForecast(page: Page) {
