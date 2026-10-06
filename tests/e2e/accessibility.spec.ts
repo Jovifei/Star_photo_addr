@@ -149,6 +149,15 @@ test("fallback map tooltips retain a name through movement and fade-out", async 
   const map = page.locator(".leaflet-container").first();
   await expect(map).toHaveAttribute("data-map-zoom", /\d+/);
   await expect(page.getByTestId("home-context-strip")).toHaveAttribute("data-updated-at", /\d{4}-/);
+  // Weather can be ready while the deep-link recenter is still animating.
+  // Establish its observable destination before testing two user zooms;
+  // Leaflet ignores another zoom request during an active zoom animation.
+  await expect.poll(() => map.evaluate(element => ({
+    center: element.getAttribute("data-map-center"),
+    zoom: element.getAttribute("data-map-zoom"),
+    panePresent: Boolean(element.querySelector(".leaflet-map-pane")),
+    animating: Boolean(element.querySelector(".leaflet-zoom-anim, .leaflet-pan-anim")),
+  }))).toEqual({ center: "30.46940,119.59780", zoom: "8", panePresent: true, animating: false });
   for (let step = 0; step < 2; step++) {
     const zoom = Number(await map.getAttribute("data-map-zoom"));
     await page.locator(".leaflet-control-zoom-in").first().click();
