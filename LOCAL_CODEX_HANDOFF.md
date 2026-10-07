@@ -1,3 +1,62 @@
+## 2026-10-07 remote follow-up — v2 stale weather migration
+
+STATE: READY_FOR_LOCAL_VALIDATION
+TASK: starphoto-378-postrelease-acceptance
+ITERATION: 3
+
+Remote branch: `codex/postrelease-v2-stale-fallback-v2-20261007`
+Base CODE_HEAD: `bb4fb9744828268dd55cfb65a0628eacd1aa2b4c`
+
+### Exact commits
+
+- RED test commit: `ed74ff53ccc7fc4005624d1eac88cf51d41035a5`
+- CODE_HEAD: `15282daf8daebe1bac06115f0b814cecf5307e0b`
+- CODE_HEAD tree: `c2de62d5fe8eb35503901e7ef6a6468c011191e0`
+
+### Review decision
+
+The v3 namespace remains the only fresh offset-integrity cache. A pre-offset v2 file may contain an ambiguous historical `utcOffsetSeconds: 0`, so it is never eligible for fresh use or astronomy/recommendation scoring.
+
+Completely ignoring v2 would also hide still-valid recent provider weather facts during cooldown. This follow-up therefore permits v2 only as read-only stale raw facts.
+
+A v2 fallback must pass:
+- existing exact model and location-count validation;
+- original source-age retention gate (filesystem mtime never rejuvenates it);
+- finite recorded `requestedLatitude/requestedLongitude` on every location;
+- equality of those recorded coordinates to the current request within 1e-5.
+
+Behavior:
+- v3 remains the only fresh disk namespace;
+- v2 is force-marked stale in envelope and per-location metadata;
+- original timestamps and raw cloud/rain/wind values are preserved;
+- cache-only v2 reads never call the provider;
+- v2 is never written into the server v3 memory cache and old files are not deleted/re-written;
+- `forecastTrustIssue` rejects stale forecasts before night scoring, so ambiguous offset evidence cannot publish recommendations;
+- existing bare-legacy cache header names remain unchanged; only v2 uses `cache-only-pre-offset-disk` / `stale-pre-offset-disk`.
+
+### Required local proof
+
+Use the project's locked dependencies.
+
+1. At RED `ed74ff53ccc7fc4005624d1eac88cf51d41035a5`:
+   `npm run test -- tests/integration/forecastDiskIntegrity.test.ts`
+   Capture exact failure count/cases.
+2. At CODE_HEAD `15282daf8daebe1bac06115f0b814cecf5307e0b`:
+   rerun the same focused test; all cases must pass.
+3. Then run:
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
+   - `npm run build`
+4. Confirm `bb4fb9744828268dd55cfb65a0628eacd1aa2b4c..${cleanCommit.result.sha}` changes only:
+   - `tests/integration/forecastDiskIntegrity.test.ts`
+   - `src/app/api/forecast/route.ts`
+
+Do not deploy, merge Draft PR49, alter network/credentials, or touch Owner notes.
+
+Still PENDING: physical phone, broad a11y, global selected-location timezone/DST, scientific forecast accuracy, and terrain-obstruction astronomy.
+
+
 ## 2026-10-07 当前接手状态（优先于下方历史）
 DEPLOYED_ACCEPTANCE_INCOMPLETE：当前运行378161ffe6aa21989ef48e63c9d077343d276a95，app/worker精确镜像82f5a0ba…健康restart0。原卷、备份校验及回滚已独立重核；未重部署。
 本地授权分支已接收远端真实offset修复d543fff637c561da9bc8197ef282495081a6601e，完成锁定依赖RED/GREEN和468测试/build。此修复尚未部署、尚待远端审核；不能把源码候选当运行SHA。
