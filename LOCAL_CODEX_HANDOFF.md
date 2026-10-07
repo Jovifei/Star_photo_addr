@@ -1,3 +1,41 @@
+## 2026-10-07 corrected MapSetup a11y validation handoff
+
+STATE: READY_FOR_LOCAL_VALIDATION
+TASK: starphoto-378-postrelease-acceptance
+ITERATION: 5
+
+Remote branch: `codex/postrelease-mapsetup-a11y-v2-20261007`
+Base: `bbf952b3429a5d89444c72241950851d03173bd4`
+
+### Exact commits
+
+- RED: `e6b0c6450ec259528619a25280a6d47c3a9e2589`
+- CODE_HEAD: `36a9bf923c895dd13766d20c9dc41fb668222702`
+- CODE_HEAD tree: `717e093b6fb847605a7b5b39d8b296ea7e1943df`
+
+The earlier `tests/unit/mapSetupA11y.test.tsx` branch is superseded and must not be used as RED evidence. Project Vitest discovers `tests/unit/**/*.test.ts`, so this corrected RED uses `tests/unit/mapSetupA11y.test.ts`.
+
+The corrected test has no JSX and no Testing Library requirement. It renders the real `MapSetup` component with the already locked `react` and `react-dom/server` packages. On RED, the ready-state assertion must fail specifically because the real component lacks `aria-hidden="true"`.
+
+The product repair is unchanged: preserve the DOM and CSS fade; active loading remains `role=status` and accessible; ready state adds `aria-hidden=true` so stale loading semantics leave the accessibility tree.
+
+### Required proof
+
+1. RED:
+   `npm run test -- tests/unit/mapSetupA11y.test.ts`
+   Expected: test file is discovered; active-loading case passes; ready-state case fails on missing `aria-hidden="true"`.
+2. GREEN at CODE_HEAD:
+   rerun the exact command; both cases pass.
+3. Then:
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
+   - `npm run build`
+4. Optional fixture-browser proof: after map ready, `.map-setup.hidden` remains in DOM but accessibility snapshot no longer exposes the loading announcement.
+
+Do not deploy, merge Draft PR49, modify network/credentials, or overwrite Owner notes.
+
+
 ## 2026-10-07 当前候选更新
 当前原授权源码15282daf8daebe1bac06115f0b814cecf5307e0b已经完成父会话锁定依赖475测试/build、三组真实RED/GREEN。包括严格UTC偏移、v3fresh/v2stale事实保留、月相盈亏正确方向；尚未部署，生产仍378。细证据docs/POST_RELEASE_ACCEPTANCE_378_20261007.md。MapSetup隐藏loading语义缺陷已交远端；手机/全a11y/全球时区/DST/预报准确率仍未闭合。Owner两处文档dirty保护保留，Draft49未合并。
 
