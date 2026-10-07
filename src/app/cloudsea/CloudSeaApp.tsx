@@ -552,7 +552,6 @@ export default function CloudSeaApp() {
           </button>
         </div>
       </ProductHeader>
-      <SnapshotSourceDisclosure snapshot={selectedContext?.snapshot ?? snapshots[primaryDate]} siteId={selectedSiteId} />
       {topicContext.transfer?.status === "conflict" && !selectedSiteId && pickedPoint?.latitude === topicContext.incoming.identity?.latitude && pickedPoint?.longitude === topicContext.incoming.identity?.longitude ? <p role="status" className="location-transfer-notice" data-testid="location-transfer-conflict">所选地点与本入口目录坐标冲突（相距约 {topicContext.transfer.distanceKm?.toFixed(1) ?? "未知"} km），保留原坐标，未自动合并或套用目录评分。</p> : null}
       {topicContext.dateNotice ? <p role="status" className="location-transfer-notice">{topicContext.dateNotice}</p> : null}
 
@@ -917,6 +916,7 @@ export default function CloudSeaApp() {
           </ResponsiveTopicDetail>
         ) : null}
       </div>
+      <SnapshotSourceDisclosure snapshot={selectedContext?.snapshot ?? snapshots[primaryDate]} siteId={selectedSiteId} />
     </div>
   );
 }

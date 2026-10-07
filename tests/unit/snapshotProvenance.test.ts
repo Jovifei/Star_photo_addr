@@ -19,3 +19,8 @@ it("keeps unknown supplier clocks unknown and cannot mark them fresh", () => {
   expect(snapshotSourceTime("pressure", "gfs").sourceFetchedAt).toBeNull();
   expect(snapshotSourceAgeMs()).toBe(Infinity);
 });
+it("an empty regenerated snapshot has no supplier clock and stays stale", () => {
+  const snapshot = buildFireGlowSnapshot("2026-10-07", "icon", {});
+  expect(snapshotSourceAgeMs(snapshot.provenance)).toBe(Infinity);
+  expect(snapshot.stale).toBe(true);
+});

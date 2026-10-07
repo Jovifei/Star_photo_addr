@@ -434,7 +434,7 @@ export function buildFireGlowSnapshot(
     generatedAt: new Date().toISOString(),
     provenance: { version: 1, sourcesBySite: Object.fromEntries(Object.entries(dayRecords).map(([id, record]) => [id, [snapshotSourceTime("surface", record.model ?? model, record.provenance?.sourceFetchedAt ?? record.fetchedAt, record.provenance?.providerRunAt)]])) },
     source: "Open-Meteo Forecast API（云层/降水/能见度）+ astronomy-engine 太阳高度角",
-    stale: records.some((record) => record.status === "stale" || record.status === "error" || !Number.isFinite(dataAgeMs(record.provenance?.sourceFetchedAt ?? record.fetchedAt))),
+    stale: !records.length || records.some((record) => record.status === "stale" || record.status === "error" || !Number.isFinite(dataAgeMs(record.provenance?.sourceFetchedAt ?? record.fetchedAt))),
     sites,
   };
 }
