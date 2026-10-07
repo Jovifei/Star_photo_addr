@@ -112,3 +112,17 @@
 最后来源边界RED：空Fireglow快照2PASS/1FAIL（stale原为false）；GREEN将空来源与无可信采集时间保持stale，重新跑原缓存集成门禁。主工作区之后的来源披露仍可键盘/触摸展开，不挤占顶部日期和地图。最终测试数量因新增该断言为514，真实结果以PR52/CI终态为准。
 
 在底图域名受限的真实浏览器环境，原触摸用例仍失败；追踪显示地图图层失败横幅文字拦截首触，而不是地图数据/scroll失效。主题地图横幅静态文字透传手势，retry按钮继续pointer-events:auto与Leaflet事件隔离。保留错误事实/重试，不隐藏横幅，不删除原触摸断言。CSS原因/风险补充：确保失败图层时仍可选点/拖动，重试按钮与读屏状态仍需原测试验证。
+
+## 完整Chromium真实终态与追加修复
+
+旧c56构建完整392cases：258PASS/126适用SKIP/8FAIL（26.0m）。不是完整PASS。失败为200%图层恢复超时、宽矮屏披露定位器冲突、刷新失败仍eligible、截图首触、两topic方法说明重复类、topic首触、兼容链接闭合弹层重复map-stage。披露/地图位置/首触已真实逐项修复；9ed7原失败图层与触摸回归5PASS3SKIP。最终CI须独立完整验证新head。
+
+刷新门禁RED新增断言实际FAIL：hasEvaluation=true且availabilityError=HTTP429仍eligible。GREEN在门禁中保留字段/旧值但阻止发布推荐。关闭AdaptiveSheet依旧保留挂载/焦点恢复，但只有open时保留地图工具所需map-stage样式祖先，closed使用独立类，避免地图画布身份重复；不删除原兼容链接/焦点断言。
+
+| 追加文件 | 原因 / 风险 |
+|---|---|
+| `src/lib/dataPresentation.ts` | 显式预报刷新失败不能因旧evaluation仍发布推荐；供应商健康仍与选中数据分离。 |
+| `tests/unit/dataPresentation.test.ts` | 保留原测试并新增真实RED/GREEN，检查有evaluation时429门禁。 |
+| `src/components/ui/AdaptiveSheet.tsx` | 关闭弹层不再冒充map-stage，挂载及焦点回归保留；open工具样式不变。 |
+
+设备调用实际错误：`adb devices`与`idevice_id -l`均exit127 command not found。VM没有可执行真机验收链路；必须由本地真实OnePlus/iOS及AT执行既有矩阵并回传证据，不把Playwright/axe当作TalkBack/VoiceOver。
