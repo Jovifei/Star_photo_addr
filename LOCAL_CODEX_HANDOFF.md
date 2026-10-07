@@ -1,3 +1,51 @@
+## 2026-10-07 remote follow-up — MapSetup stale status semantics
+
+STATE: READY_FOR_LOCAL_VALIDATION
+TASK: starphoto-378-postrelease-acceptance
+ITERATION: 4
+
+Remote branch: `codex/postrelease-mapsetup-a11y-20261007`
+Base CODE_HEAD: `15282daf8daebe1bac06115f0b814cecf5307e0b`
+
+### Exact commits
+
+- RED test commit: `f5badf69b2ee21289aaa6d3dda37f6b969cd7fd8`
+- CODE_HEAD: `fadf68c127d23a15dc4b3d413c6dee037dbc39dc`
+- CODE_HEAD tree: `886ebd561c365db215c8140c4e381a8a0ccf4ef8`
+
+### Proven issue and minimal repair
+
+`MapSetup` always rendered `role="status"`. The ready state only added the CSS class `.hidden`, whose current CSS changes `opacity` and `pointer-events` but not accessibility-tree exposure. Therefore the visually faded loading copy can remain an active status node after the map is ready.
+
+The repair preserves the DOM node and existing 0.6s opacity fade. It adds `aria-hidden=true` only while `hidden/ready` is true. During active loading, `aria-hidden` is absent and `role=status` remains available for the loading announcement.
+
+No focus-management behavior, map readiness logic, CSS animation, network/data code, scoring, or Owner files are changed.
+
+### Required local RED/GREEN
+
+Use locked project dependencies.
+
+1. At RED `f5badf69b2ee21289aaa6d3dda37f6b969cd7fd8`:
+   `npm run test -- tests/unit/mapSetupA11y.test.tsx`
+   The ready-state accessibility test should fail because the hidden overlay still exposes `role=status`.
+2. At CODE_HEAD `fadf68c127d23a15dc4b3d413c6dee037dbc39dc`:
+   rerun the same test; both lifecycle cases must pass.
+3. Then run:
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
+   - `npm run build`
+4. Confirm `15282daf8daebe1bac06115f0b814cecf5307e0b..${fix.result.commit_sha}` changes only:
+   - `src/components/MapSetup.tsx`
+   - `tests/unit/mapSetupA11y.test.tsx`
+
+Optional browser evidence after integration: after `.map-setup.hidden`, the accessibility snapshot must no longer contain the loading status while the element remains in the DOM for the visual fade.
+
+Do not deploy, merge Draft PR49, alter network/credentials, or touch Owner notes.
+
+Still PENDING: physical screen-reader/device proof, broad a11y, global selected-location timezone/DST, scientific forecast accuracy, terrain-obstruction astronomy, and independent astronomy-fact availability when weather fields are incomplete.
+
+
 ## 2026-10-07 当前接手状态（优先于下方历史）
 DEPLOYED_ACCEPTANCE_INCOMPLETE：当前运行378161ffe6aa21989ef48e63c9d077343d276a95，app/worker精确镜像82f5a0ba…健康restart0。原卷、备份校验及回滚已独立重核；未重部署。
 本地授权分支已接收远端真实offset修复d543fff637c561da9bc8197ef282495081a6601e，完成锁定依赖RED/GREEN和468测试/build。此修复尚未部署、尚待远端审核；不能把源码候选当运行SHA。
