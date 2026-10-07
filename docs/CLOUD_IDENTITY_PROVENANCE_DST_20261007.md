@@ -126,3 +126,5 @@
 | `src/components/ui/AdaptiveSheet.tsx` | 关闭弹层不再冒充map-stage，挂载及焦点回归保留；open工具样式不变。 |
 
 设备调用实际错误：`adb devices`与`idevice_id -l`均exit127 command not found。VM没有可执行真机验收链路；必须由本地真实OnePlus/iOS及AT执行既有矩阵并回传证据，不把Playwright/axe当作TalkBack/VoiceOver。
+
+最后身份往返RED：真实090920d构建首页接收observing目录点时，desktop/mobile两项都FAIL，坐标仍正确但Nav输出sourceScope=coordinate及planner坐标ID。修复Nav只在所选坐标仍匹配时保留incoming scoped identity；换点立即回到坐标身份，canonical/sourceId仍不得越过坐标冲突。主题phase从所选本地时次推导，往返同时检验日期和晨间选择。新增浏览器断言保留前述3项转换测试。此前完整515资格与五job终态以对应精确head的PR记录为准，新head重新执行CI。

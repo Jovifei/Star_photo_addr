@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import { locationIdentity } from "@/lib/locationIdentity";
+import { locationIdentity, sameLocationIdentity } from "@/lib/locationIdentity";
 import { useStore } from "@/lib/store";
 import { buildProductHref, readProductLinkContext, type ProductLinkContext } from "@/lib/productRoutes";
 
@@ -53,12 +53,24 @@ export default function NavTabs() {
   );
 
   const navigationState = hydrated ? state : null;
+  const incomingContext = readProductLinkContext(searchParams);
+  const selectedLocation = navigationState?.selectedLocation;
+  // Keep scoped catalogue assertions through the coordinate-only home store,
+  // but drop them as soon as a different point is selected.
+  const navigationIdentity = selectedLocation
+    ? incomingContext.identity && sameLocationIdentity(selectedLocation, incomingContext.identity)
+      ? incomingContext.identity
+      : locationIdentity(selectedLocation, selectedLocation.id.startsWith("finder-") ? "observing" : "coordinate")
+    : null;
   const navigationContext: ProductLinkContext = pathname === "/fireglow" || pathname === "/cloudsea"
     ? readProductLinkContext(searchParams)
     : navigationState
     ? {
         location: navigationState.selectedLocation,
-        identity: navigationState.selectedLocation ? locationIdentity(navigationState.selectedLocation, navigationState.selectedLocation.id.startsWith("finder-") ? "observing" : "coordinate") : null,
+        identity: navigationIdentity,
+        phase: navigationState.cloudState.activeForecastTime
+          ? Number(navigationState.cloudState.activeForecastTime.slice(11, 13)) < 12 ? "morning" : "evening"
+          : incomingContext.phase,
         contextVersion: 2,
         night: navigationState.selectedNight,
         model: navigationState.cloudState.model,
