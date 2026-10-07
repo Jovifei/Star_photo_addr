@@ -31,11 +31,11 @@ The fix bumps the surface cache namespace from `surface-v2-past1` to `surface-v3
 Use locked project dependencies; do not count transient npx versions.
 
 1. At cache RED `20d75bf7e440c0012044e06f2a7282c9a2e399ad`, run:
-   `npx vitest run tests/integration/forecastDiskIntegrity.test.ts`
-   The two new cache-contract tests are expected to fail on the pre-migration implementation.
+   `npm run test -- tests/integration/forecastDiskIntegrity.test.ts`
+   Three assertions/cases are expected to fail on the pre-migration implementation: the v3 fresh-key case, rejection of ambiguous v2 zero, and acceptance of explicit UTC zero under v3.
 2. At cache fix `343252c9135d4c2572effe3212ab266231188f2e`, rerun the same file; it must pass.
 3. At moon RED `e27cc57c73f9b8d206bf1dbb2c85e915455a0dcf`, run:
-   `npx vitest run tests/unit/astronomy.test.ts`
+   `npm run test -- tests/unit/astronomy.test.ts`
    Waning-name/phase-angle assertions are expected to fail.
 4. At CODE_HEAD `bb4fb9744828268dd55cfb65a0628eacd1aa2b4c`, rerun the astronomy test and then:
    - `npm run lint`
