@@ -42,11 +42,13 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
   candidates?: CityCandidate[]; status?: CityCandidateStatus; activeId?: string;
   onPick: (candidate: CityCandidate) => void; onRemove?: (id: string) => void; onTrack?: (candidate: CityCandidate) => void;
 }) {
-  const { state, selectNight, setCandidates } = useStore();
+  const { state, selectNight, selectCatalogNight, setCandidates } = useStore();
+  const changeCatalogNight = selectCatalogNight ?? selectNight;
   const candidates = propCandidates ?? state.candidates;
   useCandidateForecasts(candidates);
-  const nightKeys = useMemo(() => state.nightKeys.slice(0, 7), [state.nightKeys]);
-  const selectedNight = state.selectedNight || nightKeys[0] || "";
+  const catalogNightKeys = state.catalogNightKeys ?? state.nightKeys;
+  const nightKeys = useMemo(() => catalogNightKeys.slice(0, 7), [catalogNightKeys]);
+  const selectedNight = state.catalogSelectedNight ?? state.selectedNight ?? nightKeys[0] ?? "";
   const evaluatedCandidates = useMemo(() => candidates.map((candidate) => {
     const location: Location = { id: candidate.id, name: candidate.name, latitude: candidate.latitude,
       longitude: candidate.longitude, elevation: candidate.elevation ?? null, source: "自定义", province: candidate.province };
@@ -96,7 +98,7 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
       <div className="candidate-date-tabs" role="tablist" aria-label="7天日期切换">
         {nightKeys.map((key, index) => {
           const { title, sub } = getDateTabLabel(key, index);
-          return <button key={key} type="button" role="tab" aria-selected={key === selectedNight} className={`candidate-date-tab ${key === selectedNight ? "candidate-date-tab--active" : ""}`} onClick={() => selectNight(key)} title={`${formatNightLabel(key, true)}；点击按该夜评分重排候选地点`}><span className="candidate-date-tab-title">{title}</span><span className="candidate-date-tab-sub">{sub}</span></button>;
+          return <button key={key} type="button" role="tab" aria-selected={key === selectedNight} className={`candidate-date-tab ${key === selectedNight ? "candidate-date-tab--active" : ""}`} onClick={() => changeCatalogNight(key)} title={`${formatNightLabel(key, true)}；点击按该夜评分重排候选地点`}><span className="candidate-date-tab-title">{title}</span><span className="candidate-date-tab-sub">{sub}</span></button>;
         })}
       </div>
       <div className="candidate-cards-container">
@@ -128,7 +130,7 @@ export default function CandidateList({ candidates: propCandidates, activeId, on
             <div className="candidate-7day-capsules">{nightKeys.map((key, dayIdx) => {
               const data = nights.get(key), score = data?.score ?? null;
               const tone = score === null ? "" : score >= 80 ? "capsule--great" : score >= 65 ? "capsule--good" : score >= 50 ? "capsule--fair" : "capsule--poor";
-              return <button key={key} type="button" className={`mini-capsule ${tone} ${key === selectedNight ? "mini-capsule--active" : ""}`} onClick={(event) => { event.stopPropagation(); selectNight(key); }} title={score === null ? `${formatNightLabel(key, true)}: ${data?.windowLabel ?? "数据不足"}` : `${formatNightLabel(key, true)}: 整晚窗口 ${score}分 (${data?.statusLabel ?? ""})；点击切换`}><span className="mini-capsule-day">{getDayShortLabel(key, dayIdx)}</span><span className="mini-capsule-score">{score ?? "—"}</span></button>;
+              return <button key={key} type="button" className={`mini-capsule ${tone} ${key === selectedNight ? "mini-capsule--active" : ""}`} onClick={(event) => { event.stopPropagation(); changeCatalogNight(key); }} title={score === null ? `${formatNightLabel(key, true)}: ${data?.windowLabel ?? "数据不足"}` : `${formatNightLabel(key, true)}: 整晚窗口 ${score}分 (${data?.statusLabel ?? ""})；点击切换`}><span className="mini-capsule-day">{getDayShortLabel(key, dayIdx)}</span><span className="mini-capsule-score">{score ?? "—"}</span></button>;
             })}</div>
           </div>;
         })}

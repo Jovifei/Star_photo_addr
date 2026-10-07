@@ -21,39 +21,43 @@ export default function RecommendationQuickControls() {
   const {
     state,
     setCloud,
+    setCatalogForecastTime,
     setRecommendationThreshold,
     setRecommendedOnly,
   } = useStore();
-  const scoreWindowStart = state.forecastWindowStart;
+  const scoreWindowStart = state.catalogForecastWindowStart ?? state.forecastWindowStart;
+  const catalogSelectedNight = state.catalogSelectedNight ?? state.selectedNight;
+  const catalogForecastTime = state.catalogForecastTime ?? state.cloudState.activeForecastTime;
+  const updateCatalogForecastTime = setCatalogForecastTime ?? ((time: string | null) => setCloud({ activeForecastTime: time, playing: false }));
   const windowNoteId = useId();
 
   const scoreTimes = useMemo(
     () => (scoreWindowStart ? forecastTimeWindow(scoreWindowStart, 72) : []),
     [scoreWindowStart],
   );
-  const activeScoreTime = scoreTimes.includes(state.cloudState.activeForecastTime ?? "")
-    ? state.cloudState.activeForecastTime!
+  const activeScoreTime = scoreTimes.includes(catalogForecastTime ?? "")
+    ? catalogForecastTime!
     : scoreTimes[0] ?? "";
   const activeScoreLabel = describeScoreTime(activeScoreTime, scoreWindowStart);
-  const selectedTime = state.cloudState.activeForecastTime;
-  const selectedNightOutsideWindow = Boolean(selectedTime && !scoreTimes.includes(selectedTime) && isInNight(selectedTime, state.selectedNight));
+  const selectedTime = catalogForecastTime;
+  const selectedNightOutsideWindow = Boolean(selectedTime && !scoreTimes.includes(selectedTime) && isInNight(selectedTime, catalogSelectedNight));
   const selectedScoreLabel = selectedNightOutsideWindow
-    ? `观测夜 · ${formatNightLabel(state.selectedNight, true)} ${formatHourWithDate(selectedTime!, state.selectedNight)}`
+    ? `观测夜 · ${formatNightLabel(catalogSelectedNight, true)} ${formatHourWithDate(selectedTime!, catalogSelectedNight)}`
     : activeScoreLabel;
 
   useEffect(() => {
     if (!activeScoreTime) return;
-    const activeForecastTime = state.cloudState.activeForecastTime;
+    const activeForecastTime = catalogForecastTime;
     if (
       activeForecastTime &&
-      (scoreTimes.includes(activeForecastTime) || isInNight(activeForecastTime, state.selectedNight))
+      (scoreTimes.includes(activeForecastTime) || isInNight(activeForecastTime, catalogSelectedNight))
     ) return;
-    setCloud({ activeForecastTime: activeScoreTime, playing: false });
-  }, [activeScoreTime, scoreTimes, setCloud, state.cloudState.activeForecastTime, state.selectedNight]);
+    updateCatalogForecastTime(activeScoreTime);
+  }, [activeScoreTime, scoreTimes, updateCatalogForecastTime, catalogForecastTime, catalogSelectedNight]);
 
   function setScoreTime(index: number) {
     const time = scoreTimes[Math.min(Math.max(index, 0), Math.max(0, scoreTimes.length - 1))];
-    if (time) setCloud({ activeForecastTime: time, playing: false });
+    if (time) updateCatalogForecastTime(time);
   }
 
   return (
