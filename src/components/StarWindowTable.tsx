@@ -23,7 +23,8 @@ function samePoint(a: { latitude: number; longitude: number }, b: { latitude: nu
 /** Consumes the same candidate request service. Never borrows scores by fuzzy place name/distance. */
 export default function StarWindowTable() {
   const { state, addCandidate, removeCandidate, selectLocation, setCandidateForecastModel } = useStore();
-  const { candidates, nightKeys, forecastCache, selectedLocation } = state;
+  const { candidates, forecastCache, selectedLocation } = state;
+  const nightKeys = state.catalogNightKeys ?? state.nightKeys;
   const candidateForecastError = useCandidateForecasts(candidates);
   const selectedForecastRequest = useMemo(() => {
     if (!selectedLocation || candidates.some((candidate) => samePoint(candidate, selectedLocation))) return [];
