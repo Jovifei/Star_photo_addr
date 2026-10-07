@@ -15,7 +15,8 @@ import type { ForecastModel } from "@/lib/types";
 export const dynamic = "force-dynamic";
 function snapshotJson(value: unknown, init?: ResponseInit) {
   if (value && typeof value === "object" && "sites" in value && "generatedAt" in value) {
-    return NextResponse.json(snapshotTransport(value as { generatedAt: string }), init);
+    const snapshot = value as { generatedAt: string; stale?: boolean; provenance?: import("@/lib/snapshotProvenance").SnapshotProvenance };
+    return NextResponse.json(snapshotTransport({ ...snapshot, stale: Boolean(snapshot.stale) || !snapshot.provenance }), init);
   }
   return NextResponse.json(value, init);
 }
@@ -88,7 +89,8 @@ function readFireglowFromDisk(date: string, model: string): FireGlowSnapshot | n
     const filePath = fs.existsSync(/*turbopackIgnore: true*/ currentPath) ? currentPath : legacyPath;
     if (!fs.existsSync(/*turbopackIgnore: true*/ filePath)) return null;
     const content = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
-    return JSON.parse(content) as FireGlowSnapshot;
+    const snapshot = JSON.parse(content) as FireGlowSnapshot;
+    return snapshot?.date === date && snapshot.model === model && snapshot.sites && typeof snapshot.sites === "object" ? snapshot : null;
   } catch {
     return null;
   }
@@ -154,6 +156,11 @@ export async function GET(request: NextRequest) {
 
   const key = `source-v1|${date}|${model}`;
   const diskCached = readUsableFireglowDiskSnapshot(date, model);
+  if (params.get("cache_only") === "1") {
+    const retained = cache.get(key)?.snapshot ?? diskCached;
+    if (!retained) return snapshotJson({ error: "cache-only-miss" }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": "60", "X-Fireglow-Cache": "cache-only-miss" } });
+    return snapshotJson({ ...retained, stale: Boolean(retained.stale) || snapshotSourceAgeMs(retained.provenance) > TTL_MS }, { headers: { "Cache-Control": "no-store", "X-Fireglow-Cache": "cache-only" } });
+  }
   if (forceRefresh) {
     const last = lastForceAt.get(key) ?? 0;
     const elapsed = Date.now() - last;

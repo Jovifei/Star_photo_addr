@@ -24,7 +24,8 @@ import type { ForecastModel } from "@/lib/types";
 export const dynamic = "force-dynamic";
 function snapshotJson(value: unknown, init?: ResponseInit) {
   if (value && typeof value === "object" && "sites" in value && "generatedAt" in value) {
-    return NextResponse.json(snapshotTransport(value as { generatedAt: string }), init);
+    const snapshot = value as { generatedAt: string; stale?: boolean; provenance?: import("@/lib/snapshotProvenance").SnapshotProvenance };
+    return NextResponse.json(snapshotTransport({ ...snapshot, stale: Boolean(snapshot.stale) || !snapshot.provenance }), init);
   }
   return NextResponse.json(value, init);
 }
@@ -339,6 +340,11 @@ export async function GET(request: NextRequest) {
   }
 
   const key = `${date}|${model}`;
+  if (params.get("cache_only") === "1") {
+    const retained = usableStaleCache(key)?.snapshot;
+    if (!retained) return snapshotJson({ error: "cache-only-miss" }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": "60", "X-Cloudsea-Cache": "cache-only-miss" } });
+    return snapshotJson({ ...retained, stale: Boolean(retained.stale) || snapshotSourceAgeMs(retained.provenance) > TTL_MS }, { headers: { "Cache-Control": "no-store", "X-Cloudsea-Cache": "cache-only" } });
+  }
   if (forceRefresh) {
     const last = lastForceAt.get(key) ?? 0;
     const elapsed = Date.now() - last;

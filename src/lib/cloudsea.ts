@@ -1,3 +1,4 @@
+import { dataAgeMs } from "./forecastIntegrity";
 import { snapshotSourceTime, type SnapshotProvenance } from "./snapshotProvenance";
 // Cloud-sea (云海条件指数) scoring for mountain observing sites.
 //
@@ -679,7 +680,7 @@ export function buildCloudSeaSnapshot(
       availableSites > 0
         ? "Open-Meteo surface weather + pressure-level model profile (Beta)"
         : "Open-Meteo surface weather; pressure-level model profile unavailable (Beta)",
-    stale: false,
+    stale: Object.values(weatherByDate[date] ?? {}).some(record => !Number.isFinite(dataAgeMs(record.sourceFetchedAt))) || Object.values(pressureBySite).some(record => !Number.isFinite(dataAgeMs(record.fetchedAt))),
     surface: {
       status: pressureStatusFor(surfaceAvailableSites, totalSites),
       availableSites: surfaceAvailableSites,

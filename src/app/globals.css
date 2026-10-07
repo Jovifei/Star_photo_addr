@@ -5147,3 +5147,5 @@
 .tone-warn {
   color: #fbbf24 !important;
 }
+
+.location-transfer-notice { margin: .35rem .75rem; font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
