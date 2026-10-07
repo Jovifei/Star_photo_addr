@@ -1,3 +1,55 @@
+## 2026-10-07 remote follow-up — v2 stale weather migration
+
+STATE: READY_FOR_LOCAL_VALIDATION
+TASK: starphoto-378-postrelease-acceptance
+ITERATION: 3
+
+Remote branch: `codex/postrelease-v2-stale-fallback-20261007`
+Base CODE_HEAD: `bb4fb9744828268dd55cfb65a0628eacd1aa2b4c`
+
+### Exact commits
+
+- RED test commit: `ed74ff53ccc7fc4005624d1eac88cf51d41035a5`
+- CODE_HEAD: `53ea1d015664738abd5a10eaab260dd5d26bfe3b`
+- CODE_HEAD tree: `a102adbf2ea3dfdb5b50bc3942e0b445c0fe28e0`
+
+### Decision
+
+The prior v3 migration correctly prevents ambiguous pre-offset records from becoming fresh. Rejecting v2 entirely, however, creates an avoidable data-availability regression during provider cooldown: recent cloud/rain/wind facts with valid original timestamps can disappear even though stale recommendations are already fail-closed.
+
+The follow-up therefore allows v2 only as a read-only stale-facts source. It never becomes fresh, never enters the in-memory v3 cache, never rewrites/deletes old files, and cache-only reads do not call the provider.
+
+For v2 specifically, reuse requires:
+- exact model and location count through `usableDiskForecast`;
+- original source age within the existing retention limit;
+- finite recorded `requestedLatitude/requestedLongitude` for every location;
+- coordinate equality to the current request within 1e-5.
+
+The potentially ambiguous `utcOffsetSeconds: 0` is preserved as raw historical evidence but cannot publish an astronomy/recommendation result because the returned response is force-marked stale and `forecastTrustIssue` rejects stale forecasts before scoring.
+
+### Local RED/GREEN
+
+Use locked project dependencies.
+
+1. At `ed74ff53ccc7fc4005624d1eac88cf51d41035a5`:
+   `npm run test -- tests/integration/forecastDiskIntegrity.test.ts`
+   Capture the exact failing cases/count.
+2. At `53ea1d015664738abd5a10eaab260dd5d26bfe3b`:
+   rerun the same file; all cases must pass.
+3. Then at CODE_HEAD run:
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
+   - `npm run build`
+4. Confirm `bb4fb9744828268dd55cfb65a0628eacd1aa2b4c..${fix.result.commit_sha}` changes only:
+   - `tests/integration/forecastDiskIntegrity.test.ts`
+   - `src/app/api/forecast/route.ts`
+
+Do not deploy, merge Draft PR49, alter network/credentials, or touch Owner notes.
+
+Still PENDING: physical phone, broad a11y, global selected-location timezone/DST, scientific forecast accuracy, and terrain-obstruction astronomy.
+
+
 ## 2026-10-07 当前接手状态（优先于下方历史）
 DEPLOYED_ACCEPTANCE_INCOMPLETE：当前运行378161ffe6aa21989ef48e63c9d077343d276a95，app/worker精确镜像82f5a0ba…健康restart0。原卷、备份校验及回滚已独立重核；未重部署。
 本地授权分支已接收远端真实offset修复d543fff637c561da9bc8197ef282495081a6601e，完成锁定依赖RED/GREEN和468测试/build。此修复尚未部署、尚待远端审核；不能把源码候选当运行SHA。
