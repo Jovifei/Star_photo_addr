@@ -201,11 +201,9 @@ export async function GET(request: NextRequest) {
       STALE_TTL_MS,
     );
     if (retained) {
-      const cacheState = retained.origin === "current"
-        ? "cache-only-disk"
-        : retained.origin === "pre-offset"
-          ? "cache-only-pre-offset-disk"
-          : "cache-only-legacy-disk";
+      const cacheState = retained.origin === "pre-offset"
+        ? "cache-only-pre-offset-disk"
+        : "cache-only-disk";
       return NextResponse.json(markStale(retained.data), {
         headers: responseHeaders(
           true,
@@ -280,11 +278,9 @@ export async function GET(request: NextRequest) {
       STALE_TTL_MS,
     );
     if (diskFallback) {
-      const cacheState = diskFallback.origin === "current"
-        ? "stale-disk"
-        : diskFallback.origin === "pre-offset"
-          ? "stale-pre-offset-disk"
-          : "stale-legacy-disk";
+      const cacheState = diskFallback.origin === "pre-offset"
+        ? "stale-pre-offset-disk"
+        : "stale-disk";
       const warning = diskFallback.origin === "pre-offset"
         ? '110 - "Response is stale pre-offset weather facts; recommendations withheld"'
         : '110 - "Response is stale from disk"';
