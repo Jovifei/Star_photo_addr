@@ -161,6 +161,48 @@ describe("forecast model routing", () => {
     );
   });
 
+  it("fails closed when the upstream omits utc_offset_seconds instead of treating unknown as UTC", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          latitude: 30,
+          longitude: 120,
+          elevation: 0,
+          timezone: "Asia/Shanghai",
+          hourly: VALID_CLOUD_HOURLY,
+        }),
+      }),
+    );
+    await expect(fetchSurfaceForecasts([location], 1)).rejects.toThrow(
+      "有效时区偏移",
+    );
+  });
+
+  it("preserves an explicit zero UTC offset", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          latitude: 0,
+          longitude: 0,
+          elevation: 0,
+          timezone: "UTC",
+          utc_offset_seconds: 0,
+          hourly: VALID_CLOUD_HOURLY,
+        }),
+      }),
+    );
+    const [forecast] = await fetchSurfaceForecasts(
+      [{ ...location, latitude: 0, longitude: 0 }],
+      1,
+    );
+    expect(forecast?.utcOffsetSeconds).toBe(0);
+    expect(forecast?.provenance?.utcOffsetSeconds).toBe(0);
+  });
+
   it("always fetches the upstream with no-store semantics", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
