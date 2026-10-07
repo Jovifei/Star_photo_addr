@@ -43,9 +43,9 @@ export default function ObservingSitesLayer() {
   const [snapshotErrorKey, setSnapshotErrorKey] = useState<string | null>(null);
   const snapshotRequestId = useRef(0);
   const lastRefreshRevision = useRef(0);
-  const activeForecastTime = state.cloudState.activeForecastTime;
+  const activeForecastTime = state.catalogForecastTime ?? state.cloudState.activeForecastTime;
   const model = state.cloudState.model;
-  const selectedNight = state.selectedNight;
+  const selectedNight = state.catalogSelectedNight ?? state.selectedNight;
   const scoreDate = scoreDateForForecastTime(activeForecastTime, selectedNight);
   const requestKey = `${activeForecastTime ?? ""}|${model}|${scoreDate}|${state.dataRefreshRevision}`;
 
