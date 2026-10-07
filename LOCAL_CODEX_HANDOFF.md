@@ -36,3 +36,11 @@ The current follow-up locks only source-map-js to upstream-patched 1.2.2 within 
 Publish the reviewed candidate on the same branch without force, verify its exact SHA/tree and run its full CI. Inspect that run's actual screenshots and metadata before release. Previous successful jobs are not acceptance of a different candidate.
 
 Deployment has not occurred for this repair. Before the approved release, verify the current running version and a usable rollback point through the existing deployment process; preserve application data. See [deployment guidance](docs/DEPLOYMENT.md) and [current repair evidence](docs/engineering-change-log/2026-10-05-candidate-lines-and-map-retry.md).
+# 2026-10-07 latest acceptance update (supersedes earlier status below)
+
+Production remains 378161ffe6aa21989ef48e63c9d077343d276a95; no redeployment or Draft PR49 merge. Original authorized branch received corrected MapSetup CODE_HEAD 36a9bf923c895dd13766d20c9dc41fb668222702 after local locked RED e6b0c645 (1 FAIL/1 PASS), GREEN (2 PASS), complete lint/types/84 files477 tests/build PASS. Earlier undiscovered tsx test was not valid RED; package manifest actually already includes RTL/jsdom, correcting the earlier dependency claim.
+
+Physical phone now partially exercised: OnePlus7Pro/Android11, Jovi manually opened public site after automatic browser launch was blocked. Actual map selection of 巴中光雾山, expansion and upward swipe succeeded. ICON facts cloud21%/rain0.0mm/wind1.9m/s; original sourceFetchedAt2026-10-07T06:16:41.313Z. Visibility missing, score withheld. Large summary, delayed facts and nested scrolling need redesign; separate map-layer error remains untraced. This is not full phone or screen-reader acceptance.
+
+Next remote stage: finish exact T1 timezone repair and corrected test handoff, then implement compact mobile and independent astronomy/raw-fact display per docs/MOBILE_DENSITY_REDESIGN_20261007.md. Local precise-SHA tests and real-device checks precede release. Owner tasks notes remain protected and uncommitted.
+

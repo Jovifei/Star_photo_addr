@@ -31,3 +31,9 @@ Jovi已授权同Project接力聊天；Project保持6a758ed08fcc8191b7e6184c19225
 原授权分支已接收已验证CODE15282；生产仍378，未部署这些新修复，DraftPR49未合并。原d3dc923完整CI37572336906已成功，不能冒充最新15282的CI。
 375x812现网尺寸模拟：无横向溢出，地图工具打开/按钮关闭/从body Escape关闭与返回触发器成功。初始focus检查发生在requestAnimationFrame前，未判定生产focusbug；对话框ASIDE直接press超时不等于用户键盘无法关闭。仍未做物理手机或真实OS读屏。
 MapSetup另有明确语义缺陷：ready时class map-setup hidden，computed display:grid/visibility:visible/opacity:0，role:status且无aria-hidden；18瓦片已加载，可访问快照仍含loading。视觉地图正常，不误写地图卡住。已交远端独立修复。
+# Latest Oct7 acceptance correction
+
+Current original branch code36a9bf923c895dd13766d20c9dc41fb668222702; production remains378. Corrected MapSetup regression actually ran: RED e6b0c6451FAIL/1PASS, GREEN36a9bf92PASS, full84files477tests/lint/types/buildPASS. The previous `.test.tsx` was undiscovered, not validRED. RTL/jsdom are actually listed in package.json; earlier missing-dependency assertion was incorrect.
+
+OnePlus7Pro Android11 physical test partially completed after Jovi opened website: selected巴中光雾山, expanded and scrolled. Real ICON cloud21%,rain0.0mm,wind1.9m/s/source2026-10-07T06:16:41.313Z; missingvisibility explicitlywithheldscore. Fulldevice/readeracceptance remainsPENDING. Map-layerfailure onphone is separate, rootcausepending. Compactredesign spec docs/MOBILE_DENSITY_REDESIGN_20261007.md.
+
