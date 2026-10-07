@@ -147,6 +147,14 @@ function validAlignedSeries(
   );
 }
 
+function requireUtcOffsetSeconds(item: RawForecastResponse): number {
+  const value = item.utc_offset_seconds;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error("天气上游没有返回有效时区偏移");
+  }
+  return value;
+}
+
 export function validateRawForecast(
   item: RawForecastResponse | undefined,
 ): void {
@@ -158,8 +166,6 @@ export function validateRawForecast(
     Math.abs(item.longitude) > 180 ||
     !Number.isFinite(item.elevation) ||
     typeof item.timezone !== "string" ||
-    (item.utc_offset_seconds !== undefined &&
-      !Number.isFinite(item.utc_offset_seconds)) ||
     !Array.isArray(item.hourly?.time)
   ) {
     throw new Error("天气上游返回了无法识别的 hourly 数据");
@@ -185,6 +191,7 @@ export function validateRawForecast(
       throw new Error(`天气上游没有返回有效${label}数据`);
     }
   }
+  requireUtcOffsetSeconds(item);
 }
 
 const OPEN_METEO_MAX_CONCURRENCY = 2;
@@ -442,6 +449,7 @@ export async function fetchSurfaceForecasts(
   return locations.map((location, index) => {
     const single = responses[index];
     if (!single) throw new Error("天气上游缺少对应地点的响应");
+    const utcOffsetSeconds = requireUtcOffsetSeconds(single);
     const provenance: ForecastProvenance = {
       requestedLatitude: location.latitude,
       requestedLongitude: location.longitude,
@@ -458,7 +466,7 @@ export async function fetchSurfaceForecasts(
       sourceFetchedAt: fetchedAt,
       providerRunAt: null,
       timezone: single.timezone,
-      utcOffsetSeconds: single.utc_offset_seconds ?? 0,
+      utcOffsetSeconds: utcOffsetSeconds,
     };
     return {
       locationId: location.id,
@@ -466,7 +474,7 @@ export async function fetchSurfaceForecasts(
       modelLongitude: single.longitude,
       modelElevation: single.elevation,
       timezone: single.timezone,
-      utcOffsetSeconds: single.utc_offset_seconds ?? 0,
+      utcOffsetSeconds: utcOffsetSeconds,
       fetchedAt,
       metadata,
       requestedLatitude: location.latitude,
