@@ -78,8 +78,10 @@ export function nextNightKeys(days: number, now = new Date()): string[] {
 }
 
 /** The evening-date key for the currently running night, or tonight in daytime. */
-export function currentNightKey(now = new Date()): string {
-  const timeZone = "Asia/Shanghai";
+export function currentNightKey(
+  now = new Date(),
+  timeZone = "Asia/Shanghai",
+): string {
   const today = localDateKey(now, timeZone);
   const hour = Number(
     new Intl.DateTimeFormat("en-US", {
@@ -93,8 +95,10 @@ export function currentNightKey(now = new Date()): string {
 }
 
 /** Pick the first useful local forecast hour for the home page. */
-export function initialForecastTime(now = new Date()): string {
-  const timeZone = "Asia/Shanghai";
+export function initialForecastTime(
+  now = new Date(),
+  timeZone = "Asia/Shanghai",
+): string {
   const today = localDateKey(now, timeZone);
   const hour = Number(
     new Intl.DateTimeFormat("en-US", {

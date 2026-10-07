@@ -48,6 +48,20 @@ describe("home night defaults", () => {
     const now = new Date("2026-08-08T22:00:00.000Z"); // 06:00 Shanghai
     expect(currentNightKey(now)).toBe("2026-08-09");
   });
+
+  it("resolves the same instant in the selected point timezone instead of Shanghai", () => {
+    const now = new Date("2026-10-07T05:58:59.788Z");
+    expect(currentNightKey(now, "Asia/Shanghai")).toBe("2026-10-07");
+    expect(initialForecastTime(now, "Asia/Shanghai")).toBe("2026-10-07T13:00");
+    expect(currentNightKey(now, "America/Los_Angeles")).toBe("2026-10-06");
+    expect(initialForecastTime(now, "America/Los_Angeles")).toBe("2026-10-06T22:00");
+  });
+
+  it("keeps a point-local pre-dawn hour attached to the previous evening", () => {
+    const now = new Date("2026-10-07T11:30:00.000Z"); // 04:30 Los Angeles
+    expect(initialForecastTime(now, "America/Los_Angeles")).toBe("2026-10-07T04:00");
+    expect(currentNightKey(now, "America/Los_Angeles")).toBe("2026-10-06");
+  });
 });
 
 describe("isInNight — 当日夜间 (≥20:00)", () => {
