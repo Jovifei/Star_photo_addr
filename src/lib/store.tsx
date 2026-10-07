@@ -706,7 +706,7 @@ export function StoreProvider({
     async (location: Location, model?: CloudState["model"]) => {
       const selectedModel = model ?? state.cloudState.model;
       const expectedNight = state.selectedNight;
-      const expectedForecastTime = state.cloudState.activeForecastTime;
+      const expectedForecastTime = state.cloudState.activeForecastTime ?? null;
       currentModelRef.current = selectedModel;
       pendingModelRef.current = selectedModel;
       const requestId = ++latestForecastRequestRef.current;
@@ -779,7 +779,7 @@ export function StoreProvider({
     ) => {
       const selectedModel = model ?? state.cloudState.model;
       const expectedNight = state.selectedNight;
-      const expectedForecastTime = state.cloudState.activeForecastTime;
+      const expectedForecastTime = state.cloudState.activeForecastTime ?? null;
       currentModelRef.current = selectedModel;
       pendingModelRef.current = selectedModel;
       const locationId = stableSampleLocationId(latitude, longitude);
@@ -1021,7 +1021,7 @@ export function StoreProvider({
     // flag would cancel this request because of its own loading transition.
     const hydrationRequestId = latestForecastRequestRef.current;
     const expectedNight = state.selectedNight;
-    const expectedForecastTime = state.cloudState.activeForecastTime;
+    const expectedForecastTime = state.cloudState.activeForecastTime ?? null;
     dispatch({ type: "SET_LOADING", loading: true });
     void fetchForecastFor(location, model)
       .then((forecast) => {
