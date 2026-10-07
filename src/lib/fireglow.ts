@@ -1,3 +1,4 @@
+import { snapshotSourceTime, type SnapshotProvenance } from "./snapshotProvenance";
 // Fire-glow (火烧云 / 朝晚霞) scoring for the curated site library.
 //
 // Model v2. Cloud-canvas weights (high×0.75 / mid×0.45 / low×0.10) and the
@@ -69,6 +70,8 @@ export interface FireGlowSnapshot {
   date: string;
   model: ForecastModel;
   generatedAt: string;
+  provenance?: SnapshotProvenance;
+  transport?: { servedAt: string };
   source: string;
   stale: boolean;
   /** Set when a forced refresh failed and an older snapshot was served. */
@@ -428,6 +431,7 @@ export function buildFireGlowSnapshot(
     date,
     model,
     generatedAt: new Date().toISOString(),
+    provenance: { version: 1, sourcesBySite: Object.fromEntries(Object.entries(dayRecords).map(([id, record]) => [id, [snapshotSourceTime("surface", record.model ?? model, record.provenance?.sourceFetchedAt ?? record.fetchedAt, record.provenance?.providerRunAt)]])) },
     source: "Open-Meteo Forecast API（云层/降水/能见度）+ astronomy-engine 太阳高度角",
     stale: records.some((record) => record.status === "stale" || record.status === "error"),
     sites,
