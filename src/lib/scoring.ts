@@ -80,7 +80,7 @@ export function evaluateNight(forecast: LocationForecast, location: Location, ni
     windowLabel: scoredWindow.length ? `${formatHour(scoredWindow[0]!.time)}–${formatHour(scoredWindow.at(-1)!.time)}（${scoredWindow.length} 个连续小时采样）` : "暂无连续窗口",
     darkHours: hours.filter((hour) => hour.sunAltitude <= -18).length,
     galacticMax: Math.round(Math.max(...hours.map((hour) => hour.galacticAltitude))),
-    moonIllumination: moon.moonIllumination, moonPhase: moonPhaseName(moon.moonIllumination), blockers,
+    moonIllumination: moon.moonIllumination, moonPhase: moonPhaseName(moon.moonIllumination, moon.moonPhaseAngle), blockers,
     reason: top.length ? "整晚最佳连续 3 小时预报分，不代表当前时次或现场保证；出发前复核云图与预警" : "无完整连续 3 小时窗口；分数为暗夜时次参考，不构成出行推荐",
     scoreModelVersion: SCORE_MODEL_VERSION,
     scoreBasis: "night-best-contiguous-window",
