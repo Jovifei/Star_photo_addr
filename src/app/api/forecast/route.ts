@@ -53,6 +53,49 @@ function readFromDiskCache(
   return null;
 }
 
+function readPreOffsetDiskCache(
+  key: string,
+  model: ForecastModel,
+  latitudes: number[],
+  longitudes: number[],
+  maxAgeMs: number,
+): ForecastResponse | null {
+  const data = readFromDiskCache(key, model, latitudes.length, maxAgeMs);
+  if (!data) return null;
+  const sameRequestedPoints = data.locations.every((location, index) =>
+    Number.isFinite(location.requestedLatitude) &&
+    Number.isFinite(location.requestedLongitude) &&
+    Math.abs(location.requestedLatitude! - latitudes[index]!) <= 1e-5 &&
+    Math.abs(location.requestedLongitude! - longitudes[index]!) <= 1e-5,
+  );
+  return sameRequestedPoints ? data : null;
+}
+
+type RetainedDiskOrigin = "current" | "pre-offset" | "legacy";
+
+function readRetainedDiskForecast(
+  currentKey: string,
+  preOffsetKey: string,
+  legacyKey: string,
+  model: ForecastModel,
+  latitudes: number[],
+  longitudes: number[],
+  maxAgeMs: number,
+): { data: ForecastResponse; origin: RetainedDiskOrigin } | null {
+  const current = readFromDiskCache(currentKey, model, latitudes.length, maxAgeMs);
+  if (current) return { data: current, origin: "current" };
+  const preOffset = readPreOffsetDiskCache(
+    preOffsetKey,
+    model,
+    latitudes,
+    longitudes,
+    maxAgeMs,
+  );
+  if (preOffset) return { data: preOffset, origin: "pre-offset" };
+  const legacy = readFromDiskCache(legacyKey, model, latitudes.length, maxAgeMs);
+  return legacy ? { data: legacy, origin: "legacy" } : null;
+}
+
 const MODELS = new Set<ForecastModel>(["best_match", "icon", "gfs", "aifs"]);
 function boundedInteger(name: string, fallback: number, minimum: number, maximum: number): number {
   const raw = process.env[name];
@@ -116,8 +159,9 @@ export async function GET(request: NextRequest) {
   const daysRaw = Number(searchParams.get("days") ?? "14");
   const days = clampForecastDays(Number.isFinite(daysRaw) ? daysRaw : 14, model);
   const legacyKey = `${model}|${days}|${normalizedCoordinateKey(latitudes)}|${normalizedCoordinateKey(longitudes)}`;
-  // v3 is an offset-integrity boundary: v2 records may have persisted the
-  // former unknown->0 normalization and cannot be distinguished from genuine UTC.
+  const preOffsetKey = `surface-v2-past1|${legacyKey}`;
+  // v3 is the fresh offset-integrity boundary. v2 may still be exposed as
+  // explicitly stale raw weather facts, but never as fresh data or score input.
   const key = `surface-v3-offset|${legacyKey}`;
   const cached = forecastCache.read(key);
   if (!forceRefresh && cached && cached.ageMs <= FRESH_TTL_MS) {
@@ -147,20 +191,25 @@ export async function GET(request: NextRequest) {
         ),
       });
     }
-    const disk = readFromDiskCache(
+    const retained = readRetainedDiskForecast(
       key,
+      preOffsetKey,
+      legacyKey,
       model,
-      latitudes.length,
+      latitudes,
+      longitudes,
       STALE_TTL_MS,
     );
-    const retained = disk ?? readFromDiskCache(legacyKey, model, latitudes.length, STALE_TTL_MS);
     if (retained) {
-      return NextResponse.json(markStale(retained), {
+      const cacheState = retained.origin === "pre-offset"
+        ? "cache-only-pre-offset-disk"
+        : "cache-only-disk";
+      return NextResponse.json(markStale(retained.data), {
         headers: responseHeaders(
           true,
           model,
           days,
-          "cache-only-disk",
+          cacheState,
           true,
         ),
       });
@@ -219,15 +268,24 @@ export async function GET(request: NextRequest) {
         headers: { ...responseHeaders(true, model, days, "stale-memory", true, decision.suppressed, decision.retryAfterSeconds), Warning: '110 - "Response is stale"' },
       });
     }
-    const diskFallback = readFromDiskCache(
+    const diskFallback = readRetainedDiskForecast(
       key,
+      preOffsetKey,
+      legacyKey,
       model,
-      latitudes.length,
+      latitudes,
+      longitudes,
       STALE_TTL_MS,
-    ) ?? readFromDiskCache(legacyKey, model, latitudes.length, STALE_TTL_MS);
+    );
     if (diskFallback) {
-      return NextResponse.json(markStale(diskFallback), {
-        headers: { ...responseHeaders(true, model, days, "stale-disk", true, decision.suppressed, decision.retryAfterSeconds), Warning: '110 - "Response is stale from disk"' },
+      const cacheState = diskFallback.origin === "pre-offset"
+        ? "stale-pre-offset-disk"
+        : "stale-disk";
+      const warning = diskFallback.origin === "pre-offset"
+        ? '110 - "Response is stale pre-offset weather facts; recommendations withheld"'
+        : '110 - "Response is stale from disk"';
+      return NextResponse.json(markStale(diskFallback.data), {
+        headers: { ...responseHeaders(true, model, days, cacheState, true, decision.suppressed, decision.retryAfterSeconds), Warning: warning },
       });
     }
     if (error instanceof OpenMeteoRateLimitError) {
