@@ -5154,3 +5154,9 @@
 .snapshot-source-note > summary { min-height: 32px; align-content: center; cursor: pointer; }
 .snapshot-source-note > summary:focus-visible { outline: 2px solid var(--green-soft); outline-offset: 2px; }
 @media (pointer: coarse) { .snapshot-source-note > summary { min-height: 44px; } }
+
+/* A failed basemap must not consume blank-map gestures behind its text. */
+.fireglow-map .map-tile-error,
+.cloudsea-map-pane .map-tile-error { pointer-events: none; }
+.fireglow-map .map-tile-error button,
+.cloudsea-map-pane .map-tile-error button { pointer-events: auto; }
