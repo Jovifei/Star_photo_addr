@@ -1,30 +1,58 @@
 # Current engineering handoff
 
+STATE: READY_FOR_LOCAL_VALIDATION
+TASK: starphoto-378-postrelease-acceptance
+ITERATION: 1
+
 Repository: `Jovifei/Star_photo_addr`
-Branch: `codex/overnight-forecast-coverage-20261003`
-Review: [Draft PR 49](https://github.com/Jovifei/Star_photo_addr/pull/49)
+Remote repair branch: `codex/postrelease-offset-integrity-20261007`
 
-## Published baseline
+## Exact repair identity
 
-Exact head `5a46046ba6470fca6493a19dfe0866a2f182e60b`, tree `3fdc04905885feb7f9d37fb27f22a04c140d9b62`. The tooltip fixture synchronization and concise handoff are published.
+- Accepted base: `378161ffe6aa21989ef48e63c9d077343d276a95`
+- Accepted base tree: `5e4a8d6b57fe558bce152dc7b21bf7d0e6575fad`
+- Regression-only commit: `1596e376065047342cc96e9b574c8e35e5340745`
+- Regression-only tree: `bc3b523aba8c3fff68597897e4714c7bea247d05`
+- Repair head: `d543fff637c561da9bc8197ef282495081a6601e`
+- Repair tree: `15fb7c20a972d7def4ca60481738cfb41056aad0`
 
-[CI 37404323556](https://github.com/Jovifei/Star_photo_addr/actions/runs/37404323556) stopped at one high production dependency finding in source-map-js 1.2.1. Quality checks after audit and all dependent browser/container jobs did not run; live-data smoke passed.
+The repair head is the code-under-test. This handoff document is committed separately after it so its documentation commit does not change the repair tree.
 
-Prior head `7a1e6b13bfec647591845c7790ea9fb798c75a18`:
-[CI 37343815232](https://github.com/Jovifei/Star_photo_addr/actions/runs/37343815232) finished with Chromium 259 passed / 124 applicability skips / 1 failed. The other four jobs succeeded: quality (82 files / 466 tests; production audit zero), Firefox/WebKit (12 passed), container and live-data smoke.
+## Proven source defect
 
-All desktop/mobile 100%/200% readability and map-retry cases passed. Original-resolution screenshots confirmed the candidate names, timeline controls, map-error copy and layers controls in their tested states. The full run still failed; physical-phone settings and actual browser zoom were not verified.
+At the accepted base, `src/lib/forecast.ts` allows an Open-Meteo surface payload to omit `utc_offset_seconds`, then normalizes that unknown value with `?? 0`. For a non-UTC provider timezone such as `Asia/Shanghai`, this can reinterpret provider-local wall-clock hours as UTC and feed the wrong instant into astronomy/recommendation scoring.
 
-## Reviewed fixture and pending dependency patch
+The repair does not derive an offset from a timezone name. It fail-closes if the provider offset is absent or non-finite, while preserving an explicit numeric zero as a valid UTC offset.
 
-The mobile tooltip lifecycle test clicked during an already-running initial map-positioning animation. The test now waits for the expected fixture center, zoom 8, an existing map pane and no zoom/pan animation in one observable snapshot. Its two strict zoom-plus-one checks and every tooltip naming assertion remain unchanged. Product map behavior is unchanged.
+## Changed code
 
-This nine-line test repair passed local lint, types, 82 files / 466 tests and production build, plus independent trace and diff review. These checks apply to the unchanged test source in the current candidate; documentation minimization does not establish a new browser result.
+1. `tests/unit/forecast.test.ts`
+   - Adds a regression that requires missing `utc_offset_seconds` to reject instead of becoming UTC.
+   - Adds a guard that explicit `utc_offset_seconds: 0` remains valid in both the location result and provenance.
+2. `src/lib/forecast.ts`
+   - Adds one shared runtime validator for the provider UTC offset.
+   - Runs it after existing cloud/time contract checks.
+   - Removes both `?? 0` coercions from normalized forecast/provenance output.
 
-The current follow-up locks only source-map-js to upstream-patched 1.2.2 within all existing version ranges. See [dependency repair evidence](docs/engineering-change-log/2026-10-06-source-map-js-audit.md). Clean install, production audit zero, all three dependency-boundary checks, and lint/types/82 files/466 tests/build passed for this patch. Its exact-candidate CI is still required.
+No changes were made to pressure forecast handling, global night-date selection, UI/a11y code, deployment, credentials, network configuration, Draft PR49, Owner task notes, or the local acceptance ledger.
 
-## Remaining release gates
+## Test status and required local proof
 
-Publish the reviewed candidate on the same branch without force, verify its exact SHA/tree and run its full CI. Inspect that run's actual screenshots and metadata before release. Previous successful jobs are not acceptance of a different candidate.
+Remote ChatGPT has no command executor for this workspace. Therefore all command-based tests below are **NOT_RUN remotely** and must not be treated as passed.
 
-Deployment has not occurred for this repair. Before the approved release, verify the current running version and a usable rollback point through the existing deployment process; preserve application data. See [deployment guidance](docs/DEPLOYMENT.md) and [current repair evidence](docs/engineering-change-log/2026-10-05-candidate-lines-and-map-retry.md).
+Local Codex should:
+1. Check out `1596e376065047342cc96e9b574c8e35e5340745` and run the focused forecast unit file. The new missing-offset regression is expected to FAIL on this test-only commit; capture the exact failure.
+2. Check out `d543fff637c561da9bc8197ef282495081a6601e` and rerun the same focused file; it must PASS.
+3. On the repair head run at minimum:
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm run test`
+   - `npm run build`
+4. Inspect the diff from `378161ffe6aa21989ef48e63c9d077343d276a95` to `d543fff637c561da9bc8197ef282495081a6601e` and confirm only the two code/test files above changed.
+5. Do not deploy or merge Draft PR49. Return exact command output, exit statuses, and any failures to the remote review layer.
+
+## Remaining acceptance gates
+
+Still open and not claimed by this repair: physical-phone UX; broad keyboard/focus/screen-reader/contrast/dynamic-status accessibility; slow/interrupted/repeated-operation UX; live weather units/elevation/7-14 day coverage; overseas/DST global-night-date consistency; production/device proof.
+
+`src/lib/pressure.ts` also contains timezone/offset fallbacks, but this review found no current scoring consumer of its `utcOffsetSeconds`; it is intentionally left as a separate audit item rather than bundled into this proven surface-forecast repair.
