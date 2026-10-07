@@ -287,7 +287,7 @@ test.describe("responsive layout contract", () => {
     const detail = page.locator(".cloudsea-site-detail:visible");
     if (mobile) {
       await expect(detail).not.toHaveAttribute("aria-modal");
-      await expect(page.getByTestId("mobile-data-sheet-body")).toHaveCSS("overflow-y", "auto");
+      await expect(page.getByTestId("mobile-data-sheet-body")).toHaveCSS("overflow-y", "visible");
       await expect(detail.locator(".cs-detail-scroll-content")).toHaveCSS("overflow-y", "visible");
     } else {
       await expect(detail).toHaveAttribute("role", "dialog");
@@ -310,8 +310,14 @@ test.describe("responsive layout contract", () => {
       const sheetScroll = await page.getByTestId("mobile-data-sheet-body").evaluate((element) => ({
         clientHeight: element.clientHeight,
         scrollHeight: element.scrollHeight,
+        scrollTop: element.scrollTop,
       }));
-      expect(sheetScroll.scrollHeight).toBeGreaterThan(sheetScroll.clientHeight);
+      expect(sheetScroll.scrollHeight).toBeLessThanOrEqual(sheetScroll.clientHeight + 1);
+      expect(sheetScroll.scrollTop).toBe(0);
+      const end = page.getByTestId("mobile-data-sheet").getByRole("button", { name: /查看版本更新记录/ });
+      await end.scrollIntoViewIfNeeded();
+      await expect(end).toBeInViewport();
+      expect(await page.evaluate(() => scrollY)).toBeGreaterThan(0);
     } else {
       expect(detailScroll.scrollHeight).toBeGreaterThan(detailScroll.clientHeight);
     }
@@ -387,7 +393,7 @@ test.describe("responsive layout contract", () => {
     const detail = page.locator(".fireglow-site-detail:visible");
     if (mobile) {
       await expect(detail).not.toHaveAttribute("aria-modal");
-      await expect(page.getByTestId("mobile-data-sheet-body")).toHaveCSS("overflow-y", "auto");
+      await expect(page.getByTestId("mobile-data-sheet-body")).toHaveCSS("overflow-y", "visible");
       await expect(detail.locator(".fg-detail-scroll-content")).toHaveCSS("overflow-y", "visible");
     } else {
       await expect(detail).toHaveAttribute("role", "dialog");

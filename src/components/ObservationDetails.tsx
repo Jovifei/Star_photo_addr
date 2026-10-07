@@ -175,8 +175,8 @@ export default function ObservationDetails({
         <div className="metric">
           <div className="label">暗夜时长（估算）</div>
           <div className="value">
-            {facts?.darkHours ?? "—"}
-            {facts ? <small>h</small> : null}
+            {astronomyFacts?.darkHours ?? "—"}
+            {astronomyFacts ? <small>h</small> : null}
           </div>
         </div>
         <div className="metric">

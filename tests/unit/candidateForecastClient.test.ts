@@ -49,6 +49,7 @@ describe("bounded shared candidate loader", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(new URL(String(fetchMock.mock.calls[0]![0]), "http://localhost").searchParams.get("latitude")).toBe("30.1,31.6");
     expect(first.map((entry) => entry.id)).toEqual(["a", "z"]);
+    expect(first.map((entry) => entry.forecast.locationId)).toEqual(["a", "z"]);
     expect(second.map((entry) => entry.forecast.metadata?.model)).toEqual(["best_match", "best_match"]);
   });
 

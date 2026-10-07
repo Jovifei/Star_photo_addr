@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { lockCompactPageScroll } from "@/lib/pageScrollLock";
+
+const subscribeToMount = () => () => undefined;
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 const FOCUSABLE_SELECTOR = [
   "button:not([disabled])",
@@ -40,16 +45,17 @@ export default function AdaptiveSheet({
   testId?: string;
 }) {
   const sheetRef = useRef<HTMLElement | null>(null);
+  const mounted = useSyncExternalStore(subscribeToMount, clientSnapshot, serverSnapshot);
 
   useEffect(() => {
-    if (!open) return;
+    if (!mounted || !open) return;
     return lockCompactPageScroll();
-  }, [open]);
+  }, [mounted, open]);
 
   useEffect(() => {
     const sheet = sheetRef.current;
     if (sheet) sheet.inert = !open;
-    if (!open) return;
+    if (!mounted || !open) return;
 
     const focusables = () =>
       Array.from(sheetRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
@@ -84,17 +90,17 @@ export default function AdaptiveSheet({
       window.cancelAnimationFrame(frame);
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [id, onClose, open]);
+  }, [id, mounted, onClose, open]);
 
   useEffect(() => {
-    if (open) return;
+    if (!mounted || open) return;
     const trigger = triggerRef.current;
     if (!trigger) return;
     const frame = window.requestAnimationFrame(() => trigger.focus({ preventScroll: true }));
     return () => window.cancelAnimationFrame(frame);
-  }, [open, triggerRef]);
+  }, [mounted, open, triggerRef]);
 
-  return (
+  const content = (
     <>
       <button
         type="button"
@@ -120,5 +126,18 @@ export default function AdaptiveSheet({
       </aside>
     </>
   );
+
+  if (!mounted) return null;
+  // The map tool presentation uses these ancestors for its dock geometry and
+  // scoped control styles. Move that presentation intact outside map stacking
+  // contexts, while the filter presentation already owns fixed positioning.
+  const presentation = className.split(" ").includes("mobile-map-panel-drawer") ? (
+    <div className="map-stage" data-adaptive-sheet-portal="true" hidden={!open} style={{ display: open ? "contents" : "none" }}>
+      <div className={`mobile-map-panel-dock${open ? " is-open" : ""}`}>
+        {content}
+      </div>
+    </div>
+  ) : content;
+  return createPortal(presentation, document.body);
 }
 
