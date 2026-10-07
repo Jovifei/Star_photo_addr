@@ -33,7 +33,7 @@ export default function ProductStateBridge() {
   } | null>(null);
 
   useEffect(() => {
-    if (pathname.startsWith("/planner")) return;
+    if (pathname.startsWith("/planner") || pathname === "/fireglow" || pathname === "/cloudsea") return;
     const signature = searchParams.toString();
     const applicationKey = `${pathname}?${signature}`;
     if (
@@ -72,7 +72,8 @@ export default function ProductStateBridge() {
     // a seasonal 8/12 night and must not silently move the current map back
     // to that historical event date.
     const isHome = pathname === "/";
-    const night = isHome ? null : searchParams.get("night");
+    const versionedContext = searchParams.get("contextVersion") === "2";
+    const night = isHome && !versionedContext ? null : searchParams.get("night");
     const model = searchParams.get("model");
     const forecastTime = searchParams.get("forecastTime");
     const observationTime = searchParams.get("observationTime");
@@ -82,7 +83,7 @@ export default function ProductStateBridge() {
     const cleanUrl = new URL(window.location.href);
     let shouldReplaceUrl = false;
 
-    if (isHome && searchParams.has("night")) {
+    if (isHome && !versionedContext && searchParams.has("night")) {
       cleanUrl.searchParams.delete("night");
       shouldReplaceUrl = true;
     }
