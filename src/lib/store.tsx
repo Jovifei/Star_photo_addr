@@ -219,9 +219,12 @@ export function cachedForecast(
   cache: Map<string, LocationForecast>,
   locationId: string,
   model: ForecastModel,
+  location?: Pick<Location, "latitude" | "longitude">,
 ): LocationForecast | null {
   const value = cache.get(forecastCacheKey(locationId, model));
-  return value?.metadata?.model === model ? value : null;
+  if (!value || value.metadata?.model !== model) return null;
+  if (location && (!Number.isFinite(value.requestedLatitude) || !Number.isFinite(value.requestedLongitude) || Math.abs(value.requestedLatitude! - location.latitude) > 1e-5 || Math.abs(value.requestedLongitude! - location.longitude) > 1e-5)) return null;
+  return value;
 }
 
 function markForecastStale(forecast: LocationForecast): LocationForecast {
@@ -266,6 +269,7 @@ function reducer(state: AppState, action: Action): AppState {
         cloudState: {
           ...state.cloudState,
           activeForecastTime: action.forecastTime,
+          activeForecastEpoch: null,
           timeIndex: nightHourIndex(action.forecastTime),
         },
       };
@@ -298,6 +302,7 @@ function reducer(state: AppState, action: Action): AppState {
         cloudState: {
           ...state.cloudState,
           activeForecastTime: action.forecastTime,
+          activeForecastEpoch: null,
           timeIndex: nightHourIndex(action.forecastTime),
         },
       };
@@ -306,9 +311,11 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, bortleEnabled: action.enabled };
     case "SET_CLOUD": {
       const partial = { ...action.partial };
+      if (partial.activeForecastTime !== undefined && partial.activeForecastEpoch === undefined) partial.activeForecastEpoch = null;
       if (action.source === "auto" && state.pointClockSource === "explicit") {
         if (partial.activeForecastTime !== state.cloudState.activeForecastTime) delete partial.timeIndex;
         delete partial.activeForecastTime;
+        delete partial.activeForecastEpoch;
         if (!Object.keys(partial).length) return state;
       }
       const pointClockSource = action.source === "explicit" && partial.activeForecastTime != null
@@ -733,7 +740,7 @@ export function StoreProvider({
       // so the background hydration effect does not silently retry it: such a
       // retry used to land after a 429 and hide the failure from the user.
       forecastHydrationKeyRef.current = `${location.id}|${selectedModel}`;
-      const cached = cachedForecast(state.forecastCache, location.id, selectedModel);
+      const cached = cachedForecast(state.forecastCache, location.id, selectedModel, location);
       dispatch({ type: "SET_LOCATION", location });
       dispatch({ type: "SET_DETAIL_OPEN", open: true });
       dispatch({ type: "SET_LOADING", loading: true });
@@ -765,7 +772,7 @@ export function StoreProvider({
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current || currentModelRef.current !== selectedModel) return;
         const message = error instanceof Error ? error.message : "天气请求失败";
-        const fallback = cachedForecast(state.forecastCache, location.id, selectedModel);
+        const fallback = cachedForecast(state.forecastCache, location.id, selectedModel, location);
         if (fallback) {
           const staleFallback = markForecastStale(fallback);
           dispatch({ type: "SET_FORECAST", forecast: staleFallback });
@@ -832,7 +839,7 @@ export function StoreProvider({
       // location+model pair, so the hydration effect must not retry it and
       // mask a 429 the user is supposed to see.
       forecastHydrationKeyRef.current = `${locationId}|${selectedModel}`;
-      const cached = cachedForecast(state.forecastCache, locationId, selectedModel);
+      const cached = cachedForecast(state.forecastCache, locationId, selectedModel, location);
       const requestId = ++latestForecastRequestRef.current;
       forecastInFlightRef.current = true;
       dispatch({ type: "SET_LOADING", loading: true });
@@ -866,7 +873,7 @@ export function StoreProvider({
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current || currentModelRef.current !== selectedModel) return;
         const message = error instanceof Error ? error.message : "取样或天气请求失败";
-        const fallback = cachedForecast(state.forecastCache, locationId, selectedModel);
+        const fallback = cachedForecast(state.forecastCache, locationId, selectedModel, location);
         if (fallback) {
           const staleFallback = markForecastStale(fallback);
           dispatch({ type: "SET_FORECAST", forecast: staleFallback });
@@ -940,7 +947,7 @@ export function StoreProvider({
     } catch (error) {
       if (requestId !== latestForecastRequestRef.current || currentModelRef.current !== state.cloudState.model) return;
       const message = error instanceof Error ? error.message : "数据刷新失败";
-      const fallback = cachedForecast(state.forecastCache, location.id, state.cloudState.model);
+      const fallback = cachedForecast(state.forecastCache, location.id, state.cloudState.model, location);
       if (fallback) {
         const staleFallback = markForecastStale(fallback);
         dispatch({ type: "SET_FORECAST", forecast: staleFallback });

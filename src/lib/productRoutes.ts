@@ -25,12 +25,13 @@ export interface ProductLinkContext {
   night?: string | null;
   model?: CloudState["model"] | null;
   forecastTime?: string | null;
+  forecastEpoch?: number | null;
   observationTime?: string | null;
   overlay?: CloudOverlayMode | null;
 }
 
 const OBSERVATION_CONTEXT_KEYS = [
-  "contextVersion", "sourceScope", "sourceId", "canonicalId", "phase",
+  "contextVersion", "sourceScope", "sourceId", "canonicalId", "phase", "forecastEpoch",
   "lat",
   "lng",
   "name",
@@ -118,6 +119,7 @@ export function buildProductHref(
   }
   setNonEmpty(target, "model", context.model);
   setNonEmpty(target, "forecastTime", context.forecastTime);
+  if (Number.isSafeInteger(context.forecastEpoch)) target.set("forecastEpoch", String(context.forecastEpoch));
   setNonEmpty(target, "observationTime", context.observationTime);
   setNonEmpty(target, "overlay", context.overlay);
 
@@ -160,5 +162,6 @@ export function readProductLinkContext(params: Pick<URLSearchParams, "get">): Pr
   return { identity, location: identity ? { ...identity, elevation: null } : null,
     contextVersion: params.get("contextVersion") === "2" ? 2 : undefined,
     night: params.get("night"), forecastTime: params.get("forecastTime"),
+    forecastEpoch: params.get("forecastEpoch") && Number.isSafeInteger(Number(params.get("forecastEpoch"))) ? Number(params.get("forecastEpoch")) : null,
     phase: phase === "morning" || phase === "evening" ? phase : undefined };
 }

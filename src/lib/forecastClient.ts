@@ -1,3 +1,4 @@
+import { validAbsoluteHours } from "./absoluteForecastTime";
 import type { ForecastModel, ForecastResponse, LocationForecast } from "./types";
 import { dataAgeMs, forecastAgeMs, FORECAST_FRESH_MS } from "./forecastIntegrity";
 
@@ -80,7 +81,7 @@ function validateLocation(
       typeof location.fetchedAt === "string" &&
       Array.isArray(location.hourly) &&
       location.hourly.length > 0 &&
-      new Set(location.hourly.map((hour) => hour?.time)).size === location.hourly.length &&
+      (location.metadata?.timeAxisVersion === "epoch-v1" ? validAbsoluteHours(location.hourly, location.timezone) : new Set(location.hourly.map((hour) => hour?.time)).size === location.hourly.length) &&
       location.hourly.every((hour) => typeof hour?.time === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(hour.time)),
   );
 }

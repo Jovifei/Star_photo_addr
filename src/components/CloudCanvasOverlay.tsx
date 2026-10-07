@@ -14,6 +14,7 @@ interface CloudCanvasOverlayProps {
   gridData: CloudGridData | null;
   timeIndex: number;
   activeForecastTime?: string | null;
+  activeForecastEpoch?: number | null;
   displayMode: CloudDisplayMode;
   showPrecipitation?: boolean;
   showWind?: boolean;
@@ -31,6 +32,7 @@ export default function CloudCanvasOverlay({
   gridData,
   timeIndex,
   activeForecastTime,
+  activeForecastEpoch,
   displayMode,
   showPrecipitation = false,
   showWind = false,
@@ -50,14 +52,14 @@ export default function CloudCanvasOverlay({
       setRenderStatus(next);
     });
   };
-  const propsRef = useRef({ gridData, timeIndex, activeForecastTime, displayMode, showPrecipitation, showWind });
+  const propsRef = useRef({ gridData, timeIndex, activeForecastTime, activeForecastEpoch, displayMode, showPrecipitation, showWind });
 
   useEffect(() => {
-    propsRef.current = { gridData, timeIndex, activeForecastTime, displayMode, showPrecipitation, showWind };
-  }, [activeForecastTime, displayMode, gridData, showPrecipitation, showWind, timeIndex]);
+    propsRef.current = { gridData, timeIndex, activeForecastTime, activeForecastEpoch, displayMode, showPrecipitation, showWind };
+  }, [activeForecastEpoch, activeForecastTime, displayMode, gridData, showPrecipitation, showWind, timeIndex]);
 
   const draw = () => {
-    const { gridData: data, timeIndex: ti, activeForecastTime: activeTime, displayMode: mode, showPrecipitation: rainEnabled, showWind: windEnabled } = propsRef.current;
+    const { gridData: data, timeIndex: ti, activeForecastTime: activeTime, activeForecastEpoch: activeEpoch, displayMode: mode, showPrecipitation: rainEnabled, showWind: windEnabled } = propsRef.current;
     const canvas = canvasRef.current;
     if (!map || !data || !canvas) return;
 
@@ -92,9 +94,9 @@ export default function CloudCanvasOverlay({
     const rows = data.rows ?? 5;
     const cols = data.cols ?? 6;
     const time = activeTime ?? ti;
-    const layerValues = getValuesAtTime(data, time);
+    const layerValues = getValuesAtTime(data, time, activeEpoch);
     const values = mode === "total"
-      ? getCloudCoverAtTime(data, time)
+      ? getCloudCoverAtTime(data, time, activeEpoch)
       : layerValues[mode];
 
     const validSamples = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value));
@@ -129,7 +131,7 @@ export default function CloudCanvasOverlay({
     }
     ctx.putImageData(pixels, 0, 0);
 
-    const weather = getWeatherValuesAtTime(data, time);
+    const weather = getWeatherValuesAtTime(data, time, activeEpoch);
     if (rainEnabled) {
       for (let py = 0; py < canvas.height; py += 2) {
         for (let px = 0; px < canvas.width; px += 2) {
@@ -178,7 +180,7 @@ export default function CloudCanvasOverlay({
   useEffect(() => {
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeForecastTime, displayMode, gridData, map, showPrecipitation, showWind, timeIndex]);
+  }, [activeForecastEpoch, activeForecastTime, displayMode, gridData, map, showPrecipitation, showWind, timeIndex]);
 
   useEffect(() => {
     if (!map) return;

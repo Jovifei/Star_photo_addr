@@ -63,6 +63,7 @@ export default function NavTabs() {
         night: navigationState.selectedNight,
         model: navigationState.cloudState.model,
         forecastTime: navigationState.cloudState.activeForecastTime,
+        forecastEpoch: navigationState.cloudState.activeForecastEpoch,
         observationTime: navigationState.cloudState.activeObservationTime,
         overlay: navigationState.cloudState.overlayMode,
       }

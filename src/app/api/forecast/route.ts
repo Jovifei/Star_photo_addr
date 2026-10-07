@@ -1,3 +1,4 @@
+import { validAbsoluteHours } from "@/lib/absoluteForecastTime";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -47,7 +48,7 @@ function readFromDiskCache(
     try {
       const data: unknown = JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ filename, "utf-8"));
       // Check ORIGINAL fetch time; filesystem mtime is not provenance.
-      if (usableDiskForecast(data, model, count, maxAgeMs)) return data;
+      if (usableDiskForecast(data, model, count, maxAgeMs) && (!key.startsWith("surface-v4-epoch|") || data.locations.every(location => location.metadata?.timeAxisVersion === "epoch-v1" && validAbsoluteHours(location.hourly, location.timezone)))) return data;
     } catch { /* Missing or invalid cache entries do not fabricate data. */ }
   }
   return null;
@@ -71,7 +72,7 @@ function readPreOffsetDiskCache(
   return sameRequestedPoints ? data : null;
 }
 
-type RetainedDiskOrigin = "current" | "pre-offset" | "legacy";
+type RetainedDiskOrigin = "current" | "pre-epoch" | "pre-offset" | "legacy";
 
 function readRetainedDiskForecast(
   currentKey: string,
@@ -84,6 +85,8 @@ function readRetainedDiskForecast(
 ): { data: ForecastResponse; origin: RetainedDiskOrigin } | null {
   const current = readFromDiskCache(currentKey, model, latitudes.length, maxAgeMs);
   if (current) return { data: current, origin: "current" };
+  const preEpoch = readPreOffsetDiskCache(`surface-v3-offset|${legacyKey}`, model, latitudes, longitudes, maxAgeMs);
+  if (preEpoch) return { data: preEpoch, origin: "pre-epoch" };
   const preOffset = readPreOffsetDiskCache(
     preOffsetKey,
     model,
@@ -160,9 +163,9 @@ export async function GET(request: NextRequest) {
   const days = clampForecastDays(Number.isFinite(daysRaw) ? daysRaw : 14, model);
   const legacyKey = `${model}|${days}|${normalizedCoordinateKey(latitudes)}|${normalizedCoordinateKey(longitudes)}`;
   const preOffsetKey = `surface-v2-past1|${legacyKey}`;
-  // v3 is the fresh offset-integrity boundary. v2 may still be exposed as
-  // explicitly stale raw weather facts, but never as fresh data or score input.
-  const key = `surface-v3-offset|${legacyKey}`;
+  // v4 requires verified absolute instants. Older namespaces are read-only
+  // stale facts, never promoted to the new timeline trust boundary.
+  const key = `surface-v4-epoch|${legacyKey}`;
   const cached = forecastCache.read(key);
   if (!forceRefresh && cached && cached.ageMs <= FRESH_TTL_MS) {
     return NextResponse.json(cached.value, { headers: responseHeaders(false, model, days, "memory", false) });
@@ -201,7 +204,7 @@ export async function GET(request: NextRequest) {
       STALE_TTL_MS,
     );
     if (retained) {
-      const cacheState = retained.origin === "pre-offset"
+      const cacheState = (retained.origin === "pre-offset" || retained.origin === "pre-epoch")
         ? "cache-only-pre-offset-disk"
         : "cache-only-disk";
       return NextResponse.json(markStale(retained.data), {

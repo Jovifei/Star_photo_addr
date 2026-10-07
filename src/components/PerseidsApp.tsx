@@ -100,8 +100,9 @@ function TonightEvidence({
             nightKey={state.selectedNight}
             hours={evaluation.hours}
             selectedTime={state.cloudState.activeForecastTime}
-            onSelectTime={(time) =>
-              setCloud({ activeForecastTime: time })
+            selectedEpoch={state.cloudState.activeForecastEpoch}
+            onSelectTime={(time, epochSeconds) =>
+              setCloud({ activeForecastTime: time, activeForecastEpoch: epochSeconds })
             }
             title="逐小时气象与云量详情"
           />

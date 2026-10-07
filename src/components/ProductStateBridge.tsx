@@ -178,13 +178,13 @@ export default function ProductStateBridge() {
       setDetailOpen(true);
     }
     if (acceptedHomeForecastTime || observationTime) {
-      if (acceptedHomeForecastTime && /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(acceptedHomeForecastTime)) {
+      if ((!versionedContext || !night) && acceptedHomeForecastTime && /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(acceptedHomeForecastTime)) {
         const hour = Number(acceptedHomeForecastTime.slice(11, 13));
         const date = acceptedHomeForecastTime.slice(0, 10);
         selectNight(hour <= 5 ? addDays(date, -1) : date);
       }
       setCloud({
-        ...(acceptedHomeForecastTime ? { activeForecastTime: acceptedHomeForecastTime } : {}),
+        ...(acceptedHomeForecastTime ? { activeForecastTime: acceptedHomeForecastTime, activeForecastEpoch: searchParams.get("forecastEpoch") && Number.isSafeInteger(Number(searchParams.get("forecastEpoch"))) ? Number(searchParams.get("forecastEpoch")) : null } : {}),
         activeObservationTime:
           observationTime ?? state.cloudState.activeObservationTime,
       });
