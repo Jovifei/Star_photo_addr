@@ -1,3 +1,7 @@
+# Latest 2026-10-07 follow-up candidate
+
+LOCAL_CODEX_AUTHORED CODE_HEAD10e25655db4146b306ca6c38abd4597e72a174f0/tree99d54ada52dd91c5e9a7951dee6bc33127709360. Adds candidate cache identity and independent elapsed-duration fallback guards; fixed actual768 modal close stacking via portals and aligned actual document-scroll/map-density contracts. Full86files496tests/lint/types/buildPASS; CI-failure reproduction35PASS4applicableSKIP. Prior95fed16 CI37596735320 FAILED6Chromium/256PASS, other4jobsSUCCESS, not release proof. New exactCI and remote actual-source review PENDING. Production remains378; noDraft49merge/deploy. Owner notes preserved. Evidence: docs/COMPACT_MOBILE_A1_LOCAL_ACCEPTANCE_20261007.md. Coordinate conflicts/source-time/DST/device/reader/science remain scoped pending.
+
 # 2026-10-07 latest local repair candidate
 
 LOCAL_CODEX_AUTHORED product commit5854a1604d8517b48c7120f805ed3a157d6c1347/tree088d6cfd0f5c3d1e6fd1f057c09df46e5e2ed487. Current source includes remote478 base plus corrected explicit clock ownership/refresh/catalog handoff, strict coordinate identity binding, independent astronomy/raw weather, compact portrait document scrolling, marker first-touch and200% input shrink repairs. Parent full85files494tests/lint/types/buildPASS; targeted mobile31PASS2applicableSKIP. Actual bounded LA GFS72hours72visibility/source08:21:12.87Z/stalefalse and candidate real-response calculation1PASS.

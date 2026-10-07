@@ -1,3 +1,9 @@
+## 2026-10-07 latest follow-up (supersedes candidate status below)
+
+Current product CODE_HEAD10e25655db4146b306ca6c38abd4597e72a174f0/tree99d54ada52dd91c5e9a7951dee6bc33127709360. It adds validated batch-cache local identity binding, refuses score-sample counts as elapsed duration, and places modal presentations outside map stacking contexts with SSR/focus/scroll handling preserved.
+
+Exact prior hosted CI37596735320 on95fed16 FAILED: quality/live-data/container/cross-browser succeeded, Chromium6FAIL256PASS; skipped count not independently captured. Two768px modal close interactions were intercepted by map tools; four contracts still required old400px maps/internal panel scrolling. Actual production layer issue was fixed; tests now verify220–440px map and reachable document content with body.scrollTop0. Local reproduction35PASS4applicableSKIP, full86files496tests/lint/types/buildPASS. Cache/duration seam RED2FAIL7PASS -> GREEN9PASS (including astronomy12PASS). New exact hostedCI/remote-source-review/newdeployment remainPENDING; production378 unchanged. Earlier494/31 results below are retained historical candidate evidence.
+
 # 手机密度与点位时间修复交接
 
 状态：LOCAL_CODEX_AUTHORED 候选；现网仍378161ffe6aa21989ef48e63c9d077343d276a95。未部署、未合并Draft PR49。
