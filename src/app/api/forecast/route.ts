@@ -116,7 +116,9 @@ export async function GET(request: NextRequest) {
   const daysRaw = Number(searchParams.get("days") ?? "14");
   const days = clampForecastDays(Number.isFinite(daysRaw) ? daysRaw : 14, model);
   const legacyKey = `${model}|${days}|${normalizedCoordinateKey(latitudes)}|${normalizedCoordinateKey(longitudes)}`;
-  const key = `surface-v2-past1|${legacyKey}`;
+  // v3 is an offset-integrity boundary: v2 records may have persisted the
+  // former unknown->0 normalization and cannot be distinguished from genuine UTC.
+  const key = `surface-v3-offset|${legacyKey}`;
   const cached = forecastCache.read(key);
   if (!forceRefresh && cached && cached.ageMs <= FRESH_TTL_MS) {
     return NextResponse.json(cached.value, { headers: responseHeaders(false, model, days, "memory", false) });
