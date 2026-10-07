@@ -102,3 +102,9 @@
 |---|---|
 | `LOCAL_CODEX_HANDOFF.md` | 置顶本阶段未部署状态并保留历史；避免旧交接部署授权误用于本阶段。 |
 | `docs/CLOUD_IDENTITY_PROVENANCE_DST_20261007.md` | 逐文件、契约、真实结果、NOT_RUN、设备/科学验收与回滚；文档证据不替代真机/准确率。 |
+
+## 后续真实矩阵实施
+
+托管CI已实际具备供应商访问能力，所以既有live-smoke每模型的一次请求扩成五坐标batch，不增加模型请求次数；四模型顺序执行，429立即停止。记录每行原始UTC epoch/时区、requested与provider grid坐标分别保留、采集时间及未知run/observation null、visibility count。上海、两处牛背山、LA、Kathmandu共20行的真实结果以最终CI日志为准；此处编写时仍PENDING，不伪造PASS。既有28行cache-only产品矩阵仍NOT_RUN，两者不能混称。最新429实际HTTP测试PASS。
+
+40ef源码构建的响应式/地图触摸/文档单滚动/地点日期回归在执行；已重跑原desktop宽矮方法说明失败用例并通过，原断言未改。最终完整结果在PR52。
