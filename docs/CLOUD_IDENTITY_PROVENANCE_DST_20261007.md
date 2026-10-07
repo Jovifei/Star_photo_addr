@@ -128,3 +128,11 @@
 设备调用实际错误：`adb devices`与`idevice_id -l`均exit127 command not found。VM没有可执行真机验收链路；必须由本地真实OnePlus/iOS及AT执行既有矩阵并回传证据，不把Playwright/axe当作TalkBack/VoiceOver。
 
 最后身份往返RED：真实090920d构建首页接收observing目录点时，desktop/mobile两项都FAIL，坐标仍正确但Nav输出sourceScope=coordinate及planner坐标ID。修复Nav只在所选坐标仍匹配时保留incoming scoped identity；换点立即回到坐标身份，canonical/sourceId仍不得越过坐标冲突。主题phase从所选本地时次推导，往返同时检验日期和晨间选择。新增浏览器断言保留前述3项转换测试。此前完整515资格与五job终态以对应精确head的PR记录为准，新head重新执行CI。
+
+版本化超范围日期RED：f540构建desktop/mobile均FAIL，首页将2030-01-02替换成今日并剥离显式forecastTime。修复仅对contextVersion=2且严格有效本地日历日期/时分保留选择，预报缺该日期保持无数据，不替换成今日评分；旧未版本化历史书签今晚优先兼容逻辑保留。新增闰年/无效日期门禁，拒绝JS Date自动把2月29或4月31移到次月。
+
+| 追加文件 | 原因 / 风险 |
+|---|---|
+| `tests/unit/productRoutes.test.ts` | 保留原路由测试，新增有效超范围日期与无效日历归一化门禁；选择日期不表示供应商覆盖。 |
+
+新ProductStateBridge只保留合法日期上下文，绝不把当前预报写成2030预报或提升旧缓存信任。超范围显示无该时次预报并允许用户从顶部直接改选有效日期；跨入口继续携带原选择。最终CI/精确head以PR52顶部与终态为准。

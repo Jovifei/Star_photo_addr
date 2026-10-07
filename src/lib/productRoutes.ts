@@ -165,3 +165,10 @@ export function readProductLinkContext(params: Pick<URLSearchParams, "get">): Pr
     forecastEpoch: params.get("forecastEpoch") && Number.isSafeInteger(Number(params.get("forecastEpoch"))) ? Number(params.get("forecastEpoch")) : null,
     phase: phase === "morning" || phase === "evening" ? phase : undefined };
 }
+
+/** A versioned selected date may be outside provider coverage, never a normalized invalid calendar date. */
+export function validProductDate(value: string | null | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const instant = Date.parse(value + "T12:00:00Z");
+  return Number.isFinite(instant) && new Date(instant).toISOString().slice(0, 10) === value;
+}

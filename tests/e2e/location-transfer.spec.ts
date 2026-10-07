@@ -39,3 +39,12 @@ test("a home round-trip retains the source scope and source ID when the selected
   await expect(fireglow).toHaveAttribute("href", /night=2026-10-08/);
   await expect(fireglow).toHaveAttribute("href", /phase=morning/);
 });
+
+test("a versioned unsupported home date is retained without substituting today's forecast context", async ({ page }) => {
+  await page.route("**/api/**", route => route.fulfill({ status: 502, json: { error: "fixture: no supplier request" } }));
+  await page.goto("/?contextVersion=2&lat=31.2&lng=121.5&name=自定义点位&night=2030-01-02&forecastTime=2030-01-02T20%3A00");
+  const fireglow = page.getByRole("link", { name: /^火烧云/ });
+  await expect(fireglow).toHaveAttribute("href", /lat=31.2.*lng=121.5/);
+  await expect(fireglow).toHaveAttribute("href", /night=2030-01-02/);
+  await expect(fireglow).toHaveAttribute("href", /forecastTime=2030-01-02T20%3A00/);
+});

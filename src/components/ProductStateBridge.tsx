@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
 import type { CloudOverlayMode, MapViewMode } from "@/lib/types";
 import { addDays, initialForecastTime } from "@/lib/nighttime";
+import { validProductDate } from "@/lib/productRoutes";
 import { toSimplifiedChinese } from "@/lib/chineseText";
 
 /**
@@ -104,7 +105,7 @@ export default function ProductStateBridge() {
     // resurrect years-old planner links outside the provider's forecast range.
     const coordinateDates = new Set(Array.from({ length: 16 }, (_, index) => addDays(homeDate, index - 2)));
     const acceptedHomeForecastTime =
-      !isHome || !forecastTime || (hasValidCoordinates && coordinateDates.has(forecastDate ?? "")) || acceptedHomeDates.has(forecastDate ?? "")
+      !isHome || !forecastTime || (versionedContext && validProductDate(forecastDate) && /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(forecastTime)) || (hasValidCoordinates && coordinateDates.has(forecastDate ?? "")) || acceptedHomeDates.has(forecastDate ?? "")
         ? forecastTime
         : null;
     if (isHome && forecastTime && !acceptedHomeForecastTime) {
@@ -131,7 +132,7 @@ export default function ProductStateBridge() {
       );
     }
 
-    if (night && state.nightKeys.includes(night)) {
+    if (night && (state.nightKeys.includes(night) || (versionedContext && validProductDate(night)))) {
       selectNight(night);
     }
     const selectedModel =
