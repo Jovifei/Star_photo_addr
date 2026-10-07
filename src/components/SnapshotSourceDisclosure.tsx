@@ -4,7 +4,7 @@ export default function SnapshotSourceDisclosure({ snapshot, siteId }: {
   siteId: string | null;
 }) {
   const sources = siteId ? snapshot?.provenance?.sourcesBySite[siteId] : null;
-  return <details className="forecast-method-note" data-testid="snapshot-source-times">
+  return <details className="snapshot-source-note" data-testid="snapshot-source-times">
     <summary>来源与时间</summary>
     {!siteId ? <p>选择目录点位查看原始供应商时间。</p> : sources?.length ? sources.map(source =>
       <p key={source.dataset}>{source.provider} · {source.model.toUpperCase()} · {source.dataset === "surface" ? "地面" : "压力层"}：
