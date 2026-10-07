@@ -63,6 +63,10 @@ export default function ProductStateBridge() {
     const longitudeValue = searchParams.get("lng");
     const latitude = latitudeValue === null ? null : Number(latitudeValue);
     const longitude = longitudeValue === null ? null : Number(longitudeValue);
+    const hasValidCoordinates =
+      latitude !== null && longitude !== null &&
+      Number.isFinite(latitude) && Number.isFinite(longitude) &&
+      latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
     const name = toSimplifiedChinese(searchParams.get("name")?.trim()) || "观星计划点位";
     // The home map is always tonight-first. Old planner links often carried
     // a seasonal 8/12 night and must not silently move the current map back
@@ -96,7 +100,7 @@ export default function ProductStateBridge() {
       addDays(homeDate, 1),
     ]);
     const acceptedHomeForecastTime =
-      !isHome || !forecastTime || acceptedHomeDates.has(forecastDate ?? "")
+      !isHome || !forecastTime || hasValidCoordinates || acceptedHomeDates.has(forecastDate ?? "")
         ? forecastTime
         : null;
     if (isHome && forecastTime && !acceptedHomeForecastTime) {
@@ -178,16 +182,7 @@ export default function ProductStateBridge() {
       });
     }
 
-    if (
-      latitude !== null &&
-      longitude !== null &&
-      Number.isFinite(latitude) &&
-      Number.isFinite(longitude) &&
-      latitude >= -90 &&
-      latitude <= 90 &&
-      longitude >= -180 &&
-      longitude <= 180
-    ) {
+    if (hasValidCoordinates) {
       const elevationParam = searchParams.get("elevation");
       const parsedElevation =
         elevationParam === null || elevationParam.trim() === ""
