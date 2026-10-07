@@ -45,6 +45,58 @@ Do not deploy, merge Draft PR49, alter network/credentials, or touch Owner notes
 
 Still PENDING: physical screen-reader/device proof, broad a11y, global selected-location timezone/DST, scientific forecast accuracy, terrain-obstruction astronomy, and independent astronomy-fact availability when weather fields are incomplete.
 
+### Staged next work after this a11y fix validates
+
+#### Stage T1 — selected-point local calendar semantics
+
+Source evidence: home initialization and clock resync call `currentNightKey()` / `initialForecastTime()`, and those helpers currently hard-code `Asia/Shanghai`. The selected forecast already carries an IANA `timezone`, but `selectLocation()` does not synchronize the selected-location clock from it.
+
+Plan:
+- make `currentNightKey`, `initialForecastTime`, and any relevant date helper accept an explicit IANA timezone while retaining Shanghai as the catalog/default compatibility value;
+- add explicit store clock-basis state so an automatic location-timezone sync cannot overwrite a user-selected historical night/hour;
+- after a successful selected-point forecast, bind the selected arbitrary point to `forecast.timezone` and recompute only auto-owned `nightKeys/selectedNight/forecastWindowStart/activeForecastTime`;
+- do not switch the China observing-site catalog snapshot date away from its current China-date semantics;
+- defer home deep-link forecastTime rejection until the selected point timezone is known instead of validating arbitrary overseas coordinates against Shanghai.
+
+Tests:
+- same instant yields different correct evening date/hour for Asia/Shanghai and America/Los_Angeles;
+- pre-dawn ownership still maps to the previous evening in each timezone;
+- changing selected point across timezones updates only auto clock state;
+- explicit historical night/hour survives forecast hydration;
+- URL forecastTime validation is relative to resolved selected-point timezone, not browser/process timezone.
+
+#### Stage T2 — DST-safe absolute hourly identity
+
+Current hourly identity is a provider-local wall-clock string and scoring recovers UTC with one response-level offset. This needs a dedicated DST proof before global acceptance.
+
+Provider contract to evaluate: Open-Meteo supports `timeformat=unixtime`, returning hourly timestamps as GMT+0 epoch seconds while still returning the resolved timezone identifier. Prefer carrying an absolute instant alongside the location-local display label rather than guessing DST offsets from geography or a single static offset.
+
+Plan:
+- first add contract fixtures for America/Los_Angeles spring-forward and fall-back nights;
+- if the current ISO-local representation cannot uniquely preserve repeated/missing DST hours, add a canonical absolute `instant` to normalized hours and use it for ordering/astronomy identity;
+- keep local wall-clock labels for UI/night grouping, derived from the resolved IANA timezone;
+- never collapse two distinct fall-back instants merely because their local HH:mm labels match;
+- only retire response-level offset arithmetic from astronomy after equivalent China/UTC/negative-offset/DST regressions are green.
+
+#### Stage A1 — independent astronomical facts
+
+Source evidence: `evaluateNight()` returns null when any `missingNightInputs` field is absent, including ICON visibility. `ObservationDetails` then reads Moon illumination, dark hours and Galactic maximum only from that nullable weather-scored evaluation, so valid geometric facts disappear with an unrelated meteorological field.
+
+Plan, after the timezone/instant foundation:
+- add a separate `NightAstronomyFacts` projection computed from selected location + canonical night instants using `astronomyAt`; it must not calculate or imply a weather score;
+- include Moon illumination/phase, astronomical-dark-hour count/duration, Galactic-center maximum altitude, and enough provenance to state the timezone/time basis;
+- keep score/window/confidence fail-closed when weather inputs such as visibility are incomplete;
+- update `ObservationDetails` and the CloudTimeline Moon summary to use astronomy facts independently from `NightEvaluation`;
+- preserve the displayed selected-location elevation as unknown when unknown. If Astronomy Engine receives its existing 0 m computational fallback, label that as a geometric calculation fallback, never as actual site elevation;
+- keep terrain/building horizon obstruction explicitly out of scope, so altitude above the mathematical horizon is not called guaranteed photographic visibility.
+
+Tests:
+- ICON night with visibility=null => weather evaluation null, score/window/confidence withheld, but Moon/dark-duration/Galactic facts present;
+- stale/missing weather values do not fabricate any weather recommendation;
+- unknown elevation remains unknown in UI while astronomy calculation still completes with an explicit fallback note;
+- waxing/waning labels remain correct from the already repaired phase angle;
+- astronomy facts remain identical across browser/process timezones for the same absolute instants and selected IANA timezone.
+
 
 ## 2026-10-07 当前接手状态（优先于下方历史）
 DEPLOYED_ACCEPTANCE_INCOMPLETE：当前运行378161ffe6aa21989ef48e63c9d077343d276a95，app/worker精确镜像82f5a0ba…健康restart0。原卷、备份校验及回滚已独立重核；未重部署。
