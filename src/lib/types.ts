@@ -307,6 +307,7 @@ export interface HourEvaluation extends HourWeather {
   sunAltitude: number;
   moonAltitude: number;
   moonIllumination: number;
+  moonPhaseAngle: number;
   galacticAltitude: number;
   score: number;
   quality: Quality;
