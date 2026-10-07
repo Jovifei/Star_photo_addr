@@ -3,7 +3,11 @@
 /** Loading overlay shown while the dark-sky map expands. */
 export default function MapSetup({ hidden }: { hidden: boolean }) {
   return (
-    <div className={`map-setup${hidden ? " hidden" : ""}`} role="status">
+    <div
+      className={`map-setup${hidden ? " hidden" : ""}`}
+      role="status"
+      aria-hidden={hidden || undefined}
+    >
       <div>
         <div className="loader" />
         <b>正在加载地图图层</b>
