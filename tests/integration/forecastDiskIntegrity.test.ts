@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const NOW = Date.parse("2026-09-13T08:00:00Z");
 const LIMIT = 6 * 60 * 60_000;
 const KEY = "icon|1|30.182|108.882";
+const OFFSET_CONTRACT_KEY = `surface-v3-offset|${KEY}`;
+const PRE_OFFSET_KEY = `surface-v2-past1|${KEY}`;
 let directory: string;
 
 function payload(fetchedAt: string) {
@@ -55,11 +57,29 @@ describe("forecast disk fallback original-age gate", () => {
     expect(response.headers.get("x-data-stale")).toBe("true");
     expect((await response.json()).locations[0].metadata.stale).toBe(true);
   });
-  it("accepts fresh data only under the expanded coverage cache key", async () => {
-    writeDisk(payload(new Date(NOW - 60_000).toISOString()), `surface-v2-past1|${KEY}`);
+  it("accepts fresh data only under the offset-contract cache key", async () => {
+    writeDisk(payload(new Date(NOW - 60_000).toISOString()), OFFSET_CONTRACT_KEY);
     const response = await request(true);
     expect(response.status).toBe(200);
     expect((await response.json()).locations[0].metadata.stale).toBe(false);
+  });
+  it("does not reuse a pre-offset-contract v2 record whose zero offset is ambiguous", async () => {
+    const value = payload(new Date(NOW - 60_000).toISOString());
+    value.locations[0]!.timezone = "Asia/Shanghai";
+    value.locations[0]!.utcOffsetSeconds = 0;
+    writeDisk(value, PRE_OFFSET_KEY);
+    const response = await request(true);
+    expect(response.status).toBe(429);
+    expect(response.headers.get("x-forecast-cache")).toBe("cache-only-miss");
+  });
+  it("preserves an explicit UTC zero in the offset-contract cache namespace", async () => {
+    const value = payload(new Date(NOW - 60_000).toISOString());
+    value.locations[0]!.timezone = "UTC";
+    value.locations[0]!.utcOffsetSeconds = 0;
+    writeDisk(value, OFFSET_CONTRACT_KEY);
+    const response = await request(true);
+    expect(response.status).toBe(200);
+    expect((await response.json()).locations[0].utcOffsetSeconds).toBe(0);
   });
   it("never treats a recently fetched legacy record as a fresh normal response", async () => {
     writeDisk(payload(new Date(NOW - 60_000).toISOString()));
