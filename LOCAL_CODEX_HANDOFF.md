@@ -1,3 +1,15 @@
+# 当前交接 — 2026-10-07 正式发布完成
+
+已部署5fbf7bac2c925d068f4c04274cbdbe79b0672ead，版本1.0.27，clean-runtime镜像aa57d67d…；app/worker healthy重启0。CI37607724883五任务SUCCESS。主报告：docs/DEPLOYED_5FBF_ACCEPTANCE_20261007.md。
+
+修复发布覆盖目录残留导致“健康新版/页面旧版”的实际缺陷；正式服务首页/火烧云/云海与打包HTML逐字节匹配。新版504屏实测地图440px、溢出0、实际GFS原值及score93/暗夜估算9h。截图工具失败，使用实际DOM记录，不冒充真机。
+
+原卷、原378镜像/配置及一致备份保留。原目录Owner两份笔记仍保护。已授权测试通过即部署，不能重复索取许可。Git push正常；gh未登录与公开GET限流单独记录，服务器GET已完成CI读数。
+
+接下来通过原Project接力聊天审核此次精确SHA/报告，继续跨产品身份、快照来源时间、DST和真机/读屏阶段；不把待做科学验收包装为已完成。PR49仍Draft/main未合并。下方旧记录仅作历史，不覆盖本条精确版本。
+
+---
+
 # Latest 2026-10-07 follow-up candidate
 
 LOCAL_CODEX_AUTHORED CODE_HEAD10e25655db4146b306ca6c38abd4597e72a174f0/tree99d54ada52dd91c5e9a7951dee6bc33127709360. Adds candidate cache identity and independent elapsed-duration fallback guards; fixed actual768 modal close stacking via portals and aligned actual document-scroll/map-density contracts. Full86files496tests/lint/types/buildPASS; CI-failure reproduction35PASS4applicableSKIP. Prior95fed16 CI37596735320 FAILED6Chromium/256PASS, other4jobsSUCCESS, not release proof. New exactCI and remote actual-source review PENDING. Production remains378; noDraft49merge/deploy. Owner notes preserved. Evidence: docs/COMPACT_MOBILE_A1_LOCAL_ACCEPTANCE_20261007.md. Coordinate conflicts/source-time/DST/device/reader/science remain scoped pending.
