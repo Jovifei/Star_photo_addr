@@ -25,6 +25,7 @@ export interface AstronomyResult {
   moonAltitude: number;
   moonAzimuth: number;
   moonIllumination: number;
+  moonPhaseAngle: number;
   galacticAltitude: number;
   galacticAzimuth: number;
 }
@@ -44,20 +45,23 @@ export function astronomyAt(date: Date, location: Location): AstronomyResult {
   const moon = horizontal(Astronomy.Body.Moon, date, observer);
   const galacticCenter = horizontal(Astronomy.Body.Star1, date, observer);
   const illumination = Astronomy.Illumination(Astronomy.Body.Moon, date);
+  const moonPhaseAngle = Astronomy.MoonPhase(date);
   return {
     sunAltitude: sun.altitude,
     sunAzimuth: sun.azimuth,
     moonAltitude: moon.altitude,
     moonAzimuth: moon.azimuth,
     moonIllumination: illumination.phase_fraction,
+    moonPhaseAngle,
     galacticAltitude: galacticCenter.altitude,
     galacticAzimuth: galacticCenter.azimuth,
   };
 }
 
-export function moonPhaseName(fraction: number, waxing = true): string {
+export function moonPhaseName(fraction: number, phaseAngle: number): string {
   if (fraction < 0.03) return "新月";
   if (fraction > 0.97) return "满月";
+  const waxing = phaseAngle < 180;
   if (fraction < 0.45) return waxing ? "娥眉月" : "残月";
   if (fraction < 0.55) return waxing ? "上弦月" : "下弦月";
   return waxing ? "盈凸月" : "亏凸月";
