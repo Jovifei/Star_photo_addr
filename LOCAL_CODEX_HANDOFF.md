@@ -1,3 +1,96 @@
+# 2026-10-07 T1 selected-point timezone handoff
+
+STATE: READY_FOR_LOCAL_VALIDATION
+TASK: starphoto-378-postrelease-acceptance
+ITERATION: 6
+
+Production remains `378161ffe6aa21989ef48e63c9d077343d276a95`. No deployment or Draft PR49 merge was performed.
+
+## Exact current-base chain
+
+- Current authorized/source baseline: `755a1fe1ee16f2fda47c337b7e6c72255a3bd1d6`
+- T1 RED: `63a3147d2f2d71fb709ad1cd8798bb82df7d3b65`
+- T1 CODE_HEAD: `478e008e3d8be74b87e114f831ac830737a9a959`
+- T1 CODE_HEAD tree: `11ec3fa008906e6c1d3ba145e4155cb0fb61e563`
+- Remote branch: `codex/postrelease-selected-point-timezone-t1-final-20261007`
+
+The provisional `2727d8ba039c33f786c1b6c33bd9fb92c318c33d` candidate is superseded. It exercised the intended T1 behavior but local typecheck found five TS2345 calls because `CloudState.activeForecastTime` is optional (`string | null | undefined`) while the async clock guard contract is `string | null`.
+
+The exact fix is intentionally narrow: all three captures now normalize with `state.cloudState.activeForecastTime ?? null`. This removes the optional-`undefined` boundary without widening the reducer/action contract.
+
+## RED/GREEN structure
+
+RED `63a3147d2f2d71fb709ad1cd8798bb82df7d3b65` is based directly on the current `755a1fe` baseline and changes only:
+- `tests/unit/nighttime.test.ts`
+- `tests/unit/storeHydration.test.ts`
+
+It locks:
+- the same absolute instant resolving to Shanghai Oct 7 13:xx but Los Angeles Oct 6 22:xx;
+- selected-point pre-dawn ownership of the previous observation night;
+- selected LA forecast timezone updating point night/hour/window;
+- China catalog night/hour remaining on Shanghai;
+- a user-explicit night/hour chosen while forecast is in flight not being overwritten.
+
+GREEN `478e008e3d8be74b87e114f831ac830737a9a959` changes only nine product files:
+- `src/lib/nighttime.ts`
+- `src/lib/store.tsx`
+- `src/components/ProductStateBridge.tsx`
+- `src/components/CandidateList.tsx`
+- `src/components/StarWindowTable.tsx`
+- `src/components/ObservingMapControl.tsx`
+- `src/components/RecommendationQuickControls.tsx`
+- `src/components/ObservingSitesLayer.tsx`
+- `src/components/ViewportRecommendationPanel.tsx`
+
+## Architecture boundary
+
+The selected point and China catalog intentionally use separate clocks.
+
+Selected-point domain:
+- `selectedNight`
+- `nightKeys`
+- `forecastWindowStart`
+- `cloudState.activeForecastTime`
+- selected `Location.timezone`
+
+These are synchronized from the trusted selected forecast's IANA timezone only while the point clock is still automatic.
+
+China catalog domain:
+- `catalogSelectedNight`
+- `catalogNightKeys`
+- `catalogForecastWindowStart`
+- `catalogForecastTime`
+
+Candidate comparisons and nationwide observing-snapshot/recommendation consumers use this catalog clock and therefore do not shift to Los Angeles when the user selects an LA point.
+
+Explicit point selections are preserved:
+- if the user changes night/hour while forecast hydration is in flight, timezone hydration only records the location timezone and does not replace those explicit values;
+- a coordinate-bound URL `forecastTime` is not rejected against the pre-hydration Shanghai calendar.
+
+This stage does NOT claim DST repeated-hour correctness. T2 canonical-instant/DST work remains separate.
+
+## Required local proof
+
+Use exact locked project dependencies.
+
+1. RED:
+   `npm run test -- tests/unit/nighttime.test.ts tests/unit/storeHydration.test.ts`
+   The new T1 cases must be discovered and fail on the old clock behavior. Record exact FAIL/PASS counts.
+2. GREEN at `478e008e3d8be74b87e114f831ac830737a9a959`:
+   rerun the exact focused command; all tests must pass.
+3. Run `npm run typecheck` first and confirm the five former TS2345 errors are gone.
+4. Run full `npm run check`.
+5. Inspect `755a1fe1ee16f2fda47c337b7e6c72255a3bd1d6..${code}` and confirm only the 11 files listed above changed.
+6. Fixture/browser validation before integration:
+   - at instant `2026-10-07T05:58:59.788Z`, a mocked/selected LA point with `America/Los_Angeles` must show point-local Oct 6 / about 22:00;
+   - China candidate/snapshot controls must remain on Shanghai Oct 7 / about 13:00;
+   - an explicit coordinate-bound forecastTime must survive hydration.
+
+Do not deploy, merge Draft PR49, modify network/credentials, or overwrite Owner notes.
+
+After this exact T1 candidate is locally accepted and integrated, the next authorized remote stage is the compact mobile + independent astronomy/raw-fact work specified in `docs/MOBILE_DENSITY_REDESIGN_20261007.md`. Do not start T2 DST canonical-instant redesign in that stage.
+
+
 ## 2026-10-07 当前候选更新
 当前原授权源码15282daf8daebe1bac06115f0b814cecf5307e0b已经完成父会话锁定依赖475测试/build、三组真实RED/GREEN。包括严格UTC偏移、v3fresh/v2stale事实保留、月相盈亏正确方向；尚未部署，生产仍378。细证据docs/POST_RELEASE_ACCEPTANCE_378_20261007.md。MapSetup隐藏loading语义缺陷已交远端；手机/全a11y/全球时区/DST/预报准确率仍未闭合。Owner两处文档dirty保护保留，Draft49未合并。
 
