@@ -1,3 +1,9 @@
+# 2026-10-07 latest local repair candidate
+
+LOCAL_CODEX_AUTHORED product commit5854a1604d8517b48c7120f805ed3a157d6c1347/tree088d6cfd0f5c3d1e6fd1f057c09df46e5e2ed487. Current source includes remote478 base plus corrected explicit clock ownership/refresh/catalog handoff, strict coordinate identity binding, independent astronomy/raw weather, compact portrait document scrolling, marker first-touch and200% input shrink repairs. Parent full85files494tests/lint/types/buildPASS; targeted mobile31PASS2applicableSKIP. Actual bounded LA GFS72hours72visibility/source08:21:12.87Z/stalefalse and candidate real-response calculation1PASS.
+
+Production remains378161ffe6aa21989ef48e63c9d077343d276a95. No deploy orDraft49merge. Exact hostedCI/remote-source-review/newproductionphone acceptance PENDING. Remote current tools are read-only; do not falsely attribute local commits to remote. Owner tasks/lessons andtasks/todo preserved. Detailed evidence and remaining point-identity/source-time/DST/raster/science boundaries: docs/COMPACT_MOBILE_A1_LOCAL_ACCEPTANCE_20261007.md.
+
 ## 2026-10-07 当前候选更新
 当前原授权源码15282daf8daebe1bac06115f0b814cecf5307e0b已经完成父会话锁定依赖475测试/build、三组真实RED/GREEN。包括严格UTC偏移、v3fresh/v2stale事实保留、月相盈亏正确方向；尚未部署，生产仍378。细证据docs/POST_RELEASE_ACCEPTANCE_378_20261007.md。MapSetup隐藏loading语义缺陷已交远端；手机/全a11y/全球时区/DST/预报准确率仍未闭合。Owner两处文档dirty保护保留，Draft49未合并。
 
