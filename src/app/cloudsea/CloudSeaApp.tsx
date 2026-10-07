@@ -481,7 +481,7 @@ export default function CloudSeaApp() {
     }
   };
 
-  usePublishTopicContext("/cloudsea", CLOUD_SEA_SITES, "cloudsea", selectedSiteId, pickedPoint, selectedContext?.dateKey ?? primaryDate, phase, topicContext.incoming);
+  usePublishTopicContext("/cloudsea", CLOUD_SEA_SITES, "cloudsea", selectedSiteId, pickedPoint, selectedContext?.dateKey ?? primaryDate, phase, topicContext.incoming, topicContext.preservedDate);
 
   return (
     <div className="cloudsea-root app-shell">
@@ -529,7 +529,7 @@ export default function CloudSeaApp() {
                 type="button"
                 aria-pressed={range === option.value}
                 className={range === option.value ? "active" : ""}
-                onClick={() => setRange(option.value)}
+                onClick={() => { topicContext.acceptDate(); setRange(option.value); }}
                 title={option.hint}
               >
                 {rangeOptionLabel(option, baseDate)}

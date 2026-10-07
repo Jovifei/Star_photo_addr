@@ -363,7 +363,7 @@ export default function FireglowApp() {
             ? `暂无达到 ≥${scoreThreshold} 分的地点`
             : visibleError || "当前无可显示的点位评分";
 
-  usePublishTopicContext("/fireglow", OBSERVING_SITES, "observing", selectedId, pickedPoint, selectedDateKey, phase, topicContext.incoming);
+  usePublishTopicContext("/fireglow", OBSERVING_SITES, "observing", selectedId, pickedPoint, selectedDateKey, phase, topicContext.incoming, topicContext.preservedDate);
 
   return (
     <div className="fireglow-root app-shell">
@@ -397,7 +397,7 @@ export default function FireglowApp() {
                 aria-pressed={rangeMode === option.value}
                 className={rangeMode === option.value ? "active" : ""}
                 title={option.hint}
-                onClick={() => setRangeMode(option.value)}
+                onClick={() => { topicContext.acceptDate(); setRangeMode(option.value); }}
               >
                 {rangeOptionLabel(option, baseDate)}
               </button>

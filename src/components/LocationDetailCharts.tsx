@@ -16,7 +16,8 @@ interface LocationDetailChartsProps {
   location: Location | null;
   nightKey: string;
   activeHour?: string | null;
-  onSelectHour?: (time: string) => void;
+  activeEpoch?: number | null;
+  onSelectHour?: (time: string, epochSeconds?: number) => void;
   model?: string;
 }
 
@@ -222,6 +223,7 @@ export default function LocationDetailCharts({
   evaluation,
   location,
   activeHour,
+  activeEpoch,
   onSelectHour,
   model = "icon",
 }: LocationDetailChartsProps) {
@@ -330,14 +332,14 @@ export default function LocationDetailCharts({
         {onSelectHour && (
           <div className="detail-hour-chips">
             {hours.map((h) => {
-              const isSelected = effectiveHour === h.time;
+              const isSelected = effectiveHour === h.time && (activeEpoch == null || h.epochSeconds === activeEpoch);
               return (
                 <button
-                  key={h.time}
+                  key={h.epochSeconds ?? h.time}
                   type="button"
                   className={`detail-hour-chip ${isSelected ? "detail-hour-chip--active" : ""}`}
-                  onClick={() => onSelectHour(h.time)}
-                  title={`${formatHour(h.time)} · 综合 ${h.score}分`}
+                  onClick={() => onSelectHour(h.time, h.epochSeconds)}
+                  title={`${formatHour(h.time)}${h.epochSeconds != null ? ` UTC${(h.utcOffsetSeconds ?? 0) >= 0 ? "+" : ""}${(h.utcOffsetSeconds ?? 0) / 3600}` : ""} · 综合 ${h.score}分`}
                 >
                   <span className="detail-hour-chip-time">{formatHour(h.time)}</span>
                   <span className="detail-hour-chip-score">{Number.isFinite(h.score) ? h.score : "—"}</span>

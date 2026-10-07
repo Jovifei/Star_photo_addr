@@ -18,3 +18,13 @@ test("an unrelated custom coordinate does not show catalogue conflicts", async (
   await expect(page.getByRole("link", { name: /^火烧云/ })).toHaveAttribute("href", /lat=31.2/);
   await expect(page.getByTestId("location-transfer-conflict")).toHaveCount(0);
 });
+
+test("an unsupported incoming date remains in peer links until a topic date is explicitly chosen", async ({ page }) => {
+  await page.route("**/api/**", route => route.fulfill({ status: 502, json: { error: "fixture: no supplier request" } }));
+  await page.goto("/fireglow?contextVersion=2&lat=31.2&lng=121.5&name=自定义点位&night=2030-01-02");
+  await expect(page.getByRole("link", { name: /^云海/ })).toHaveAttribute("href", /night=2030-01-02/);
+  await expect(page.getByText(/跨入口保留原日期/)).toBeVisible();
+  await page.getByRole("button", { name: /明日/ }).click();
+  await expect(page.getByRole("link", { name: /^云海/ })).not.toHaveAttribute("href", /night=2030-01-02/);
+  await expect(page.getByText(/跨入口保留原日期/)).toHaveCount(0);
+});

@@ -210,7 +210,7 @@ export default function CloudTimeline() {
   // The expanded matrix is intentionally one night, while the compact rail is
   // a 72-hour forecast. Keep the summary/card bound to the actual active hour
   // even when the selected hour is outside the currently expanded night.
-  const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime);
+  const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime && (cloudState.activeForecastEpoch == null || hour.epochSeconds === cloudState.activeForecastEpoch));
   const selectedWeatherScore = selectedHour ? scoreCoreWeather(selectedHour)?.weatherScore ?? null : null;
   const forecastStale = pointForecast
     ? Boolean(pointForecast.metadata?.stale)
@@ -337,7 +337,7 @@ export default function CloudTimeline() {
 
   const setTimelineIndex = useCallback((value: number) => {
     const item = timelineItems[Math.min(Math.max(value, 0), Math.max(0, timelineItems.length - 1))];
-    if (item) setActiveTime(item.time);
+    if (item) setActiveTime(item.time, "epochSeconds" in item ? item.epochSeconds : undefined);
   }, [setActiveTime, timelineItems]);
 
   /** Keyboard scrub: ±1 step, ±1 night (±6 obs frames), Home/End. */
