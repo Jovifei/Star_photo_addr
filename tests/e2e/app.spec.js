@@ -73,7 +73,7 @@ test("跨日期进入首页时首屏水合、日期与导航一致", async ({ pa
 
 test("主页默认云量预报与光污染参考，卫星实况需主动选择", async ({ page }, testInfo) => {
   await page.goto("/?lat=30.4694&lng=119.5978&name=%E5%A4%A9%E8%8D%92%E5%9D%AA");
-  await expect(page.locator(".map-stage")).toBeVisible();
+  await expect(page.locator("section.map-stage")).toBeVisible();
   await expect(page.locator(".map-viewport")).toBeVisible();
   if (testInfo.project.name === "desktop") {
     await expect(page.getByTestId("observation-reason-card")).toBeAttached();
@@ -195,7 +195,7 @@ test("规划器兼容链接转入统一观测台并保留地点上下文", async
   expect(target.searchParams.get("name")).toBe("天荒坪");
   expect(target.searchParams.get("elevation")).toBe("958.4");
   expect(target.searchParams.get("model")).toBe("icon");
-  await expect(page.locator(".map-stage")).toBeVisible();
+  await expect(page.locator("section.map-stage")).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.get("night")).toBeNull();
   if (testInfo.project.name === "mobile") {
     await expandMobileDataSheet(page);

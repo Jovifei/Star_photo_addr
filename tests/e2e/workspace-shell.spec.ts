@@ -182,21 +182,23 @@ test("workspace command bar carries search and locate above the three columns", 
   await expect(page.getByTestId("workspace-input").locator(".map-search-card")).toHaveCount(0);
 });
 
-test("command bar exposes recommendation-only filtering after locate", async ({ page }) => {
+test("command bar exposes recommendation-only filtering after locate", async ({ page }, testInfo) => {
   await page.goto("/?overlay=forecast-cloud&view=combined");
   const disclosure = page.getByRole("button", { name: "时间与地点筛选" });
   if (await disclosure.isVisible()) await disclosure.click();
   const commandBar = page.getByTestId("workspace-commandbar");
   const locate = commandBar.locator(".locate-button");
-  const toggle = commandBar.getByRole("checkbox", {
+  const filterScope = testInfo.project.name === "mobile" ? page.getByRole("dialog", { name: "时间与地点筛选", exact: true }) : commandBar;
+  const toggle = filterScope.getByRole("checkbox", {
     name: "仅显示达到推荐门槛的地点",
   });
 
   await expect(locate).toBeVisible();
   await expect(toggle).toBeVisible();
-  const followsLocate = await commandBar.evaluate((bar) => {
+  const followsLocate = await page.evaluate(() => {
+    const bar = document.querySelector('[data-testid="workspace-commandbar"]')!;
     const locateButton = bar.querySelector(".locate-button");
-    const filterInput = bar.querySelector(
+    const filterInput = document.querySelector(
       '[aria-label="仅显示达到推荐门槛的地点"]',
     );
     return Boolean(
@@ -233,7 +235,8 @@ test("command bar exposes direct Bortle and score controls without an extra pane
   const disclosure = page.getByRole("button", { name: "时间与地点筛选" });
   if (await disclosure.isVisible()) await disclosure.click();
   const commandBar = page.getByTestId("workspace-commandbar");
-  const quickControls = commandBar.getByTestId("recommendation-quick-controls");
+  const filterScope = testInfo.project.name === "mobile" ? page.getByRole("dialog", { name: "时间与地点筛选", exact: true }) : commandBar;
+  const quickControls = filterScope.getByTestId("recommendation-quick-controls");
   const bortle = quickControls.getByTestId("bortle-filter-bar");
   const threshold = quickControls.getByRole("slider", { name: "推荐分数门槛" });
   const scoreTime = quickControls.getByRole("slider", { name: "观星评分时间滑窗" });
@@ -258,7 +261,8 @@ test("command bar exposes direct Bortle and score controls without an extra pane
   await expect(bortle).toContainText("B4");
   await expect(bortle).toContainText("乡村/郊区过渡");
 
-  const order = await commandBar.evaluate((bar) => {
+  const order = await page.evaluate(() => {
+    const bar = document;
     const elements = [
       bar.querySelector(".locate-button"),
       bar.querySelector('[aria-label="观星评分时间滑窗"]'),
