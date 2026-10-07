@@ -371,7 +371,7 @@ export default function FireglowApp() {
         onSite={(site) => {
           const forecast = ranked.find((entry) => entry.id === site.id);
           if (forecast) focusSite(forecast);
-          else { setPickedPoint({ latitude: site.latitude, longitude: site.longitude }); map?.flyTo([site.latitude, site.longitude], 8); }
+          else { setSelectedId(site.id); setPickedPoint(null); map?.flyTo([site.latitude, site.longitude], 8); }
         }}
         onCoordinate={(point) => { setSelectedId(null); setPickedPoint(point); map?.flyTo([point.latitude, point.longitude], 8); }} />
       <ProductHeader

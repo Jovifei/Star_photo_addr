@@ -489,7 +489,7 @@ export default function CloudSeaApp() {
         onSite={(site) => {
           const forecast = rankedSites.find((entry) => entry.site.id === site.id);
           if (forecast) handleSelectSite(site.id);
-          else { setPickedPoint({ latitude: site.latitude, longitude: site.longitude }); mapRef.current?.flyTo([site.latitude, site.longitude], 8); }
+          else { handleSelectSite(site.id); }
         }}
         onCoordinate={(point) => { setSelectedSiteId(null); setPickedPoint(point); mapRef.current?.flyTo([point.latitude, point.longitude], 8); }} />
       <ProductHeader

@@ -101,8 +101,8 @@ export function resolveLocationTransfer<T extends IdentityPoint>(
     (identity.sourceScope === scope && site.id === identity.sourceId) ||
     identity.canonicalId === scope + ":" + site.id);
   const distances = related.map(site => coordinateDistanceKm(identity, site));
-  // Catalogue points are exact selections, not weather-model grid centres.
-  if (distances.some(distance => !Number.isFinite(distance) || distance > 0.1)) {
+  // Use the existing metre-scale coordinate identity, never model-grid proximity.
+  if (related.some(site => coordinateIdentityKey(site) !== coordinateIdentityKey(identity))) {
     return { status: "conflict", site: null, distanceKm: Math.max(...distances) };
   }
   return related.length === 1

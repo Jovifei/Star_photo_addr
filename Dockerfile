@@ -51,6 +51,7 @@ COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
 COPY --from=build --chown=nextjs:nodejs /app/scripts/observing-snapshot-worker.mjs ./scripts/observing-snapshot-worker.mjs
 COPY --from=build --chown=nextjs:nodejs /app/scripts/observing-snapshot-worker-utils.mjs ./scripts/observing-snapshot-worker-utils.mjs
+COPY --from=build --chown=nextjs:nodejs /app/scripts/check-release-frontend.mjs ./scripts/check-release-frontend.mjs
 USER nextjs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 \
