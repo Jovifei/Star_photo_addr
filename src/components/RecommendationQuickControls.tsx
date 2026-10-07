@@ -28,7 +28,7 @@ export default function RecommendationQuickControls() {
   const scoreWindowStart = state.catalogForecastWindowStart ?? state.forecastWindowStart;
   const catalogSelectedNight = state.catalogSelectedNight ?? state.selectedNight;
   const catalogForecastTime = state.catalogForecastTime ?? state.cloudState.activeForecastTime;
-  const updateCatalogForecastTime = setCatalogForecastTime ?? ((time: string | null) => setCloud({ activeForecastTime: time, playing: false }));
+  const updateCatalogForecastTime = useMemo(() => setCatalogForecastTime ?? ((time: string | null) => setCloud({ activeForecastTime: time, playing: false })), [setCatalogForecastTime, setCloud]);
   const windowNoteId = useId();
 
   const scoreTimes = useMemo(

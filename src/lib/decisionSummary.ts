@@ -21,6 +21,7 @@ export function buildDecisionSummary(input: {
   loading: boolean;
   updatedAt: string | null;
   unavailableReason?: string | null;
+  hasWeatherFacts?: boolean;
 }): DecisionSummaryModel {
   const updatedLabel = formatUpdatedLabel(input.updatedAt);
 
@@ -41,7 +42,7 @@ export function buildDecisionSummary(input: {
     return {
       kind: "unknown",
       locationName: input.location.name,
-      gradeLabel: "数据不足",
+      gradeLabel: !input.loading && input.hasWeatherFacts ? "评分暂缓" : "数据不足",
       gradeTone: "muted",
       windowLabel: "—",
       riskTitle: "评分未知",

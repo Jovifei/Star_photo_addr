@@ -45,7 +45,7 @@ function readFromDiskCache(
   if (legacyName.length <= 255) candidates.push(path.join(DISK_CACHE_DIR, legacyName));
   for (const filename of candidates) {
     try {
-      const data: unknown = JSON.parse(fs.readFileSync(filename, "utf-8"));
+      const data: unknown = JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ filename, "utf-8"));
       // Check ORIGINAL fetch time; filesystem mtime is not provenance.
       if (usableDiskForecast(data, model, count, maxAgeMs)) return data;
     } catch { /* Missing or invalid cache entries do not fabricate data. */ }

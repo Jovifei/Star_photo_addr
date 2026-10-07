@@ -50,7 +50,7 @@ export default function ObservingMapControl({
   docked?: boolean;
 } = {}) {
   const { state, setCloud, setCatalogForecastTime, setRecommendationThreshold, setObservingBortleLevels, setObservingBortleLimit, setRecommendationBands } = useStore();
-  const updateCatalogForecastTime = setCatalogForecastTime ?? ((time: string | null) => setCloud({ activeForecastTime: time, playing: false }));
+  const updateCatalogForecastTime = useMemo(() => setCatalogForecastTime ?? ((time: string | null) => setCloud({ activeForecastTime: time, playing: false })), [setCatalogForecastTime, setCloud]);
   const isSitesWorkspace = state.mapWorkspace === "sites";
   // Floating phone panels default to a title strip. Inside the mobile drawer
   // the full form remains expanded because the drawer itself provides the

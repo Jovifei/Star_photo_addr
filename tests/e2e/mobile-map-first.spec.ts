@@ -28,8 +28,9 @@ for (const width of [320, 375, 390, 430, 768, 1024]) {
     const top = (await page.locator(".workspace-commandbar").boundingBox())!.y +
       (await page.locator(".workspace-commandbar").boundingBox())!.height;
     expect(top).toBeLessThanOrEqual(112);
-    if (width === 390) expect((await map.boundingBox())!.height).toBeGreaterThanOrEqual(422);
-    expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBeLessThanOrEqual(1);
+    expect((await map.boundingBox())!.height).toBeGreaterThanOrEqual(220);
+    expect((await map.boundingBox())!.height).toBeLessThanOrEqual(440);
+    await expect(sheet).toHaveCSS("max-height", "none");
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
     await page.getByRole("button", { name: "展开数据面板" }).click();
     await expect(sheet).toHaveAttribute("data-level", "half");
@@ -37,6 +38,13 @@ for (const width of [320, 375, 390, 430, 768, 1024]) {
     await expect(sheet).toHaveAttribute("data-level", "full");
     await expect(sheet.getByRole("button", { name: "收起数据面板" })).toBeFocused();
     await expect(sheet.getByTestId("mobile-data-sheet-body")).toBeVisible();
+    await expect(sheet.getByTestId("mobile-data-sheet-body")).toHaveCSS("overflow", "visible");
+    const documentEnd = sheet.getByRole("button", { name: /查看版本更新记录/ });
+    await documentEnd.scrollIntoViewIfNeeded();
+    await expect(documentEnd).toBeInViewport();
+    const scrollOwners = await sheet.getByTestId("mobile-data-sheet-body").evaluate((body) => ({ scrollTop: body.scrollTop, pageY: window.scrollY }));
+    expect(scrollOwners.scrollTop).toBe(0);
+    expect(scrollOwners.pageY).toBeGreaterThan(0);
     await page.getByRole("button", { name: "收起数据面板" }).click();
     await page.getByRole("button", { name: "收起数据面板" }).click();
     await expect(sheet).toHaveAttribute("data-level", "peek");

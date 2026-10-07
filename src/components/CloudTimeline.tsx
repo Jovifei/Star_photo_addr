@@ -12,6 +12,7 @@ import { missingNightInputs, scoreCoreWeather } from "@/lib/forecastIntegrity";
 import { presentHourlyDataValidity } from "@/lib/dataPresentation";
 import type { SatelliteFrame } from "@/lib/types";
 import HourlyForecastMatrix, { buildNightTimes } from "@/components/HourlyForecastMatrix";
+import { nightAstronomyFacts } from "@/lib/nightAstronomyFacts";
 import { evaluateNight } from "@/lib/scoring";
 
 const RANGE_OPTIONS: Array<{ value: 1 | 5 | 7; label: string }> = [
@@ -225,6 +226,8 @@ export default function CloudTimeline() {
     [displayNight, pointForecast, selectedLocation],
   );
 
+  const astronomyFacts = useMemo(() => nightAstronomyFacts(pointForecast, selectedLocation, displayNight), [pointForecast, selectedLocation, displayNight]);
+
   const trackSegments = useMemo(
     () => buildTrackSegments(timelineItems, isSatelliteMode),
     [isSatelliteMode, timelineItems],
@@ -283,7 +286,7 @@ export default function CloudTimeline() {
     const inForwardWindow = forwardTimes.includes(cloudState.activeForecastTime ?? "");
     const inSelectedNight = isInNight(cloudState.activeForecastTime ?? "", selectedNight);
     if (!inForwardWindow && !inSelectedNight) {
-      setCloud({ activeForecastTime: forecastTimeline[0].time });
+      setCloud({ activeForecastTime: forecastTimeline[0].time }, "auto");
     }
   }, [cloudState.activeForecastTime, cloudState.activeObservationTime, forecastTimeline, forwardTimes, isNightLightsMode, isSatelliteMode, observationTimeline, safeTimelineIndex, selectedNight, setCloud]);
 
@@ -292,7 +295,7 @@ export default function CloudTimeline() {
     const nextTime = schedule[safeIndex]?.time ?? schedule[0].time;
     const activeIsNightTime = schedule.some((item) => item.time === cloudState.activeForecastTime);
     if (!cloudState.activeForecastTime || (activeIsNightTime && cloudState.timeIndex !== safeIndex)) {
-      setCloud({ activeForecastTime: nextTime, timeIndex: safeIndex });
+      setCloud({ activeForecastTime: nextTime, timeIndex: safeIndex }, "auto");
     }
   }, [cloudState.activeForecastTime, cloudState.timeIndex, isNightLightsMode, isSatelliteMode, safeIndex, schedule, setCloud]);
 
@@ -473,7 +476,7 @@ export default function CloudTimeline() {
             <span><b>风</b>{selectedHour?.windSpeed == null ? "—" : `${selectedHour.windSpeed.toFixed(1)} m/s`}</span>
             <span><b>AQI</b>{!selectedLocation || aqiValue == null ? "—" : aqiValue}</span>
             <span><b>Kp</b>{!selectedLocation || kpValue == null ? "—" : kpValue.toFixed(1)}</span>
-            <span><b>月相</b>{nightSummary?.moonPhase ?? "—"}</span>
+            <span><b>月相</b>{astronomyFacts?.moonPhase ?? "—"}</span>
             <span><b>暗夜窗口</b>{nightSummary?.windowLabel ?? "—"}</span>
           </div>}
 

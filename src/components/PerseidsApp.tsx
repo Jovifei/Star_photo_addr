@@ -21,6 +21,7 @@ import MapHeadline from "@/components/MapHeadline";
 import HomeContextStrip from "@/components/HomeContextStrip";
 import WorkspaceShell from "@/components/workspace/WorkspaceShell";
 import { useStore } from "@/lib/store";
+import { nightAstronomyFacts } from "@/lib/nightAstronomyFacts";
 import { evaluateNight } from "@/lib/scoring";
 import { sameLocationIdentity } from "@/lib/locationIdentity";
 import LocationDetailCharts from "@/components/LocationDetailCharts";
@@ -51,6 +52,8 @@ function TonightEvidence({
     );
   }, [state.cloudState.model, state.forecast, state.selectedLocation, state.selectedNight, leadIndex]);
 
+  const astronomyFacts = useMemo(() => nightAstronomyFacts(state.forecast?.metadata?.model === state.cloudState.model ? state.forecast : null, state.selectedLocation, state.selectedNight), [state.forecast, state.cloudState.model, state.selectedLocation, state.selectedNight]);
+
   const isCandidate = state.selectedLocation
     ? state.candidates.some((candidate) =>
         sameLocationIdentity(candidate, state.selectedLocation),
@@ -61,6 +64,7 @@ function TonightEvidence({
     <ObservationDetails
       sample={state.sample}
       evaluation={evaluation}
+      astronomyFacts={astronomyFacts}
       location={state.selectedLocation}
       isCandidate={isCandidate}
       onAddCandidate={() => addCandidate(state.selectedLocation!)}
@@ -109,7 +113,7 @@ function TonightEvidence({
 }
 
 export default function PerseidsApp() {
-  const { state, sampleAt, removeCandidate } = useStore();
+  const { state, sampleAt, selectCatalogCandidate, removeCandidate } = useStore();
   const mapRef = useRef<LeafletMap | null>(null);
   const [ready, setReady] = useState(false);
   const selectedLocationId = state.selectedLocation?.id ?? null;
@@ -148,9 +152,7 @@ export default function PerseidsApp() {
     candidates={state.candidates}
     status={state.candidates.length ? "ok" : "empty"}
     activeId={state.selectedLocation?.id}
-    onPick={(candidate) =>
-      void sampleAt(candidate.latitude, candidate.longitude, candidate.elevation ?? undefined, candidate.name)
-    }
+    onPick={(candidate) => void selectCatalogCandidate(candidate)}
     onRemove={removeCandidate}
     onTrack={handleTrack}
   />;

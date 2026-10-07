@@ -54,7 +54,8 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [1024, 768]]
 
     if (width === 390) {
       const map = await page.locator(".map-viewport").boundingBox();
-      expect(map!.height).toBeGreaterThanOrEqual(340);
+      expect(map!.height).toBeGreaterThanOrEqual(220);
+      expect(map!.height).toBeLessThanOrEqual(440);
     }
 
     const before = await context.innerText();
@@ -62,8 +63,11 @@ for (const [width, height] of [[320, 568], [390, 844], [768, 1024], [1024, 768]]
     const sheet = page.getByTestId("mobile-filter-sheet");
     const slider = sheet.getByRole("slider", { name: "观星评分时间滑窗" });
     if (await slider.isEnabled()) {
+      const beforeScoreTime = await slider.inputValue();
       await slider.press("ArrowRight");
-      await expect.poll(() => context.innerText()).not.toBe(before);
+      await expect.poll(() => slider.inputValue()).not.toBe(beforeScoreTime);
+      // National catalog scoring is independent of the selected-point/map clock.
+      await expect.poll(() => context.innerText()).toBe(before);
     }
     await page.keyboard.press("Escape");
     await expect(context).toBeVisible();

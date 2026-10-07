@@ -69,6 +69,8 @@ interface AppState {
   forecast: LocationForecast | null;
   nightKeys: string[];
   selectedNight: string;
+  /** User/URL choices survive location hydration, even if their value is unchanged. */
+  pointClockSource: "auto" | "explicit";
   /** Stable selected-point page-session start for the weather rail. */
   forecastWindowStart: string;
   /** China observing-catalog clock remains independent from an overseas selected point. */
@@ -120,6 +122,7 @@ function createInitialState(initialNow: string): AppState {
     forecast: null,
     nightKeys: nightRangeKeys(homeNight, 7),
     selectedNight: homeNight,
+    pointClockSource: "auto",
     forecastWindowStart: homeForecastTime,
     catalogNightKeys: nightRangeKeys(homeNight, 7),
     catalogSelectedNight: homeNight,
@@ -183,7 +186,7 @@ type Action =
       forecastTime: string;
     }
   | { type: "SET_BORTLE"; enabled: boolean }
-  | { type: "SET_CLOUD"; partial: Partial<CloudState> }
+  | { type: "SET_CLOUD"; partial: Partial<CloudState>; source: "auto" | "explicit" }
   | { type: "SET_CANDIDATE_FORECAST_MODEL"; model: ForecastModel }
   | { type: "SET_CANDIDATES"; candidates: CityCandidate[] }
   | { type: "ADD_CANDIDATE"; candidate: CityCandidate }
@@ -241,7 +244,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_FORECAST":
       return { ...state, forecast: action.forecast };
     case "SELECT_NIGHT":
-      return { ...state, selectedNight: action.nightKey };
+      return { ...state, selectedNight: action.nightKey, pointClockSource: "explicit" };
     case "SELECT_CATALOG_NIGHT":
       return { ...state, catalogSelectedNight: action.nightKey };
     case "SET_CATALOG_FORECAST_TIME":
@@ -250,9 +253,10 @@ function reducer(state: AppState, action: Action): AppState {
       if (state.selectedLocation?.id !== action.locationId) return state;
       const selectedLocation = { ...state.selectedLocation, timezone: action.timeZone };
       if (
+        state.pointClockSource === "explicit" ||
         state.selectedNight !== action.expectedNight ||
         state.cloudState.activeForecastTime !== action.expectedForecastTime
-      ) return { ...state, selectedLocation };
+      ) return { ...state, selectedLocation, forecastWindowStart: action.forecastTime };
       return {
         ...state,
         selectedLocation,
@@ -271,6 +275,7 @@ function reducer(state: AppState, action: Action): AppState {
         state.catalogSelectedNight === action.expectedNight &&
         state.catalogForecastTime === action.expectedForecastTime;
       const pointClockIsAutomatic =
+        state.pointClockSource === "auto" &&
         state.selectedNight === action.expectedNight &&
         state.cloudState.activeForecastTime === action.expectedForecastTime;
       const next = {
@@ -299,18 +304,28 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case "SET_BORTLE":
       return { ...state, bortleEnabled: action.enabled };
-    case "SET_CLOUD":
-      if (action.partial.model && action.partial.model !== state.cloudState.model) {
+    case "SET_CLOUD": {
+      const partial = { ...action.partial };
+      if (action.source === "auto" && state.pointClockSource === "explicit") {
+        if (partial.activeForecastTime !== state.cloudState.activeForecastTime) delete partial.timeIndex;
+        delete partial.activeForecastTime;
+        if (!Object.keys(partial).length) return state;
+      }
+      const pointClockSource = action.source === "explicit" && partial.activeForecastTime != null
+        ? "explicit" as const : state.pointClockSource;
+      if (partial.model && partial.model !== state.cloudState.model) {
         return {
           ...state,
-          cloudState: { ...state.cloudState, ...action.partial },
+          pointClockSource,
+          cloudState: { ...state.cloudState, ...partial },
           forecast: null,
           loading: false,
           error: "",
           forecastAvailability: { error: null, lastSuccessAt: null, staleInUse: false },
         };
       }
-      return { ...state, cloudState: { ...state.cloudState, ...action.partial } };
+      return { ...state, pointClockSource, cloudState: { ...state.cloudState, ...partial } };
+    }
     case "SET_CANDIDATE_FORECAST_MODEL":
       return state.candidateForecastModel === action.model ? state : { ...state, candidateForecastModel: action.model };
     case "SET_CANDIDATES":
@@ -430,7 +445,9 @@ async function fetchForecastFor(
   );
   const forecast = result.data.locations[0] ?? null;
   if (!forecast) throw new Error("天气响应没有返回选中地点");
-  return forecast;
+  // forecastClient has verified this response slot's requested coordinates.
+  // API coordinate IDs and local catalog/search IDs are different namespaces.
+  return { ...forecast, locationId: location.id };
 }
 
 interface StoreContextValue {
@@ -446,10 +463,11 @@ interface StoreContextValue {
   ) => Promise<void>;
   refreshData: () => Promise<void>;
   selectNight: (nightKey: string) => void;
+  selectCatalogCandidate: (candidate: CityCandidate) => Promise<void>;
   selectCatalogNight: (nightKey: string) => void;
   setCatalogForecastTime: (forecastTime: string | null) => void;
   toggleBortle: () => void;
-  setCloud: (partial: Partial<CloudState>) => void;
+  setCloud: (partial: Partial<CloudState>, source?: "auto" | "explicit") => void;
   setCandidateForecastModel: (model: ForecastModel) => void;
   setCandidates: (candidates: CityCandidate[]) => void;
   addCandidate: (location: Location) => void;
@@ -867,6 +885,8 @@ export function StoreProvider({
   );
 
   const refreshData = useCallback(async () => {
+    const expectedNight = state.selectedNight;
+    const expectedForecastTime = state.cloudState.activeForecastTime ?? null;
     const location = state.selectedLocation;
     const requestStartedAt = Date.now();
     const lastAttempt = lastForecastAttemptRef.current;
@@ -912,6 +932,7 @@ export function StoreProvider({
         dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: issue ?? "天气数据不可用" });
       } else {
         dispatch({ type: "SET_FORECAST_SUCCESS", fetchedAt: forecast.fetchedAt });
+        syncLocationClock(location.id, forecast, expectedNight, expectedForecastTime);
       }
       if (forecast) {
         dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
@@ -933,7 +954,7 @@ export function StoreProvider({
       }
       if (requestId === latestForecastRequestRef.current) forecastInFlightRef.current = false;
     }
-  }, [state.cloudState.model, state.forecastCache, state.selectedLocation]);
+  }, [state.cloudState.activeForecastTime, state.cloudState.model, state.forecastCache, state.selectedLocation, state.selectedNight, syncLocationClock]);
 
   const locate = useCallback(
     (latitude: number, longitude: number) => {
@@ -954,9 +975,16 @@ export function StoreProvider({
     if (!hasDarkSkyLayer()) return;
     dispatch({ type: "SET_BORTLE", enabled: !state.bortleEnabled });
   }, [state.bortleEnabled]);
-  const setCloud = useCallback((partial: Partial<CloudState>) => {
-    dispatch({ type: "SET_CLOUD", partial });
+  const setCloud = useCallback((partial: Partial<CloudState>, source: "auto" | "explicit" = "explicit") => {
+    dispatch({ type: "SET_CLOUD", partial, source });
   }, []);
+  const selectCatalogCandidate = useCallback(async (candidate: CityCandidate) => {
+    // A candidate click inspects the evening the user was comparing, rather
+    // than silently returning to the selected point's current local night.
+    selectNight(state.catalogSelectedNight);
+    setCloud({ activeForecastTime: `${state.catalogSelectedNight}T20:00`, playing: false });
+    await selectLocation({ ...candidate, elevation: candidate.elevation ?? null, source: "参考点位" });
+  }, [selectLocation, selectNight, setCloud, state.catalogSelectedNight]);
   const setCandidateForecastModel = useCallback((model: ForecastModel) => {
     dispatch({ type: "SET_CANDIDATE_FORECAST_MODEL", model });
   }, []);
@@ -1219,6 +1247,7 @@ export function StoreProvider({
       sampleAt,
       refreshData,
       selectNight,
+      selectCatalogCandidate,
       selectCatalogNight,
       setCatalogForecastTime,
       toggleBortle,
@@ -1249,6 +1278,7 @@ export function StoreProvider({
       sampleAt,
       refreshData,
       selectNight,
+      selectCatalogCandidate,
       selectCatalogNight,
       setCatalogForecastTime,
       toggleBortle,

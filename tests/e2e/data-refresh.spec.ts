@@ -27,6 +27,8 @@ function forecastPayload(requestUrl: string) {
   const fetchedAt = new Date().toISOString();
   const locations = latitudes.map((latitude, index) => ({
     locationId: `e2e-${index}`,
+    requestedLatitude: latitude,
+    requestedLongitude: longitudes[index] ?? 120.1551,
     modelLatitude: latitude,
     modelLongitude: longitudes[index] ?? 120.1551,
     modelElevation: 20,

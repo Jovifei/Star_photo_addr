@@ -99,8 +99,11 @@ export default function ProductStateBridge() {
       addDays(homeDate, -1),
       addDays(homeDate, 1),
     ]);
+    // Keep coordinate-bound local dates before timezone hydration, but do not
+    // resurrect years-old planner links outside the provider's forecast range.
+    const coordinateDates = new Set(Array.from({ length: 16 }, (_, index) => addDays(homeDate, index - 2)));
     const acceptedHomeForecastTime =
-      !isHome || !forecastTime || hasValidCoordinates || acceptedHomeDates.has(forecastDate ?? "")
+      !isHome || !forecastTime || (hasValidCoordinates && coordinateDates.has(forecastDate ?? "")) || acceptedHomeDates.has(forecastDate ?? "")
         ? forecastTime
         : null;
     if (isHome && forecastTime && !acceptedHomeForecastTime) {
@@ -174,9 +177,13 @@ export default function ProductStateBridge() {
       setDetailOpen(true);
     }
     if (acceptedHomeForecastTime || observationTime) {
+      if (acceptedHomeForecastTime && /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(acceptedHomeForecastTime)) {
+        const hour = Number(acceptedHomeForecastTime.slice(11, 13));
+        const date = acceptedHomeForecastTime.slice(0, 10);
+        selectNight(hour <= 5 ? addDays(date, -1) : date);
+      }
       setCloud({
-        activeForecastTime:
-          acceptedHomeForecastTime ?? state.cloudState.activeForecastTime,
+        ...(acceptedHomeForecastTime ? { activeForecastTime: acceptedHomeForecastTime } : {}),
         activeObservationTime:
           observationTime ?? state.cloudState.activeObservationTime,
       });

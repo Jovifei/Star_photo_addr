@@ -2395,6 +2395,8 @@
 }
 .star-window-add-input {
   flex: 1;
+  min-width: 0;
+  width: 100%;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);

@@ -100,10 +100,20 @@ function normalizeResponse(
   if (!body.locations.every((location) => validateLocation(location, model))) {
     throw new Error("天气响应缺少完整的地点天气结构");
   }
-  if (body.locations.some((location, index) =>
-    (location.requestedLatitude !== undefined && Math.abs(location.requestedLatitude - requestedLocations[index]!.latitude) > 1e-5) ||
-    (location.requestedLongitude !== undefined && Math.abs(location.requestedLongitude - requestedLocations[index]!.longitude) > 1e-5),
-  )) {
+  if (body.locations.some((location, index) => {
+    const requested = requestedLocations[index]!;
+    if (location.requestedLatitude !== undefined || location.requestedLongitude !== undefined) {
+      return !Number.isFinite(location.requestedLatitude) || !Number.isFinite(location.requestedLongitude) ||
+        Math.abs(location.requestedLatitude! - requested.latitude) > 1e-5 ||
+        Math.abs(location.requestedLongitude! - requested.longitude) > 1e-5;
+    }
+    // Old responses used a coordinate API ID. Only that documented namespace
+    // can prove identity without explicit request coordinates; never use the
+    // provider's nearby model-grid coordinate or an arbitrary local name.
+    const legacy = /^api-(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)$/.exec(location.locationId);
+    return !legacy || Math.abs(Number(legacy[1]) - requested.latitude) > 1e-5 ||
+      Math.abs(Number(legacy[2]) - requested.longitude) > 1e-5;
+  })) {
     throw new Error("天气响应地点坐标映射不一致");
   }
   const headerStale = response.headers.get("X-Data-Stale") === "true";

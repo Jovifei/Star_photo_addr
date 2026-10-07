@@ -30,7 +30,50 @@ export function ObservingSiteMarker({ color, selected, bortle, ...props }: Omit<
   // One icon belongs to this mounted marker. Unrelated grid/store renders
   // keep its DOM intact; actual visual changes replace it. No global cache.
   const icon = useMemo(() => markerIcon(color, selected, bortle), [color, selected, bortle]);
-  return <Marker {...props} icon={icon} />;
+  const markerRef = useRef<L.Marker | null>(null);
+  const lastTouch = useRef<number | null>(null);
+  useEffect(() => {
+    const marker = markerRef.current;
+    const element = marker?.getElement();
+    if (!marker || !element) return;
+    let start: { x: number; y: number } | null = null;
+    let dragged = false;
+    const down = (event: PointerEvent) => {
+      start = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
+      dragged = false;
+    };
+    const move = (event: PointerEvent) => {
+      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) dragged = true;
+    };
+    const up = (event: PointerEvent) => {
+      if (event.pointerType !== "touch" || !start || dragged) return;
+      start = null;
+      lastTouch.current = Date.now();
+      // The browser can omit its synthesized click immediately after a sheet
+      // touch-drag. Preserve the curated marker's exact identity on pointer-up.
+      marker.fire("click", { latlng: marker.getLatLng(), originalEvent: event });
+    };
+    const click = (event: MouseEvent) => {
+      if (event.detail > 0 && lastTouch.current !== null && Date.now() - lastTouch.current < 700) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+    const cancel = () => { start = null; dragged = false; };
+    element.addEventListener("pointerdown", down);
+    element.addEventListener("pointermove", move);
+    element.addEventListener("pointerup", up);
+    element.addEventListener("pointercancel", cancel);
+    element.addEventListener("click", click, true);
+    return () => {
+      element.removeEventListener("pointerdown", down);
+      element.removeEventListener("pointermove", move);
+      element.removeEventListener("pointerup", up);
+      element.removeEventListener("pointercancel", cancel);
+      element.removeEventListener("click", click, true);
+    };
+  }, [icon]);
+  return <Marker {...props} ref={markerRef} icon={icon} />;
 }
 
 export default function ObservingSitesLayer() {

@@ -5,6 +5,7 @@ import { describeDarkSkyStatus, sampleBortle } from "@/lib/darksky";
 import { formatElevationMeters } from "@/lib/locationPresentation";
 import { statusMeta } from "@/lib/scoring";
 import type { DarkSkySample, Location, NightEvaluation } from "@/lib/types";
+import type { NightAstronomyFacts } from "@/lib/nightAstronomyFacts";
 import ScoreRing from "@/components/ScoreRing";
 
 function sampleMatchesLocation(
@@ -27,6 +28,7 @@ interface FetchedDarkSkySample {
 export default function ObservationDetails({
   sample,
   evaluation,
+  astronomyFacts = null,
   location,
   isCandidate = false,
   onAddCandidate,
@@ -34,14 +36,16 @@ export default function ObservationDetails({
 }: {
   sample: DarkSkySample | null;
   evaluation: NightEvaluation | null;
+  astronomyFacts?: NightAstronomyFacts | null;
   location: Location | null;
   isCandidate?: boolean;
   onAddCandidate?: () => void;
   onRemoveCandidate?: () => void;
 }) {
+  const facts = astronomyFacts ?? evaluation;
   const meta = evaluation
     ? statusMeta(evaluation.status)
-    : { label: "数据不足", tone: "muted" };
+    : { label: astronomyFacts ? "评分暂缓" : "数据不足", tone: "muted" };
   const [fetchedSample, setFetchedSample] =
     useState<FetchedDarkSkySample | null>(null);
   const locationKey = location
@@ -164,22 +168,22 @@ export default function ObservationDetails({
         <div className="metric">
           <div className="label">月面照度</div>
           <div className="value">
-            {evaluation ? Math.round(evaluation.moonIllumination * 100) : "—"}
-            {evaluation ? <small>%</small> : null}
+            {facts ? Math.round(facts.moonIllumination * 100) : "—"}
+            {facts ? <small>%</small> : null}
           </div>
         </div>
         <div className="metric">
-          <div className="label">暗夜时长</div>
+          <div className="label">暗夜时长（估算）</div>
           <div className="value">
-            {evaluation?.darkHours ?? "—"}
-            {evaluation ? <small>h</small> : null}
+            {facts?.darkHours ?? "—"}
+            {facts ? <small>h</small> : null}
           </div>
         </div>
         <div className="metric">
-          <div className="label">银河最高</div>
+          <div className="label">银河采样最高</div>
           <div className="value">
-            {evaluation?.galacticMax ?? "—"}
-            {evaluation ? <small>°</small> : null}
+            {facts?.galacticMax ?? "—"}
+            {facts ? <small>°</small> : null}
           </div>
         </div>
         <div className="metric">
@@ -190,6 +194,7 @@ export default function ObservationDetails({
         </div>
       </div>
 
+      {astronomyFacts && <p className="small muted">天文几何参考 · {astronomyFacts.sampleCount} 个小时采样；暗夜时长按相邻逐小时太阳高度线性近似积分，太阳低于 −18°；不跨缺失时段，银河仅为采样最高高度，不含地形遮挡{astronomyFacts.heightAssumption === "sea-level" ? "；海拔未知，几何计算按海平面" : ""}。按供应商当前 UTC 偏移计算，跨夏令时精确时序待核验；不代表天气适宜或出行推荐。</p>}
       {darkSkyStatusNote && (
         <p
           className="dark-sky-unavailable-note"
