@@ -1,3 +1,6 @@
+## 2026-10-07 当前候选更新
+当前原授权源码15282daf8daebe1bac06115f0b814cecf5307e0b已经完成父会话锁定依赖475测试/build、三组真实RED/GREEN。包括严格UTC偏移、v3fresh/v2stale事实保留、月相盈亏正确方向；尚未部署，生产仍378。细证据docs/POST_RELEASE_ACCEPTANCE_378_20261007.md。MapSetup隐藏loading语义缺陷已交远端；手机/全a11y/全球时区/DST/预报准确率仍未闭合。Owner两处文档dirty保护保留，Draft49未合并。
+
 ## 2026-10-07 当前接手状态（优先于下方历史）
 DEPLOYED_ACCEPTANCE_INCOMPLETE：当前运行378161ffe6aa21989ef48e63c9d077343d276a95，app/worker精确镜像82f5a0ba…健康restart0。原卷、备份校验及回滚已独立重核；未重部署。
 本地授权分支已接收远端真实offset修复d543fff637c561da9bc8197ef282495081a6601e，完成锁定依赖RED/GREEN和468测试/build。此修复尚未部署、尚待远端审核；不能把源码候选当运行SHA。
