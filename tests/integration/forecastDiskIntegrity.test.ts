@@ -10,12 +10,15 @@ const KEY = "icon|1|30.182|108.882";
 const OFFSET_CONTRACT_KEY = `surface-v3-offset|${KEY}`;
 const PRE_OFFSET_KEY = `surface-v2-past1|${KEY}`;
 let directory: string;
+let providerCalls = 0;
 
 function payload(fetchedAt: string) {
   const metadata = { source: "Open-Meteo", model: "icon", fetchedAt, stale: false, units: {} };
   return { metadata, locations: [{ locationId: "loc-0", modelLatitude: 30.18,
     modelLongitude: 108.88, modelElevation: 1402, timezone: "Asia/Shanghai",
-    utcOffsetSeconds: 28800, fetchedAt, metadata, hourly: [{ time: "2026-09-13T21:00", cloudCover: 8 }] }] };
+    utcOffsetSeconds: 28800, fetchedAt, metadata, requestedLatitude: 30.182,
+    requestedLongitude: 108.882, hourly: [{ time: "2026-09-13T21:00", cloudCover: 8,
+      precipitation: 0.2, windSpeed: 3 }] }] };
 }
 function writeDisk(value: unknown, key = KEY): void {
   const folder = path.join(directory, "forecast-cache");
@@ -37,10 +40,14 @@ beforeEach(() => {
   vi.stubEnv("FORECAST_STALE_TTL_MS", String(LIMIT));
   vi.spyOn(Date, "now").mockReturnValue(NOW);
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  providerCalls = 0;
   vi.doMock("@/lib/forecast", async () => ({
     ...await vi.importActual<typeof import("@/lib/forecast")>("@/lib/forecast"),
     clampForecastDays: (days: number) => days,
-    fetchForecastByCoords: vi.fn(async () => { throw new Error("天气接口返回 HTTP 429"); }),
+    fetchForecastByCoords: vi.fn(async () => {
+      providerCalls += 1;
+      throw new Error("天气接口返回 HTTP 429");
+    }),
   }));
 });
 afterEach(() => {
@@ -63,14 +70,56 @@ describe("forecast disk fallback original-age gate", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).locations[0].metadata.stale).toBe(false);
   });
-  it("does not reuse a pre-offset-contract v2 record whose zero offset is ambiguous", async () => {
-    const value = payload(new Date(NOW - 60_000).toISOString());
+  it("retains same-point pre-offset v2 weather facts only as stale without spending provider quota", async () => {
+    const timestamp = new Date(NOW - 60_000).toISOString();
+    const value = payload(timestamp);
     value.locations[0]!.timezone = "Asia/Shanghai";
     value.locations[0]!.utcOffsetSeconds = 0;
     writeDisk(value, PRE_OFFSET_KEY);
     const response = await request(true);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-forecast-cache")).toBe("cache-only-pre-offset-disk");
+    expect(response.headers.get("x-data-stale")).toBe("true");
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(providerCalls).toBe(0);
+    const body = await response.json();
+    expect(body.metadata.stale).toBe(true);
+    expect(body.locations[0].metadata.stale).toBe(true);
+    expect(body.locations[0].fetchedAt).toBe(timestamp);
+    expect(body.locations[0].hourly[0]).toMatchObject({
+      cloudCover: 8,
+      precipitation: 0.2,
+      windSpeed: 3,
+    });
+  });
+  it("rejects a pre-offset v2 record whose recorded request coordinates do not match", async () => {
+    const value = payload(new Date(NOW - 60_000).toISOString());
+    value.locations[0]!.requestedLatitude = 31;
+    writeDisk(value, PRE_OFFSET_KEY);
+    const response = await request(true);
     expect(response.status).toBe(429);
     expect(response.headers.get("x-forecast-cache")).toBe("cache-only-miss");
+    expect(providerCalls).toBe(0);
+  });
+  it("rejects expired pre-offset v2 facts using original source age", async () => {
+    writeDisk(payload(new Date(NOW - LIMIT - 1).toISOString()), PRE_OFFSET_KEY);
+    const response = await request(true);
+    expect(response.status).toBe(429);
+    expect(providerCalls).toBe(0);
+  });
+  it("returns pre-offset v2 facts as stale after an upstream failure, never as fresh", async () => {
+    const timestamp = new Date(NOW - 60_000).toISOString();
+    const value = payload(timestamp);
+    value.locations[0]!.utcOffsetSeconds = 0;
+    writeDisk(value, PRE_OFFSET_KEY);
+    const response = await request();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-forecast-cache")).toBe("stale-pre-offset-disk");
+    expect(response.headers.get("x-data-stale")).toBe("true");
+    expect(providerCalls).toBe(1);
+    const body = await response.json();
+    expect(body.locations[0].fetchedAt).toBe(timestamp);
+    expect(body.locations[0].metadata.stale).toBe(true);
   });
   it("preserves an explicit UTC zero in the offset-contract cache namespace", async () => {
     const value = payload(new Date(NOW - 60_000).toISOString());
