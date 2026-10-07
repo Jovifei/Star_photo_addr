@@ -67,6 +67,7 @@ async function fetchWithRetry(url, options = {}, attempts = 4) {
       if (!response.ok) {
         rateLimited = response.status === 429;
         const detail = await response.text().catch(() => "");
+        if (rateLimited) throw Object.assign(new Error("HTTP 429; supplier cooldown: Retry-After=" + (response.headers.get("Retry-After") ?? "unknown") + "; no automatic retry"), { rateLimited: true });
         throw new Error(
           `HTTP ${response.status}${detail ? ` · ${detail.slice(0, 180)}` : ""}`,
         );
@@ -74,6 +75,7 @@ async function fetchWithRetry(url, options = {}, attempts = 4) {
       return response;
     } catch (error) {
       lastError = error;
+      if (error?.rateLimited) throw error;
       if (attempt < attempts) {
         await new Promise((resolve) =>
           setTimeout(
