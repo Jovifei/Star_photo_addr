@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "project": "Star_photo_addr",
+  "agent": "/root",
+  "run": "01a11c27-fe28-7c81-afb2-8aed4e7cefaf",
+  "sourceSha": "011cd379736a4ea50b80ad8e5211207e68a46cc8",
+  "sourceTree": "fda8a9ef656058964b985248ec7d47458e1af4e4",
+  "root": "E:\\project\\Star_photo_addr",
+  "branch": "codex/verify-pressure-20261009",
+  "canonicalCheck": {
+    "firstAttempt": "FAIL:one5000msfinder-test-timeout",
+    "exitCode": 0,
+    "tests": 542,
+    "focused": "6PASS",
+    "status": "PASS",
+    "command": "npm run check",
+    "repeat": "same command/no assertion or timeout changes",
+    "files": 97
+  },
+  "chromium": {
+    "durationMinutes": 11.4,
+    "passed": 278,
+    "sourceSha": "c2390b952fa43617ef38ffbbb8d7f133ca18f1f1",
+    "sourceEquivalence": "src/tests/scripts/dependencies/CI/Docker identical to011cd37",
+    "skipped": 126,
+    "failed": 0,
+    "command": "npx playwright test --config=playwright.local.config.js",
+    "exitCode": 0,
+    "status": "PASS"
+  },
+  "crossBrowser": {
+    "exitCode": 0,
+    "sourceSha": "011cd379736a4ea50b80ad8e5211207e68a46cc8",
+    "status": "PASS",
+    "passed": 12
+  },
+  "frontend": {
+    "exitCode": 0,
+    "sourceSha": "011cd379736a4ea50b80ad8e5211207e68a46cc8",
+    "status": "PASS",
+    "matchedRoutes": 3
+  },
+  "hostedCI": {
+    "runId": 37817174713,
+    "chromiumSkipped": 126,
+    "chromiumPassed": 278,
+    "durationMinutes": 18.8,
+    "status": "SUCCESS",
+    "allFiveJobs": "SUCCESS",
+    "sourceSha": "011cd379736a4ea50b80ad8e5211207e68a46cc8"
+  },
+  "weatherMatrices": {
+    "production": {
+      "toolSourceSha": "c2390b952fa43617ef38ffbbb8d7f133ca18f1f1",
+      "rows": 48,
+      "status": "NOT_RUN",
+      "reason": "capability unavailable;no subsequent weather requests"
+    },
+    "local": {
+      "reason": "cache miss429/Retry-After;stopped",
+      "sourceSha": "011cd379736a4ea50b80ad8e5211207e68a46cc8",
+      "rows": 48,
+      "status": "NOT_RUN"
+    }
+  },
+  "physicalDevice": "NOT_RUN",
+  "screenReader": "NOT_RUN",
+  "scientificAccuracy": "NOT_RUN",
+  "deployment": "NOT_RUN",
+  "merge": "NOT_RUN",
+  "hub": "NOT_SUBMITTED:revision unavailable,pending draft retained"
+}

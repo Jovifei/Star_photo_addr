@@ -1408,6 +1408,14 @@ Jovi已明确停止本地后续执行，本次只提交并推送现有完成记�
 - [x] 08f9320两项源码修复经独立复核关闭；2168a65只修复恢复测试时钟；CI417实际277PASS/126SKIP/1FAIL的移动隐藏节点断言已由c2390b9修复，跨入口14/14为远端来源记录。
 - [x] PR53当前精确head c2390b952fa43617ef38ffbbb8d7f133ca18f1f1 / tree4abd9760a5e9f12db68e0ca612ae98240f0c1cd5已与Git对象核对；CI418/37814365990尚在运行。
 - [ ] 保护本地接力记录后，在E原目录精确候选分支执行接收验证；Hosted CI作为独立待核验门禁，不混用旧候选结果。
+- [x] E原目录已接收011cd379736a4ea50b80ad8e5211207e68a46cc8/treefda8a9ef656058964b985248ec7d47458e1af4e4；原main与接力记录保留，未创建C盘worktree，未代写业务源码。
+- [x] 本地npm ci、production audit0；原样完整check最终重跑97文件542测试/lint/types/build PASS。首次单项5000ms超时及定向6PASS日志保留，不改时限或断言。
+- [x] c2390b9本地完整Chromium278PASS/126适用SKIP/0FAIL；其src/tests/scripts/依赖/CI/Docker与011cd37无差异。011cd37 Firefox/WebKit12PASS、精确健康revision与三HTML内容门禁3/3PASS。
+- [x] 48行本地及生产只读矩阵真实执行：NOT_RUN；本地cache miss429停止，旧生产缺能力声明而不继续请求天气。设备/读屏/科学仍NOT_RUN。
+- [x] 011cd37精确CI419/37817174713已独立核对五任务SUCCESS，Chromium278PASS/126SKIP；PR53尚未合并，未部署。
+- [ ] 本地证据提交GitHub并回传同一远端会话最终审核；不启动新业务阶段、不恢复旧暂停自动循环。
+
+本轮本地复核文档：docs/LOCAL_PRESSURE_RECEPTION_20261009.md。原目录Owner历史备份保留；临时服务器已由工具管理的前台会话Ctrl+C结束。
 - [ ] 接收精确远端提交，在E原目录验证并回传证据交远端审核。
 
 复核：本次未改业务源码、未跑新测试、未派发新远端实现。已恢复原远端页面；C2C doctor workspace_mismatch与Hub revision WinError10061为本次真实错误。Hub本次未成功上报，不自动重试。旧定时循环不自行恢复，生产部署不在本轮范围。
