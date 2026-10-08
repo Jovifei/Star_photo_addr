@@ -6,6 +6,10 @@ it("executes the actual cache-only CLI with48 read-only requests and records mis
   const requests: URL[] = [];
   const server = createServer((request, response) => {
     requests.push(new URL(request.url ?? "", "http://localhost"));
+    if (request.url === "/api/acceptance-capabilities") {
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({ app: "star-weather-planner", cacheOnlyVersion: 1, products: ["surface", "pressure", "fireglow", "cloudsea"] })); return;
+    }
     response.writeHead(503, { "Content-Type": "application/json" }); response.end(JSON.stringify({ error: "cache-only-miss" }));
   });
   await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -13,8 +17,8 @@ it("executes the actual cache-only CLI with48 read-only requests and records mis
     const address = server.address(); if (!address || typeof address === "string") throw new Error("No test address");
     const { stdout } = await promisify(execFile)(process.execPath, ["scripts/acceptance-weather-matrix.mjs", `--base=http://127.0.0.1:${address.port}`, "--cache-only", "--date=2026-10-08"]);
     const evidence = JSON.parse(stdout);
-    expect(requests).toHaveLength(48);
-    expect(requests.every(url => url.searchParams.get("cache_only") === "1" && !url.searchParams.has("refresh"))).toBe(true);
+    expect(requests).toHaveLength(49);
+    expect(requests.filter(url => url.pathname !== "/api/acceptance-capabilities").every(url => url.searchParams.get("cache_only") === "1" && !url.searchParams.has("refresh"))).toBe(true);
     expect(evidence.rows.every((row: { status: string }) => row.status === "NOT_RUN")).toBe(true);
     expect(evidence.scientificAccuracy).toBe("NOT_RUN"); expect(evidence.physicalDevice).toBe("NOT_RUN");
     expect(evidence.rows.filter((row: { product: string }) => row.product === "pressure")).toHaveLength(20);

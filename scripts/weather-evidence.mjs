@@ -84,11 +84,27 @@ export async function collectWeatherEvidence({ base, date, fetcher = fetch, now 
     ["Shanghai", 31.2304, 121.4737], ["Niubeishan-observing", 29.782, 102.582],
     ["Niubeishan-cloudsea", 29.742, 102.325], ["Los-Angeles", 34.0522, -118.2437], ["Kathmandu", 27.7172, 85.324],
   ];
-  const evidence = { schemaVersion: 2, mode: "CACHE_ONLY", collectedAt: new Date(now).toISOString(), base: new URL(base).origin, date, rows: [], stopped: false, scientificAccuracy: "NOT_RUN", physicalDevice: "NOT_RUN", screenReader: "NOT_RUN" };
+  const evidence = { schemaVersion: 2, mode: "CACHE_ONLY", collectedAt: new Date(now).toISOString(), base: new URL(base).origin, date, rows: [], capability: null, stopped: false, scientificAccuracy: "NOT_RUN", physicalDevice: "NOT_RUN", screenReader: "NOT_RUN" };
   const requests = MODELS.flatMap(model => [
     ...points.flatMap(([name, latitude, longitude]) => ["surface", "pressure"].map(product => ({ product, name, latitude, longitude, model }))),
     ...["fireglow", "cloudsea"].map(product => ({ product, model, date })),
   ]);
+  // Old releases may ignore cache_only. Never probe a weather endpoint until
+  // this non-weather declaration confirms the versioned read-only contract.
+  try {
+    const response = await fetcher(new URL("/api/acceptance-capabilities", base), { signal: AbortSignal.timeout(30000), redirect: "error" });
+    const capability = await response.json().catch(() => null);
+    if (!response.ok || capability?.app !== "star-weather-planner" || capability?.cacheOnlyVersion !== 1 || !["surface", "pressure", "fireglow", "cloudsea"].every(product => Array.isArray(capability.products) && capability.products.includes(product))) {
+      evidence.capability = { http: response.status, status: "NOT_RUN", reason: "cache-only-capability-unavailable" };
+      evidence.rows = requests.map(expected => ({ ...expected, status: "NOT_RUN", reason: "cache-only-capability-unavailable" }));
+      return evidence;
+    }
+    evidence.capability = capability;
+  } catch (error) {
+    evidence.capability = { status: "NOT_RUN", reason: String(error) };
+    evidence.rows = requests.map(expected => ({ ...expected, status: "NOT_RUN", reason: "cache-only-capability-unavailable" }));
+    return evidence;
+  }
   for (const expected of requests) {
     if (evidence.stopped) { evidence.rows.push({ ...expected, status: "NOT_RUN", reason: "cooldown-stop" }); continue; }
     const path = expected.product === "surface" ? "/api/forecast" : expected.product === "pressure" ? "/api/pressure-forecast" : `/api/${expected.product}/snapshot`;

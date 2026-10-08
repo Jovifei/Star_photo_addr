@@ -36,8 +36,20 @@ it("stops the whole 48-row matrix on429 and records remaining rows NOT_RUN", asy
   let calls = 0;
   const result = await collectWeatherEvidence({ base: "http://localhost", date: "2026-10-08", now, fetcher: async (input: string | URL | Request) => {
     const url = new URL(String(input));
-    calls += 1; expect(url.searchParams.get("cache_only")).toBe("1"); expect(url.searchParams.has("refresh")).toBe(false);
+    calls += 1;
+    if (url.pathname === "/api/acceptance-capabilities") return new Response(JSON.stringify({ app: "star-weather-planner", cacheOnlyVersion: 1, products: ["surface", "pressure", "fireglow", "cloudsea"] }));
+    expect(url.searchParams.get("cache_only")).toBe("1"); expect(url.searchParams.has("refresh")).toBe(false);
     return new Response(JSON.stringify({ error: "cooldown" }), { status: 429, headers: { "Retry-After": "600" } });
   } });
-  expect(calls).toBe(1); expect(result.rows).toHaveLength(48); expect((result.rows as Array<{ status: string }>).every(row => row.status === "NOT_RUN")).toBe(true);
+  expect(calls).toBe(2); expect(result.rows).toHaveLength(48); expect((result.rows as Array<{ status: string }>).every(row => row.status === "NOT_RUN")).toBe(true);
+});
+
+it("never calls legacy weather endpoints without a versioned cache-only declaration", async () => {
+  const paths: string[] = [];
+  const result = await collectWeatherEvidence({ base: "http://localhost", date: "2026-10-08", now, fetcher: async (input: string | URL | Request) => {
+    paths.push(new URL(String(input)).pathname); return new Response("old release", { status: 404 });
+  } });
+  expect(paths).toEqual(["/api/acceptance-capabilities"]);
+  expect(result.rows).toHaveLength(48);
+  expect((result.rows as Array<{ reason: string }>).every(row => row.reason === "cache-only-capability-unavailable")).toBe(true);
 });
