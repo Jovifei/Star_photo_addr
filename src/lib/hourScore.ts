@@ -1,5 +1,5 @@
+import { hourInstantMs } from "./absoluteForecastTime";
 import { astronomyAt } from "./astronomy";
-import { parseProviderTime } from "./nighttime";
 import {
   missingNightInputs,
   scoreCoreWeather,
@@ -20,7 +20,7 @@ export function scoreHour(
   if (!core) return null;
   let astro;
   try {
-    astro = astronomyAt(parseProviderTime(hour.time, utcOffsetSeconds), location);
+    astro = astronomyAt(new Date(hourInstantMs(hour, utcOffsetSeconds)), location);
   } catch {
     return null;
   }

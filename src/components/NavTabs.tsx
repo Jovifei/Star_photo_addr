@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { locationIdentity, sameLocationIdentity } from "@/lib/locationIdentity";
 import { useStore } from "@/lib/store";
-import { buildProductHref, type ProductLinkContext } from "@/lib/productRoutes";
+import { buildProductHref, readProductLinkContext, type ProductLinkContext } from "@/lib/productRoutes";
 
 /** Prerender skeleton: same four entries so header width never jumps. */
 export function NavTabsFallback() {
@@ -52,12 +53,29 @@ export default function NavTabs() {
   );
 
   const navigationState = hydrated ? state : null;
-  const navigationContext: ProductLinkContext = navigationState
+  const incomingContext = readProductLinkContext(searchParams);
+  const selectedLocation = navigationState?.selectedLocation;
+  // Keep scoped catalogue assertions through the coordinate-only home store,
+  // but drop them as soon as a different point is selected.
+  const navigationIdentity = selectedLocation
+    ? incomingContext.identity && sameLocationIdentity(selectedLocation, incomingContext.identity)
+      ? incomingContext.identity
+      : locationIdentity(selectedLocation, selectedLocation.id.startsWith("finder-") ? "observing" : "coordinate")
+    : null;
+  const navigationContext: ProductLinkContext = pathname === "/fireglow" || pathname === "/cloudsea"
+    ? readProductLinkContext(searchParams)
+    : navigationState
     ? {
         location: navigationState.selectedLocation,
+        identity: navigationIdentity,
+        phase: navigationState.cloudState.activeForecastTime
+          ? Number(navigationState.cloudState.activeForecastTime.slice(11, 13)) < 12 ? "morning" : "evening"
+          : incomingContext.phase,
+        contextVersion: 2,
         night: navigationState.selectedNight,
         model: navigationState.cloudState.model,
         forecastTime: navigationState.cloudState.activeForecastTime,
+        forecastEpoch: navigationState.cloudState.activeForecastEpoch,
         observationTime: navigationState.cloudState.activeObservationTime,
         overlay: navigationState.cloudState.overlayMode,
       }
@@ -74,7 +92,7 @@ export default function NavTabs() {
       }
     : {};
   const homeHref = buildProductHref("/", homeContext, {
-    includeNight: false,
+    includeNight: navigationContext.contextVersion === 2,
   });
 
   const recommendationActive =
@@ -98,14 +116,14 @@ export default function NavTabs() {
     },
     {
       id: "fireglow",
-      href: "/fireglow",
+      href: buildProductHref("/fireglow", navigationContext),
       label: "火烧云",
       hint: "晨晚霞窗口",
       active: pathname === "/fireglow",
     },
     {
       id: "cloudsea",
-      href: "/cloudsea",
+      href: buildProductHref("/cloudsea", navigationContext),
       label: "云海",
       hint: "云顶与日出",
       active: pathname === "/cloudsea",

@@ -16,7 +16,8 @@ interface LocationDetailChartsProps {
   location: Location | null;
   nightKey: string;
   activeHour?: string | null;
-  onSelectHour?: (time: string) => void;
+  activeEpoch?: number | null;
+  onSelectHour?: (time: string, epochSeconds?: number) => void;
   model?: string;
 }
 
@@ -35,6 +36,12 @@ interface PressureForecastResult {
 function formatHour(timeString?: string | null): string {
   if (!timeString || timeString.length < 16) return "";
   return timeString.slice(11, 16);
+}
+
+function evaluatedHourLabel(hour: HourEvaluation, hours: HourEvaluation[]): string {
+  const offset = hour.utcOffsetSeconds ?? 0;
+  return formatHour(hour.time) + (hour.epochSeconds != null && hours.some(other => other.time === hour.time && other.epochSeconds !== hour.epochSeconds)
+    ? ` UTC${offset >= 0 ? "+" : ""}${offset / 3600}` : "");
 }
 
 function baseChartStyle() {
@@ -64,7 +71,7 @@ function buildWeatherChart(hours: HourEvaluation[]) {
     },
     xAxis: {
       type: "category",
-      data: hours.map((h) => formatHour(h.time)),
+      data: hours.map((h) => evaluatedHourLabel(h, hours)),
       axisLine: { lineStyle: { color: "rgba(165, 205, 216, 0.18)" } },
       axisLabel: { color: "#7a939d", fontSize: 9, interval: 0 },
     },
@@ -131,7 +138,7 @@ function buildAstroChart(hours: HourEvaluation[]) {
     },
     xAxis: {
       type: "category",
-      data: hours.map((h) => formatHour(h.time)),
+      data: hours.map((h) => evaluatedHourLabel(h, hours)),
       axisLine: { lineStyle: { color: "rgba(165, 205, 216, 0.18)" } },
       axisLabel: { color: "#7a939d", fontSize: 9, interval: 0 },
     },
@@ -222,6 +229,7 @@ export default function LocationDetailCharts({
   evaluation,
   location,
   activeHour,
+  activeEpoch,
   onSelectHour,
   model = "icon",
 }: LocationDetailChartsProps) {
@@ -330,16 +338,17 @@ export default function LocationDetailCharts({
         {onSelectHour && (
           <div className="detail-hour-chips">
             {hours.map((h) => {
-              const isSelected = effectiveHour === h.time;
+              const isSelected = effectiveHour === h.time && (activeEpoch == null || h.epochSeconds === activeEpoch);
               return (
                 <button
-                  key={h.time}
+                  key={h.epochSeconds ?? h.time}
                   type="button"
                   className={`detail-hour-chip ${isSelected ? "detail-hour-chip--active" : ""}`}
-                  onClick={() => onSelectHour(h.time)}
-                  title={`${formatHour(h.time)} · 综合 ${h.score}分`}
+                  onClick={() => onSelectHour(h.time, h.epochSeconds)}
+                  title={`${evaluatedHourLabel(h, hours)} · 综合 ${h.score}分`}
+                  aria-label={`${evaluatedHourLabel(h, hours)} · 综合 ${h.score}分`}
                 >
-                  <span className="detail-hour-chip-time">{formatHour(h.time)}</span>
+                  <span className="detail-hour-chip-time">{evaluatedHourLabel(h, hours)}</span>
                   <span className="detail-hour-chip-score">{Number.isFinite(h.score) ? h.score : "—"}</span>
                 </button>
               );

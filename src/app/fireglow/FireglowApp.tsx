@@ -1,4 +1,6 @@
 "use client";
+import { useTopicContext, usePublishTopicContext } from "@/hooks/useTopicContext";
+import SnapshotSourceDisclosure from "@/components/SnapshotSourceDisclosure";
 import type { ReactNode } from "react";
 import MapViewportObserver from "@/components/MapViewportObserver";
 import MapTileStatus from "@/components/MapTileStatus";
@@ -137,16 +139,18 @@ interface RankedSite {
 }
 
 export default function FireglowApp() {
-  const [rangeMode, setRangeMode] = useState<RangeMode>(0);
-  const [phase, setPhase] = useState<Phase>("evening");
+  const contextBaseDate = todayKey();
+  const topicContext = useTopicContext(OBSERVING_SITES, "observing", contextBaseDate);
+  const [rangeMode, setRangeMode] = useState<RangeMode>(topicContext.initialRange);
+  const [phase, setPhase] = useState<Phase>(topicContext.incoming.phase ?? "evening");
   const [snapshots, setSnapshots] = useState<Record<string, FireGlowSnapshot | null>>({});
   const [dateErrors, setDateErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [requestKey, setRequestKey] = useState("");
   const [map, setMap] = useState<LeafletMap | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [pickedPoint, setPickedPoint] = useState<Coordinate | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(topicContext.transfer?.site?.id ?? null);
+  const [pickedPoint, setPickedPoint] = useState<Coordinate | null>(topicContext.incoming.identity && !topicContext.transfer?.site ? { latitude: topicContext.incoming.identity.latitude, longitude: topicContext.incoming.identity.longitude } : null);
   const mobile = useMobilePanelViewport();
   const [scoreThreshold, setScoreThreshold] = useState(0);
   const loadTokenRef = useRef(0);
@@ -359,13 +363,15 @@ export default function FireglowApp() {
             ? `暂无达到 ≥${scoreThreshold} 分的地点`
             : visibleError || "当前无可显示的点位评分";
 
+  usePublishTopicContext("/fireglow", OBSERVING_SITES, "observing", selectedId, pickedPoint, selectedDateKey, phase, topicContext.incoming, topicContext.preservedDate);
+
   return (
     <div className="fireglow-root app-shell">
       <TopicMapSearch sites={OBSERVING_SITES}
         onSite={(site) => {
           const forecast = ranked.find((entry) => entry.id === site.id);
           if (forecast) focusSite(forecast);
-          else { setPickedPoint({ latitude: site.latitude, longitude: site.longitude }); map?.flyTo([site.latitude, site.longitude], 8); }
+          else { setSelectedId(site.id); setPickedPoint(null); map?.flyTo([site.latitude, site.longitude], 8); }
         }}
         onCoordinate={(point) => { setSelectedId(null); setPickedPoint(point); map?.flyTo([point.latitude, point.longitude], 8); }} />
       <ProductHeader
@@ -391,7 +397,7 @@ export default function FireglowApp() {
                 aria-pressed={rangeMode === option.value}
                 className={rangeMode === option.value ? "active" : ""}
                 title={option.hint}
-                onClick={() => setRangeMode(option.value)}
+                onClick={() => { topicContext.acceptDate(); setRangeMode(option.value); }}
               >
                 {rangeOptionLabel(option, baseDate)}
               </button>
@@ -409,6 +415,9 @@ export default function FireglowApp() {
           </button>
         </div>
       </ProductHeader>
+      {topicContext.transfer?.status === "conflict" && !selectedId && pickedPoint?.latitude === topicContext.incoming.identity?.latitude && pickedPoint?.longitude === topicContext.incoming.identity?.longitude ? <p role="status" className="location-transfer-notice" data-testid="location-transfer-conflict">所选地点与本入口目录坐标冲突（相距约 {topicContext.transfer.distanceKm?.toFixed(1) ?? "未知"} km），保留原坐标，未自动合并或套用目录评分。</p> : null}
+      {topicContext.dateNotice ? <p role="status" className="location-transfer-notice">{topicContext.dateNotice}</p> : null}
+
 
       <details className="fireglow-model-note forecast-method-note">
         <summary>预报条件指数 · 非实测概率</summary>
@@ -645,6 +654,7 @@ export default function FireglowApp() {
           </ResponsiveTopicDetail>
         ) : null}
       </main>
+      <SnapshotSourceDisclosure snapshot={snapshots[selectedDateKey]} siteId={selectedId} />
     </div>
   );
 }

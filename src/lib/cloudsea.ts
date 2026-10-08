@@ -1,3 +1,5 @@
+import { dataAgeMs } from "./forecastIntegrity";
+import { snapshotSourceTime, type SnapshotProvenance } from "./snapshotProvenance";
 // Cloud-sea (云海条件指数) scoring for mountain observing sites.
 //
 // Surface cloud/RH/wind/precipitation describe whether moisture and low-cloud
@@ -111,6 +113,8 @@ export interface CloudSeaSnapshot {
   date: string;
   model: ForecastModel;
   generatedAt: string;
+  provenance?: SnapshotProvenance;
+  transport?: { servedAt: string };
   source: string;
   stale: boolean;
   refreshError?: string;
@@ -202,6 +206,7 @@ function clamp(val: number, min = 0, max = 100): number {
 }
 
 export interface RawSiteHourly {
+  sourceFetchedAt?: string | null;
   time: string[];
   cloud_cover?: Array<number | null>;
   cloud_cover_low?: Array<number | null>;
@@ -667,11 +672,15 @@ export function buildCloudSeaSnapshot(
     date,
     model,
     generatedAt: new Date().toISOString(),
+    provenance: { version: 1, sourcesBySite: Object.fromEntries(CLOUD_SEA_SITES.map(site => [site.id, [
+      snapshotSourceTime("surface", model, weatherByDate[date]?.[site.id]?.sourceFetchedAt),
+      snapshotSourceTime("pressure", pressureBySite[site.id]?.model ?? model, pressureBySite[site.id]?.fetchedAt),
+    ]])) },
     source:
       availableSites > 0
         ? "Open-Meteo surface weather + pressure-level model profile (Beta)"
         : "Open-Meteo surface weather; pressure-level model profile unavailable (Beta)",
-    stale: false,
+    stale: Object.values(weatherByDate[date] ?? {}).some(record => !Number.isFinite(dataAgeMs(record.sourceFetchedAt))) || Object.values(pressureBySite).some(record => !Number.isFinite(dataAgeMs(record.fetchedAt))),
     surface: {
       status: pressureStatusFor(surfaceAvailableSites, totalSites),
       availableSites: surfaceAvailableSites,

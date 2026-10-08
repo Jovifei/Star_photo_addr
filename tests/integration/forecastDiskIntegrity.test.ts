@@ -8,6 +8,7 @@ const NOW = Date.parse("2026-09-13T08:00:00Z");
 const LIMIT = 6 * 60 * 60_000;
 const KEY = "icon|1|30.182|108.882";
 const OFFSET_CONTRACT_KEY = `surface-v3-offset|${KEY}`;
+const EPOCH_KEY = `surface-v4-epoch|${KEY}`;
 const PRE_OFFSET_KEY = `surface-v2-past1|${KEY}`;
 let directory: string;
 let providerCalls = 0;
@@ -64,8 +65,10 @@ describe("forecast disk fallback original-age gate", () => {
     expect(response.headers.get("x-data-stale")).toBe("true");
     expect((await response.json()).locations[0].metadata.stale).toBe(true);
   });
-  it("accepts fresh data only under the offset-contract cache key", async () => {
-    writeDisk(payload(new Date(NOW - 60_000).toISOString()), OFFSET_CONTRACT_KEY);
+  it("accepts fresh data only with absolute instants under the epoch cache key", async () => {
+    const data = payload(new Date(NOW - 60_000).toISOString());
+    const epochData = { ...data, metadata: { ...data.metadata, timeAxisVersion: "epoch-v1" }, locations: data.locations.map(location => ({ ...location, metadata: { ...location.metadata, timeAxisVersion: "epoch-v1" }, hourly: location.hourly.map(hour => ({ ...hour, epochSeconds: Date.parse(hour.time + "Z") / 1000 - 28800, utcOffsetSeconds: 28800 })) })) };
+    writeDisk(epochData, EPOCH_KEY);
     const response = await request(true);
     expect(response.status).toBe(200);
     expect((await response.json()).locations[0].metadata.stale).toBe(false);
@@ -167,4 +170,14 @@ describe("forecast disk fallback original-age gate", () => {
     writeDisk(payload(new Date(NOW - LIMIT - 1).toISOString()));
     expect((await request()).status).toBe(502);
   });
+});
+
+it("keeps v3 original timestamps and facts read-only and stale after the epoch migration", async () => {
+ const stamp = new Date(NOW-60000).toISOString();
+ writeDisk(payload(stamp), OFFSET_CONTRACT_KEY);
+ const result = await request(true); const body = await result.json();
+ expect(body.locations[0].metadata.stale).toBe(true);
+ expect(body.locations[0].fetchedAt).toBe(stamp);
+ expect(body.locations[0].hourly[0].cloudCover).toBe(8);
+ expect(providerCalls).toBe(0);
 });

@@ -33,6 +33,6 @@ describe("Open-Meteo cloud contract", () => {
   });
 
   it("rejects a malformed hourly time value", () => {
-    expect(() => validate("invalidTime")).toThrow("无效逐小时时间轴");
+    expect(() => validate("invalidTime")).toThrow("无效绝对时间轴");
   });
 });

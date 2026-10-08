@@ -11,7 +11,7 @@ import {
 afterEach(() => vi.restoreAllMocks());
 
 const VALID_CLOUD_HOURLY = {
-  time: ["2026-08-19T20:00"],
+  time: [Date.parse("2026-08-19T12:00:00Z") / 1000],
   cloud_cover: [15],
   cloud_cover_low: [8],
   cloud_cover_mid: [12],

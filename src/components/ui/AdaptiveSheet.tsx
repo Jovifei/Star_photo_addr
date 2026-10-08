@@ -132,7 +132,7 @@ export default function AdaptiveSheet({
   // scoped control styles. Move that presentation intact outside map stacking
   // contexts, while the filter presentation already owns fixed positioning.
   const presentation = className.split(" ").includes("mobile-map-panel-drawer") ? (
-    <div className="map-stage" data-adaptive-sheet-portal="true" hidden={!open} style={{ display: open ? "contents" : "none" }}>
+    <div className={open ? "map-stage" : "map-sheet-portal"} data-adaptive-sheet-portal="true" hidden={!open} style={{ display: open ? "contents" : "none" }}>
       <div className={`mobile-map-panel-dock${open ? " is-open" : ""}`}>
         {content}
       </div>

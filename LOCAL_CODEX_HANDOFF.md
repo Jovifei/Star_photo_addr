@@ -1,3 +1,11 @@
+# 当前云端阶段交接 — 2026-10-07（未部署）
+
+本条优先于下方历史。独立分支 `codex/cloud-identity-provenance-dst-20261007`，授权base `35600636b969704ec8fa5dd9c1bf8ff650ecc0d1`；[Draft PR52](https://github.com/Jovifei/Star_photo_addr/pull/52) 顶部记录最终精确head/tree。已实际云端实现地点身份/相关坐标冲突/四入口日期、原始来源时间与传输分离、官方epoch/DST和版本化只读旧缓存，以及测试/CI门禁。逐文件原因风险、真实结果、设备/科学矩阵、迁移回滚见 [阶段报告](docs/CLOUD_IDENTITY_PROVENANCE_DST_20261007.md)。
+
+生产仍为5fbf7bac2c925d068f4c04274cbdbe79b0672ead；PR49未合并，无部署/清缓存/生产卷修改，Owner两份任务笔记不变。本地从GitHub精确SHA安装测试和真机取证，回传云端审核；不代写业务代码。真OnePlus/iOS/TalkBack/VoiceOver及科学准确率NOT_RUN；供应商 smoke 成功不等于全部矩阵/科学通过。`scripts/check-release-frontend.mjs`保持，CI运行容器亦检查页面内容。下方正式发布与旧候选仅是历史。
+
+---
+
 # 当前交接 — 2026-10-07 正式发布完成
 
 已部署5fbf7bac2c925d068f4c04274cbdbe79b0672ead，版本1.0.27，clean-runtime镜像aa57d67d…；app/worker healthy重启0。CI37607724883五任务SUCCESS。主报告：docs/DEPLOYED_5FBF_ACCEPTANCE_20261007.md。

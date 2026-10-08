@@ -263,6 +263,7 @@ export default function CloudLayer() {
           gridData={activeGrid}
           timeIndex={cloudState.timeIndex}
           activeForecastTime={cloudState.activeForecastTime}
+          activeForecastEpoch={cloudState.activeForecastEpoch}
           displayMode={cloudState.cloudDisplayMode}
           showPrecipitation={cloudState.precipitationEnabled}
           showWind={cloudState.windEnabled}

@@ -5147,3 +5147,16 @@
 .tone-warn {
   color: #fbbf24 !important;
 }
+
+.location-transfer-notice { margin: .35rem .75rem; font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+
+.snapshot-source-note { margin: 0 .75rem; font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+.snapshot-source-note > summary { min-height: 32px; align-content: center; cursor: pointer; }
+.snapshot-source-note > summary:focus-visible { outline: 2px solid var(--green-soft); outline-offset: 2px; }
+@media (pointer: coarse) { .snapshot-source-note > summary { min-height: 44px; } }
+
+/* A failed basemap must not consume blank-map gestures behind its text. */
+.fireglow-map .map-tile-error,
+.cloudsea-map-pane .map-tile-error { pointer-events: none; }
+.fireglow-map .map-tile-error button,
+.cloudsea-map-pane .map-tile-error button { pointer-events: auto; }

@@ -1,3 +1,4 @@
+import { resolveWallHour } from "./absoluteForecastTime";
 import type L from "leaflet";
 import { maxForecastDaysForModel } from "@/lib/forecastModelPolicy";
 import { normalizeForecastDaysForModel, requestForecastResponse } from "@/lib/forecastClient";
@@ -223,9 +224,10 @@ export function bilinearInterpolate(
 function hourAt(
   forecast: LocationForecast,
   timeOrIndex: string | number,
+  epochSeconds?: number | null,
 ): HourWeather | undefined {
   if (typeof timeOrIndex === "string") {
-    return forecast.hourly.find((hour) => hour.time === timeOrIndex);
+    return epochSeconds != null ? forecast.hourly.find(hour => hour.epochSeconds === epochSeconds) : resolveWallHour(forecast.hourly, timeOrIndex) ?? undefined;
   }
   return forecast.hourly[
     Math.min(
@@ -283,6 +285,8 @@ export function aggregateForecastHour(
   if (!valid.length) return null;
   return {
     time,
+    epochSeconds: valid.every(hour => hour.epochSeconds === valid[0].epochSeconds) ? valid[0].epochSeconds : undefined,
+    utcOffsetSeconds: valid[0].utcOffsetSeconds,
     temperature: meanNumber(valid.map((hour) => hour.temperature)),
     humidity: meanNumber(valid.map((hour) => hour.humidity)),
     dewPoint: meanNumber(valid.map((hour) => hour.dewPoint)),
@@ -305,6 +309,7 @@ export function aggregateForecastHour(
 export function getValuesAtTime(
   gridData: CloudGridData,
   timeOrIndex: string | number,
+  epochSeconds?: number | null,
 ): {
   high: Array<number | null>;
   mid: Array<number | null>;
@@ -312,13 +317,13 @@ export function getValuesAtTime(
 } {
   return {
     high: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex)?.cloudHigh ?? null,
+      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.cloudHigh ?? null,
     ),
     mid: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex)?.cloudMid ?? null,
+      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.cloudMid ?? null,
     ),
     low: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex)?.cloudLow ?? null,
+      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.cloudLow ?? null,
     ),
   };
 }
@@ -326,15 +331,17 @@ export function getValuesAtTime(
 export function getCloudCoverAtTime(
   gridData: CloudGridData,
   timeOrIndex: string | number,
+  epochSeconds?: number | null,
 ): Array<number | null> {
   return gridData.forecasts.map(
-    (forecast) => hourAt(forecast, timeOrIndex)?.cloudCover ?? null,
+    (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.cloudCover ?? null,
   );
 }
 
 export function getWeatherValuesAtTime(
   gridData: CloudGridData,
   timeOrIndex: string | number,
+  epochSeconds?: number | null,
 ): {
   precipitation: Array<number | null>;
   windSpeed: Array<number | null>;
@@ -342,13 +349,13 @@ export function getWeatherValuesAtTime(
 } {
   return {
     precipitation: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex)?.precipitation ?? null,
+      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.precipitation ?? null,
     ),
     windSpeed: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex)?.windSpeed ?? null,
+      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.windSpeed ?? null,
     ),
     windDirection: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex)?.windDirection ?? null,
+      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.windDirection ?? null,
     ),
   };
 }

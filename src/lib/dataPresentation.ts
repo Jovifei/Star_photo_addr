@@ -100,7 +100,7 @@ export function presentRecommendationEligibility(facts: RecommendationFacts): Pr
   if (!facts.hasLocation || (facts.loading && !facts.hasForecast)) {
     return { code: "waiting", label: "等待数据", detail: "选择地点并完成数据读取后检查推荐门禁", tone: "neutral" };
   }
-  if (facts.hasEvaluation && !facts.forecastIssue) {
+  if (facts.hasEvaluation && !facts.forecastIssue && !facts.availabilityError) {
     return { code: "eligible", label: "已通过推荐数据门禁", detail: "后续判断仍由今晚状态与评分结果决定", tone: "good" };
   }
   return {
