@@ -294,20 +294,15 @@ export default function LocationDetailCharts({
   const effectiveEvaluation = hours.find(hour => hour.time === effectiveHour && (activeEpoch == null || hour.epochSeconds === activeEpoch));
   const effectiveEpoch = activeEpoch ?? effectiveEvaluation?.epochSeconds;
 
-  const activeSamples = useMemo(() => effectiveHour ? pressureProfileAt(pressure, effectiveHour, effectiveEpoch) : null, [pressure, effectiveHour, effectiveEpoch]);
+  const activeSamples = effectiveHour ? pressureProfileAt(pressure, effectiveHour, effectiveEpoch) : null;
   const profileComplete = hasUsablePressureProfile(activeSamples);
-  const profile = useMemo(() => {
-    return (activeSamples ?? []).map(sample => ({
-      pressure: sample.pressure, heightMsl: sample.heightMsl ?? Number.NaN,
-      cloudCover: sample.cloudCover ?? Number.NaN,
-      ...(sample.humidity == null ? {} : { humidity: sample.humidity }),
-    }));
-  }, [activeSamples]);
-
-  const layers = useMemo(() => {
-    if (!pressure || pressure.stale || !profileComplete || !profile.length || siteElevation == null) return [];
-    return deriveCloudLayers(profile, pressure.modelElevation, siteElevation);
-  }, [pressure, profile, profileComplete, siteElevation]);
+  const profile = (activeSamples ?? []).map(sample => ({
+    pressure: sample.pressure, heightMsl: sample.heightMsl ?? Number.NaN,
+    cloudCover: sample.cloudCover ?? Number.NaN,
+    ...(sample.humidity == null ? {} : { humidity: sample.humidity }),
+  }));
+  const layers = pressure && !pressure.stale && profileComplete && profile.length && siteElevation != null
+    ? deriveCloudLayers(profile, pressure.modelElevation, siteElevation) : [];
 
   const weatherOption = useMemo(() => {
     if (!hours.length) return null;
@@ -319,10 +314,7 @@ export default function LocationDetailCharts({
     return buildAstroChart(hours);
   }, [hours]);
 
-  const profileOption = useMemo(() => {
-    if (!profile.length) return null;
-    return buildProfileChart(profile, siteElevation);
-  }, [profile, siteElevation]);
+  const profileOption = profile.length ? buildProfileChart(profile, siteElevation) : null;
 
   if (!hours.length) return null;
 
