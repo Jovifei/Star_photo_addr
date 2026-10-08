@@ -8,7 +8,7 @@ Owner authorization: integrate remote branch functionality, resolve conflicts, t
 - [x] Install locked dependencies and verify lint/types/unit-contract-integration/build.
 - [x] Verify complete Chromium and applicable cross-browser contracts on the integrated source.
 - [x] Record exact candidate, branch resolution, results and remaining product acceptance boundaries.
-- [ ] Fetch main again, merge verified integration into main, synchronize original checkout/dependencies and push main without force.
-- [ ] Verify original main, origin/main and remote main SHA agree.
+- [x] Fetch main again, merge verified integration into main, synchronize original checkout/dependencies and push main without force.
+- [x] Verify original main, origin/main and remote main SHA agree.
 
 Production remains 5fbf7ba unless separately instructed. Test skips, CI smoke and merging do not establish full physical-device/scientific acceptance.

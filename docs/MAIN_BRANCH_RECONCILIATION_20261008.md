@@ -50,3 +50,5 @@ Jovi本次授权：按功能合并远端分支、解决冲突、测试后归并m
 
 原目录必须使用 E:/project/Star_photo_addr 的 main。此次整合后应核对本地main、origin/main、GitHub main相同。
 真实设备、读屏和完整科学准确率仍需独立验收；本次无部署，不把构建和测试等同生产天气通过。
+主线合并commit：ea635d912bf395e4aad1302d6c960d19841625a4；原目录已切main，源码和依赖清单与已测试95c4597相同。后续文档收尾commit不改变被测源码。
+
