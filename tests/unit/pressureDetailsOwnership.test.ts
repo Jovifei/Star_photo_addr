@@ -61,3 +61,11 @@ it("preserves raw partial profile but withholds cloud relation when fewer than s
   await screen.findAllByText(/2000/);
   expect(view.container.querySelector(".cloud-layer-badge")).toBeNull();
 });
+it("a legacy wall-clock selection marks only the earlier repeated hour active", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(pressure))));
+  const view = render(createElement(LocationDetailCharts, { ...props, activeEpoch: null, onSelectHour: vi.fn() }));
+  await screen.findAllByText(/1000/);
+  const selected = view.container.querySelectorAll(".detail-hour-chip--active");
+  expect(selected).toHaveLength(1);
+  expect(selected[0].getAttribute("aria-label")).toContain("UTC-7");
+});

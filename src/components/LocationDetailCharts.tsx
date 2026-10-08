@@ -291,8 +291,10 @@ export default function LocationDetailCharts({
 
   // Determine active hour
   const effectiveHour = activeHour ?? hours[0]?.time ?? null;
+  const effectiveEvaluation = hours.find(hour => hour.time === effectiveHour && (activeEpoch == null || hour.epochSeconds === activeEpoch));
+  const effectiveEpoch = activeEpoch ?? effectiveEvaluation?.epochSeconds;
 
-  const activeSamples = useMemo(() => effectiveHour ? pressureProfileAt(pressure, effectiveHour, activeEpoch) : null, [pressure, effectiveHour, activeEpoch]);
+  const activeSamples = useMemo(() => effectiveHour ? pressureProfileAt(pressure, effectiveHour, effectiveEpoch) : null, [pressure, effectiveHour, effectiveEpoch]);
   const profileComplete = hasUsablePressureProfile(activeSamples);
   const profile = useMemo(() => {
     return (activeSamples ?? []).map(sample => ({
@@ -347,7 +349,7 @@ export default function LocationDetailCharts({
         {onSelectHour && (
           <div className="detail-hour-chips">
             {hours.map((h) => {
-              const isSelected = effectiveHour === h.time && (activeEpoch == null || h.epochSeconds === activeEpoch);
+              const isSelected = effectiveHour === h.time && h.epochSeconds === effectiveEpoch;
               return (
                 <button
                   key={h.epochSeconds ?? h.time}
@@ -392,7 +394,7 @@ export default function LocationDetailCharts({
             <span className="detail-chart-title">低云垂直剖面与海拔</span>
           </div>
           <span className="detail-chart-subtitle">
-            {effectiveHour ? `${evaluatedHourLabel(hours.find(hour => hour.time === effectiveHour && (activeEpoch == null || hour.epochSeconds === activeEpoch)) ?? { time: effectiveHour } as HourEvaluation, hours)} 时次推导` : "气压层推导"}
+            {effectiveHour ? `${effectiveEvaluation ? evaluatedHourLabel(effectiveEvaluation, hours) : formatHour(effectiveHour)} 时次推导` : "气压层推导"}
           </span>
         </div>
 
