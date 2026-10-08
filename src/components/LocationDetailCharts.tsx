@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Cloud, Moon, Mountain, AlertTriangle, Loader2 } from "lucide-react";
 import type { HourEvaluation, Location } from "@/lib/types";
-import { pressureProfileAt } from "@/lib/pressureIntegrity";
+import { hasUsablePressureProfile, pressureProfileAt } from "@/lib/pressureIntegrity";
 import type { PressureForecastResponse } from "@/lib/pressure";
 import { deriveCloudLayers } from "@/lib/cloudLayers";
 
@@ -292,19 +292,20 @@ export default function LocationDetailCharts({
   // Determine active hour
   const effectiveHour = activeHour ?? hours[0]?.time ?? null;
 
+  const activeSamples = useMemo(() => effectiveHour ? pressureProfileAt(pressure, effectiveHour, activeEpoch) : null, [pressure, effectiveHour, activeEpoch]);
+  const profileComplete = hasUsablePressureProfile(activeSamples);
   const profile = useMemo(() => {
-    if (!pressure?.profiles || !effectiveHour) return [];
-    return (pressureProfileAt(pressure, effectiveHour, activeEpoch) ?? []).map(sample => ({
+    return (activeSamples ?? []).map(sample => ({
       pressure: sample.pressure, heightMsl: sample.heightMsl ?? Number.NaN,
       cloudCover: sample.cloudCover ?? Number.NaN,
       ...(sample.humidity == null ? {} : { humidity: sample.humidity }),
     }));
-  }, [pressure, effectiveHour, activeEpoch]);
+  }, [activeSamples]);
 
   const layers = useMemo(() => {
-    if (!pressure || pressure.stale || !profile.length || siteElevation == null) return [];
+    if (!pressure || pressure.stale || !profileComplete || !profile.length || siteElevation == null) return [];
     return deriveCloudLayers(profile, pressure.modelElevation, siteElevation);
-  }, [pressure, profile, siteElevation]);
+  }, [pressure, profile, profileComplete, siteElevation]);
 
   const weatherOption = useMemo(() => {
     if (!hours.length) return null;
@@ -409,6 +410,7 @@ export default function LocationDetailCharts({
           </div>
         )}
 
+        {pressure && !profileComplete && <p className="chart-error-box">当前时次不足六个完整压力层，暂缓云层关系推导。</p>}
         {pressure?.stale && <p className="chart-error-box">气压资料已降级，仅显示原始剖面，暂缓云层关系推导。</p>}
         {!pressureLoading && profileOption && (
           <div className="chart-wrapper">

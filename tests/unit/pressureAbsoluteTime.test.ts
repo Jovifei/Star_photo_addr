@@ -30,3 +30,9 @@ it("rejects duplicate epoch, missing zone and fabricated calendar wall time", ()
   expect(() => parsePressureForecast({ ...duplicate, timezone: undefined }, "la", "gfs")).toThrow();
   expect(() => parsePressureForecast({ ...duplicate, hourly: { ...duplicate.hourly, time: ["2026-02-30T01:00", "2026-02-30T02:00"] } }, "la", "gfs")).toThrow();
 });
+it("old ISO preserves facts but never upgrades to fresh epoch data", () => {
+  const input = raw(["2026-10-07T12:00Z", "2026-10-07T13:00Z"], "Asia/Shanghai");
+  const data = parsePressureForecast({ ...input, hourly: { ...input.hourly, time: ["2026-10-07T20:00", "2026-10-07T21:00"] } }, "legacy", "icon");
+  expect(data.stale).toBe(true); expect(data.timeAxisVersion).toBeUndefined();
+  expect(pressureProfileAt(data, "2026-10-07T20:00")?.[0].cloudCover).toBe(20);
+});

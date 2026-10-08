@@ -55,3 +55,9 @@ it("rejects a successful response from contradictory coordinates or model", asyn
   await screen.findByText("垂直云层暂时不可用");
   expect(screen.queryByText(/2000/)).toBeNull();
 });
+it("preserves raw partial profile but withholds cloud relation when fewer than six complete layers exist", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(pressure))));
+  const view = render(createElement(LocationDetailCharts, props));
+  await screen.findAllByText(/2000/);
+  expect(view.container.querySelector(".cloud-layer-badge")).toBeNull();
+});
