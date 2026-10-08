@@ -56,6 +56,7 @@
 - Fireglow有效HTTP200携带Retry-After：旧构建桌面/移动首次加载均丢弃score72原始快照（2 FAIL）。现先校验并保存当前快照及原始来源/stale，再用传输冷却停止后续日期；429和不可用回退仍立即停止。新增真实浏览器路由回归核对首次原始事实、三日仅当前日期、降级提示、详情原始sourceFetchedAt与总请求次数。fixture仅验证行为，不作真实天气/科学证明。
 - 新增顺序策略unit验证保留同一原始对象；完整npm run check退出0，97文件542项PASS，lint/typecheck/build PASS。移动三日列表分数前含日期，新测试首轮误用纯分数文本断言，按现有完整格式修正，保留数值、来源和次数断言。最终浏览器与精确候选五任务CI终态见PR顶部；旧4e03 CI不作为修正候选验收。
 - 完整VM Chromium额外发现既有candidate自动恢复测试1 FAIL：测试锚点在route收到请求，慢浏览器消费响应后才注册61秒定时器，62秒断言会提前。实际trace确认第二请求未发生；在返回503前冻结浏览器时钟，让失败响应和定时器共享同一时刻，保留59秒仅1次/62秒共2次/无refresh/分数恢复全部断言。修复桌面、移动2 PASS；不修改业务冷却时长。中断有失败的VM完整运行，不计完整PASS；最终404 Chromium以精确候选CI为准。
+- 精确2168a65的CI #417（37811075098）完整Chromium终态277 PASS/126适用性SKIP/1 FAIL；其余四任务SUCCESS。唯一失败为新Cloudsea429回归在mobile用.first()误选隐藏的desktop侧栏错误节点。展开mobile面板后仍复现13 PASS/1 FAIL；现场mobile状态已有原错误文本。加入现有expandMobileDataSheet真实展开步骤，并按设备限定对应面板status，保留错误文本/可见及仅1次请求断言；不改Cloudsea业务/布局。修复后完整跨入口组14 PASS，新精确CI终态见PR顶部，不能把#417称完整PASS。
 - 独立复核最终diff：未放宽坐标/模型归属、六层/ICON能见度评分门禁，未改来源时间、清旧缓存或重复冷却供应商请求。main/Owner笔记/内容一致性脚本保持。
 
 ## 每文件原因与风险
