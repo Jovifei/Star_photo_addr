@@ -1,3 +1,4 @@
+import { readLocationIdentity, type LocationIdentity } from "./locationIdentity";
 import type { CloudOverlayMode, CloudState, Location } from "@/lib/types";
 
 /**
@@ -11,9 +12,12 @@ export type ProductRouteSearchParams = Record<
   string | string[] | undefined
 >;
 
-export type ProductPath = "/" | "/sites" | "/planner";
+export type ProductPath = "/" | "/sites" | "/planner" | "/fireglow" | "/cloudsea";
 
 export interface ProductLinkContext {
+  identity?: LocationIdentity | null;
+  contextVersion?: 2;
+  phase?: "morning" | "evening";
   location?: Pick<
     Location,
     "latitude" | "longitude" | "name" | "elevation"
@@ -21,11 +25,13 @@ export interface ProductLinkContext {
   night?: string | null;
   model?: CloudState["model"] | null;
   forecastTime?: string | null;
+  forecastEpoch?: number | null;
   observationTime?: string | null;
   overlay?: CloudOverlayMode | null;
 }
 
 const OBSERVATION_CONTEXT_KEYS = [
+  "contextVersion", "sourceScope", "sourceId", "canonicalId", "phase", "forecastEpoch",
   "lat",
   "lng",
   "name",
@@ -90,7 +96,14 @@ export function buildProductHref(
   options: { includeNight?: boolean } = {},
 ): string {
   const target = new URLSearchParams();
-  const { location } = context;
+  const location = context.identity ? { ...context.identity, elevation: context.location?.elevation ?? null } : context.location;
+  if (context.contextVersion === 2) target.set("contextVersion", "2");
+  if (context.identity) {
+    target.set("sourceScope", context.identity.sourceScope);
+    if (context.identity.sourceId) target.set("sourceId", context.identity.sourceId);
+    target.set("canonicalId", context.identity.canonicalId);
+  }
+  setNonEmpty(target, "phase", context.phase);
 
   if (hasValidCoordinates(location)) {
     target.set("lat", String(location.latitude));
@@ -106,6 +119,7 @@ export function buildProductHref(
   }
   setNonEmpty(target, "model", context.model);
   setNonEmpty(target, "forecastTime", context.forecastTime);
+  if (Number.isSafeInteger(context.forecastEpoch)) target.set("forecastEpoch", String(context.forecastEpoch));
   setNonEmpty(target, "observationTime", context.observationTime);
   setNonEmpty(target, "overlay", context.overlay);
 
@@ -140,4 +154,21 @@ export function buildSitesRedirect(
   target.set("view", "light-pollution");
   target.set("panel", "sites");
   return `/?${target.toString()}`;
+}
+
+export function readProductLinkContext(params: Pick<URLSearchParams, "get">): ProductLinkContext {
+  const identity = readLocationIdentity(params);
+  const phase = params.get("phase");
+  return { identity, location: identity ? { ...identity, elevation: null } : null,
+    contextVersion: params.get("contextVersion") === "2" ? 2 : undefined,
+    night: params.get("night"), forecastTime: params.get("forecastTime"),
+    forecastEpoch: params.get("forecastEpoch") && Number.isSafeInteger(Number(params.get("forecastEpoch"))) ? Number(params.get("forecastEpoch")) : null,
+    phase: phase === "morning" || phase === "evening" ? phase : undefined };
+}
+
+/** A versioned selected date may be outside provider coverage, never a normalized invalid calendar date. */
+export function validProductDate(value: string | null | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const instant = Date.parse(value + "T12:00:00Z");
+  return Number.isFinite(instant) && new Date(instant).toISOString().slice(0, 10) === value;
 }

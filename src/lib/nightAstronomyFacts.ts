@@ -1,6 +1,7 @@
+import { hourInstantMs } from "./absoluteForecastTime";
 import { astronomyAt, moonPhaseName } from "./astronomy";
 import { forecastTrustIssue } from "./forecastIntegrity";
-import { isInNight, parseProviderTime } from "./nighttime";
+import { isInNight } from "./nighttime";
 import type { Location, LocationForecast } from "./types";
 
 export interface NightAstronomyFacts {
@@ -23,8 +24,7 @@ function darkIntervalFraction(startAltitude: number, endAltitude: number): numbe
   return startDark ? crossing : 1 - crossing;
 }
 
-/** Geometric hourly samples, independent of weather qualification. Uses the current
- * provider fixed-offset contract; DST canonical instants require a later migration.
+/** Geometric hourly samples, independent of weather qualification. Uses provider UNIX instants when present; legacy fixed-offset facts remain compatible.
  * Reject stale/pre-offset fallbacks rather than trusting their guessed clock. */
 export function nightAstronomyFacts(
   forecast: LocationForecast | null,
@@ -43,8 +43,8 @@ export function nightAstronomyFacts(
 
   const hours = forecast.hourly
     .filter(hour => isInNight(hour.time, nightKey))
-    .sort((a, b) => a.time.localeCompare(b.time));
-  if (hours.length < 7 || new Set(hours.map(hour => hour.time)).size !== hours.length) return null;
+    .sort((a, b) => hourInstantMs(a) - hourInstantMs(b));
+  if (hours.length < 7 || new Set(hours.map(hour => hour.epochSeconds ?? hour.time)).size !== hours.length) return null;
 
   try {
     // Require an actual IANA identity even while the provider API uses one offset.
@@ -53,7 +53,7 @@ export function nightAstronomyFacts(
       if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(hour.time)) {
         throw new Error("Invalid provider clock");
       }
-      const instant = parseProviderTime(hour.time, forecast.utcOffsetSeconds);
+      const instant = new Date(hourInstantMs(hour, forecast.utcOffsetSeconds));
       if (!Number.isFinite(instant.getTime())) throw new Error("Invalid provider time");
       return { instantMs: instant.getTime(), ...astronomyAt(instant, location) };
     });

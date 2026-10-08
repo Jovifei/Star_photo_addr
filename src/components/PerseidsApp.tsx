@@ -90,7 +90,8 @@ function TonightEvidence({
           location={state.selectedLocation}
           nightKey={state.selectedNight}
           activeHour={state.cloudState.activeForecastTime}
-          onSelectHour={(time) => setCloud({ activeForecastTime: time })}
+          activeEpoch={state.cloudState.activeForecastEpoch}
+          onSelectHour={(time, epochSeconds) => setCloud({ activeForecastTime: time, activeForecastEpoch: epochSeconds ?? null })}
           model={state.cloudState.model}
         />
       ) : null}
@@ -100,8 +101,9 @@ function TonightEvidence({
             nightKey={state.selectedNight}
             hours={evaluation.hours}
             selectedTime={state.cloudState.activeForecastTime}
-            onSelectTime={(time) =>
-              setCloud({ activeForecastTime: time })
+            selectedEpoch={state.cloudState.activeForecastEpoch}
+            onSelectTime={(time, epochSeconds) =>
+              setCloud({ activeForecastTime: time, activeForecastEpoch: epochSeconds })
             }
             title="逐小时气象与云量详情"
           />

@@ -69,6 +69,9 @@ export interface BortleClass {
 /** One normalised weather hour (location-local time, from Open-Meteo). */
 export interface HourWeather {
   time: string;
+  /** Absolute provider UNIX instant; repeated local hours have different values. */
+  epochSeconds?: number;
+  utcOffsetSeconds?: number;
   temperature?: number | null;
   humidity?: number | null;
   dewPoint?: number | null;
@@ -237,6 +240,7 @@ export interface SourceStatus {
 }
 
 export interface ForecastMetadata {
+  timeAxisVersion?: "epoch-v1";
   source: "Open-Meteo";
   model: ForecastModel;
   fetchedAt: string;
@@ -379,6 +383,7 @@ export interface CloudState {
   model: Exclude<ForecastModel, "best_match">;
   /** Canonical local ISO time selected by the matrix/timeline. */
   activeForecastTime?: string | null;
+  activeForecastEpoch?: number | null;
   /** Real observed satellite frame time. Kept separate from forecast time. */
   activeObservationTime?: string | null;
   /** Mutually exclusive map raster mode. */

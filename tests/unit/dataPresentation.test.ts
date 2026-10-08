@@ -58,3 +58,7 @@ describe("data presentation contract", () => {
     expect(presentMapRecommendationEligibility({ loading: false, requestFailed: false, hasSnapshot: true, stale: false, publishableCount: 4 }).code).toBe("eligible");
   });
 });
+
+it("withholds a retained evaluated forecast after its explicit refresh failed", () => {
+  expect(presentRecommendationEligibility({ hasLocation: true, loading: false, hasForecast: true, hasEvaluation: true, forecastIssue: null, availabilityError: "HTTP 429" }).code).toBe("withheld");
+});

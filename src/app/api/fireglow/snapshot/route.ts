@@ -1,3 +1,4 @@
+import { snapshotSourceAgeMs, snapshotTransport } from "@/lib/snapshotProvenance";
 import { currentOpenMeteoRateLimit, openMeteoRateLimitHeaders } from "@/lib/forecast";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,6 +13,14 @@ import {
 import type { ForecastModel } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+function snapshotJson(value: unknown, init?: ResponseInit) {
+  if (value && typeof value === "object" && "sites" in value && "generatedAt" in value) {
+    const snapshot = value as { generatedAt: string; stale?: boolean; provenance?: import("@/lib/snapshotProvenance").SnapshotProvenance };
+    return NextResponse.json(snapshotTransport({ ...snapshot, stale: Boolean(snapshot.stale) || !Number.isFinite(snapshotSourceAgeMs(snapshot.provenance)) }), init);
+  }
+  return NextResponse.json(value, init);
+}
+
 
 const VALID_MODELS = new Set<ForecastModel>(["best_match", "icon", "gfs", "aifs"]);
 const TTL_MS = 30 * 60_000;
@@ -30,7 +39,7 @@ const SNAPSHOT_DIRECTORY =
   path.join(process.cwd(), "data", "snapshots");
 
 function fireglowDiskPath(date: string, model: string): string {
-  return path.join(SNAPSHOT_DIRECTORY, `fireglow-snapshot-${date}-${model}.json`);
+  return path.join(SNAPSHOT_DIRECTORY, `fireglow-source-v1-${date}-${model}.json`);
 }
 
 function countValidScores(snapshot: FireGlowSnapshot | null | undefined): number {
@@ -75,10 +84,13 @@ function saveFireglowToDisk(date: string, model: string, snapshot: FireGlowSnaps
 function readFireglowFromDisk(date: string, model: string): FireGlowSnapshot | null {
   if (process.env.NODE_ENV === "test") return null;
   try {
-    const filePath = fireglowDiskPath(date, model);
+    const currentPath = fireglowDiskPath(date, model);
+    const legacyPath = path.join(SNAPSHOT_DIRECTORY, `fireglow-snapshot-${date}-${model}.json`);
+    const filePath = fs.existsSync(/*turbopackIgnore: true*/ currentPath) ? currentPath : legacyPath;
     if (!fs.existsSync(/*turbopackIgnore: true*/ filePath)) return null;
     const content = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
-    return JSON.parse(content) as FireGlowSnapshot;
+    const snapshot = JSON.parse(content) as FireGlowSnapshot;
+    return snapshot?.date === date && snapshot.model === model && snapshot.sites && typeof snapshot.sites === "object" ? snapshot : null;
   } catch {
     return null;
   }
@@ -87,12 +99,12 @@ function readFireglowFromDisk(date: string, model: string): FireGlowSnapshot | n
 export function fireglowSnapshotAgeMs(snapshot: FireGlowSnapshot): number {
   const generatedAt = Date.parse(snapshot.generatedAt);
   if (!Number.isFinite(generatedAt)) return Number.POSITIVE_INFINITY;
-  return Math.max(0, Date.now() - generatedAt);
+  return Math.max(0, Date.now() - generatedAt, snapshotSourceAgeMs(snapshot.provenance));
 }
 
 function readUsableFireglowDiskSnapshot(date: string, model: string): FireGlowSnapshot | null {
   const snapshot = readFireglowFromDisk(date, model);
-  return snapshot && countValidScores(snapshot) > 0 && fireglowSnapshotAgeMs(snapshot) <= DISK_STALE_TTL_MS
+  return snapshot && countValidScores(snapshot) > 0 && Number.isFinite(Date.parse(snapshot.generatedAt)) && Math.max(0, Date.now() - Date.parse(snapshot.generatedAt)) <= DISK_STALE_TTL_MS
     ? snapshot
     : null;
 }
@@ -130,20 +142,25 @@ export async function GET(request: NextRequest) {
   const forceRefresh = params.get("refresh") === "1";
 
   if (!isFinderDateAllowed(date) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json(
+    return snapshotJson(
       { error: "date 必须是当前日期附近的合法日期" },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
   if (!VALID_MODELS.has(model)) {
-    return NextResponse.json(
+    return snapshotJson(
       { error: "model 必须是 best_match、icon、gfs 或 aifs" },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
-  const key = `${date}|${model}`;
+  const key = `source-v1|${date}|${model}`;
   const diskCached = readUsableFireglowDiskSnapshot(date, model);
+  if (params.get("cache_only") === "1") {
+    const retained = cache.get(key)?.snapshot ?? diskCached;
+    if (!retained) return snapshotJson({ error: "cache-only-miss" }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": "60", "X-Fireglow-Cache": "cache-only-miss" } });
+    return snapshotJson({ ...retained, stale: Boolean(retained.stale) || snapshotSourceAgeMs(retained.provenance) > TTL_MS }, { headers: { "Cache-Control": "no-store", "X-Fireglow-Cache": "cache-only" } });
+  }
   if (forceRefresh) {
     const last = lastForceAt.get(key) ?? 0;
     const elapsed = Date.now() - last;
@@ -154,7 +171,7 @@ export async function GET(request: NextRequest) {
       const cached = cache.get(key);
       const cooldownFallback = cached?.snapshot ?? diskCached;
       if (cooldownFallback) {
-        return NextResponse.json(
+        return snapshotJson(
           { ...cooldownFallback, stale: true, refreshError: "强制刷新冷却中" },
           {
             headers: {
@@ -165,7 +182,7 @@ export async function GET(request: NextRequest) {
           },
         );
       }
-      return NextResponse.json(
+      return snapshotJson(
         { error: "火烧云强制刷新处于冷却保护，请稍后重试" },
         {
           status: 429,
@@ -182,8 +199,8 @@ export async function GET(request: NextRequest) {
   }
 
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.at < TTL_MS && !forceRefresh) {
-    return NextResponse.json(cached.snapshot, {
+  if (cached && fireglowSnapshotAgeMs(cached.snapshot) < TTL_MS && !forceRefresh) {
+    return snapshotJson(cached.snapshot, {
       headers: {
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
         "X-Fireglow-Cache": "memory",
@@ -194,7 +211,7 @@ export async function GET(request: NextRequest) {
   if (!cached && diskCached && !forceRefresh && fireglowSnapshotAgeMs(diskCached) <= TTL_MS) {
     const ageMs = fireglowSnapshotAgeMs(diskCached);
     cache.set(key, { snapshot: diskCached, at: Date.now() - ageMs });
-    return NextResponse.json(diskCached, {
+    return snapshotJson(diskCached, {
       headers: {
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
         "X-Fireglow-Cache": "disk",
@@ -243,7 +260,7 @@ export async function GET(request: NextRequest) {
 
     if (newCount === 0) {
       if (diskCount > 0) {
-        return NextResponse.json(
+        return snapshotJson(
           {
             ...diskFallback!,
             stale: true,
@@ -259,15 +276,15 @@ export async function GET(request: NextRequest) {
         );
       }
       const limit = currentOpenMeteoRateLimit();
-      if (limit) return NextResponse.json({ error: limit.message }, { status: 429, headers: { "Cache-Control": "no-store", ...openMeteoRateLimitHeaders() } });
-      return NextResponse.json(
+      if (limit) return snapshotJson({ error: limit.message }, { status: 429, headers: { "Cache-Control": "no-store", ...openMeteoRateLimitHeaders() } });
+      return snapshotJson(
         { error: "上游未返回有效火烧云评分，请稍后重试" },
         { status: 502, headers: { "Cache-Control": "no-store" } },
       );
     }
 
     if (diskCount > 0 && newCount < diskCount * 0.7) {
-      return NextResponse.json(
+      return snapshotJson(
         {
           ...diskFallback!,
           stale: true,
@@ -284,7 +301,7 @@ export async function GET(request: NextRequest) {
     }
 
     rememberSnapshot(key, date, model, snapshot);
-    return NextResponse.json(snapshot, {
+    return snapshotJson(snapshot, {
       headers: {
         "Cache-Control": "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
         "X-Fireglow-Cache": forceRefresh ? "forced-fresh" : "fresh",
@@ -297,7 +314,7 @@ export async function GET(request: NextRequest) {
       const timedOut =
         error instanceof Error &&
         (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
-      return NextResponse.json(
+      return snapshotJson(
         {
           ...fallback,
           stale: true,
@@ -318,10 +335,10 @@ export async function GET(request: NextRequest) {
       error instanceof Error &&
       (error.name === "AbortError" || /aborted|timeout|超时/i.test(error.message));
     const limit = currentOpenMeteoRateLimit();
-    if (limit) return NextResponse.json({ error: limit.message }, { status: 429, headers: { "Cache-Control": "no-store", ...openMeteoRateLimitHeaders() } });
+    if (limit) return snapshotJson({ error: limit.message }, { status: 429, headers: { "Cache-Control": "no-store", ...openMeteoRateLimitHeaders() } });
     const providerMessage =
       error instanceof Error ? error.message : "火烧云上游请求失败";
-    return NextResponse.json(
+    return snapshotJson(
       {
         error: timedOut
           ? "火烧云快照请求超时"

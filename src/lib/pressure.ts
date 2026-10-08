@@ -63,6 +63,8 @@ function pressureVariables(): string[] {
 
 function withPressureVariables(url: string): string {
   const parsed = new URL(url);
+  // Pressure profiles remain China-scoped ISO records; do not inherit surface epoch format.
+  parsed.searchParams.set("timeformat", "iso8601");
   const current = parsed.searchParams.get("hourly");
   parsed.searchParams.set(
     "hourly",

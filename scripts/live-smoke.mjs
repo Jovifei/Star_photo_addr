@@ -67,6 +67,7 @@ async function fetchWithRetry(url, options = {}, attempts = 4) {
       if (!response.ok) {
         rateLimited = response.status === 429;
         const detail = await response.text().catch(() => "");
+        if (rateLimited) throw Object.assign(new Error("HTTP 429; supplier cooldown: Retry-After=" + (response.headers.get("Retry-After") ?? "unknown") + "; no automatic retry"), { rateLimited: true });
         throw new Error(
           `HTTP ${response.status}${detail ? ` · ${detail.slice(0, 180)}` : ""}`,
         );
@@ -74,6 +75,7 @@ async function fetchWithRetry(url, options = {}, attempts = 4) {
       return response;
     } catch (error) {
       lastError = error;
+      if (error?.rateLimited) throw error;
       if (attempt < attempts) {
         await new Promise((resolve) =>
           setTimeout(
@@ -101,36 +103,45 @@ function numericCount(values) {
     : 0;
 }
 
+const MATRIX_POINTS = [
+  ["Shanghai", 31.2304, 121.4737], ["Niubeishan-observing", 29.782, 102.582],
+  ["Niubeishan-cloudsea", 29.742, 102.325], ["Los-Angeles", 34.0522, -118.2437],
+  ["Kathmandu", 27.7172, 85.324],
+];
 async function probeForecastModel(name, providerModel) {
   const url = new URL(ENDPOINTS.forecast);
-  url.searchParams.set("latitude", "30.2741");
-  url.searchParams.set("longitude", "120.1551");
+  url.searchParams.set("latitude", MATRIX_POINTS.map(point => point[1]).join(","));
+  url.searchParams.set("longitude", MATRIX_POINTS.map(point => point[2]).join(","));
   url.searchParams.set("hourly", CLOUD_VARIABLES);
-  url.searchParams.set("timezone", "Asia/Shanghai");
+  url.searchParams.set("timezone", "auto");
+  url.searchParams.set("timeformat", "unixtime");
   url.searchParams.set("forecast_days", "2");
   url.searchParams.set("wind_speed_unit", "ms");
   if (providerModel) url.searchParams.set("models", providerModel);
   const startedAt = Date.now();
+  // One batch per model; sequential models and 429 stops the entire smoke.
   const response = await fetchWithRetry(url);
   const data = await response.json();
-  assert(Array.isArray(data.hourly?.time), `${name}: hourly.time missing`);
-  for (const field of [
-    "cloud_cover",
-    "cloud_cover_low",
-    "cloud_cover_mid",
-    "cloud_cover_high",
-  ]) {
-    assert(
-      numericCount(data.hourly?.[field]) > 0,
-      `${name}: ${field} has no numeric values`,
-    );
-  }
-  return {
-    source: `Open-Meteo ${name}`,
-    status: "ok",
-    hours: data.hourly.time.length,
-    latencyMs: Date.now() - startedAt,
-  };
+  const sourceFetchedAt = new Date().toISOString();
+  assert(Array.isArray(data) && data.length === MATRIX_POINTS.length, `${name}: multi-coordinate coverage missing`);
+  const matrix = data.map((forecast, index) => {
+    const point = MATRIX_POINTS[index];
+    const times = forecast.hourly?.time;
+    assert(Array.isArray(times) && times.length > 0, `${name}/${point[0]}: hourly.time missing`);
+    assert(times.every((time, hour) => Number.isSafeInteger(time) && (hour === 0 || time > times[hour - 1])), `${name}/${point[0]}: UNIX epochs invalid`);
+    for (const field of ["cloud_cover", "cloud_cover_low", "cloud_cover_mid", "cloud_cover_high"]) {
+      assert(numericCount(forecast.hourly?.[field]) > 0, `${name}/${point[0]}: ${field} has no numeric values`);
+    }
+    return { point: point[0], requestedLatitude: point[1], requestedLongitude: point[2],
+      returnedLatitude: forecast.latitude, returnedLongitude: forecast.longitude,
+      provider: "Open-Meteo", requestedModel: name, requestedProviderModel: providerModel ?? "best_match (automatic)",
+      timezone: forecast.timezone, sourceFetchedAt, providerRunAt: null, observedAt: null,
+      hours: times.length, firstEpoch: times[0], lastEpoch: times.at(-1),
+      visibilityCount: numericCount(forecast.hourly?.visibility),
+      acceptance: "LIVE_PROVIDER_CONTRACT_ONLY; NOT_SCIENTIFIC_ACCURACY" };
+  });
+  return { source: `Open-Meteo ${name}`, status: "ok", hours: matrix[0].hours,
+    latencyMs: Date.now() - startedAt, matrix };
 }
 
 async function probePressure() {

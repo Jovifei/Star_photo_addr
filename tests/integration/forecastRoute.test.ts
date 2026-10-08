@@ -18,6 +18,7 @@ let fetchForecastByCoords: ReturnType<typeof vi.fn>;
 function metadata(model: ForecastModel) {
   return {
     source: "Open-Meteo" as const,
+    timeAxisVersion: "epoch-v1" as const,
     model,
     fetchedAt: "2026-08-20T00:00:00.000Z",
     stale: false,
@@ -42,6 +43,8 @@ function payload(model: ForecastModel = "gfs"): ForecastResponse {
         hourly: [
           {
             time: "2026-08-20T20:00",
+            epochSeconds: Date.parse("2026-08-20T12:00:00Z") / 1000,
+            utcOffsetSeconds: 28800,
             temperature: 20,
             humidity: 60,
             dewPoint: 12,

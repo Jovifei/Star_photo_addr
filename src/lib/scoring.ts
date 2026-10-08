@@ -1,3 +1,4 @@
+import { hourInstantMs } from "./absoluteForecastTime";
 // Night astronomy score. This is a best-window forecast, NOT an arrival-time observation.
 import { moonPhaseName } from "./astronomy";
 import { formatHour, isInNight } from "./nighttime";
@@ -14,13 +15,13 @@ function evaluateHour(hour: HourWeather, location: Location, utcOffsetSeconds: n
   if (!result) throw new Error("关键天气字段缺失，不能计算小时评分");
   return result;
 }
-function timestamp(time: string): number { return Date.parse(`${time}Z`); }
+function timestamp(hour: HourWeather): number { return hourInstantMs(hour); }
 function longestWindow(hours: HourEvaluation[], threshold = 62): HourEvaluation[] {
   let best: HourEvaluation[] = [];
   let current: HourEvaluation[] = [];
   for (const hour of hours) {
     const previous = current.at(-1);
-    if (previous && timestamp(hour.time) - timestamp(previous.time) !== 3_600_000) current = [];
+    if (previous && timestamp(hour) - timestamp(previous) !== 3_600_000) current = [];
     if (hour.score >= threshold && !hour.blockers.length && hour.sunAltitude < -12) {
       current.push(hour);
       if (current.length > best.length) best = [...current];
@@ -35,7 +36,7 @@ function bestThreeHours(hours: HourEvaluation[]): HourEvaluation[] {
   for (let i = 0; i + 2 < hours.length; i += 1) {
     const part = hours.slice(i, i + 3);
     if (part.some((hour) => hour.sunAltitude >= -12 || hour.blockers.length)) continue;
-    if (timestamp(part[1]!.time) - timestamp(part[0]!.time) !== 3_600_000 || timestamp(part[2]!.time) - timestamp(part[1]!.time) !== 3_600_000) continue;
+    if (timestamp(part[1]!) - timestamp(part[0]!) !== 3_600_000 || timestamp(part[2]!) - timestamp(part[1]!) !== 3_600_000) continue;
     const score = part.reduce((sum, hour) => sum + hour.score, 0) / 3;
     if (score > bestScore) { best = part; bestScore = score; }
   }
@@ -44,9 +45,9 @@ function bestThreeHours(hours: HourEvaluation[]): HourEvaluation[] {
 export function evaluateNight(forecast: LocationForecast, location: Location, nightKey: string, leadIndex = 0): NightEvaluation | null {
   if (forecastTrustIssue(forecast)) return null;
   if (!Number.isFinite(forecast.utcOffsetSeconds)) return null;
-  const source = forecast.hourly.filter((hour) => isInNight(hour.time, nightKey)).sort((a, b) => a.time.localeCompare(b.time));
-  if (source.length < 7 || new Set(source.map((hour) => hour.time)).size !== source.length) return null;
-  if (source.some((hour) => !Number.isFinite(timestamp(hour.time)) || missingNightInputs(hour).length > 0)) return null;
+  const source = forecast.hourly.filter((hour) => isInNight(hour.time, nightKey)).sort((a, b) => hourInstantMs(a) - hourInstantMs(b));
+  if (source.length < 7 || new Set(source.map((hour) => hour.epochSeconds ?? hour.time)).size !== source.length) return null;
+  if (source.some((hour) => !Number.isFinite(timestamp(hour)) || missingNightInputs(hour).length > 0)) return null;
   const hours = source.map((hour) => evaluateHour(hour, location, forecast.utcOffsetSeconds));
   const window = longestWindow(hours);
   const top = bestThreeHours(hours);
