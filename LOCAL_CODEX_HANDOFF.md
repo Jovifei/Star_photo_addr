@@ -1,3 +1,11 @@
+# 当前交接 — 2026-10-08 主线整合与仓库整理
+
+本条优先于历史。最新e057云端功能及九历史tip已整合，本地全套测试通过。当前任务将已验证源码归并main并同步E:/project/Star_photo_addr；精确Git状态以main实际HEAD为准。此前的Draft49禁止合并记录已由Jovi本次主线合并授权取代。此轮未部署，定时循环保持PAUSED。
+
+接力Prompt：docs/NEXT_SESSION_PROMPT_20261008.md；功能/测试/清理证据：docs/MAIN_BRANCH_RECONCILIATION_20261008.md。仍需真实设备/读屏/科学验收；生成目录清理被自动审批拒绝，未绕过。
+
+---
+
 # 当前云端阶段交接 — 2026-10-07（未部署）
 
 本条优先于下方历史。独立分支 `codex/cloud-identity-provenance-dst-20261007`，授权base `35600636b969704ec8fa5dd9c1bf8ff650ecc0d1`；[Draft PR52](https://github.com/Jovifei/Star_photo_addr/pull/52) 顶部记录最终精确head/tree。已实际云端实现地点身份/相关坐标冲突/四入口日期、原始来源时间与传输分离、官方epoch/DST和版本化只读旧缓存，以及测试/CI门禁。逐文件原因风险、真实结果、设备/科学矩阵、迁移回滚见 [阶段报告](docs/CLOUD_IDENTITY_PROVENANCE_DST_20261007.md)。

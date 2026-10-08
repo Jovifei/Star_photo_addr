@@ -113,7 +113,24 @@
   .app-shell > .product-topic-toolbar .segmented { flex-wrap: wrap; }
   .app-shell > .product-topic-toolbar .segmented[data-mode="phase"] { order: 0; }
   .app-shell > .product-topic-toolbar :is(.fireglow-refresh, .cloudsea-refresh) { order: 1; }
-  .app-shell > .product-topic-toolbar .segmented[data-mode="range"] { order: 2; }
+  /* Four dates share one 44px row. Let labels stack inside their equal
+     columns instead of wrapping the overview onto a third toolbar row. */
+  .app-shell > .product-topic-toolbar .segmented[data-mode="range"] {
+    order: 2;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+  }
+  .app-shell > .product-topic-toolbar .segmented[data-mode="range"] button {
+    flex-direction: column;
+    gap: 1px;
+    max-width: none;
+    padding-inline: 2px;
+    white-space: normal;
+  }
+  .app-shell > .product-topic-toolbar .segmented[data-mode="range"] button small {
+    font-size: 10px;
+  }
   .app-shell > .product-topic-toolbar .segmented button,
   .app-shell > .product-topic-toolbar :is(.fireglow-refresh, .cloudsea-refresh) { min-height: 44px; }
 }

@@ -151,3 +151,6 @@
 
 ### 云端任务启动验收
 - create_thread(chatgptWorkCloud)成功不代表挂载了代码执行环境。必须核查工作目录、GitHub写入工具和实际测试/commit证据；不要把只读权限检查的秒级回复称为大阶段执行。GitHub-only的用户新指令覆盖旧Project本地只读连接前置要求。
+
+## 2026-10-08 原目录约束
+Jovi要求使用E:/project/Star_photo_addr并保持main同步；后续默认在原目录工作。不要默认创建C盘worktree。发现Owner修改先保护，禁止reset/clean/stash覆盖。
