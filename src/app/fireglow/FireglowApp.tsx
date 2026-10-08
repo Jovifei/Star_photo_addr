@@ -187,17 +187,25 @@ export default function FireglowApp() {
               { signal: controller.signal, cache: "no-store" },
             ).then(async (response) => {
               const payload = await response.json().catch(() => null);
-              if (response.status === 429 || response.headers.has("Retry-After")) throw new TopicCooldownError(payload?.error ?? "天气供应商冷却中，请稍后重试", response.headers.get("Retry-After"));
-              if (!response.ok || !payload?.sites) {
-                throw new Error(payload?.error ?? "火烧云快照不可用");
+              const retryAfter = response.headers.get("Retry-After");
+              const cooldown = response.status === 429 || retryAfter !== null
+                ? new TopicCooldownError(payload?.error ?? "天气供应商冷却中，请稍后重试", retryAfter) : null;
+              try {
+                if (!response.ok || !payload?.sites) throw new Error(payload?.error ?? "火烧云快照不可用");
+                if (!hasUsableFireGlowScores(payload)) throw new Error("上游未返回有效火烧云评分，请点击刷新重试");
+                if (payload.date !== date || payload.model !== model) throw new Error("快照日期或模型与请求不一致，请重试");
+                // Retain the current valid payload and its original source/stale
+                // facts. The transport cooldown only stops subsequent dates.
+                return { snapshot: payload as FireGlowSnapshot, cooldown };
+              } catch (error) {
+                if (cooldown) throw new TopicCooldownError(error instanceof Error ? error.message : cooldown.message, retryAfter);
+                throw error;
               }
-              if (!hasUsableFireGlowScores(payload)) {
-                throw new Error("上游未返回有效火烧云评分，请点击刷新重试");
-              }
-              if (payload.date !== date || payload.model !== model) throw new Error("快照日期或模型与请求不一致，请重试");
-              return payload as FireGlowSnapshot;
             }),
+          (result) => result.cooldown,
         )
+          .then(results => results.map(result => result.status === "fulfilled"
+            ? { status: "fulfilled" as const, value: result.value.snapshot } : result))
           .then((results) => {
             if (controller.signal.aborted || loadTokenRef.current !== token) return;
             setDateErrors((current) => {

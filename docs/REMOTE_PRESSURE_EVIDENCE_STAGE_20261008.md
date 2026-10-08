@@ -41,12 +41,21 @@
 - 二次审核新增“当前小时不足六层仍推导”1 FAIL/4 PASS → 修复5 PASS；旧墙钟重复小时两个选中态1 FAIL/5 PASS → 修复6 PASS。保留所有断言。
 - model context解析1 FAIL/7 PASS → 修复8 PASS。
 - 基线 `npm ci`701包；纯基线lint/types/91文件516测试PASS，独立干净基线build PASS。初次混入新测试的构建不作为纯基线证据；首个tsx回归未被配置发现也不计RED。
-- 候选 `npm run check` 包含lint/typecheck/unit-contract-integration/build；最终本地lint/types/97文件539测试/build全部PASS（业务代码aa23beae5b5daa36b43883ee0c81bfb77df45b16）；精确最终CI终态见PR。生产 `npm audit --omit=dev --audit-level=high`实际0漏洞。
-- Chromium完整402用例、Firefox/WebKit12用例和容器门禁在最终PR CI上核对终态；本地早期浏览器执行后主动中断以重新冻结审核修复，不计完整PASS。系统Chromium保留断言，只有VM启动参数差异；不冒充跨浏览器/真机。
+- 候选 `npm run check` 包含lint/typecheck/unit-contract-integration/build；初次业务冻结lint/types/97文件539测试/build全部PASS（aa23beae5b5daa36b43883ee0c81bfb77df45b16）；PR53独立反馈修复后完整check为97文件542测试/build PASS；精确最终CI终态见PR。生产 `npm audit --omit=dev --audit-level=high`实际0漏洞。
+- 修复后Chromium完整404用例、Firefox/WebKit12用例和容器门禁在最终PR CI上核对终态；本地早期浏览器执行后主动中断以重新冻结审核修复，不计完整PASS。系统Chromium保留断言，只有VM启动参数差异；不冒充跨浏览器/真机。
 - 实际本地服务 `/`、`/fireglow`、`/cloudsea` 内容门禁3/3哈希一致。重建复核曾命中中断遗留的旧VM服务器，首页servedSHA b7d3…/packagedSHA0668…不一致，门禁正确失败；仅停止本任务旧进程后重启冻结候选，能力接口200且三页面重新一致，未降低门禁。保护脚本不变；最终CI亦运行该门禁。
 - `node scripts/acceptance-weather-matrix.mjs --base=http://127.0.0.1:3103 --cache-only --date=2026-10-09` 实际48行NOT_RUN，首个surface缓存未命中429/Retry-After60，后续停止。原始JSON：`docs/evidence/CACHE_ONLY_MATRIX_20261008.json`。这不是生产数据或准确率。
 - 生产cache-only地址及 `https://api.open-meteo.com/` 只读HEAD实际 `curl: (56) CONNECT tunnel failed, response 403`，代理拒绝；没有绕过/改网络。VM真实供应商和生产矩阵NOT_RUN；最终Hosted CI供应商结果单独列出。
 - `adb devices`、`idevice_id -l`实际bash command not found（exit127）。无附接设备，真OnePlus/iOS/TalkBack/VoiceOver NOT_RUN。
+
+## PR53本地独立审查反馈闭环
+
+实际读取[评论6064335323](https://github.com/Jovifei/Star_photo_addr/pull/53#issuecomment-6064335323)，审查对象4e03fae6594e02d789c29e951ba91baf87eb7f6b结论CHANGES_REQUIRED；这是外部独立反馈，不与前述云端自复核混称。
+
+- pressure缓存/coalescing五位舍入：30.123451和30.123452顺序与并发均在原代码复现错误身份（2 FAIL/5 PASS）。key改用完整数值坐标；严格详情身份守卫未改。修复后相邻坐标分别返回、相同坐标仍缓存/合并且只请求一次，相关16项回归PASS。
+- Fireglow有效HTTP200携带Retry-After：旧构建桌面/移动首次加载均丢弃score72原始快照（2 FAIL）。现先校验并保存当前快照及原始来源/stale，再用传输冷却停止后续日期；429和不可用回退仍立即停止。新增真实浏览器路由回归核对首次原始事实、三日仅当前日期、降级提示、详情原始sourceFetchedAt与总请求次数。fixture仅验证行为，不作真实天气/科学证明。
+- 新增顺序策略unit验证保留同一原始对象；完整npm run check退出0，97文件542项PASS，lint/typecheck/build PASS。移动三日列表分数前含日期，新测试首轮误用纯分数文本断言，按现有完整格式修正，保留数值、来源和次数断言。最终浏览器与精确候选五任务CI终态见PR顶部；旧4e03 CI不作为修正候选验收。
+- 独立复核最终diff：未放宽坐标/模型归属、六层/ICON能见度评分门禁，未改来源时间、清旧缓存或重复冷却供应商请求。main/Owner笔记/内容一致性脚本保持。
 
 ## 每文件原因与风险
 
@@ -76,6 +85,7 @@
 | tests/integration/weatherEvidenceCli.test.ts | 执行真正CLI、一次能力读取和48次cache-only天气请求，全部非科学结果 |
 | tests/integration/cloudseaRoute.test.ts | 供应商fixture使用实际unixtime请求契约；原评分与覆盖断言保留 |
 | tests/e2e/mock-open-meteo.js | pressure原fixture字段保留，仅按供应商新契约编码epoch |
+| tests/e2e/fireglow-data-integrity.spec.ts | HTTP200冷却保留原始事实、来源/stale与桌面/移动请求次数回归 |
 | tests/e2e/location-transfer.spec.ts | 两专题请求模型/回链与真实429请求次数；原坐标/日期断言保留 |
 | docs/plans/2026-10-08-pressure-and-evidence.md | 实施前问题/文件/验收/风险和研究方案；非仅计划交付 |
 | docs/evidence/CACHE_ONLY_MATRIX_20261008.json | VM实际只读执行原始结果，明确local base/NOT_RUN |

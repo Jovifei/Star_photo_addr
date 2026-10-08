@@ -12,6 +12,34 @@ async function route() {
 }
 const request = (query = "") => new NextRequest(`http://localhost/api/pressure-forecast?latitude=30&longitude=120&model=icon${query}`);
 describe("pressure provider cooldown", () => {
+  it("nearby exact coordinates have separate cached identities", async () => {
+    const { GET } = await route();
+    fetchPressureForecast.mockImplementation(async (latitude: number, longitude: number) => ({ requestedLatitude: latitude, requestedLongitude: longitude, model: "icon", fetchedAt: new Date().toISOString() }));
+    const point = (latitude: number) => new NextRequest(`http://localhost/api/pressure-forecast?latitude=${latitude}&longitude=120&model=icon`);
+    const first = await GET(point(30.123451));
+    const second = await GET(point(30.123452));
+    expect((await first.json()).requestedLatitude).toBe(30.123451);
+    expect((await second.json()).requestedLatitude).toBe(30.123452);
+    expect(fetchPressureForecast).toHaveBeenCalledTimes(2);
+    await GET(point(30.123452));
+    expect(fetchPressureForecast).toHaveBeenCalledTimes(2);
+  });
+  it("concurrent nearby coordinates do not coalesce across exact identities", async () => {
+    const { GET } = await route();
+    let release: () => void = () => {};
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    fetchPressureForecast.mockImplementation(async (latitude: number, longitude: number) => {
+      await gate; return { requestedLatitude: latitude, requestedLongitude: longitude, model: "icon", fetchedAt: new Date().toISOString() };
+    });
+    const point = (latitude: number) => new NextRequest(`http://localhost/api/pressure-forecast?latitude=${latitude}&longitude=120&model=icon`);
+    const first = GET(point(30.123451)); const second = GET(point(30.123452)); const identical = GET(point(30.123451));
+    await Promise.resolve(); await Promise.resolve(); release();
+    expect((await (await first).json()).requestedLatitude).toBe(30.123451);
+    expect((await (await second).json()).requestedLatitude).toBe(30.123452);
+    const shared = await identical; expect(shared.headers.get("x-pressure-cache")).toBe("coalesced");
+    expect((await shared.json()).requestedLatitude).toBe(30.123451);
+    expect(fetchPressureForecast).toHaveBeenCalledTimes(2);
+  });
   it("cache-only miss and refresh=1 never contact the provider", async () => {
     const { GET } = await route();
     const response = await GET(request("&cache_only=1&refresh=1"));

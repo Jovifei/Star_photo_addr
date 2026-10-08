@@ -5,12 +5,16 @@ export class TopicCooldownError extends Error {
     this.name = "TopicCooldownError";
   }
 }
-export async function settleTopicDates<T>(dates: readonly string[], load: (date: string) => Promise<T>): Promise<PromiseSettledResult<T>[]> {
+export async function settleTopicDates<T>(dates: readonly string[], load: (date: string) => Promise<T>, stopAfter?: (value: T) => TopicCooldownError | null): Promise<PromiseSettledResult<T>[]> {
   const results: PromiseSettledResult<T>[] = [];
   let stop: unknown;
   for (const date of dates) {
     if (stop) { results.push({ status: "rejected", reason: stop }); continue; }
-    try { results.push({ status: "fulfilled", value: await load(date) }); }
+    try {
+      const value = await load(date);
+      stop = stopAfter?.(value);
+      results.push({ status: "fulfilled", value });
+    }
     catch (reason) {
       results.push({ status: "rejected", reason });
       if (reason instanceof TopicCooldownError || (reason instanceof Error && reason.name === "AbortError")) stop = reason;

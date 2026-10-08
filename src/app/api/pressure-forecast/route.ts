@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     Number.isFinite(daysRaw) ? daysRaw : 7,
     model,
   );
-  const key = `epoch-v1|${model}|${days}|${latitude.toFixed(5)}|${longitude.toFixed(5)}`;
+  const key = `epoch-v1|${model}|${days}|${latitude}|${longitude}`;
   const cached = pressureCache.read(key);
 
   if (params.get("cache_only") === "1") {

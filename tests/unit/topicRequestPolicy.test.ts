@@ -16,3 +16,14 @@ it("isolates ordinary failures and stops obsolete aborted requests", async () =>
   await settleTopicDates(["one", "two"], async () => { calls += 1; throw new DOMException("aborted", "AbortError"); });
   expect(calls).toBe(1);
 });
+
+it("accepts the current retained payload before transport cooldown stops later dates", async () => {
+  const calls: string[] = [];
+  const retained = { stale: true, sourceFetchedAt: "2026-10-08T00:00:00Z", score: 72 };
+  const results = await settleTopicDates(["one", "two", "three"], async date => {
+    calls.push(date); return retained;
+  }, () => new TopicCooldownError("retained response cooldown", "600"));
+  expect(calls).toEqual(["one"]);
+  expect(results[0]).toEqual({ status: "fulfilled", value: retained });
+  expect(results[1].status).toBe("rejected"); expect(results[2].status).toBe("rejected");
+});
