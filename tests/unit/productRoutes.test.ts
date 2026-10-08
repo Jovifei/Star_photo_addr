@@ -4,6 +4,7 @@ import {
   buildProductHref,
   buildSitesRedirect,
   validProductDate,
+  readProductLinkContext,
 } from "@/lib/productRoutes";
 
 describe("buildProductHref", () => {
@@ -158,4 +159,9 @@ it("retains valid selected dates outside forecast coverage but rejects normalize
   expect(validProductDate("2026-02-29")).toBe(false);
   expect(validProductDate("2026-04-31")).toBe(false);
   expect(validProductDate("2026-13-01")).toBe(false);
+});
+
+it("retains allowlisted selected model in parsed cross-product context", () => {
+  expect(readProductLinkContext(new URLSearchParams("model=gfs")).model).toBe("gfs");
+  expect(readProductLinkContext(new URLSearchParams("model=borrowed")).model).toBeNull();
 });

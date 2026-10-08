@@ -159,7 +159,8 @@ export function buildSitesRedirect(
 export function readProductLinkContext(params: Pick<URLSearchParams, "get">): ProductLinkContext {
   const identity = readLocationIdentity(params);
   const phase = params.get("phase");
-  return { identity, location: identity ? { ...identity, elevation: null } : null,
+  const model = params.get("model");
+  return { model: model === "icon" || model === "gfs" || model === "aifs" ? model : null, identity, location: identity ? { ...identity, elevation: null } : null,
     contextVersion: params.get("contextVersion") === "2" ? 2 : undefined,
     night: params.get("night"), forecastTime: params.get("forecastTime"),
     forecastEpoch: params.get("forecastEpoch") && Number.isSafeInteger(Number(params.get("forecastEpoch"))) ? Number(params.get("forecastEpoch")) : null,

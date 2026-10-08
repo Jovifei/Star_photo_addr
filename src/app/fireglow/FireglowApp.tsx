@@ -1,4 +1,5 @@
 "use client";
+import { settleTopicDates, TopicCooldownError } from "@/lib/topicRequestPolicy";
 import { useTopicContext, usePublishTopicContext } from "@/hooks/useTopicContext";
 import SnapshotSourceDisclosure from "@/components/SnapshotSourceDisclosure";
 import type { ReactNode } from "react";
@@ -141,6 +142,7 @@ interface RankedSite {
 export default function FireglowApp() {
   const contextBaseDate = todayKey();
   const topicContext = useTopicContext(OBSERVING_SITES, "observing", contextBaseDate);
+  const model = topicContext.incoming.model ?? "icon";
   const [rangeMode, setRangeMode] = useState<RangeMode>(topicContext.initialRange);
   const [phase, setPhase] = useState<Phase>(topicContext.incoming.phase ?? "evening");
   const [snapshots, setSnapshots] = useState<Record<string, FireGlowSnapshot | null>>({});
@@ -179,23 +181,22 @@ export default function FireglowApp() {
           dates.forEach((date) => delete next[date]);
           return next;
         });
-        Promise.allSettled(
-          dates.map((date) =>
+        settleTopicDates(dates, (date) =>
             fetch(
-              `/api/fireglow/snapshot?date=${date}${force ? "&refresh=1" : ""}`,
+              `/api/fireglow/snapshot?date=${date}&model=${model}${force ? "&refresh=1" : ""}`,
               { signal: controller.signal, cache: "no-store" },
             ).then(async (response) => {
               const payload = await response.json().catch(() => null);
+              if (response.status === 429 || response.headers.has("Retry-After")) throw new TopicCooldownError(payload?.error ?? "天气供应商冷却中，请稍后重试", response.headers.get("Retry-After"));
               if (!response.ok || !payload?.sites) {
                 throw new Error(payload?.error ?? "火烧云快照不可用");
               }
               if (!hasUsableFireGlowScores(payload)) {
                 throw new Error("上游未返回有效火烧云评分，请点击刷新重试");
               }
-              if (payload.date !== date) throw new Error("快照日期与请求不一致，请重试");
+              if (payload.date !== date || payload.model !== model) throw new Error("快照日期或模型与请求不一致，请重试");
               return payload as FireGlowSnapshot;
             }),
-          ),
         )
           .then((results) => {
             if (controller.signal.aborted || loadTokenRef.current !== token) return;
@@ -242,7 +243,7 @@ export default function FireglowApp() {
       });
       return () => controller.abort();
     },
-    [],
+    [model],
   );
 
   useEffect(() => {
@@ -363,7 +364,7 @@ export default function FireglowApp() {
             ? `暂无达到 ≥${scoreThreshold} 分的地点`
             : visibleError || "当前无可显示的点位评分";
 
-  usePublishTopicContext("/fireglow", OBSERVING_SITES, "observing", selectedId, pickedPoint, selectedDateKey, phase, topicContext.incoming, topicContext.preservedDate);
+  usePublishTopicContext("/fireglow", OBSERVING_SITES, "observing", selectedId, pickedPoint, selectedDateKey, phase, topicContext.incoming, topicContext.preservedDate, model);
 
   return (
     <div className="fireglow-root app-shell">
@@ -420,7 +421,7 @@ export default function FireglowApp() {
 
 
       <details className="fireglow-model-note forecast-method-note">
-        <summary>预报条件指数 · 非实测概率</summary>
+        <summary>{model.toUpperCase()} 模型 · 预报条件指数 · 非实测概率</summary>
         <p>
         条件指数由云层结构、能见度与太阳高度启发式映射，尚未完成长期实拍事件概率校准；地图色面为点位条件指数的 IDW 插值，不是卫星或雷达像素场。
         </p>
