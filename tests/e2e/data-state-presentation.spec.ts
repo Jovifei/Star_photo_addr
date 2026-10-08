@@ -237,18 +237,24 @@ test("provider degradation stays separate from selected-data eligibility", async
 test("candidate batch recovers once after transient failure without manual refresh", async ({ page }, info) => {
   await page.clock.install();
   let attempts = 0;
+  let firstFailureTime = 0;
   await page.route("**/api/forecast?**", async route => {
     const url = new URL(route.request().url());
     if (url.searchParams.get("model") !== "best_match") return route.fallback();
     attempts += 1;
     expect(url.searchParams.has("refresh")).toBe(false);
-    if (attempts === 1) return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"天气服务暂时不可用"})});
+    if (attempts === 1) {
+      firstFailureTime = await page.evaluate(() => Date.now());
+      return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"天气服务暂时不可用"})});
+    }
     return route.fallback();
   });
   await page.goto(selectedUrl);
   if (info.project.name === "mobile") await expandMobileDataSheet(page);
   await expect(page.getByTestId("candidate-forecast-request-status")).toContainText("天气服务暂时不可用");
-  await page.clock.fastForward(59_000);
+  // Rendering/expanding the sheet consumes real time while the installed clock
+  // runs. Assert at 59 seconds from the failure, not 59 seconds after rendering.
+  await page.clock.pauseAt(new Date(firstFailureTime + 59_000));
   expect(attempts).toBe(1);
   await page.clock.fastForward(3_000);
   await expect.poll(()=>attempts).toBe(2);

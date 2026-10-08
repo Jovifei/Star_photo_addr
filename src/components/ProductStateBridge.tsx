@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
 import type { CloudOverlayMode, MapViewMode } from "@/lib/types";
 import { addDays, initialForecastTime } from "@/lib/nighttime";
+import { validProductDate } from "@/lib/productRoutes";
 import { toSimplifiedChinese } from "@/lib/chineseText";
 
 /**
@@ -33,7 +34,7 @@ export default function ProductStateBridge() {
   } | null>(null);
 
   useEffect(() => {
-    if (pathname.startsWith("/planner")) return;
+    if (pathname.startsWith("/planner") || pathname === "/fireglow" || pathname === "/cloudsea") return;
     const signature = searchParams.toString();
     const applicationKey = `${pathname}?${signature}`;
     if (
@@ -63,12 +64,17 @@ export default function ProductStateBridge() {
     const longitudeValue = searchParams.get("lng");
     const latitude = latitudeValue === null ? null : Number(latitudeValue);
     const longitude = longitudeValue === null ? null : Number(longitudeValue);
+    const hasValidCoordinates =
+      latitude !== null && longitude !== null &&
+      Number.isFinite(latitude) && Number.isFinite(longitude) &&
+      latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180;
     const name = toSimplifiedChinese(searchParams.get("name")?.trim()) || "观星计划点位";
     // The home map is always tonight-first. Old planner links often carried
     // a seasonal 8/12 night and must not silently move the current map back
     // to that historical event date.
     const isHome = pathname === "/";
-    const night = isHome ? null : searchParams.get("night");
+    const versionedContext = searchParams.get("contextVersion") === "2";
+    const night = isHome && !versionedContext ? null : searchParams.get("night");
     const model = searchParams.get("model");
     const forecastTime = searchParams.get("forecastTime");
     const observationTime = searchParams.get("observationTime");
@@ -78,7 +84,7 @@ export default function ProductStateBridge() {
     const cleanUrl = new URL(window.location.href);
     let shouldReplaceUrl = false;
 
-    if (isHome && searchParams.has("night")) {
+    if (isHome && !versionedContext && searchParams.has("night")) {
       cleanUrl.searchParams.delete("night");
       shouldReplaceUrl = true;
     }
@@ -95,8 +101,11 @@ export default function ProductStateBridge() {
       addDays(homeDate, -1),
       addDays(homeDate, 1),
     ]);
+    // Keep coordinate-bound local dates before timezone hydration, but do not
+    // resurrect years-old planner links outside the provider's forecast range.
+    const coordinateDates = new Set(Array.from({ length: 16 }, (_, index) => addDays(homeDate, index - 2)));
     const acceptedHomeForecastTime =
-      !isHome || !forecastTime || acceptedHomeDates.has(forecastDate ?? "")
+      !isHome || !forecastTime || (versionedContext && validProductDate(forecastDate) && /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(forecastTime)) || (hasValidCoordinates && coordinateDates.has(forecastDate ?? "")) || acceptedHomeDates.has(forecastDate ?? "")
         ? forecastTime
         : null;
     if (isHome && forecastTime && !acceptedHomeForecastTime) {
@@ -123,7 +132,7 @@ export default function ProductStateBridge() {
       );
     }
 
-    if (night && state.nightKeys.includes(night)) {
+    if (night && (state.nightKeys.includes(night) || (versionedContext && validProductDate(night)))) {
       selectNight(night);
     }
     const selectedModel =
@@ -170,24 +179,19 @@ export default function ProductStateBridge() {
       setDetailOpen(true);
     }
     if (acceptedHomeForecastTime || observationTime) {
+      if ((!versionedContext || !night) && acceptedHomeForecastTime && /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d$/.test(acceptedHomeForecastTime)) {
+        const hour = Number(acceptedHomeForecastTime.slice(11, 13));
+        const date = acceptedHomeForecastTime.slice(0, 10);
+        selectNight(hour <= 5 ? addDays(date, -1) : date);
+      }
       setCloud({
-        activeForecastTime:
-          acceptedHomeForecastTime ?? state.cloudState.activeForecastTime,
+        ...(acceptedHomeForecastTime ? { activeForecastTime: acceptedHomeForecastTime, activeForecastEpoch: searchParams.get("forecastEpoch") && Number.isSafeInteger(Number(searchParams.get("forecastEpoch"))) ? Number(searchParams.get("forecastEpoch")) : null } : {}),
         activeObservationTime:
           observationTime ?? state.cloudState.activeObservationTime,
       });
     }
 
-    if (
-      latitude !== null &&
-      longitude !== null &&
-      Number.isFinite(latitude) &&
-      Number.isFinite(longitude) &&
-      latitude >= -90 &&
-      latitude <= 90 &&
-      longitude >= -180 &&
-      longitude <= 180
-    ) {
+    if (hasValidCoordinates) {
       const elevationParam = searchParams.get("elevation");
       const parsedElevation =
         elevationParam === null || elevationParam.trim() === ""

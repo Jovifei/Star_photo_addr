@@ -1239,3 +1239,157 @@ Finalsource and limitations are in LOCAL_CODEX_HANDOFF.md currentreceipt. No cla
 
 - [x] Candidate recovery,large batch persistence,tests,merge,originalmain sync,deployment and realpage/coldcache acceptance.
 - [ ] Remote successor decision PENDING_REMOTE_PLANNING.
+
+
+## 2026-10-03 build dependency boundary
+- [x] Reproduce the main production audit failure and verify the shadcn runtime/build boundary.
+- [x] Preserve versions, CSS and runtime behavior; classify the CLI chain as development-only.
+- [x] Add RED/GREEN dependency boundary regression; full check 73 files / 421 tests and production build pass.
+- [x] Production audit zero; actual production install and standalone/trace inspection exclude the CLI chain.
+- [x] Independent review passed; development audit eight high entries remain explicitly documented.
+- [ ] Push the existing branch and verify exact-commit draft PR full CI.
+- [ ] Existing production visual acceptance and PENDING_REMOTE_PLANNING remain open.
+
+
+## 2026-10-03 source-update timezone consistency
+- [x] Complete bounded public-page QA and identify the source-update timezone mismatch.
+- [x] Reproduce the timestamp mismatch in a Firefox UTC context before the source fix.
+- [x] Share Shanghai-time formatting across the three timestamp surfaces, preserving original ISO evidence and fallback text.
+- [x] Add null/midnight/offset unit coverage and three real browser timezone contexts.
+- [x] Final aggregate checks74files428tests/build and rebuilt Firefox6/6 passed; independent diff review found no blockers.
+- [x] Publish `2c143f72` on the existing branch; exact-head CI37138879197 five jobs SUCCESS (Chromium234PASS122SKIP, Firefox/WebKit12PASS).
+- [ ] Keep merge/deployment, physical-device QA and production overnight acceptance separate.
+
+
+## 2026-10-03 A11Y-AXE-001 initial slice
+- [x] Verify documented secondary scope and official dependency metadata; preserve runtime and lock boundaries.
+- [x] Add six desktop/mobile fixture checks with whole-document scans, full result attachments and keyboard focus assertions.
+- [x] Local lint/types/74 files428 tests/build and production audit zero; test discovery six cases.
+- [ ] Independent review and exact-head hosted browser CI; local browser launch BLOCKED, not passed.
+- [ ] Retain physical-device, screen-reader, real-imagery and remaining-route boundaries.
+
+## 2026-10-04 Latest-main integration and candidate keyboard repair
+- [x] Verify remote main48f5562 and original PR49 head8c53ded; retain all latest recovery/cache changes.
+- [x] Diagnose old exact-head CI37141820492: 5 serious nested-interactive failures.
+- [x] Separate native candidate selection from date/removal controls; retain full axe gate.
+- [ ] Final aggregate checks, independent repair review, exact-head CI and browser/visual acceptance.
+- [ ] Continue remaining documented acceptance after this gate; no unauthorized main merge/deploy.
+
+<!-- Preserved append-only Owner notes from main48f5562, originally2026-10-04 -->
+
+## Independent audit request 2026-10-04
+- [x] Verify repository/main and latesthandoff baseline.
+- [x] Create detailed private local request with addresses, UI/data/cache/deployment/test/doc/route scope and reporting contract.
+- [x] Keep private operations addresses excluded from Git and mirror; no businesscode changes or review claims.
+- [ ] Independent Agent audit to be initiated by Jovi; NOT_RUN here.
+
+## 2026-10-07 378 postrelease acceptance
+- [x] Independent remoteHEAD/tree/parent,currenthealth,app/worker imagehealthy/restart0/originalvolume.
+- [x] Actual release receipt read;Owner snapshot9331bd0/zip retained;originalauthorizedbranch synced.
+- [ ] Backup/rollback receipts and intact artifacts verified without secrets.
+- [ ] Realbrowser/mobile viewport/map/forecast/tooltip/scroll/return/repeat;physicalphone NOT_RUN until available.
+- [ ] Keyboard/focus/accessible names/contrast/dynamicmessages;whole-sitea11y not qualified by focusedaxe.
+- [ ] Boundedrealweather coverage/source/stale/model/units/elevation/timezone/nightdate/recommendation.
+- [ ] Reproduce missingUTC-offset source defect and globaldate hypothesis;remote actualrepaircommit then localtests/CI/evidence return.
+- [ ] C2C doctorgreen,oldremotechatfull,successor decision pending.
+- [ ] Handoff/hub DEPLOYED_ACCEPTANCE_INCOMPLETE exact378;no duplicate deploy orDraftmerge.
+
+## 2026-10-07 手机重设计（Jovi最新纠正）
+- [x] 识别真机OnePlus7Pro Android11；打开浏览器操作被策略拒绝，真机网页NOT_RUN。
+- [x] 定位ICON缺字段连带隐藏独立天文事实；手机最终CSS大结论/固定摘要/单列降低密度。
+- [x] 写可执行设计 docs/MOBILE_DENSITY_REDESIGN_20261007.md。
+- [ ] 远端实际修复提交与交接；本地精确SHA测试和浏览器/真机验证。
+- [ ] 通过后发布新候选，保留快照卷/备份/回滚；更新现网与知识库证据。
+
+- [x] 真机首页巴中光雾山选择、展开、上滑已执行：ICON事实存在、缺能见度；完整真机仍PENDING。
+- [x] 地图加载语义修复36a9bf9：有效RED/GREEN及84文件477测试/build通过，原分支已同步755a1fe。
+- [ ] T1候选2727d8b定向47PASS，但类型检查5处TS2345失败；已回传远端，禁止集成/发布。
+
+- [x] T1候选478e008完整84文件481测试/build通过（首次超时记录保留）；额外请求前显式时间探针失败，候选仍CHANGES_REQUIRED且未集成。
+- [x] 审核请求docs/T1_REVIEW_CHANGES_REQUIRED_20261007.md提交53432cf已推送；Hub revision4已上报。
+- [ ] 同一远端接力聊天无法加载；恢复后按审核文件修复，再继续compact mobile/A1，不新开任务。
+
+## 2026-10-07 右侧504px现网继续复核
+- [x] 实测504×1244首屏、半屏/全展开和内部滚动；原LA页面已返回。
+- [x] 火烧云/云海牛背山实网页数据、cache模型与覆盖只读复核，无强制刷新/清缓存。
+- [x] 同名牛背山三目录坐标冲突、NavTabs丢点位、派生时间不等于原始抓取已记录78f9858并推送。
+- [x] 原Project接力聊天恢复，已回传实际失败请求并要求真实全阶段提交。
+- [ ] 等远端实际代码，精确SHA本地测试、浏览器/真机验收；不把计划当已执行。
+
+- [x] 本地作者修复5854a160、交接95fed16已同步原授权分支并推送；Owner两文件哈希一致。
+- [x] 完整85文件494测试/lint/types/build、手机31PASS2适用SKIP、真实GFS响应计算1PASS；知识库2槽+4工程文档已验证同步。
+- [ ] CI37596735320目前4jobSUCCESS/e2e运行；精确源码已回传原远端接力审核，新候选未部署。
+
+### 2026-10-07 18:00 当前核验补记
+- [x] 原目录7e42fe10，产品10e25655已推送，Owner笔记保留。
+- [x] 当前496测试/移动35PASS4SKIP/桌面15PASS3SKIP，build/lint/types通过。
+- [x] Hub revision6已上报；Obsidian当前进度与Compact工程文档同步。
+- [ ] 新精确CI读取阻塞（GitHub连接关闭/API超时），不得假称通过或部署。
+- [ ] 远端迭代12请求当前源码审查；本地独立trace确认fetchedAt是上游抓取时间，磁盘读不会洗新时间。跨入口坐标/快照来源时间仍未关闭。
+
+- [x] 远端迭代12已撤回forecast.ts来源时间为假provenance的判定；认可A1与实际modal遮挡修复，CI仍NOT_VERIFIED。迭代13回传setCloud默认explicit、自动调用auto及独立trace位置，等待限定审核。
+
+
+### 2026-10-07 继续发布计划
+- [x] 读取远端迭代13已完成回复：T1/来源时间/API身份闭合，跨产品身份与DST另列待做。
+- [x] git ls-remote精确7e42成功；gh未登录、公开GET403限流，分开记录。
+- [ ] 当前候选完整388项Chromium验收终态，修复真实失败。
+- [ ] 精确7e42低内存打包、原卷一致备份与回滚保留、发布后真实数据/四入口检查。
+
+### 2026-10-07 19:00 发布复核
+- [x] 产品5fbf7ba、CI37607724883五任务SUCCESS；账本/校验工具3560063已同步推送，Owner笔记保留。
+- [x] 修复覆盖镜像残留导致前端旧版问题；clean-runtime aa57d67d…正式发布，首页/火烧云/云海服务响应与打包HTML匹配。
+- [x] app/worker healthy重启0、原卷/378回滚镜像/一致备份保留；真实GFS原值、93分和小屏440px/overflow0、暗夜估算9h通过。
+- [x] 回传原Project迭代14；跨入口身份、快照来源时间、DST、真机/读屏仍待后续阶段，不声称最终产品全站验收完成。
+
+- [x] 远端迭代14已实际回复并读取：接受工程发布，来源时间与日期/候选传递闭合；总体科学/设备验收仍未完成。
+- [x] Hub revision7、知识库进度及发布工程报告同步成功。
+- [ ] 迭代15已请求完整下一阶段方案（身份/来源时间/DST/设备与科学验收），保持5fbf正式版本，禁止虚构远端commit。
+
+### 下一阶段（远端迭代15已回复，16技术修正讨论中，实施NOT_RUN）
+- [x] 读取远端发布复审与完整阶段计划，不把建议称为实际commit。
+- [ ] 隔离新候选，保留5fbf运行版本和Owner快照。
+- [ ] 四产品点位身份：明确来源/范围/坐标，ID不能绕过矛盾坐标；相关跨入口冲突不按名字自动合并。
+- [ ] 快照来源时间：供应商来源与缓存/worker传输分别记录，未知观测/起报时刻保持null。
+- [ ] 核实官方epoch契约后迁移DST绝对时序，保持URL本地时刻和旧缓存兼容，重复/不存在小时有明确策略。
+- [ ] 真机/读屏/科学指标矩阵，实测与fixtures分开。
+- [ ] RED/GREEN、完整CI、受冷却约束的真实数据检查、交接和远端审核；通过后按既有授权发布。
+
+### 2026-10-07 Jovi要求远端主导完整阶段
+- [x] 恢复原定时检查，每5分钟，未全部验收不能暂停。
+- [x] 原接力聊天启用已有GitHub插件，派发完整审核/修复/身份/来源时间/DST/测试/实际commit交接阶段；本地不再替代业务实现。
+- [ ] 核实远端实际写入/执行能力和GitHub提交。生成时不重复派任务；能力缺口需要配置而非等待虚构结果。
+- [ ] 收到精确远端commit后隔离接收、编译测试部署、GitHub证据回传、远端再审核。
+
+- [x] 远端迭代17实际回复已读取：GitHub读到了35600636/treef4a511b9，现有工具仅fetch/fetch_file/compare/read，无create_branch/create_commit/update_file/update_ref；REMOTE_WRITE_NOT_AVAILABLE，尚无新commit，不能以计划替代实施。
+- [ ] 已向Jovi询问仅Jovifei/Star_photo_addr的远端云端执行授权或已有执行入口；待答案前不得创建新云端任务/扩大权限。本地业务实现NOT_RUN。保持5fbf现网与5分钟检查，未变化不重复派发/通知。
+
+### 真正云端执行环境
+- [x] 完整Prompt已实际发送并保存在tmp/REMOTE_FULL_STAGE_PROMPT_20261007.md，不是微任务；普通云端聊天6ac63f27缺工具尚未实施。
+- [x] 从chatgpt.com/codex/cloud只选择Jovifei/Star_photo_addr启动真实设置任务01a11676-0c76-75f7-890e-a0ba6bcde01e/host durable，已请求Node24与35600636基线依赖/测试。
+- [ ] 核实设置实际命令/工作目录与发布条件，完成环境后派发完整实施任务并验证GitHub提交；不能把创建聊天或8秒权限答复当成代码执行。
+
+
+- [x] 真实环境已发布，仅Star_photo_addr、默认包管理器域名、无机密；main设置420测试/6浏览器通过只作环境能力证据。
+- [x] 真正完整实施任务01a11684-3875-717a-8ef4-9562b3d0c01a/host durable已启动，完整原Prompt加正确356基线与迁移/数据/权限约束；每5分钟监控该任务。
+- [ ] 等远端实际GitHubcommit及交接，再本地精确接收验证，绝不将已创建/正在思考称为实现完成。
+
+- [x] 真正实施任务21:19–21:22 UI已出现实际命令与编辑：工作区/网络检查、GitHub API确认35600636、相对旧main103个变更文件读取、独立目录恢复源码。git fetch/ls-remote因云端proxy:8080无法连接失败，未改变网络；远端继续走已有GitHub API，未伪造提交。
+- [ ] 精确源码树恢复与新依赖资格仍待远端完成；不要把环境main420测试当最新分支496资格。
+
+### 2026-10-07 21:52 远端实际提交接收
+- [x] 已确认远端创建Draft PR52并GitHub fetch取得c56ea9ad76b13ce4a9790487a777eb2aa057462f/treef b00b1aaedc17ae1a1d8d0ee76566d627484fdb7a（实际tree以git show为准），父21680f2；49文件785增193删。原目录356与Owner修改保持不变，仅取Git对象。
+- [ ] 远端完整Chromium/最新CI/最终handoff仍在执行；本地资格未跑，不合并不部署。云端UI称90文件512测试与16导航测试通过，仅作作者记录。
+
+
+## 2026-10-08 收尾：仅提交已有工作与待办
+
+Jovi已明确停止本地后续执行，本次只提交并推送现有完成记录、经验与未完成清单。定时继续执行已暂停。本次未运行新测试、未合并PR49/PR52、未部署新候选。远端PR52此前已提交；本地只读取过c56ea9ad，候选本地验收仍未完成。上述历史段落保留为各时刻记录，本段停止要求覆盖此前继续循环的要求。
+
+## 2026-10-08 主线整理验收
+- [x] 最新云端e057与历史九tip功能审计和整合
+- [x] lint/types/build、516单元、272Chromium、12跨浏览器通过；126适用跳过
+- [x] 无引用8张过程截图清理、4旧接收工作树备份后移除
+- [ ] 原E目录切main并推送同步
+- [ ] 最新接力说明和Hub更新
+- BLOCKED：自动审批拒绝原目录生成目录递归清理，保留未删除。

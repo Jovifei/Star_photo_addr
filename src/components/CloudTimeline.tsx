@@ -1,10 +1,11 @@
 "use client";
+import { resolveWallHour } from "@/lib/absoluteForecastTime";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { NIGHT_END, NIGHT_START } from "@/lib/constants";
-import { formatHourWithDate, formatNightLabel, nightRangeKeys } from "@/lib/nighttime";
+import { forecastTimeWindow, formatHourWithDate, formatNightLabel, nightRangeKeys } from "@/lib/nighttime";
 import { HOURS_PER_NIGHT } from "@/lib/nighttime";
 import { isInNight } from "@/lib/nighttime";
 import { aggregateForecastHour, getValuesAtTime } from "@/lib/cloudGrid";
@@ -12,6 +13,7 @@ import { missingNightInputs, scoreCoreWeather } from "@/lib/forecastIntegrity";
 import { presentHourlyDataValidity } from "@/lib/dataPresentation";
 import type { SatelliteFrame } from "@/lib/types";
 import HourlyForecastMatrix, { buildNightTimes } from "@/components/HourlyForecastMatrix";
+import { nightAstronomyFacts } from "@/lib/nightAstronomyFacts";
 import { evaluateNight } from "@/lib/scoring";
 
 const RANGE_OPTIONS: Array<{ value: 1 | 5 | 7; label: string }> = [
@@ -61,6 +63,8 @@ function nightKeyOfTime(time: string): string {
 
 interface TrackTick {
   time: string;
+  epochSeconds?: number;
+  offsetLabel?: string;
   label: string;
 }
 
@@ -77,7 +81,7 @@ interface TrackSegment {
  * directly clickable hour ticks instead of one opaque 73-step slider.
  */
 function buildTrackSegments(
-  items: Array<{ time: string }>,
+  items: Array<{ time: string; epochSeconds?: number; utcOffsetSeconds?: number }>,
   satellite: boolean,
 ): TrackSegment[] {
   if (!items.length) return [];
@@ -92,11 +96,11 @@ function buildTrackSegments(
     return [{ key: "obs-24h", kind: "night", label: "过去 24 小时", ticks }];
   }
   const segments: TrackSegment[] = [];
-  for (const item of items) {
+  for (const [index, item] of items.entries()) {
     const hour = Number(item.time.slice(11, 13));
     const isDayHour = hour >= 6 && hour <= 19;
     if (isDayHour) {
-      if (hour % 6 !== 0) continue;
+      if (hour % 6 !== 0 && index !== 0 && index !== items.length - 1) continue;
       let day = segments[segments.length - 1];
       if (!day || day.kind !== "day") {
         day = { key: `day-${item.time.slice(0, 10)}`, kind: "day", label: "白天", ticks: [] };
@@ -111,7 +115,7 @@ function buildTrackSegments(
       segment = { key: nightKey, kind: "night", label: formatNightLabel(nightKey, true), ticks: [] };
       segments.push(segment);
     }
-    segment.ticks.push({ time: item.time, label: String(hour) });
+    segment.ticks.push({ time: item.time, epochSeconds: item.epochSeconds, offsetLabel: item.epochSeconds != null ? " UTC" + ((item.utcOffsetSeconds ?? 0) >= 0 ? "+" : "") + (item.utcOffsetSeconds ?? 0) / 3600 : undefined, label: String(hour) });
   }
   return segments;
 }
@@ -146,9 +150,16 @@ export default function CloudTimeline() {
     () => pointForecast?.hourly ?? gridForecast?.hourly ?? [],
     [gridForecast, pointForecast],
   );
+  const forwardTimes = useMemo(
+    () => forecastTimeWindow(state.forecastWindowStart, 72),
+    [state.forecastWindowStart],
+  );
   const forecastTimeline = useMemo(
-    () => forecastHours.slice(0, 73).map((hour) => ({ time: hour.time, nightKey: selectedNight })),
-    [forecastHours, selectedNight],
+    () => {
+      const window = new Set(forwardTimes);
+      return forecastHours.filter(hour => window.has(hour.time)).map(hour => ({ time: hour.time, epochSeconds: hour.epochSeconds, utcOffsetSeconds: hour.utcOffsetSeconds, nightKey: nightKeyOfTime(hour.time) }));
+    },
+    [forecastHours, forwardTimes],
   );
   const observationTimeline = state.satelliteFrames;
   const timelineItems = useMemo(
@@ -157,13 +168,13 @@ export default function CloudTimeline() {
   );
   const activeTimelineIndex = isSatelliteMode
     ? observationTimeline.findIndex((frame) => frame.time === cloudState.activeObservationTime)
-    : forecastTimeline.findIndex((item) => item.time === cloudState.activeForecastTime);
+    : forecastTimeline.findIndex((item) => item.time === cloudState.activeForecastTime && (cloudState.activeForecastEpoch == null || item.epochSeconds === cloudState.activeForecastEpoch));
   const safeTimelineIndex = timelineItems.length
     ? Math.min(Math.max(activeTimelineIndex >= 0 ? activeTimelineIndex : 0, 0), timelineItems.length - 1)
     : 0;
-  const activeTimelineTime = isSatelliteMode
+  const activeTimelineTime = isNightLightsMode ? null : isSatelliteMode
     ? (timelineItems[safeTimelineIndex] as SatelliteFrame | undefined)?.time ?? null
-    : timelineItems[safeTimelineIndex]?.time ?? null;
+    : cloudState.activeForecastTime ?? timelineItems[safeTimelineIndex]?.time ?? null;
   const activeScheduleIndex = cloudState.activeForecastTime
     ? schedule.findIndex((item) => item.time === cloudState.activeForecastTime)
     : -1;
@@ -178,22 +189,28 @@ export default function CloudTimeline() {
       ? { time: cloudState.activeForecastTime, nightKey: selectedNight }
       : schedule[safeIndex];
   const displayNight = current?.nightKey ?? selectedNight;
+  const activeLabelNight = activeTimelineTime && !isInNight(activeTimelineTime, displayNight)
+    ? nightKeyOfTime(activeTimelineTime)
+    : displayNight;
   const matrixTimes = useMemo(() => buildNightTimes(displayNight), [displayNight]);
-  const matrixHours = useMemo(() => matrixTimes.map((time) => {
+  const matrixHours = useMemo(() => {
+    const clockSource = pointForecast ?? gridForecast;
+    if (clockSource?.metadata?.timeAxisVersion === "epoch-v1") return clockSource.hourly.filter(hour => isInNight(hour.time, displayNight)).map(hour => pointForecast ? hour : aggregateForecastHour(cloudGrid!.forecasts.map(forecast => forecast.hourly.find(item => item.epochSeconds === hour.epochSeconds)), hour.time) ?? hour);
+    return matrixTimes.map((time) => {
     const selectedHour = pointForecast?.hourly.find((hour) => hour.time === time);
     const gridHour = cloudGrid?.model === cloudState.model
       ? aggregateForecastHour(cloudGrid.forecasts.map((item) => item.hourly.find((hour) => hour.time === time)), time)
       : null;
     return selectedHour ?? gridHour ?? { time };
-  }), [cloudGrid, cloudState.model, matrixTimes, pointForecast]);
-  const activeForecastHour = forecastHours.find((hour) => hour.time === cloudState.activeForecastTime) ?? null;
+  }); }, [cloudGrid, cloudState.model, displayNight, gridForecast, matrixTimes, pointForecast]);
+  const activeForecastHour = resolveWallHour(forecastHours, cloudState.activeForecastTime ?? "", cloudState.activeForecastEpoch);
   const selectedMatrixTime = matrixTimes.includes(cloudState.activeForecastTime ?? "")
     ? cloudState.activeForecastTime
     : null;
   // The expanded matrix is intentionally one night, while the compact rail is
   // a 72-hour forecast. Keep the summary/card bound to the actual active hour
   // even when the selected hour is outside the currently expanded night.
-  const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime) ?? matrixHours[0];
+  const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime && (cloudState.activeForecastEpoch == null || hour.epochSeconds === cloudState.activeForecastEpoch));
   const selectedWeatherScore = selectedHour ? scoreCoreWeather(selectedHour)?.weatherScore ?? null : null;
   const forecastStale = pointForecast
     ? Boolean(pointForecast.metadata?.stale)
@@ -215,13 +232,15 @@ export default function CloudTimeline() {
     [displayNight, pointForecast, selectedLocation],
   );
 
+  const astronomyFacts = useMemo(() => nightAstronomyFacts(pointForecast, selectedLocation, displayNight), [pointForecast, selectedLocation, displayNight]);
+
   const trackSegments = useMemo(
     () => buildTrackSegments(timelineItems, isSatelliteMode),
     [isSatelliteMode, timelineItems],
   );
-  const isTimeActive = useCallback((time: string) =>
-    time === (isSatelliteMode ? cloudState.activeObservationTime : cloudState.activeForecastTime),
-    [cloudState.activeForecastTime, cloudState.activeObservationTime, isSatelliteMode],
+  const isTimeActive = useCallback((time: string, epochSeconds?: number) =>
+    time === (isSatelliteMode ? cloudState.activeObservationTime : cloudState.activeForecastTime) && (isSatelliteMode || cloudState.activeForecastEpoch == null || epochSeconds === cloudState.activeForecastEpoch),
+    [cloudState.activeForecastEpoch, cloudState.activeForecastTime, cloudState.activeObservationTime, isSatelliteMode],
   );
 
   useEffect(() => {
@@ -267,19 +286,22 @@ export default function CloudTimeline() {
       return;
     }
     if (!forecastTimeline.length) return;
-    const forecastIndex = forecastTimeline.findIndex((item) => item.time === cloudState.activeForecastTime);
-    const selectedMatrixTimeIsInNight = matrixTimes.includes(cloudState.activeForecastTime ?? "");
-    if (forecastIndex < 0 && !selectedMatrixTimeIsInNight) {
-      setCloud({ activeForecastTime: forecastTimeline[0].time });
+    // A missing source hour is still a valid slider selection and must remain
+    // explicitly missing. The rail only offers available hours in this same
+    // window; the selected observation-night matrix remains independently valid.
+    const inForwardWindow = forwardTimes.includes(cloudState.activeForecastTime ?? "");
+    const inSelectedNight = isInNight(cloudState.activeForecastTime ?? "", selectedNight);
+    if (!inForwardWindow && !inSelectedNight) {
+      setCloud({ activeForecastTime: forecastTimeline[0].time }, "auto");
     }
-  }, [cloudState.activeForecastTime, cloudState.activeObservationTime, forecastTimeline, isNightLightsMode, isSatelliteMode, matrixTimes, observationTimeline, safeTimelineIndex, setCloud]);
+  }, [cloudState.activeForecastTime, cloudState.activeObservationTime, forecastTimeline, forwardTimes, isNightLightsMode, isSatelliteMode, observationTimeline, safeTimelineIndex, selectedNight, setCloud]);
 
   useEffect(() => {
     if (isSatelliteMode || isNightLightsMode || !schedule.length) return;
     const nextTime = schedule[safeIndex]?.time ?? schedule[0].time;
     const activeIsNightTime = schedule.some((item) => item.time === cloudState.activeForecastTime);
     if (!cloudState.activeForecastTime || (activeIsNightTime && cloudState.timeIndex !== safeIndex)) {
-      setCloud({ activeForecastTime: nextTime, timeIndex: safeIndex });
+      setCloud({ activeForecastTime: nextTime, timeIndex: safeIndex }, "auto");
     }
   }, [cloudState.activeForecastTime, cloudState.timeIndex, isNightLightsMode, isSatelliteMode, safeIndex, schedule, setCloud]);
 
@@ -290,24 +312,32 @@ export default function CloudTimeline() {
       if (isSatelliteMode) {
         setCloud({ activeObservationTime: timelineItems[nextIndex].time });
       } else {
-        setCloud({ activeForecastTime: timelineItems[nextIndex].time });
+        const item = timelineItems[nextIndex];
+        setCloud({ activeForecastTime: item.time, activeForecastEpoch: "epochSeconds" in item ? item.epochSeconds : null });
       }
     }, Math.round(PLAY_BASE_INTERVAL_MS / playSpeed));
     return () => clearInterval(interval);
   }, [cloudState.playing, isNightLightsMode, isSatelliteMode, playSpeed, safeTimelineIndex, setCloud, timelineItems]);
 
-  const setActiveTime = useCallback((time: string) => {
+  const setActiveTime = useCallback((time: string, epochSeconds?: number) => {
     if (isSatelliteMode) {
       setCloud({ activeObservationTime: time, playing: false });
       return;
     }
     const index = schedule.findIndex((item) => item.time === time);
-    setCloud({ activeForecastTime: time, timeIndex: index >= 0 ? index : cloudState.timeIndex, playing: false });
-  }, [cloudState.timeIndex, isSatelliteMode, schedule, setCloud]);
+    setCloud({ activeForecastTime: time, activeForecastEpoch: resolveWallHour(forecastHours, time, epochSeconds)?.epochSeconds ?? null, timeIndex: index >= 0 ? index : cloudState.timeIndex, playing: false });
+  }, [cloudState.timeIndex, forecastHours, isSatelliteMode, schedule, setCloud]);
+
+  const selectMatrixTime = useCallback((time: string, epochSeconds?: number) => {
+    // A rail selection can display a later night before it is the store's
+    // selected night. An explicit matrix choice carries that visible night.
+    selectNight(displayNight);
+    setActiveTime(time, epochSeconds);
+  }, [displayNight, selectNight, setActiveTime]);
 
   const setTimelineIndex = useCallback((value: number) => {
     const item = timelineItems[Math.min(Math.max(value, 0), Math.max(0, timelineItems.length - 1))];
-    if (item) setActiveTime(item.time);
+    if (item) setActiveTime(item.time, "epochSeconds" in item ? item.epochSeconds : undefined);
   }, [setActiveTime, timelineItems]);
 
   /** Keyboard scrub: ±1 step, ±1 night (±6 obs frames), Home/End. */
@@ -376,7 +406,7 @@ export default function CloudTimeline() {
                   className="cloud-track-seg-label"
                   onClick={() => {
                     const first = segment.ticks[0];
-                    if (first) setActiveTime(first.time);
+                    if (first) setActiveTime(first.time, first.epochSeconds);
                   }}
                   disabled={!segment.ticks.length}
                   aria-label={`跳到${segment.label}第一个时次`}
@@ -385,17 +415,17 @@ export default function CloudTimeline() {
                 </button>
                 <div className="cloud-track-ticks">
                   {segment.ticks.map((tick) => {
-                    const active = isTimeActive(tick.time);
+                    const active = isTimeActive(tick.time, tick.epochSeconds);
                     const showLabel = segment.kind === "day" || isSatelliteMode || Number(tick.label) % 2 === 0 || Number(tick.label) === 5;
                     return (
                       <button
-                        key={tick.time}
+                        key={tick.epochSeconds ?? tick.time}
                         type="button"
                         className={`cloud-tick${active ? " active" : ""}`}
                         aria-pressed={active}
-                        aria-label={`${segment.label} ${tick.label} 时`}
+                        aria-label={`${segment.label} ${tick.label} 时${tick.offsetLabel ?? ""}`}
                         title={formatTimelineTime(tick.time)}
-                        onClick={() => setActiveTime(tick.time)}
+                        onClick={() => setActiveTime(tick.time, tick.epochSeconds)}
                       >
                         <span className="cloud-tick-mark" aria-hidden="true" />
                         {showLabel && <span className="cloud-tick-label" aria-hidden="true">{tick.label}</span>}
@@ -411,7 +441,7 @@ export default function CloudTimeline() {
           {!isSatelliteMode && !isNightLightsMode && <div className="cloud-timeline-range" role="group" aria-label="预报夜数">
            {RANGE_OPTIONS.map((option) => <button key={option.value} type="button" className={cloudState.range === option.value ? "active" : ""} aria-pressed={cloudState.range === option.value} onClick={() => changeRange(option.value)}>{option.label}</button>)}
           </div>}
-          <span className="cloud-timeline-current" title={activeTimelineTime ?? undefined}>{isNightLightsMode ? "静态参考，无时间轴" : activeTimelineTime ? (isSatelliteMode ? formatTimelineTime(activeTimelineTime) : `${formatNightLabel(current.nightKey, true)} ${formatHourWithDate(activeTimelineTime, current.nightKey)}`) : "暂无时次"}</span>
+          <span className="cloud-timeline-current" title={activeTimelineTime ?? undefined}>{isNightLightsMode ? "静态参考，无时间轴" : activeTimelineTime ? (isSatelliteMode ? formatTimelineTime(activeTimelineTime) : `${formatNightLabel(activeLabelNight, true)} ${formatHourWithDate(activeTimelineTime, activeLabelNight)}`) : "暂无时次"}</span>
         {canExpandDetails ? <button
           type="button"
           className="cloud-timeline-toggle"
@@ -453,11 +483,11 @@ export default function CloudTimeline() {
             <span><b>风</b>{selectedHour?.windSpeed == null ? "—" : `${selectedHour.windSpeed.toFixed(1)} m/s`}</span>
             <span><b>AQI</b>{!selectedLocation || aqiValue == null ? "—" : aqiValue}</span>
             <span><b>Kp</b>{!selectedLocation || kpValue == null ? "—" : kpValue.toFixed(1)}</span>
-            <span><b>月相</b>{nightSummary?.moonPhase ?? "—"}</span>
+            <span><b>月相</b>{astronomyFacts?.moonPhase ?? "—"}</span>
             <span><b>暗夜窗口</b>{nightSummary?.windowLabel ?? "—"}</span>
           </div>}
 
-           {isSatelliteMode ? <div className="cloud-observation-note">当前为卫星观测时间轴；切换到“云量预报”后查看未来 72 小时逐小时矩阵。</div> : isNightLightsMode ? <div className="cloud-observation-note">当前为 VIIRS 2023 光污染静态参考图层；它没有逐小时时间域，不参与天气评分。</div> : <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} onSelectTime={setActiveTime} loading={state.cloudGridLoading} />}
+           {isSatelliteMode ? <div className="cloud-observation-note">当前为卫星观测时间轴；切换到“云量预报”后查看未来 72 小时逐小时矩阵。</div> : isNightLightsMode ? <div className="cloud-observation-note">当前为 VIIRS 2023 光污染静态参考图层；它没有逐小时时间域，不参与天气评分。</div> : <HourlyForecastMatrix nightKey={displayNight} hours={matrixHours} selectedTime={selectedMatrixTime} selectedEpoch={cloudState.activeForecastEpoch} onSelectTime={selectMatrixTime} loading={state.cloudGridLoading} />}
           {state.cloudGridLoading && <div className="cloud-timeline-loading" role="status">正在采样云图数据…</div>}
         </div>
       )}

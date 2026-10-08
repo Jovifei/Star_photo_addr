@@ -427,7 +427,7 @@ Dialog 与移动端抽屉
 
 | ID | 项目 | 状态 | 下一步 |
 | --- | --- | --- | --- |
-| A11Y-AXE-001 | axe 自动无障碍 | DEFERRED | 增加 `@axe-core/playwright`，先修 serious/critical |
+| A11Y-AXE-001 | axe 自动无障碍 | PARTIAL / 首轮 CI 待执行 | 已增加窄范围候选，serious/critical 阻断；不替代人工或全部路由验证 |
 | OBS-SENTRY-001 | Sentry / Web Vitals | DEFERRED | 先完成隐私、采样率、留存和精确坐标脱敏决策 |
 | COV-VITEST-001 | Vitest 覆盖率门槛 | DEFERRED | 增加 `@vitest/coverage-v8`，初始全局 75/65，关键模块 90% |
 
@@ -449,3 +449,13 @@ Dialog 与移动端抽屉
 - 未解决风险：
 - 下一步：
 ```
+
+
+## A11Y-AXE-001 执行记录 2026-10-03
+
+- 现有 PR49 分支，前序时区提交 `2c143f72` 五项 CI 全绿后开始此独立质量切片。
+- 新增 dev-only axe Playwright 4.13.0；保留所有既有锁文件包元数据与生产依赖。
+- 六项桌面/手机用例：已加载的选中点及来源详情、数据依据 Dialog、暗夜兼容入口；完整文档扫描与完整 JSON 附件；只将 serious/critical 作为首轮阻断。
+- lint/typecheck、74 文件/428 测试、build 和 production audit 0 通过；本地浏览器启动被执行环境阻断，六项用例仅完成发现检查，尚不记为 PASS。
+- 下一步：独立审查后，精确提交 hosted CI 执行并修复具体发现。地图为 Mock，不代替实时影像对比度、读屏或真机验证。
+- [完整边界与验证](../engineering-change-log/2026-10-03-accessibility-gate.md)

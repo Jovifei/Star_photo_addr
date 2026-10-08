@@ -1,3 +1,4 @@
+import { validAbsoluteHours } from "./absoluteForecastTime";
 import type { HourWeather, LocationForecast, ForecastModel, ForecastResponse, ObservationSnapshot, RecommendationScore } from "./types";
 
 /** Retention is not freshness. Even a retained response cannot be scored if stale. */
@@ -30,6 +31,7 @@ export function forecastTrustIssue(
   expectedModel?: ForecastModel,
 ): string | null {
   if (!forecast) return "暂无天气数据";
+  if (forecast.metadata?.timeAxisVersion === "epoch-v1" && !validAbsoluteHours(forecast.hourly, forecast.timezone)) return "天气绝对时间轴与本地时区不一致，不发布推荐分";
   if (!forecast.metadata || !forecast.metadata.model) return "天气数据缺少模型身份，不发布推荐分";
   if (expectedModel && forecast.metadata.model !== expectedModel) return "天气数据模型与当前选择不一致，不发布推荐分";
   if (forecast.metadata?.stale) return "天气数据已降级或过期，不发布推荐分";
@@ -48,7 +50,7 @@ export function usableDiskForecast(value: unknown, model: ForecastModel, count: 
     location && location.metadata?.model === model &&
     Number.isFinite(location.modelLatitude) && Number.isFinite(location.modelLongitude) &&
     Array.isArray(location.hourly) && location.hourly.length > 0 &&
-    new Set(location.hourly.map((hour) => hour?.time)).size === location.hourly.length &&
+    (location.metadata?.timeAxisVersion === "epoch-v1" ? validAbsoluteHours(location.hourly, location.timezone) : new Set(location.hourly.map((hour) => hour?.time)).size === location.hourly.length) &&
     location.hourly.every((hour) => hour && typeof hour.time === "string" &&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(hour.time)) &&
     forecastAgeMs(location, now) <= limit,

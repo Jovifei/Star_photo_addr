@@ -104,10 +104,11 @@ export default function ViewportRecommendationPanel({
     [],
   );
 
-  const activeForecastTime = state.cloudState.activeForecastTime ?? null;
+  const activeForecastTime = state.catalogForecastTime ?? state.cloudState.activeForecastTime ?? null;
+  const catalogSelectedNight = state.catalogSelectedNight ?? state.selectedNight;
   const scoreDate = scoreDateForForecastTime(
     activeForecastTime,
-    state.selectedNight,
+    catalogSelectedNight,
   );
   const contextKey = [
     scoreDate,

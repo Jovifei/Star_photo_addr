@@ -43,6 +43,8 @@ function buildForecastResponse(requestUrl: string) {
     locations: [
       {
         locationId: `e2e-${latitude.toFixed(5)}-${longitude.toFixed(5)}`,
+        requestedLatitude: latitude,
+        requestedLongitude: longitude,
         modelLatitude: latitude,
         modelLongitude: longitude,
         modelElevation: 0,

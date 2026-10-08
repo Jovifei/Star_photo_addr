@@ -1,7 +1,7 @@
 "use client";
 
 import L from "leaflet";
-import { Marker, Tooltip, useMap } from "react-leaflet";
+import { Marker, Tooltip, useMap, type MarkerProps } from "react-leaflet";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
@@ -24,6 +24,58 @@ function markerIcon(color: string, selected: boolean, bortle: number): L.DivIcon
   });
 }
 
+export function ObservingSiteMarker({ color, selected, bortle, ...props }: Omit<MarkerProps, "icon"> & {
+  color: string; selected: boolean; bortle: number;
+}) {
+  // One icon belongs to this mounted marker. Unrelated grid/store renders
+  // keep its DOM intact; actual visual changes replace it. No global cache.
+  const icon = useMemo(() => markerIcon(color, selected, bortle), [color, selected, bortle]);
+  const markerRef = useRef<L.Marker | null>(null);
+  const lastTouch = useRef<number | null>(null);
+  useEffect(() => {
+    const marker = markerRef.current;
+    const element = marker?.getElement();
+    if (!marker || !element) return;
+    let start: { x: number; y: number } | null = null;
+    let dragged = false;
+    const down = (event: PointerEvent) => {
+      start = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
+      dragged = false;
+    };
+    const move = (event: PointerEvent) => {
+      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) dragged = true;
+    };
+    const up = (event: PointerEvent) => {
+      if (event.pointerType !== "touch" || !start || dragged) return;
+      start = null;
+      lastTouch.current = Date.now();
+      // The browser can omit its synthesized click immediately after a sheet
+      // touch-drag. Preserve the curated marker's exact identity on pointer-up.
+      marker.fire("click", { latlng: marker.getLatLng(), originalEvent: event });
+    };
+    const click = (event: MouseEvent) => {
+      if (event.detail > 0 && lastTouch.current !== null && Date.now() - lastTouch.current < 700) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+    const cancel = () => { start = null; dragged = false; };
+    element.addEventListener("pointerdown", down);
+    element.addEventListener("pointermove", move);
+    element.addEventListener("pointerup", up);
+    element.addEventListener("pointercancel", cancel);
+    element.addEventListener("click", click, true);
+    return () => {
+      element.removeEventListener("pointerdown", down);
+      element.removeEventListener("pointermove", move);
+      element.removeEventListener("pointerup", up);
+      element.removeEventListener("pointercancel", cancel);
+      element.removeEventListener("click", click, true);
+    };
+  }, [icon]);
+  return <Marker {...props} ref={markerRef} icon={icon} />;
+}
+
 export default function ObservingSitesLayer() {
   const { state, selectLocation } = useStore();
   const map = useMap();
@@ -34,9 +86,9 @@ export default function ObservingSitesLayer() {
   const [snapshotErrorKey, setSnapshotErrorKey] = useState<string | null>(null);
   const snapshotRequestId = useRef(0);
   const lastRefreshRevision = useRef(0);
-  const activeForecastTime = state.cloudState.activeForecastTime;
+  const activeForecastTime = state.catalogForecastTime ?? state.cloudState.activeForecastTime;
   const model = state.cloudState.model;
-  const selectedNight = state.selectedNight;
+  const selectedNight = state.catalogSelectedNight ?? state.selectedNight;
   const scoreDate = scoreDateForForecastTime(activeForecastTime, selectedNight);
   const requestKey = `${activeForecastTime ?? ""}|${model}|${scoreDate}|${state.dataRefreshRevision}`;
 
@@ -178,10 +230,12 @@ export default function ObservingSitesLayer() {
             ? siteBortleColor(site.bortle)
             : recommendationColor(band);
         return (
-          <Marker
+          <ObservingSiteMarker
             key={site.id}
             position={[site.latitude, site.longitude]}
-            icon={markerIcon(color, selected, site.bortle)}
+            color={color}
+            selected={selected}
+            bortle={site.bortle}
             title={site.name}
             eventHandlers={{
               click: () => {
@@ -204,7 +258,7 @@ export default function ObservingSitesLayer() {
                 <span className="observing-site-label">{site.name}</span>
               </Tooltip>
             )}
-          </Marker>
+          </ObservingSiteMarker>
         );
       })}
     </>

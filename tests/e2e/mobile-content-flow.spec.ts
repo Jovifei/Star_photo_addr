@@ -88,7 +88,8 @@ for (const path of ["/fireglow", "/cloudsea"]) {
     await expect(page.locator(".leaflet-container").first()).toBeVisible();
     await expect(page.locator(`.${prefix}-legend`)).toBeHidden();
     const map = await page.locator(".leaflet-container").first().boundingBox();
-    expect(map!.height).toBeGreaterThan(400);
+    expect(map!.height).toBeGreaterThanOrEqual(220);
+    expect(map!.height).toBeLessThanOrEqual(440);
     await page.getByRole("button", { name: "展开数据面板" }).click();
     await page.getByRole("button", { name: "展开数据面板" }).click();
     await expect(page.getByText("数据口径与地图色阶")).toBeVisible();

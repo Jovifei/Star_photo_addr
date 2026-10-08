@@ -19,23 +19,33 @@ export function useMapBlankTap(
     const container = map.getContainer();
     let start: { x: number; y: number } | null = null;
     let dragged = false;
-    const blocked = (target: EventTarget | null) => target instanceof Element && Boolean(target.closest(blockedSelector));
+    let startedInControl = false;
+    // Leaflet's internal click-disable flag does not guard this independent
+    // native listener. Status controls are never blank canvas to sample.
+    const blocked = (target: EventTarget | null) => target instanceof Element &&
+      Boolean(target.closest(blockedSelector) || target.closest(".map-render-status"));
     const pick = (event: MouseEvent) => {
       const point = map.mouseEventToLatLng(event);
       callback.current(point.lat, point.lng);
       start = null;
     };
-    const down = (event: PointerEvent) => { start = { x: event.clientX, y: event.clientY }; dragged = false; };
+    const down = (event: PointerEvent) => {
+      start = { x: event.clientX, y: event.clientY };
+      startedInControl = blocked(event.target);
+      dragged = false;
+    };
     const move = (event: PointerEvent) => {
       if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) dragged = true;
     };
     const up = (event: PointerEvent) => {
-      if (event.pointerType !== "touch" || dragged || blocked(event.target)) return;
+      if (event.pointerType !== "touch" || dragged || startedInControl || blocked(event.target)) return;
       lastTouchPick.current = { x: event.clientX, y: event.clientY, at: Date.now() };
       pick(event);
     };
     const click = (event: MouseEvent) => {
-      if (dragged || blocked(event.target)) return;
+      const beganInControl = startedInControl;
+      startedInControl = false;
+      if (dragged || beganInControl || blocked(event.target)) return;
       const lastTouch = lastTouchPick.current;
       if (lastTouch && Date.now() - lastTouch.at < 700 &&
         Math.hypot(event.clientX - lastTouch.x, event.clientY - lastTouch.y) < 8) return;

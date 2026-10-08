@@ -2,6 +2,7 @@
 
 import { useMemo, type CSSProperties } from "react";
 import type { HourEvaluation, HourWeather } from "@/lib/types";
+import { isInNight } from "@/lib/nighttime";
 import { NIGHT_END, NIGHT_START } from "@/lib/constants";
 import { formatHour, formatHourWithDate } from "@/lib/nighttime";
 
@@ -12,7 +13,8 @@ interface HourlyForecastMatrixProps {
   nightKey: string;
   hours: MatrixHour[];
   selectedTime?: string | null;
-  onSelectTime: (time: string) => void;
+  selectedEpoch?: number | null;
+  onSelectTime: (time: string, epochSeconds?: number) => void;
   title?: string;
   loading?: boolean;
   className?: string;
@@ -88,15 +90,19 @@ export default function HourlyForecastMatrix({
   nightKey,
   hours,
   selectedTime,
+  selectedEpoch,
   onSelectTime,
   title = "单夜小时预报",
   loading = false,
   className = "",
 }: HourlyForecastMatrixProps) {
-  const times = useMemo(() => buildNightTimes(nightKey), [nightKey]);
+  const fallbackTimes = useMemo(() => buildNightTimes(nightKey), [nightKey]);
   const hourMap = useMemo(() => new Map(hours.map((hour) => [hour.time, hour])), [hours]);
-  const columns = times.map((time) => ({ time, hour: hourMap.get(time) ?? { time } }));
-  const selectedIndex = times.indexOf(selectedTime ?? "");
+  const columns = hours.some(hour => hour.epochSeconds != null)
+    ? hours.filter(hour => isInNight(hour.time, nightKey)).map(hour => ({ time: hour.time, hour }))
+    : fallbackTimes.map((time) => ({ time, hour: hourMap.get(time) ?? { time } }));
+  const selectedIndex = columns.findIndex(({ time, hour }) => time === selectedTime && (selectedEpoch == null || hour.epochSeconds === selectedEpoch));
+  const times = columns.map(column => column.time);
   const hasGroundParameters = columns.some(({ hour }) =>
     ["temperature", "dewPoint", "precipitation", "visibility", "windSpeed", "windDirection"]
       .some((key) => {
@@ -112,7 +118,7 @@ export default function HourlyForecastMatrix({
 
   const selectByIndex = (index: number) => {
     const next = times[(index + times.length) % times.length];
-    if (next) onSelectTime(next);
+    if (next) onSelectTime(next, columns[(index + times.length) % times.length]?.hour.epochSeconds);
   };
 
   return (
@@ -130,23 +136,23 @@ export default function HourlyForecastMatrix({
               ? <span className="hourly-matrix-status" role="status">地面参数暂未返回，缺失值显示为“—”</span>
             : null}
       </div>
-      <div className="hourly-matrix-scroll" tabIndex={0} role="region" aria-label="逐小时参数，可上下及左右滚动">
+      <div className="hourly-matrix-scroll" tabIndex={0} role="region" aria-label={`${title}，${nightKey}，逐小时参数，可上下及左右滚动`}>
         <table>
           <thead>
             <tr>
               <th scope="col">指标</th>
-              {columns.map(({ time }, index) => (
-                <th key={time} scope="col" className={index === selectedIndex ? "selected" : ""}>
+              {columns.map(({ time, hour }, index) => (
+                <th key={hour.epochSeconds ?? time} scope="col" className={index === selectedIndex ? "selected" : ""}>
                   <button
                     type="button"
                     className="hourly-matrix-time"
-                    aria-label={`选择 ${formatHourWithDate(time, nightKey)}`}
-                    aria-pressed={time === selectedTime}
-                    onClick={() => onSelectTime(time)}
+                    aria-label={`选择 ${formatHourWithDate(time, nightKey)}${hour.epochSeconds != null ? " UTC" + ((hour.utcOffsetSeconds ?? 0) >= 0 ? "+" : "") + (hour.utcOffsetSeconds ?? 0) / 3600 : ""}`}
+                    aria-pressed={index === selectedIndex}
+                    onClick={() => onSelectTime(time, hour.epochSeconds)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        onSelectTime(time);
+                        onSelectTime(time, hour.epochSeconds);
                         return;
                       }
                       if (event.key === "ArrowLeft") { event.preventDefault(); selectByIndex(index - 1); }
@@ -154,7 +160,7 @@ export default function HourlyForecastMatrix({
                     }}
                   >
                     <span>{formatHour(time)}</span>
-                    <small>{time.slice(0, 10) === nightKey ? "当晚" : "次日"}</small>
+                    <small>{hour.epochSeconds != null ? "UTC" + ((hour.utcOffsetSeconds ?? 0) >= 0 ? "+" : "") + (hour.utcOffsetSeconds ?? 0) / 3600 : time.slice(0, 10) === nightKey ? "当晚" : "次日"}</small>
                   </button>
                 </th>
               ))}
@@ -168,16 +174,16 @@ export default function HourlyForecastMatrix({
                   const value = valueFor(row, hour);
                   const numeric = numericValue(row, hour);
                   return (
-                    <td key={`${row.key}-${time}`} className={`${"tone" in row ? row.tone : ""} ${index === selectedIndex ? "selected" : ""}`} style={numeric == null ? undefined : { "--matrix-value": `${numeric}%` } as CSSProperties}>
+                    <td key={`${row.key}-${hour.epochSeconds ?? time}`} className={`${"tone" in row ? row.tone : ""} ${index === selectedIndex ? "selected" : ""}`} style={numeric == null ? undefined : { "--matrix-value": `${numeric}%` } as CSSProperties}>
                       <button
                         type="button"
                         aria-label={`${row.label} ${formatHour(time)} ${value}`}
-                        aria-pressed={time === selectedTime}
-                        onClick={() => onSelectTime(time)}
+                        aria-pressed={index === selectedIndex}
+                        onClick={() => onSelectTime(time, hour.epochSeconds)}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
-                            onSelectTime(time);
+                            onSelectTime(time, hour.epochSeconds);
                             return;
                           }
                           if (event.key === "ArrowLeft") { event.preventDefault(); selectByIndex(index - 1); }

@@ -538,6 +538,56 @@
   overflow: visible;
 }
 
+/* Keep toolbar groups in source order. The former grid gave the speed buttons
+   the track's flexible column and squeezed the actual time into an ellipsis.
+   Groups wrap only when their content no longer fits, including enlarged text. */
+@media (min-width: 1200px) {
+  .workspace-shell .cloud-timeline-bar {
+    display: flex;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .workspace-shell .cloud-timeline-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .workspace-shell .cloud-timeline-speed,
+  .workspace-shell .cloud-timeline-range {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+  .workspace-shell .cloud-timeline-range button {
+    white-space: nowrap;
+    line-height: max(21px, 1.5em);
+  }
+  .workspace-shell .cloud-track {
+    flex: 1 1 6em;
+    min-width: min(100%, 6em);
+  }
+  .workspace-shell .cloud-timeline-current {
+    /* Normal 14px text keeps its 21px row; enlarged glyphs grow the toolbar. */
+    line-height: max(21px, 1.5em);
+    flex: 0 0 auto;
+    max-width: 100%;
+    margin-left: auto;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+  }
+  .workspace-shell .cloud-timeline-data-card { flex-shrink: 0; }
+  .workspace-shell .cloud-timeline.is-collapsed {
+    flex: 0 0 auto;
+    max-height: none;
+  }
+}
+
+/* The track remains a local horizontal scroller. Its labels must not shrink
+   into one another when the text size grows. */
+.workspace-shell .cloud-track-seg { flex: 0 0 auto; min-width: max-content; }
+.workspace-shell .cloud-tick { flex: 1 0 auto; }
+
 .workspace-shell .cloud-timeline-toggle {
   position: absolute;
   z-index: 4;
@@ -842,3 +892,8 @@
     min-height: 160px;
   }
 }
+
+/* Allow enlarged filter text to reflow within its existing grid cell. */
+.workspace-commandbar .recommendation-quick-toggle { white-space: normal; overflow-wrap: anywhere; }
+.workspace-commandbar .recommendation-quick-slider > span { flex-wrap: wrap; }
+.workspace-commandbar .bortle-filter-bar-command button > span { flex-wrap: wrap; }

@@ -30,6 +30,9 @@ test("手机端将地图面板收纳进侧边栏且一次只显示一个工具",
 
   await page.getByTestId("mobile-map-panel-open-tools").click();
   await expect(drawer).toHaveAttribute("aria-hidden", "false");
+  // aria-hidden changes when opening starts, before the 180ms transform ends.
+  // Measure the settled hit target, retaining the strict 48px minimum below.
+  await expect.poll(() => drawer.evaluate((element) => getComputedStyle(element).transform)).toBe("matrix(1, 0, 0, 1, 0, 0)");
 
   const initialLayout = await drawer.evaluate((element) => {
     const rect = element.getBoundingClientRect();

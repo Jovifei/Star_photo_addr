@@ -95,7 +95,7 @@ export function requestCandidateForecastBatch(
       if (!forecast || forecast.metadata?.model !== model) throw new Error("候选天气响应模型不匹配");
       const fetchedAge = forecastAgeMs(forecast);
       const stale = result.stale || forecast.metadata.stale || fetchedAge > FORECAST_FRESH_MS;
-      return { id: ordered[index]!.id, forecast: { ...forecast, metadata: { ...forecast.metadata, stale } } };
+      return { id: ordered[index]!.id, forecast: { ...forecast, locationId: ordered[index]!.id, metadata: { ...forecast.metadata, stale } } };
     });
     const stale = forecasts.some(({ forecast }) => forecast.metadata?.stale === true);
     entry.failed = stale;

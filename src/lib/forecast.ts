@@ -1,3 +1,4 @@
+import { normalizeEpochHours } from "./absoluteForecastTime";
 // Server-only Open-Meteo forecast proxy logic.
 import fs from "node:fs";
 import path from "node:path";
@@ -15,7 +16,7 @@ import type {
 } from "./types.ts";
 
 interface RawHourly {
-  time: string[];
+  time: number[];
   temperature_2m?: (number | null)[];
   relative_humidity_2m?: (number | null)[];
   dew_point_2m?: (number | null)[];
@@ -117,6 +118,7 @@ export function buildForecastUrl(
     longitude: locations.map((item) => item.longitude).join(","),
     hourly: SURFACE_VARIABLES.join(","),
     timezone: "auto",
+    timeformat: "unixtime",
     forecast_days: String(clampForecastDays(days, model)),
     // The observing night continues until 05:00 on the following calendar day.
     // Keep its evening hours when the provider rolls its default start to 00:00.
@@ -147,6 +149,14 @@ function validAlignedSeries(
   );
 }
 
+function requireUtcOffsetSeconds(item: RawForecastResponse): number {
+  const value = item.utc_offset_seconds;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error("天气上游没有返回有效时区偏移");
+  }
+  return value;
+}
+
 export function validateRawForecast(
   item: RawForecastResponse | undefined,
 ): void {
@@ -158,8 +168,6 @@ export function validateRawForecast(
     Math.abs(item.longitude) > 180 ||
     !Number.isFinite(item.elevation) ||
     typeof item.timezone !== "string" ||
-    (item.utc_offset_seconds !== undefined &&
-      !Number.isFinite(item.utc_offset_seconds)) ||
     !Array.isArray(item.hourly?.time)
   ) {
     throw new Error("天气上游返回了无法识别的 hourly 数据");
@@ -168,23 +176,13 @@ export function validateRawForecast(
   if (times.length === 0) {
     throw new Error("天气上游没有返回逐小时数据");
   }
-  if (
-    !times.every(
-      (time) =>
-        typeof time === "string" &&
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(time),
-    )
-  ) {
-    throw new Error("天气上游返回了无效逐小时时间轴");
-  }
-  if (new Set(times).size !== times.length) {
-    throw new Error("天气上游返回了重复逐小时时间轴");
-  }
+  normalizeEpochHours(times, item.timezone);
   for (const [field, label] of REQUIRED_CLOUD_SERIES) {
     if (!validAlignedSeries(item.hourly[field], times.length)) {
       throw new Error(`天气上游没有返回有效${label}数据`);
     }
   }
+  requireUtcOffsetSeconds(item);
 }
 
 const OPEN_METEO_MAX_CONCURRENCY = 2;
@@ -381,8 +379,9 @@ async function requestJson(
 
 function normalizeHourly(response: RawForecastResponse): HourWeather[] {
   const hourly = response.hourly ?? { time: [] };
-  return (hourly.time ?? []).map((time, index) => ({
-    time,
+  const axis = normalizeEpochHours(hourly.time, response.timezone);
+  return axis.map((clock, index) => ({
+    ...clock,
     temperature: hourly.temperature_2m?.[index] ?? null,
     humidity: hourly.relative_humidity_2m?.[index] ?? null,
     dewPoint: hourly.dew_point_2m?.[index] ?? null,
@@ -432,6 +431,7 @@ export async function fetchSurfaceForecasts(
   const fetchedAt = new Date().toISOString();
   const metadata: ForecastMetadata = {
     source: "Open-Meteo",
+    timeAxisVersion: "epoch-v1",
     model,
     fetchedAt,
     sourceFetchedAt: fetchedAt,
@@ -442,6 +442,7 @@ export async function fetchSurfaceForecasts(
   return locations.map((location, index) => {
     const single = responses[index];
     if (!single) throw new Error("天气上游缺少对应地点的响应");
+    const utcOffsetSeconds = requireUtcOffsetSeconds(single);
     const provenance: ForecastProvenance = {
       requestedLatitude: location.latitude,
       requestedLongitude: location.longitude,
@@ -458,7 +459,7 @@ export async function fetchSurfaceForecasts(
       sourceFetchedAt: fetchedAt,
       providerRunAt: null,
       timezone: single.timezone,
-      utcOffsetSeconds: single.utc_offset_seconds ?? 0,
+      utcOffsetSeconds: utcOffsetSeconds,
     };
     return {
       locationId: location.id,
@@ -466,7 +467,7 @@ export async function fetchSurfaceForecasts(
       modelLongitude: single.longitude,
       modelElevation: single.elevation,
       timezone: single.timezone,
-      utcOffsetSeconds: single.utc_offset_seconds ?? 0,
+      utcOffsetSeconds: utcOffsetSeconds,
       fetchedAt,
       metadata,
       requestedLatitude: location.latitude,

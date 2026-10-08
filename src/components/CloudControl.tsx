@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveWallHour } from "@/lib/absoluteForecastTime";
 import { Cloud, RefreshCw } from "lucide-react";
 import {
   useCallback,
@@ -177,7 +178,7 @@ export default function CloudControl() {
   ) {
     const hour =
       typeof time === "string"
-        ? forecast.hourly.find((item) => item.time === time)
+        ? resolveWallHour(forecast.hourly, time, cloudState.activeForecastEpoch)
         : forecast.hourly.filter((item) => isInNight(item.time, selectedNight))[
             time
           ];
@@ -192,9 +193,9 @@ export default function CloudControl() {
     cloudState.overlayMode === "forecast-cloud" &&
     cloudGrid?.model === cloudState.model
   ) {
-    const layers = getValuesAtTime(cloudGrid, time);
+    const layers = getValuesAtTime(cloudGrid, time, cloudState.activeForecastEpoch);
     values = {
-      total: averageLayer(getCloudCoverAtTime(cloudGrid, time)),
+      total: averageLayer(getCloudCoverAtTime(cloudGrid, time, cloudState.activeForecastEpoch)),
       high: averageLayer(layers.high),
       mid: averageLayer(layers.mid),
       low: averageLayer(layers.low),
@@ -213,7 +214,7 @@ export default function CloudControl() {
       : null;
   const activeForecastHour = activeForecast
     ? typeof time === "string"
-      ? activeForecast.hourly.find((hour) => hour.time === time) ?? null
+      ? resolveWallHour(activeForecast.hourly, time, cloudState.activeForecastEpoch)
       : activeForecast.hourly.filter((hour) => isInNight(hour.time, selectedNight))[time] ?? null
     : null;
   const activeScoringMissing = missingScoringHour(activeForecastHour);

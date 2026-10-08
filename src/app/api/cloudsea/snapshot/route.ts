@@ -1,3 +1,4 @@
+import { snapshotSourceAgeMs, snapshotTransport } from "@/lib/snapshotProvenance";
 import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
@@ -21,6 +22,14 @@ import {
 import type { ForecastModel } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+function snapshotJson(value: unknown, init?: ResponseInit) {
+  if (value && typeof value === "object" && "sites" in value && "generatedAt" in value) {
+    const snapshot = value as { generatedAt: string; stale?: boolean; provenance?: import("@/lib/snapshotProvenance").SnapshotProvenance };
+    return NextResponse.json(snapshotTransport({ ...snapshot, stale: Boolean(snapshot.stale) || !Number.isFinite(snapshotSourceAgeMs(snapshot.provenance)) }), init);
+  }
+  return NextResponse.json(value, init);
+}
+
 
 const VALID_MODELS = new Set<ForecastModel>([
   "best_match",
@@ -72,7 +81,7 @@ function rememberForceRefresh(key: string, at: number) {
 }
 
 function cacheAgeMs(entry: CachedSnapshot): number {
-  return Math.max(0, Date.now() - entry.at);
+  return Math.max(0, Date.now() - entry.at, snapshotSourceAgeMs(entry.snapshot.provenance));
 }
 
 function isCacheableSnapshot(snapshot: CloudSeaSnapshot): boolean {
@@ -207,6 +216,7 @@ async function fetchCloudSeaWeather(
         );
       }
 
+      const sourceFetchedAt = new Date().toISOString();
       const result: Record<string, RawSiteHourly> = {};
       CLOUD_SEA_SITES.forEach((site, index) => {
         const entry = list[index] as
@@ -218,6 +228,7 @@ async function fetchCloudSeaWeather(
             Array<number | null> | string[]
           >;
           result[site.id] = {
+            sourceFetchedAt,
             time: hourly.time as string[],
             cloud_cover_low: hourly.cloud_cover_low as Array<number | null>,
             cloud_cover_mid: hourly.cloud_cover_mid as Array<number | null>,
@@ -316,26 +327,31 @@ export async function GET(request: NextRequest) {
   const forceRefresh = params.get("refresh") === "1";
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return NextResponse.json(
+    return snapshotJson(
       { error: "date 必须是 YYYY-MM-DD 格式" },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
   if (!VALID_MODELS.has(model)) {
-    return NextResponse.json(
+    return snapshotJson(
       { error: "model 必须是 best_match、icon、gfs 或 aifs" },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
   const key = `${date}|${model}`;
+  if (params.get("cache_only") === "1") {
+    const retained = usableStaleCache(key)?.snapshot;
+    if (!retained) return snapshotJson({ error: "cache-only-miss" }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": "60", "X-Cloudsea-Cache": "cache-only-miss" } });
+    return snapshotJson({ ...retained, stale: Boolean(retained.stale) || snapshotSourceAgeMs(retained.provenance) > TTL_MS }, { headers: { "Cache-Control": "no-store", "X-Cloudsea-Cache": "cache-only" } });
+  }
   if (forceRefresh) {
     const last = lastForceAt.get(key) ?? 0;
     const elapsed = Date.now() - last;
     if (elapsed < FORCE_REFRESH_COOLDOWN_MS) {
       const cached = usableStaleCache(key);
       if (cached) {
-        return NextResponse.json(
+        return snapshotJson(
           withCacheFreshness(cached, "强制刷新冷却中"),
           {
             headers: {
@@ -348,7 +364,7 @@ export async function GET(request: NextRequest) {
           },
         );
       }
-      return NextResponse.json(
+      return snapshotJson(
         { error: "云海强制刷新处于冷却保护，请稍后重试" },
         {
           status: 429,
@@ -372,7 +388,7 @@ export async function GET(request: NextRequest) {
     cacheAgeMs(cached) < TTL_MS &&
     !forceRefresh
   ) {
-    return NextResponse.json(cached.snapshot, {
+    return snapshotJson(cached.snapshot, {
       headers: {
         "Cache-Control":
           "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
@@ -429,7 +445,7 @@ export async function GET(request: NextRequest) {
       const reason = degradationMessage(snapshot);
       const fallback = usableStaleCache(key);
       if (fallback) {
-        return NextResponse.json(
+        return snapshotJson(
           withCacheFreshness(fallback, `本次${reason}，正在使用较早的成功快照`),
           {
             headers: {
@@ -440,7 +456,7 @@ export async function GET(request: NextRequest) {
         );
       }
     }
-    return NextResponse.json(
+    return snapshotJson(
       cacheable ? snapshot : { ...snapshot, refreshError: degradationMessage(snapshot) },
       {
         headers: {
@@ -460,7 +476,7 @@ export async function GET(request: NextRequest) {
     const message =
       error instanceof Error ? error.message : "获取云海气象数据失败";
     if (fallback) {
-      return NextResponse.json(withCacheFreshness(fallback, message), {
+      return snapshotJson(withCacheFreshness(fallback, message), {
         headers: {
           "Cache-Control": "no-store",
           "X-Cloudsea-Cache": "stale-on-error",
@@ -468,7 +484,7 @@ export async function GET(request: NextRequest) {
       });
     }
     const timedOut = isTimeoutError(error);
-    return NextResponse.json(
+    return snapshotJson(
       { error: timedOut ? "云海 surface 数据请求超时" : message },
       {
         status: timedOut ? 504 : 502,

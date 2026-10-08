@@ -261,12 +261,19 @@
   min-height: 40px;
 }
 .map-stage .map-render-status--tile {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
+.map-stage .map-render-status--tile > span {
+  flex: 1 1 12em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .map-stage .map-render-status--tile button {
+  flex: 0 0 auto;
+  max-width: 100%;
   margin-top: 0;
 }
 

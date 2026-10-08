@@ -3,6 +3,7 @@ import {
   buildLightPollutionRedirect,
   buildProductHref,
   buildSitesRedirect,
+  validProductDate,
 } from "@/lib/productRoutes";
 
 describe("buildProductHref", () => {
@@ -149,4 +150,12 @@ describe("buildSitesRedirect", () => {
     expect(target.searchParams.get("view")).toBe("light-pollution");
     expect(target.searchParams.get("panel")).toBe("sites");
   });
+});
+
+it("retains valid selected dates outside forecast coverage but rejects normalized invalid calendar dates", () => {
+  expect(validProductDate("2030-01-02")).toBe(true);
+  expect(validProductDate("2024-02-29")).toBe(true);
+  expect(validProductDate("2026-02-29")).toBe(false);
+  expect(validProductDate("2026-04-31")).toBe(false);
+  expect(validProductDate("2026-13-01")).toBe(false);
 });

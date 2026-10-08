@@ -150,6 +150,7 @@ describe("云图网格与时间轴", () => {
     const metadata = { source: "Open-Meteo" as const, model: "icon" as const, fetchedAt: sourceFetchedAt, sourceFetchedAt, stale: false, units: {} };
     const forecast = {
       locationId: "grid-0", modelLatitude: 30, modelLongitude: 120, modelElevation: 0,
+      requestedLatitude: 30, requestedLongitude: 120,
       timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, fetchedAt: sourceFetchedAt, metadata,
       hourly: [{ time: "2026-09-13T20:00", cloudCover: 8, cloudLow: 0, cloudMid: 3, cloudHigh: 4 }],
     };

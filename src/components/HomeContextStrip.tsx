@@ -2,17 +2,11 @@
 
 import { useStore } from "@/lib/store";
 import { formatHourWithDate, formatNightLabel } from "@/lib/nighttime";
+import { formatSourceUpdateTime } from "@/lib/sourceTime";
 
 export function formatUpdateTime(value: string | null | undefined): string {
-  if (!value) return "更新时间未知";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "更新时间未知";
-  return `数据更新 ${new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date)}`;
+  const time = formatSourceUpdateTime(value);
+  return time ? `数据更新 ${time}` : "更新时间未知";
 }
 
 function formatForecastTime(value: string | null | undefined, nightKey: string): string {

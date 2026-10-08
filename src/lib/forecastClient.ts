@@ -1,3 +1,4 @@
+import { validAbsoluteHours } from "./absoluteForecastTime";
 import type { ForecastModel, ForecastResponse, LocationForecast } from "./types";
 import { dataAgeMs, forecastAgeMs, FORECAST_FRESH_MS } from "./forecastIntegrity";
 
@@ -80,7 +81,7 @@ function validateLocation(
       typeof location.fetchedAt === "string" &&
       Array.isArray(location.hourly) &&
       location.hourly.length > 0 &&
-      new Set(location.hourly.map((hour) => hour?.time)).size === location.hourly.length &&
+      (location.metadata?.timeAxisVersion === "epoch-v1" ? validAbsoluteHours(location.hourly, location.timezone) : new Set(location.hourly.map((hour) => hour?.time)).size === location.hourly.length) &&
       location.hourly.every((hour) => typeof hour?.time === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(hour.time)),
   );
 }
@@ -100,10 +101,20 @@ function normalizeResponse(
   if (!body.locations.every((location) => validateLocation(location, model))) {
     throw new Error("天气响应缺少完整的地点天气结构");
   }
-  if (body.locations.some((location, index) =>
-    (location.requestedLatitude !== undefined && Math.abs(location.requestedLatitude - requestedLocations[index]!.latitude) > 1e-5) ||
-    (location.requestedLongitude !== undefined && Math.abs(location.requestedLongitude - requestedLocations[index]!.longitude) > 1e-5),
-  )) {
+  if (body.locations.some((location, index) => {
+    const requested = requestedLocations[index]!;
+    if (location.requestedLatitude !== undefined || location.requestedLongitude !== undefined) {
+      return !Number.isFinite(location.requestedLatitude) || !Number.isFinite(location.requestedLongitude) ||
+        Math.abs(location.requestedLatitude! - requested.latitude) > 1e-5 ||
+        Math.abs(location.requestedLongitude! - requested.longitude) > 1e-5;
+    }
+    // Old responses used a coordinate API ID. Only that documented namespace
+    // can prove identity without explicit request coordinates; never use the
+    // provider's nearby model-grid coordinate or an arbitrary local name.
+    const legacy = /^api-(-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)$/.exec(location.locationId);
+    return !legacy || Math.abs(Number(legacy[1]) - requested.latitude) > 1e-5 ||
+      Math.abs(Number(legacy[2]) - requested.longitude) > 1e-5;
+  })) {
     throw new Error("天气响应地点坐标映射不一致");
   }
   const headerStale = response.headers.get("X-Data-Stale") === "true";

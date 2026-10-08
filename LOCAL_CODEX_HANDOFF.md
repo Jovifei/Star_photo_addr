@@ -1,693 +1,84 @@
-# Mobile Browser v2 — Local Codex Handoff
+# 当前交接 — 2026-10-08 主线整合与仓库整理
 
-## Remote review source
+本条优先于历史。最新e057云端功能及九历史tip已整合，本地全套测试通过。当前任务将已验证源码归并main并同步E:/project/Star_photo_addr；精确Git状态以main实际HEAD为准。此前的Draft49禁止合并记录已由Jovi本次主线合并授权取代。此轮未部署，定时循环保持PAUSED。
 
-- Repository: `Jovifei/Star_photo_addr`
-- Source branch: `codex/mobile-browser-ia-v2-20260927`
-- Source HEAD: `1a0a746ba6c38770e615a1f4f052eb4af8b60334`
-- Product implementation commit: `ac6b425c75fe0d6131fb1d8be23e51fef6999dbe`
-- Remote branch: `codex/mobile-home-priority-v2-20260927`
-- Remote reviewed tip: `3fa6446c1a9957e5b67958bec6224916694070ae` (resolve the branch tip again before receiving work)
-- Base: `origin/main@5a054fd31bda0f743bdc68345ebb3916d0199294`
-- Owner workspace: `E:\project\Star_photo_addr` (dirty; preserve it)
+接力Prompt：docs/NEXT_SESSION_PROMPT_20261008.md；功能/测试/清理证据：docs/MAIN_BRANCH_RECONCILIATION_20261008.md。仍需真实设备/读屏/科学验收；生成目录清理被自动审批拒绝，未绕过。
 
-## Completed and reviewed
+---
 
-- `52036ed`: portrait/tablet document-scroll contract.
-- `e0a68df`: reusable `AdaptiveSheet` and mobile map-tools migration.
-- `1a0a746`: baseline/review documents.
-- Mobile filter remained the open content-priority gap: it used the old absolute `.location-filter-controls` popup in the received branch.
+# 当前云端阶段交接 — 2026-10-07（未部署）
 
-## This handoff implementation — complete
-
-`MOBILE-V2-P1-HOME-CONTENT-PRIORITY` moves mobile/tablet filter controls into `AdaptiveSheet` while keeping desktop inline controls. It preserves the search/location/filter 48px row, current store state, localStorage semantics, map selection, and all fail-closed data rules.
+本条优先于下方历史。独立分支 `codex/cloud-identity-provenance-dst-20261007`，授权base `35600636b969704ec8fa5dd9c1bf8ff650ecc0d1`；[Draft PR52](https://github.com/Jovifei/Star_photo_addr/pull/52) 顶部记录最终精确head/tree。已实际云端实现地点身份/相关坐标冲突/四入口日期、原始来源时间与传输分离、官方epoch/DST和版本化只读旧缓存，以及测试/CI门禁。逐文件原因风险、真实结果、设备/科学矩阵、迁移回滚见 [阶段报告](docs/CLOUD_IDENTITY_PROVENANCE_DST_20261007.md)。
 
-Files changed:
+生产仍为5fbf7bac2c925d068f4c04274cbdbe79b0672ead；PR49未合并，无部署/清缓存/生产卷修改，Owner两份任务笔记不变。本地从GitHub精确SHA安装测试和真机取证，回传云端审核；不代写业务代码。真OnePlus/iOS/TalkBack/VoiceOver及科学准确率NOT_RUN；供应商 smoke 成功不等于全部矩阵/科学通过。`scripts/check-release-frontend.mjs`保持，CI运行容器亦检查页面内容。下方正式发布与旧候选仅是历史。
 
-- `src/components/MapSearchCard.tsx`
-- `src/app/mobile-map-first.css`
-- `tests/e2e/mobile-content-flow.spec.ts`
-- `tests/e2e/mobile-home-priority.spec.ts`
-
-PR: not created because local `gh` is not authenticated. The implementation branch is pushed and ready for a draft PR.
-
-## Acceptance
-
-- Mobile 320/390/768/1024: filter sheet has `role=dialog`, `aria-modal=true`, focus restore, Escape/backdrop close, stable `scrollY`, and one internal vertical scroll body.
-- Desktop 1200/1440: recommendation controls remain inline and no mobile filter dialog appears.
-- `npm run typecheck`, `npm run lint`, `npm run build` pass.
-- Focused mobile and desktop E2E pass.
-- No changes to provider, cache, snapshot, score, `.env`, or fail-closed semantics.
-- Verification: typecheck PASS, lint PASS, build PASS, mobile 11 passed, desktop inline 2 passed.
-
-## Next remote review
-
-LOCAL_CODEX_NEXT:
-
-1. Fetch `origin` and resolve `origin/codex/mobile-home-priority-v2-20260927` again.
-2. Do not modify, reset, clean, stash, or overwrite Owner dirty `main`.
-3. Use a new isolated worktree from the resolved remote tip.
-4. Rerun the focused tests and `npm run check`; run full Chromium/cross-browser only for merge review.
-5. Keep physical-device validation manual and separate from Playwright.
-6. Record execution output and send `EXECUTED` to remote ChatGPT for review.
-
-Do not merge `main` or deploy from this handoff.
-
-## Next cycle — P2-A home context hierarchy
-
-Remote planning/review task: `c2c_9a7e`
-Source branch: `codex/mobile-home-priority-v2-20260927`
-Source head: `667f16746c4982624673ce7491b93ca977d3379c`
-Implementation branch: `codex/mobile-home-context-v2-20260928`
-Base tip: `667f16746c4982624673ce7491b93ca977d3379c`
-Package: `MOBILE-V2-P2A-HOME-CONTEXT-HIERARCHY`
-
-### Product result
-
-`HomeContextStrip` is a read-only mobile context line rendered before the map.
-It shows the selected night, existing forecast model, active forecast time, and
-known update time. Unknown values stay explicit. The command row remains one
-48px search/location/filter row, the map-first budget remains intact, and
-desktop inline controls are unchanged.
-
-### Files
-
-- `src/components/HomeContextStrip.tsx`
-- `src/components/PerseidsApp.tsx`
-- `src/app/mobile-map-first.css`
-- `tests/e2e/mobile-home-context.spec.ts`
-- `tasks/plans/2026-09-27-mobile-browser-architecture-v2.md`
-- `docs/engineering-change-log/2026-09-28-mobile-home-context-hierarchy.md`
-
-### Evidence
-
-- `npm run check`: PASS — lint, typecheck, 64 Vitest files / 370 tests, build.
-- Focused E2E: mobile context 4 PASS; desktop context 2 PASS; map-first 16
-  PASS; content-flow/home-priority 11 PASS; related desktop inline 4 PASS.
-- `git diff --check`: PASS.
-- Provider/cache/snapshot/score/fail-closed rules: unchanged.
-- Full Chromium/cross-browser, real device, CI, and production: `NOT_RUN`.
-
-### Remote review handoff
-
-The final pushed tip must be resolved from
-`origin/codex/mobile-home-context-v2-20260928` after push; this handoff does
-not self-reference its own commit. Remote ChatGPT should independently read
-the branch diff and the latest execution output, verify that the context strip
-does not add command-bar height or data semantics, and return `DONE`,
-`CHANGES_REQUIRED`, or `BLOCKED`.
-
-PR: `NOT_CREATED — gh auth unavailable locally`
-Merged: `NO`
-Deployed: `NO`
-
-## Next cycle — P5-B CloudSea evidence IA
-
-Remote planning task: `c2c_d92e`, iteration 2
-Base: `codex/fireglow-topic-ia-v2-20260929@47779d74b6fe1d160bc2d68c90b9712101b1de33`
-Implementation branch: `codex/cloudsea-evidence-ia-v2-20260929`
-Package: `MOBILE-V2-P5B-CLOUDSEA-EVIDENCE-IA`
-Final reviewed product/test tip: `27510270edbff21cbc5fe997c0bacc436bf3ea29`
-Final handoff tip: pending docs-only close
-
-### Product result
-
-CloudSea now keeps three facts separate: surface evidence, pressure coverage,
-and the selected mountain/window's publishable score and vertical conclusion.
-Global partial coverage remains an evidence/status row while a selected site
-with a real score keeps its score. A selected pressure-unavailable site keeps
-surface humidity/wind and shows vertical evidence unknown. Unknown-only data is
-not threshold-empty. The desktop legend and low-frequency card/detail content
-use native disclosures; mobile keeps one `MobileDataSheet`.
-
-### Files changed
-
-- `src/app/cloudsea/CloudSeaApp.tsx`
-- `src/app/cloudsea/CloudSeaSiteDetail.tsx`
-- `src/app/cloudsea/cloudsea.css`
-- `tests/e2e/cloudsea-topic-ia.spec.ts`
-- `tests/e2e/cloudsea-request-order.spec.ts`
-- `tests/e2e/score-threshold-filters.spec.ts`
-- `tests/e2e/unknown-marker-semantics.spec.ts`
-- `tasks/todo.md`
-- `docs/engineering-change-log/2026-09-29-cloudsea-evidence-ia.md`
-
-### Protected boundaries
-
-Do not modify `src/lib/cloudsea.ts`, `src/lib/cloudLayers.ts`,
-`src/lib/pressure.ts`, `src/lib/cloudseaOverlay.ts`, `src/lib/scoreThreshold.ts`,
-CloudSea snapshot/pressure API routes, provider/cache/request batching, score,
-ranking algorithm, pressure majority rule, Fireglow, or `MobileDataSheet`.
-Missing values remain missing; pressure partial is not unavailable; vertical
-unknown is not low score; no synthetic cloud base/top or heuristic conclusion
-is introduced.
-
-### Evidence
-
-- `npm run check`: PASS — 65 Vitest files / 379 tests; lint, typecheck, build.
-- P5-B topic IA: 4 PASS / 4 project skips; CloudSea pressure: 4 PASS;
-  unknown-only: 1 PASS; CloudSea threshold desktop/mobile: 2 PASS;
-  request-order: 1 PASS; day3: 1 PASS; mobile map-first `/cloudsea`: 1 PASS.
-- Follow-up winning-date/stale-scope E2E: 2 PASS; selected context now binds
-  the winning `dateKey`, raw window and snapshot for mobile/detail output.
-- CloudSea unit/integration/release integrity: 41 PASS.
-- `git diff --check`: PASS.
-- Full Chromium, cross-browser, real device, CI, production: `NOT_RUN`.
-
-### Remote review result
-
-Remote ChatGPT independently reviewed `0d80b8f` → `2751027` and returned
-`DONE`. It confirmed the three-day winning window/date/snapshot consistency,
-selected versus global stale scope, CloudSea truth boundaries, protected blob
-SHA, Fireglow untouched and Owner preservation. Product/test work is complete;
-the docs-only close records the final handoff tip.
-
-### Remote review handoff
-
-Remote ChatGPT has independently resolved and approved the product/test tip.
-After this docs-only close it should confirm the final handoff tip; verify surface /
-pressure semantics, unknown-only versus threshold-empty, selected score under
-global partial coverage, mobile vertical-unknown and total-failure copy,
-desktop disclosures, protected blobs, Fireglow untouched and Owner
-preservation. Return `DONE`, `CHANGES_REQUIRED`, or `BLOCKED` before the next
-phase.
-
-PR: `NOT_CREATED — gh auth unavailable locally`
-Merged: `NO`
-Deployed: `NO`
-
-### Protected rules
-
-Do not alter `forecastIntegrity.ts`, scoring, provider/cache/snapshot/API code,
-Fireglow/CloudSea data semantics, or the map-first gesture contract in this
-package. Preserve `missing != 0`, `stale != fresh`, and `partial != available`.
-
-## Next cycle — P2-B decision/provenance disclosure
-
-Remote planning task: `c2c_5d1b`
-Source branch: `codex/mobile-home-context-v2-20260928`
-Source head: `2c551b485553bbe7bfc69dfbf896f23be3957b83`
-Implementation branch: `codex/mobile-decision-summary-v2-20260928`
-Base tip: `2c551b485553bbe7bfc69dfbf896f23be3957b83`
-Package: `MOBILE-V2-P2B-DECISION-PROVENANCE`
-
-### Product result
-
-Keep the L2 decision and trust reason visible. Put long forecast-instance
-metadata in one native `details` disclosure with keyboard-visible summary;
-remove the duplicate `.observation-provenance` from `ObservationDetails`.
-`ForecastAvailability` stays in place. Do not move provenance into an
-`AdaptiveSheet`, change score/integrity semantics, or start P3.
-
-### Files
-
-- `src/components/workspace/DecisionSummary.tsx`
-- `src/components/ObservationDetails.tsx`
-- `src/components/PerseidsApp.tsx`
-- `src/components/workspace/workspace-shell.css`
-- `src/app/mobile-map-first.css`
-- `tests/e2e/decision-summary-disclosure.spec.ts`
-- `tests/e2e/forecast-integrity-p0.spec.ts`
-- `tasks/plans/2026-09-27-mobile-browser-architecture-v2.md`
-- `docs/engineering-change-log/2026-09-28-mobile-decision-summary-provenance.md`
-
-### Evidence
-
-- RED captured before implementation.
-- `npm run check`: PASS — lint, typecheck, 64 Vitest files / 370 tests, build.
-- P2-B focused mobile/desktop disclosure: PASS.
-- P0 stale/integrity: 8 PASS; workspace/content regression: 23 PASS.
-- `git diff --check`: PASS.
-- Full Chromium/cross-browser/device/CI/production: `NOT_RUN`.
-
-Remote review must resolve the pushed branch tip again after commit. Do not
-merge or deploy.
-
-## Next cycle — P3-A data presentation contract
-
-Remote planning task: `c2c_8f4c`
-Source branch: `codex/mobile-decision-summary-v2-20260928`
-Source head: `952577fa38851e3ea2f9cf993383e941cd512851`
-Implementation branch: `codex/data-state-presentation-v2-20260928`
-Base tip: `952577fa38851e3ea2f9cf993383e941cd512851`
-Package: `MOBILE-V2-P3A-DATA-PRESENTATION-CONTRACT`
-
-### Product result
-
-Three presentation axes now remain separate: Provider Health, Selected Data
-Validity, and Recommendation Eligibility. L2 shows current data and gate
-states; provider probes remain in the L3 provider panel. Optional unconfigured
-sources stay neutral. Existing integrity and scoring facts are only mapped to
-labels; they are not recomputed.
-
-### Files
-
-- `src/lib/dataPresentation.ts`
-- `src/components/workspace/DecisionSummary.tsx`
-- `src/components/CloudControl.tsx`
-- `src/app/globals.css`
-- `src/app/mobile-map-first.css`
-- `tests/unit/dataPresentation.test.ts`
-- `tests/e2e/data-state-presentation.spec.ts`
-- `tests/e2e/forecast-integrity-p0.spec.ts`
-- `docs/engineering-change-log/2026-09-28-data-presentation-contract.md`
-
-### Evidence
-
-- Mapper unit: 7 PASS.
-- P3A data-state E2E: 4 PASS.
-- P0/data-refresh/workspace refresh E2E: 13 PASS.
-- `npm run check`: PASS — 65 Vitest files / 377 tests and build.
-- `git diff --check`: PASS.
-- Full Chromium/cross-browser/device/CI/production: `NOT_RUN`.
-
-### Protected rules
-
-Do not modify `forecastIntegrity.ts`, scoring, hour scoring, store request or
-cache behavior, API routes, provider probes, snapshot worker, Fireglow/CloudSea
-semantics, or merge/deploy without separate authorization. P3-B will later
-align CloudTimeline and ObservingMapControl; P4/P5 remain separate.
-
-Review follow-up: the invalid/model-mismatch classification and stale-fallback
-priority were corrected after remote review. `DecisionSummary` now passes raw
-forecast facts to the authoritative integrity function while keeping evaluation
-restricted to the matching model. P0 and refresh E2E assert unavailable/stale
-and withheld states. Re-resolve the branch tip after this follow-up commit.
-
-Review follow-up: the mobile disclosure test now explicitly checks
-`scrollWidth <= clientWidth + 1` after expanding provenance. This is a test-only
-contract addition; no product or data semantics changed.
-
-### Review follow-up
-
-Remote review identified a presentation-only UTC timestamp issue in
-`HomeContextStrip`. The follow-up parses ISO timestamps and formats them with
-the explicit `Asia/Shanghai` timezone; it does not change forecast data or
-validity. The focused E2E now checks the displayed update time against the
-timestamp conversion. Re-resolve the branch tip after the follow-up commit;
-the prior implementation evidence remains valid.
-
-## Next cycle — P3-B state surface alignment
-
-Remote planning task: `c2c_b3e8`
-Source branch: `codex/data-state-presentation-v2-20260928`
-Source head: `7462417466711b3d5d45c29ca7ff028338bf4b00`
-Implementation branch: `codex/data-state-surfaces-v2-20260928`
-Base tip: `7462417466711b3d5d45c29ca7ff028338bf4b00`
-Package: `MOBILE-V2-P3B-STATE-SURFACE-ALIGNMENT`
-
-P3-B shares only presentation mappers: CloudTimeline maps hourly source/stale/
-hour/missing-field facts; ObservingMapControl maps snapshot request/stale/
-publishable-count facts. Keep raw `data-score-status`, unknown-score semantics,
-and all integrity/scoring/snapshot owners. Provider Health remains CloudControl.
-
-Evidence: unit 15 PASS; P3-B surface tests pass individually; P0/data refresh/
-workspace refresh 13 PASS; `npm run check` PASS; full Chromium, cross-browser,
-device, CI, and production `NOT_RUN`. Do not merge or deploy.
-
-Review follow-up: removed the unused legacy `forecastQualityLabel` export and
-its old presentation assertions so `dataPresentation.ts` is the single
-hourly vocabulary owner. Track geometry tests remain in `timelineTrack.test.ts`.
-
-The product-integrity stale/unknown assertion now checks
-`map-recommendation-eligibility=data-state="withheld"` and keeps the raw
-`data-score-status` plus “灰色点为当前时次数据不足，不代表低分” contract.
-
-## Next cycle — P4-A map chrome hierarchy
-
-Remote planning task: `c2c_d7b2`
-Base: `codex/data-state-surfaces-v2-20260928@90050e710829ea841b3774105506f27dcbf800b8`
-Implementation branch: `codex/map-chrome-hierarchy-v2-20260929`
-Latest follow-up tip: `450e08eb0a0b207ea1c2c59083c8f89a1ea9706e`
-
-P4-A moves low-frequency map references into the new `MapReferenceTools`
-native details wrapper. Desktop canvas no longer mounts the duplicate
-`MapBoundaryStatus` or legacy `MapPanelManager`; the inspector keeps one
-collapsed “地图说明与视图” section. Mobile layers show only the map layer
-bar, Bortle control and collapsed disclosure until the user opens it. The
-wrapper is composition-only and does not own provider, forecast, snapshot,
-score, or recommendation state.
-
-Files changed:
-
-- `src/components/MapReferenceTools.tsx`
-- `src/components/ResponsiveMapControls.tsx`
-- `src/components/PerseidsApp.tsx`
-- `src/app/ux-map-v2.css`
-- `src/app/mobile-map-controls.css`
-- `tests/e2e/map-chrome-hierarchy.spec.ts`
-- `tests/e2e/mobile-panel-dock.spec.ts`
-- `docs/engineering-change-log/2026-09-29-map-chrome-hierarchy.md`
-
-Evidence:
-
-- `npm run check`: PASS — 65 Vitest files / 378 tests; lint, typecheck, build.
-- P4-A focused E2E: 6 PASS / 6 project skips.
-- Remote review follow-up: mobile disclosure summary now has a measured
-  `min-height >= 48px` contract at 390×844 and 812×375; focused E2E 6 PASS / 6
-  project skips; `npm run check` remains PASS.
-- Map/readability/workspace/map-first regression: 41 PASS / 25 project skips.
-- Full Chromium, cross-browser, real device, CI and production: `NOT_RUN`.
-
-Remote review must resolve the final pushed branch tip and independently
-check overlay counts, details disclosure, no nested scroll, no old
-MapPanelManager mount, and unchanged P3/data owners. Do not merge or deploy.
-
-## Next cycle — P4-B map render status safe zones
-
-Remote planning task: `c2c_7b2f`
-Base: `codex/map-chrome-hierarchy-v2-20260929@4c7fc1dc18487e2679cb1eb7428fadeb1041a9d9`
-Implementation branch: `codex/map-status-safe-zones-v2-20260929`
-Final reviewed tip: `c208a0b7d0a4419f03deccc51ca7dd67cf8795e6`
-
-P4-B keeps MapTileStatus and SatelliteLayer as separate fact owners and
-shares only scoped visual lanes. Tile errors use a top-right lane below the
-MapLayerBar and retain the message that a render failure is not weather data
-absence. Satellite status uses a bottom-left lane; a preserved frame plus
-catalogue error is one status badge containing the degradation and
-“已保留上一帧”, rather than two role=status elements. Mobile and short
-landscape lanes avoid the Leaflet zoom, tool rail, and sibling MobileDataSheet;
-the drawer stacking context remains above map status.
-
-Files changed:
-
-- `src/components/MapTileStatus.tsx`
-- `src/components/SatelliteLayer.tsx`
-- `src/app/globals.css`
-- `src/app/ux-map-v2.css`
-- `src/app/mobile-map-first.css`
-- `tests/e2e/map-render-status-safe-zones.spec.ts`
-- `tests/e2e/product-integrity.spec.ts`
-- `docs/engineering-change-log/2026-09-29-map-render-status-safe-zones.md`
-
-P4-B must not modify P3 data semantics, scoring, provider/cache, snapshot/API,
-store requests, or begin P4-C/P5. Full Chromium, cross-browser, real device,
-CI and production remain `NOT_RUN` until separately authorized and executed.
-
-## Next cycle — P4-C marker / label disclosure
-
-Remote planning task: `c2c_c6d3`
-Base: `codex/map-status-safe-zones-v2-20260929@8d672172fbeee14f3a4b035935e03bfb4e39e184`
-Implementation branch: `codex/marker-label-disclosure-v2-20260929`
-Final reviewed tip: `a02aea9711072b9bbd8960dbbc066b1641dbe0ee`
-Final reviewed tip: `a02aea9711072b9bbd8960dbbc066b1641dbe0ee`
-
-P4-C keeps ObservingSitesLayer as the selected catalog marker and permanent
-label owner. SampleMarker remains for search/custom/map-sampling locations and
-is suppressed only when the catalog layer is mounted and truly owns the
-selected catalog reference. A selected catalog site is pinned through filters
-without changing `data-observing-site-count`. Rank markers keep Leaflet 1.9.4
-native temporary Tooltip behavior; no clustering, new engine, or global
-tooltip state.
-
-Evidence: `npm run check` PASS — 65 Vitest files / 379 tests; marker focused
-7 PASS / 3 project skips; viewport recommendations 2 PASS; app/map-first/P4-B
-regressions 31 PASS / 19 project skips. Full Chromium, cross-browser, real
-device, CI and production: `NOT_RUN`. Remote verdict: `DONE`.
-
-P5 is the next package: Fireglow / CloudSea topic IA, while preserving their
-empty-snapshot and pressure-partial/degraded data semantics.
-
-## Next cycle — P5-A Fireglow topic IA and visual declutter
-
-Remote planning task: `c2c_d92e`
-Base: `codex/marker-label-disclosure-v2-20260929@21d07ef1f72e3e307cd6f2880f3c1552939ee830`
-Implementation branch: `codex/fireglow-topic-ia-v2-20260929`
-Package: `MOBILE-V2-P5A-FIREGLOW-TOPIC-IA`
-Final reviewed product tip: `156c31ec209352328c829df55dd38f432e8197dc`
-Final handoff tip: pending docs-only review
-
-### Product result
-
-Fireglow presentation now keeps the existing data owners and fail-closed
-facts while separating loading, unavailable, stale/fallback, phase-empty and
-threshold-empty at the task surface. The permanent desktop colour legend and
-long scoring note move into a closed native `details` disclosure in the
-ranking panel. The selected detail keeps cloud-layer missing values explicit;
-the low-frequency Field Blueprint is a closed disclosure. Mobile keeps one
-`MobileDataSheet`; its peek conclusion says “数据不可用 · 请刷新重试” for a
-real empty/error snapshot and preserves “旧数据 · 不作推荐” for fallback.
-When valid phase scores are filtered out by the user threshold, the mobile
-ranking explicitly says `暂无达到 ≥X 分的地点` instead of implying missing data.
-
-### Files changed
-
-- `src/app/fireglow/FireglowApp.tsx`
-- `src/app/fireglow/FireglowSiteDetail.tsx`
-- `src/app/fireglow/fireglow.css`
-- `tests/e2e/fireglow-topic-ia.spec.ts`
-- `tasks/todo.md`
-- `docs/engineering-change-log/2026-09-29-fireglow-topic-ia.md`
-
-### Protected boundaries
-
-Do not modify `src/lib/fireglow.ts`, `src/lib/scoreThreshold.ts`,
-`src/lib/fireglowOverlay.ts`, `src/app/api/fireglow/snapshot/route.ts`,
-provider/cache/weather, ranking/scoring, snapshot worker, or CloudSea in this
-package. `HTTP 200` with no usable scores remains unavailable; stale data is
-never fresh; unknown remains distinct from zero; a phase with no scores is not
-threshold-empty.
-
-### Evidence
-
-- `npm run check`: PASS — 65 Vitest files / 379 tests; lint, typecheck, build.
-- P5-A topic IA E2E: 4 PASS / 4 project skips; desktop empty snapshot,
-  disclosure and failed-date priority, mobile empty peek at 390×844 and
-  812×375 with no horizontal overflow.
-- Fireglow data integrity: 7 PASS / 5 project skips.
-- Fireglow score threshold: 2 PASS; unknown marker: 1 PASS; refresh loop:
-  1 PASS; Fireglow product integrity: 3 PASS / 3 project skips; mobile
-  map-first `/fireglow`: 1 PASS.
-- `git diff --check`: PASS.
-- Full Chromium, cross-browser, real device, CI, production: `NOT_RUN`.
-
-### Remote review result
-
-Remote ChatGPT independently reviewed `4053a0e` → `156c31e` and returned
-`DONE`. It confirmed the mobile threshold-empty follow-up, empty snapshot and
-stale/phase boundaries, map/detail disclosures, protected Fireglow owners,
-untouched CloudSea, and Owner preservation. The product/test tip is complete;
-this handoff section is closed after the docs-only tip is reviewed.
-
-### Remote review handoff
-
-The product/test tip has been independently reviewed `DONE`. The docs-only
-follow-up only aligns this handoff with the final evidence; after it is pushed,
-remote ChatGPT should confirm the final tip and then plan P5-B CloudSea
-evidence IA. P5-B starts only from this reviewed handoff.
-
-PR: `NOT_CREATED — gh auth unavailable locally`
-Merged: `NO`
-Deployed: `NO`
-
-
-## 2026-10-01 Emergency repair handoff — merged and deployed
-
-Base: `d21165e88aa1a859aba917f24ea4c6c51c517edc`.
-Merged `main` SHA: `bd23a7c442e18ae5eae449e46d5ed0a10a307c0d` (PR #39).
-Remote route semantics PR #38 was merged into the release branch before #39.
-Production image: `star-photo-addr:deploy-bd23a7c442e1`; public buildRevision: `bd23a7c442e1`.
-The previous active image remains on the host for rollback. App and worker both use the original `star-photo_observing-snapshots` volume.
-
-## Product result
-
-- All four entry points now share desktop 65px header, 17px title, 13px navigation and 44px equal tabs. Phone uses the 48px top strip and four equal navigation targets; topic date/phase controls expand without increasing the top bar.
-- Finder raw forecast batches persist/share exact model, coordinates, variables and range. Source timestamps are preserved across cache hits. Fresh cache is 3h; failure fallback is explicitly stale and limited to 6h.
-- Provider 429 and the longest Retry-After propagate through point forecast, Finder, Fireglow and observing routes. Quota cooldown persists across process restart. Manual refresh does not bypass provider cooldown. Worker waits for provider Retry-After.
-- Forecast/pressure policy imports are separated from server file I/O so browser bundles do not import `node:fs`.
-
-## Verification
-
-- Local `npm run check`: PASS — lint, TypeScript, 67 test files / 395 tests and production build.
-- Product header E2E: 28 route/viewport combinations PASS, including 1440×500; mobile map-first: 12 PASS.
-- New route regressions cover fresh versus stale disk cache, daily quota Retry-After, stale Finder fallback and provider response handling.
-- Public CloudSea header was measured after deployment: 65px / 17px / 13px, 44px tabs.
-- Production `/healthz`: app `star-weather-planner`, version 1.0.22, buildRevision bd23a7c442e1; app/worker healthy, restart count 0, original data volume mounted.
-- Production best_match forecast for the sample location: HTTP 200, cache=memory, X-Data-Stale=false, 48 hourly records / 48 finite cloud values, model=best_match, sourceFetchedAt=2026-10-01T07:59:00Z.
-- Production CloudSea snapshot for 2026-10-01, GFS: HTTP 200 memory hit, stale=false, surface 54/54 available, pressure 54/54 available, 50 sites scoreable across phases; visible morning ranking lists 48.
-- The public page no longer shows the 429 banner and displays ranked sites. Fireglow worker had current-day fresh data; later fireglow dates remained stale on the last worker observation, so that multi-day range still needs observation.
-
-## Remote review status
-
-PR #38 contains the remote route-semantics follow-up. The complete merged/deployed tip has not yet received a final `DONE` from the existing ChatGPT conversation: in this environment its connector returned internal errors and the in-app browser could not open ChatGPT. Do not mark the remote final audit complete until it reviews exact SHA bd23a7c442e18ae5eae449e46d5ed0a10a307c0d and returns its verdict.
-
-The recurring quiet heartbeat is configured to continue the weather/remote-handoff loop. The local Owner worktree `E:\project\Star_photo_addr` remains dirty on its original main and was preserved.
-
-## 2026-10-01 Candidate forecast evidence repair — local product tip
-
-Base: `main@7a572b538caad9a881066cdd8c301a161c1523d1`.
-Branch: `codex/candidate-weather-evidence-20261001`.
-Product commit: `f65f3b2349e2fb2a620c949fef9e7d09eb961922`.
-Version: `v1.0.23`.
-
-The candidate cards and seven-location matrix now retain fresh same-model cloud cover, precipitation probability, wind speed, model identity and `sourceFetchedAt` when night scoring is withheld. They state the missing field and continue to leave score/rank empty. Candidate scoring uses a separate model setting from the cloud raster; it defaults to Best Match and requests up to 64 candidates as one batch. The selected matrix row loads the same candidate-score model independently. The map raster remains on its existing ICON/GFS/AIFS model contract.
-
-Local evidence before commit: `npm run check` PASS — lint, TypeScript, 68 test files / 399 tests and production build; `git diff --check` PASS. Candidate evidence/client tests: 9/9. Candidate presentation: desktop and mobile Best Match/ICON transitions passed; desktop data-state presentation 4 passed / 1 project skip; version history v1.0.23/1.0.22 passed.
-
-Production source gate against the currently deployed `buildRevision=bd23a7c442e1`: no active quota marker was present; one bounded seven-location Best Match request across the public catalog areas shown in the screenshot returned `sourceFetchedAt=2026-10-01T10:08:25.354Z`, `stale=false`, and seven non-null night scores when evaluated by the local v1.0.23 scoring code. The following `cache_only=1` read returned HTTP 200 from memory with the same model and fresh state. Jovi's exact candidate coordinates are browser-local and were not read by this process, so this confirms the live source/scoring contract for those public area points rather than the exact saved list. v1.0.23 is not yet deployed and its page-level production acceptance remains pending.
-
-Owner preservation: `E:\project\Star_photo_addr` remains on `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e` with its pre-existing dirty files; no Owner files were edited.
-
-PR: `#41 OPEN` — https://github.com/Jovifei/Star_photo_addr/pull/41.
-Merged: `NO`.
-Deployed: `NO`.
-Remote review of product SHA: `PENDING`.
-
-Next: send PR #41's current head SHA and this handoff to the existing ChatGPT conversation. Ask it to verify the candidate data/scoring contract against the last handoff, review model separation and request economy, discuss any technical disagreement, and propose the next product phase. Resolve its findings, then merge and deploy only after the fresh real-data and page checks pass again on the deployed v1.0.23 build.
-
-## 2026-10-02 Screenshot follow-up — current production evidence
-
-- Screenshot surface: `StarWindowTable`. Production `/healthz` still reports `bd23a7c442e1` / v1.0.22; PR #41/v1.0.23 is not deployed.
-- The open page URL gives the selected point `(31.633617, 120.234375)`. A `cache_only=1` read for ICON returned HTTP 200 from memory, `stale=true`, `sourceFetchedAt=2026-10-01T14:17:00.742Z`, 192 hourly rows, cloud/precipitation/wind 189 valid each, and visibility 0. Best Match returned HTTP 429 `cache-only-miss` for this exact point. These reads did not call the supplier.
-- A second Best Match cache-only read returned generic `Retry-After: 60` with no `X-Weather-Limit`. The 60 seconds is the route's cache-miss minimum and does not prove the persisted cooldown marker's absolute deadline.
-- One ordinary Best Match request was attempted as a bounded production check, but automatic approval review rejected it because cooldown expiry was not reliably verified. The request was not dispatched; no supplier quota was consumed.
-- Read-only source review found that failed candidate batches were silently caught when there is no same-model cache; the table then rendered generic `数据不足` without the request failure/retry state. The isolated worktree now preserves the safe server error and Retry-After in a status row while leaving scores/ranking withheld.
-- RED/GREEN evidence: the new 429 test failed before the UI status existed, then passed on desktop and mobile (2/2). Final `npm run check` PASS: lint, typecheck, 68 test files / 399 tests, Next build. `git diff --check` PASS. These are local fixture/code checks only.
-- Existing ChatGPT conversation attempted the exact PR #41 SHA review through the compare page and immutable raw-file URLs; it could not read their contents and returned `BLOCKED`. No exact remote review, new commit, merge, or deployment is claimed.
-- Next gate: the async approval request is pending. The attempted ordinary Best Match request was rejected before dispatch by automatic approval review because the generic cache-miss `Retry-After: 60` could not prove that the persisted provider cooldown had expired. No supplier request was sent. Once Jovi supplies a read-only cooldown access path or authorizes one bounded single-point request, verify fresh exact-coordinate fields and score. The follow-up code is uncommitted; do not commit, merge, or deploy until production data passes and the remote exact-SHA review can read the source.
-
-## 2026-10-02 Local integration for main refresh
-
-- Fetched current `origin` refs. Local Owner `main@3334e0c08f9ab2e481277628ce4ee875e2f1039e` is 100 commits behind `origin/main@7a572b538caad9a881066cdd8c301a161c1523d1` and has no local-only commits. The 100 count is commit history, not 100 file changes.
-- Candidate feature branch `origin/codex/candidate-weather-evidence-20261001@768300e02956e7437970b28a8f5f2e709aac9573` is exactly 3 commits ahead of current `origin/main`, based directly on `7a572b5`.
-- Created local isolated integration worktree `C:\Users\Admin\.codex\worktrees\starphoto-main-refresh-20261002\Star_photo_addr` from `origin/main`, then fast-forwarded the candidate feature branch. The resulting tree includes the previously tested 429 status fix and matching handoff changes.
-- Post-merge local verification passed: `npm run check` (lint, typecheck, 68 test files / 399 tests, Next build) and the desktop/mobile StarWindowTable 429 E2E (2/2) on temporary local port 3317. No weather-provider or production page requests were made by these tests.
-- The Owner checkout is still dirty and unchanged. It was not pulled, reset, stashed, or overwritten. The local integration branch has not been pushed; PR #41 remains open. Merge to remote/deploy remain gated on exact-coordinate production weather acceptance and remote ChatGPT review.
-
-## 2026-10-02 Functional consolidation release candidate
-
-Supersedes prior Oct02 statements that Owner main remains 100 commits behind or that production cooldown expiry is unverified.
-
-- Original E:\project\Star_photo_addr is clean main@7a572b538caad9a881066cdd8c301a161c1523d1. Owner changes backed up in ZIP and local snapshot ef15634ef7de914d6c5ea0a17f1189a666ec5194 before fast-forward.
-- Integration a496632630a50b7a11ef940c4d0dde100b80ee3a includes all previously outstanding branch ancestry after functional audit/migration; historical branches retained.
-- Candidate Best Match, request-error evidence, Next16.3.8, model-aware cloud/scoring capability, pressure shared persisted cooldown, strict pressure time axis, observing worker previous-night and timestamp/model/date checks integrated.
-- Complete npm check PASS:70 test files410 tests, lint/typecheck/production build. Browser run7 PASS5 SKIPPED2 CHANGES_REQUIRED desktop selected-data loading; investigating hydration cleanup race. No deploy until resolved and rerun.
-- Authoritative production cooldown marker absent; one bounded genuine Best Match request fresh sourceFetchedAt2026-10-02T05:23:26.681Z stalefalse. Saved response passes two-night actual scoring test. No fresh assertion about other points or rendered production page yet.
-- PR41 updated and existing remote ChatGPT exact-SHA review now actively reads workspace/GitHub sources. Final remote verdict pending.
-- Obsidian approved home profile incrementally registered star_photo_addr original root, retaining7 other mappings and backup. Mirror preview completed; no private deployment documents will be mirrored. Actual filtered sync follows final local main update.
-- Production remains bd23a7c442e1/v1.0.22. Retain existing rollback image and original snapshot volume on deployment.
-
-## 2026-10-02 Remote exact-SHA review follow-up — candidate/raster loading + pressure cooldown
-
-Review source:
-- PR #41 exact reviewed head: `a496632630a50b7a11ef940c4d0dde100b80ee3a`
-- Base: `main@7a572b538caad9a881066cdd8c301a161c1523d1`
-- Remote repair branch: `codex/candidate-pressure-review-followup-20261002`
-- Product repair commits:
-  - `1603fd823f7972d96999f010d4c7278f5b5be083` — decouple StarWindow selected-row loading from raster loading
-  - `e69488a00e301ce21ada08516b752d643a273b97` — preserve shared provider cooldown on pressure refresh responses
-- Regression-source commits:
-  - `5300c7d1eb9883e9776be15975ec78480a1e0434` — selected-row/raster-loading browser contract
-  - `c3626d9afb35d75e4fbef87a3c5a93934ffb6e8a` — pressure provider-cooldown precedence
-- Consolidation review log commit: `fe8ad18f504bd1180454a78892d17d2300434f86`
-- Final handoff branch tip is the commit containing this section; use the exact SHA returned by remote ChatGPT.
-
-### Exact review result on a496632
-
-Accepted:
-- Candidate scoring is intentionally separate from the raster model. New sessions use `candidateForecastModel="best_match"`; `DEFAULT_CLOUD_STATE.model` remains `icon`. This is the preferred architecture because point-score completeness and map-raster continuity are different concerns. No Best Match fields are spliced into an ICON forecast.
-- The candidate loader is one stable bounded batch per model/day/location set; six saved candidates are one request. The selected table row uses the same candidate-score model, reusing a same-point candidate cache when possible and otherwise requesting the selected coordinate separately.
-- Fresh same-model ICON data with missing visibility retains raw cloud/precipitation/wind and original `sourceFetchedAt`, but `projectCandidateNight` keeps `evaluation=null`, reports the exact visibility blocker, and leaves score/rank withheld.
-- Stale, model mismatch, source age and missing required scoring fields remain fail-closed.
-- Pressure ingestion now uses the shared Open-Meteo provider slot / typed rate-limit error path.
-- Worker observing identity treats Shanghai 00:00–05:00 as the previous observing night while Fireglow prewarm remains on the calendar date.
-- Historical branch consolidation uses functional migration plus current-tree precedence; old branch contents are not allowed to overwrite newer provider/cache/UI semantics merely to create ancestry.
-
-Remaining defects repaired remotely:
-1. `StarWindowTable` selected rows still set `loading` from global raster `state.loading`. This could hide an already-ready Best Match candidate score while an independent ICON raster request was slow, matching the current desktop loading-timeout symptom. Loading now depends on the candidate forecast itself plus its own request error.
-2. `/api/pressure-forecast` early force-refresh suppression returned only the local coordinator retry window. Response headers now merge that local window with the shared provider cooldown via `openMeteoRateLimitHeaders()`, so a daily provider cooldown cannot be shortened by a 60-second local guard.
-
-Protected:
-- no score weights changed;
-- no required scoring fields changed;
-- no cross-model weather filling;
-- no candidate/raster default model change;
-- no pressure-profile derivation or CloudSea scoring change;
-- no ProductHeader/map layout change;
-- no merge/deploy.
-
-### Test status
-
-REMOTE TEST EXECUTION: `NOT_RUN`.
-
-The recorded local evidence at `a496632` (70 Vitest files / 410 tests, lint/typecheck/build PASS) applies only to that exact SHA. The PR browser gate was still unresolved at review time: 7 pass / 5 skip / 2 desktop loading failures. Those results do not validate this remote repair head.
-
-Local Codex must run, from the final remote head:
-
-1. `npm run test -- tests/integration/pressureRoute.test.ts tests/unit/candidateNightEvidence.test.ts tests/unit/candidateForecastClient.test.ts`
-2. Desktop + mobile candidate data presentation including the new selected-row/raster-loading case:
-   `npx playwright test tests/e2e/data-state-presentation.spec.ts --project=desktop --project=mobile`
-3. The browser gate set that previously produced the two desktop loading failures; confirm zero assertion/timeouts before integration.
-4. `npm run check`
-5. `git diff --check`
-
-Do not merge solely because static/unit tests pass. The browser loading failures must be reproduced/closed on the exact received head.
-
-### Production acceptance boundary
-
-Production remains the older deployed revision until local integration/deployment is explicitly completed. The recorded real Best Match source response (`sourceFetchedAt=2026-10-02T05:23:26.681Z`, `stale=false`, two nights scoring successfully) is useful provider/scoring evidence only; it is not post-deploy page acceptance for this branch.
-
-After deployment verify separately:
-- exact `/healthz` build revision/version;
-- candidate Best Match selected/card/table provenance and score on real page coordinates;
-- ICON raster remains independent;
-- missing visibility still withholds score rather than filling from Best Match;
-- pressure 429/fallback returns the shared long provider Retry-After when applicable;
-- stale/source timestamps remain original;
-- no browser loading timeout remains.
-
-MERGED: `NO`.
-DEPLOYED: `NO`.
-
-## 2026-10-02 Final pre-merge receipt
-
-- Integrated remote repair/handoff9c249d59c6d21a661d1971f2c53f6e9d7f2dec54 with local hydration and measured date formatter fix42ee347accd53ed37500a0b30afaad3b5fc492e2.
-- Final npm run check PASS:72 files413 tests, lint/typecheck/production build.
-- Same browser gate plus remote selected-row regression PASS:10 passed6 applicability skips,29.2s. No failing tests, no waits extended. Four-product desktop/mobile header geometry included.
-- Production dependency audit:0 vulnerabilities.
-- Every local/remote branch ref is an ancestor of the integration head at this receipt; historical branches retained.
-- Remote exact-source review returned CHANGES_REQUIRED on a496632 and produced real repairs9c249d5. Repairs now locally tested. Existing remote conversation reached its length limit; next audit requires Jovi's pending same-Project chat handoff decision. Do not claim a later remote DONE verdict.
-- Next authorized steps:merge PR41,ff original main,install matching deps,verify merged code,deploy local exact-revision standalone overlay,retain rollbackimage and originalvolume,verify genuine API+page and sync filtered knowledge docs.
-
-## 2026-10-02 Delivery complete — current receipt
-
-- Functional consolidation PR41 and scoring-gap presentation PR43 merged. All existing local/remote functional refs are ancestors of main; historical refs retained.
-- Deployed code SHA:4460382fc2991b3af5555816f307c2318f5b962a; version1.0.23; app/worker image star-photo-addr:deploy-4460382fc299 both healthy. Existing snapshot volume retained; rollback-before-4460382fc299 and older image retained.
-- Original E:\project\Star_photo_addr clean main synchronized to origin/main; matching Next16.3.8 dependencies installed and original-directory build refreshed. Owner snapshot ef15634 and ZIP retained.
-- Final merged code full check:72files414tests,lint/typecheck/build PASS. Prior combined browser gates10PASS6SKIP; final truthful-missing-field E2E1/1PASS. Production dependency audit0 vulnerabilities.
-- Real post-deploy API cache-only read:BestMatch,336hours,stale=false,sourceFetchedAt2026-10-02T06:23:56.895Z. Real browser12rows84validscores; exact selected point tonight45. Data/cards/table source metadata retained; ICON raster independent.
-- Actual desktop header65px; phone390px header48px, four90px navigation targets and13px font, no page horizontal overflow.
-- ICON still lacks visibility; finished-load reason explicitly says缺能见度 and withholds ICON score. This is a field capability boundary, not ongoing sync. No cross-model field filling. Local dark-sky raster license remains unqualified and no Bortle/SQM fabricated.
-- Obsidian mapping registered under approved home root; filtered tracked engineering docs mirror applied, private guides/environment/credentials excluded. Refresh mirror after this receipt commit.
-- Remote exact review on a496632 returnedCHANGES_REQUIRED and created actual repair9c249d5; all repairs received/tested. Old chat reached length limit. Same-Project successor decision pending Jovi; no fabricated final remoteDONE or next phase execution.
-- This final receipt is documentation only. Runtime code SHA above remains authoritative; a later documentation SHA does not represent undeployed product-code changes.
-
-## 2026-10-02 v1.0.24 direct topic date controls delivered
-
-Jovi要求日期/时段常驻顶部直接选择，禁止用调整按钮弹出核心操作。PR44/45已合并并部署6389bef784c12b4bc1c7aaee0fa3a93d852766a5。云海/火烧云使用普通文档流工具栏：桌面一行，手机时段+更新一行、4日期一行；手机移除48px空包装占位，底部四入口48px/13px保持一致。72files414tests/lint/typecheck/build PASS；28几何/6交互组合PASS、12手机地图手势PASS。线上手机390px搜索底56=工具栏顶56，工具栏底173.33<地图顶174，无横溢；日期时段默认全可见、toggle0，线上傍晚切换pressed即时生效。参考Windy与Ventusky官方时间轴原则，详见docs/engineering-change-log/2026-10-02-direct-date-toolbar.md。供应商数据/评分门禁未修改。原目录需同步本次文档tip并镜像知识库。旧远端聊天仍满额，后续远端审查仍待接力决定，不伪称远端DONE。
-
-
-## v1.0.25 compact toolbar delivered
-Jovi指出v24日期拉伸占满宽屏，明确要求紧凑。PR46已合并部署a74f7ee95d77f0a26ed30e47db0ff9e71ba05f41。内容宽度flex/单行日期，桌面32px；手机只自然换行，44px触摸高度。414测试及36几何/6交互组合PASS；线上3825px火烧云组483px、日期59px，云海组557px，不再铺满。后续UX不得恢复1fr/width100%日期拉伸或机械强制分行。原main同步；Docs/Obsidian同步最后文档tip。远端旧聊天仍满，未伪称新远端review。
-
-
-## 2026-10-02 Full CI terminal closure
-PR47 actualtestedheadf7e5373c3be7e741081dc24a5727bab46924d021; CI36994802711 terminalSUCCESS(all5jobs), Chromium228PASS122SKIP0FAIL, Firefox/WebKit6PASS. Merged mainf98cf45dcd81ec661abc2f524f6d9799134059fd andoriginalmain synchronizedclean0/0. Productionv1.0.25a74f7ee runtimecode byte-equivalent under src/scripts/package; changes test/docs only, no redeploy. Normal boundedproductionBestMatch request afterauthoritativeNO_COOLDOWN_MARKER yieldedfreshsource2026-10-02T10:27:32.143Z andactualsavedresponse nightlyscore45/10hours/no blockers; noforcedrefresh/cacheclear/networkchange. PreviousPR46fullCI11fail ishistorical, notgreen; latestfullCIclosed. PENDING_REMOTE_PLANNING stays, oldchatfull/sourcehandoff decisionpending; no remoteGPT finalDONE claimed. Hub reporting adoptednewrootAGENTS andbound actualworktree/branch identities.
-
-
-## 2026-10-03 v1.0.26 overnight coverage deployment
-- PR48 tested head f2b94fcf25a279c0be28cf7bb4271831356b5cf0; full GitHub CI37082826813 terminal SUCCESS. Earlier run37068463514 had two dawn hydration expectation failures; corrected deterministic05:30 regression passed desktop/mobile locally.
-- Merge/runtime4527f4d70c997abbe380d741541ef39421c07c0b; original main fast-forwarded and dependencies installed. Deployment build lint/typecheck72files418tests/buildPASS. Image star-photo-addr:deploy-4527f4d70c99, rollback-before-4527f4d70c99 preserved, original star-photo_observing-snapshots volume retained.
-- After authoritative NO_COOLDOWN_MARKER, one normal bounded real Best Match response: sourceFetchedAt2026-10-03T03:39:29.63Z, stale=false, firstTime2026-10-02T00:00,360rows. Saved response evaluated by actual projectCandidateNight: Oct2/Oct3 each10hours and numeric score PASS. Previous-day modeled hours are forecasts, not observations. No force/cache clearing/network edits.
-- Browser visual acceptance BLOCKED: CUA initialization failed with kernel-assets path missing. API and real scoring verification do not replace page visual acceptance; follow up next available browser session.
-- PENDING_REMOTE_PLANNING remains: old remote conversation full; successor decision pending. No remote final DONE claimed.
-
-## 2026-10-04 Final candidate recovery and batch persistence receipt
-- Root cause confirmed: failed candidate hook did not recover after cooldown; large coordinate-derived filenames silently failed persistence. The original screenshot request's first network failure reason was not recovered from logs, so it is not labelled a proven429.
-- PR50 head d6785fd426eaffb8f98362325f33dfc390301b05 /CI37174401726 all5SUCCESS, Chromium230PASS122SKIP0FAIL. PR51 head4e867ecf2aa03e945de535ddb3e6066e8f3ae898 /CI37175774737 terminalSUCCESS. PR51 merged ee7269f7964603b342411354d0f36ee100654d70; source/scripts/package byte-equal to tested runtimehead4e867ec.
-- v1.0.27 runtime4e867ecf2aa03e945de535ddb3e6066e8f3ae898 deployed; image star-photo-addr:deploy-4e867ecf2aa0. App/worker healthy, rollback-before-4e867ecf2aa0 and original star-photo_observing-snapshots volume retained. Original directory main synchronized and matching dependencies installed.
-- Local fullcheck72files420tests/lint/typecheck/buildPASS; cache route/integrity23PASS including1/64locations after module restart. Client recovery desktop/mobile2PASS and manual-revision normal retry unitPASS. Source/model/age gates retained.
-- Actual production page12rows84numeric score cells,no candidate request errors; BestMatch source2026-10-04T04:17:57.136Z.17-location batch persisted in69-character hash filename,source2026-10-04T04:17:56.820Z,allFresh=true.
-- Isolated cold container with network=none,memory192MB,originalvolume read-only: HTTP200,X-Forecast-Cache=cache-only-disk,X-Data-Stale=false,count17,original source2026-10-04T04:17:56.820Z. No provider access. Probe container removed; volume retained.
-- Prior guidance exists in2026-10-01-weather-header-repair.md and2026-10-02-branch-consolidation.md; knowledge search found prior429/cooldown cases. Previous single-point-only acceptance did not close whole-page recovery. New regression and receipt correct that gap.
-- PENDING_REMOTE_PLANNING preserved: old remote chat full,successor decision pending; no remote finalDONE claimed. ICON missing-visibility and unlicensed dark-sky fields remain explicit missing-data gates, not filled from another model.
+---
+
+# 当前交接 — 2026-10-07 正式发布完成
+
+已部署5fbf7bac2c925d068f4c04274cbdbe79b0672ead，版本1.0.27，clean-runtime镜像aa57d67d…；app/worker healthy重启0。CI37607724883五任务SUCCESS。主报告：docs/DEPLOYED_5FBF_ACCEPTANCE_20261007.md。
+
+修复发布覆盖目录残留导致“健康新版/页面旧版”的实际缺陷；正式服务首页/火烧云/云海与打包HTML逐字节匹配。新版504屏实测地图440px、溢出0、实际GFS原值及score93/暗夜估算9h。截图工具失败，使用实际DOM记录，不冒充真机。
+
+原卷、原378镜像/配置及一致备份保留。原目录Owner两份笔记仍保护。已授权测试通过即部署，不能重复索取许可。Git push正常；gh未登录与公开GET限流单独记录，服务器GET已完成CI读数。
+
+接下来通过原Project接力聊天审核此次精确SHA/报告，继续跨产品身份、快照来源时间、DST和真机/读屏阶段；不把待做科学验收包装为已完成。PR49仍Draft/main未合并。下方旧记录仅作历史，不覆盖本条精确版本。
+
+---
+
+# Latest 2026-10-07 follow-up candidate
+
+LOCAL_CODEX_AUTHORED CODE_HEAD10e25655db4146b306ca6c38abd4597e72a174f0/tree99d54ada52dd91c5e9a7951dee6bc33127709360. Adds candidate cache identity and independent elapsed-duration fallback guards; fixed actual768 modal close stacking via portals and aligned actual document-scroll/map-density contracts. Full86files496tests/lint/types/buildPASS; CI-failure reproduction35PASS4applicableSKIP. Prior95fed16 CI37596735320 FAILED6Chromium/256PASS, other4jobsSUCCESS, not release proof. New exactCI and remote actual-source review PENDING. Production remains378; noDraft49merge/deploy. Owner notes preserved. Evidence: docs/COMPACT_MOBILE_A1_LOCAL_ACCEPTANCE_20261007.md. Coordinate conflicts/source-time/DST/device/reader/science remain scoped pending.
+
+# 2026-10-07 latest local repair candidate
+
+LOCAL_CODEX_AUTHORED product commit5854a1604d8517b48c7120f805ed3a157d6c1347/tree088d6cfd0f5c3d1e6fd1f057c09df46e5e2ed487. Current source includes remote478 base plus corrected explicit clock ownership/refresh/catalog handoff, strict coordinate identity binding, independent astronomy/raw weather, compact portrait document scrolling, marker first-touch and200% input shrink repairs. Parent full85files494tests/lint/types/buildPASS; targeted mobile31PASS2applicableSKIP. Actual bounded LA GFS72hours72visibility/source08:21:12.87Z/stalefalse and candidate real-response calculation1PASS.
+
+Production remains378161ffe6aa21989ef48e63c9d077343d276a95. No deploy orDraft49merge. Exact hostedCI/remote-source-review/newproductionphone acceptance PENDING. Remote current tools are read-only; do not falsely attribute local commits to remote. Owner tasks/lessons andtasks/todo preserved. Detailed evidence and remaining point-identity/source-time/DST/raster/science boundaries: docs/COMPACT_MOBILE_A1_LOCAL_ACCEPTANCE_20261007.md.
+
+## 2026-10-07 当前候选更新
+当前原授权源码15282daf8daebe1bac06115f0b814cecf5307e0b已经完成父会话锁定依赖475测试/build、三组真实RED/GREEN。包括严格UTC偏移、v3fresh/v2stale事实保留、月相盈亏正确方向；尚未部署，生产仍378。细证据docs/POST_RELEASE_ACCEPTANCE_378_20261007.md。MapSetup隐藏loading语义缺陷已交远端；手机/全a11y/全球时区/DST/预报准确率仍未闭合。Owner两处文档dirty保护保留，Draft49未合并。
+
+## 2026-10-07 当前接手状态（优先于下方历史）
+DEPLOYED_ACCEPTANCE_INCOMPLETE：当前运行378161ffe6aa21989ef48e63c9d077343d276a95，app/worker精确镜像82f5a0ba…健康restart0。原卷、备份校验及回滚已独立重核；未重部署。
+本地授权分支已接收远端真实offset修复d543fff637c561da9bc8197ef282495081a6601e，完成锁定依赖RED/GREEN和468测试/build。此修复尚未部署、尚待远端审核；不能把源码候选当运行SHA。
+详细证据与待验收项：docs/POST_RELEASE_ACCEPTANCE_378_20261007.md。Owner追加文档在9331bd0快照/zip保护并保留。C2C同Project接力6ac5c47d-2a7c-83ea-ad99-696dba6482b8已验证workspace_info。手机真机、广泛无障碍、海外/DST、慢网/中断和科学准确率仍未完整验收。DraftPR49不合并。
+
+# Current engineering handoff
+
+Repository: `Jovifei/Star_photo_addr`
+Branch: `codex/overnight-forecast-coverage-20261003`
+Review: [Draft PR 49](https://github.com/Jovifei/Star_photo_addr/pull/49)
+
+## Published baseline
+
+Exact head `5a46046ba6470fca6493a19dfe0866a2f182e60b`, tree `3fdc04905885feb7f9d37fb27f22a04c140d9b62`. The tooltip fixture synchronization and concise handoff are published.
+
+[CI 37404323556](https://github.com/Jovifei/Star_photo_addr/actions/runs/37404323556) stopped at one high production dependency finding in source-map-js 1.2.1. Quality checks after audit and all dependent browser/container jobs did not run; live-data smoke passed.
+
+Prior head `7a1e6b13bfec647591845c7790ea9fb798c75a18`:
+[CI 37343815232](https://github.com/Jovifei/Star_photo_addr/actions/runs/37343815232) finished with Chromium 259 passed / 124 applicability skips / 1 failed. The other four jobs succeeded: quality (82 files / 466 tests; production audit zero), Firefox/WebKit (12 passed), container and live-data smoke.
+
+All desktop/mobile 100%/200% readability and map-retry cases passed. Original-resolution screenshots confirmed the candidate names, timeline controls, map-error copy and layers controls in their tested states. The full run still failed; physical-phone settings and actual browser zoom were not verified.
+
+## Reviewed fixture and pending dependency patch
+
+The mobile tooltip lifecycle test clicked during an already-running initial map-positioning animation. The test now waits for the expected fixture center, zoom 8, an existing map pane and no zoom/pan animation in one observable snapshot. Its two strict zoom-plus-one checks and every tooltip naming assertion remain unchanged. Product map behavior is unchanged.
+
+This nine-line test repair passed local lint, types, 82 files / 466 tests and production build, plus independent trace and diff review. These checks apply to the unchanged test source in the current candidate; documentation minimization does not establish a new browser result.
+
+The current follow-up locks only source-map-js to upstream-patched 1.2.2 within all existing version ranges. See [dependency repair evidence](docs/engineering-change-log/2026-10-06-source-map-js-audit.md). Clean install, production audit zero, all three dependency-boundary checks, and lint/types/82 files/466 tests/build passed for this patch. Its exact-candidate CI is still required.
+
+## Remaining release gates
+
+Publish the reviewed candidate on the same branch without force, verify its exact SHA/tree and run its full CI. Inspect that run's actual screenshots and metadata before release. Previous successful jobs are not acceptance of a different candidate.
+
+Deployment has not occurred for this repair. Before the approved release, verify the current running version and a usable rollback point through the existing deployment process; preserve application data. See [deployment guidance](docs/DEPLOYMENT.md) and [current repair evidence](docs/engineering-change-log/2026-10-05-candidate-lines-and-map-retry.md).
+# 2026-10-07 latest acceptance update (supersedes earlier status below)
+
+Production remains 378161ffe6aa21989ef48e63c9d077343d276a95; no redeployment or Draft PR49 merge. Original authorized branch received corrected MapSetup CODE_HEAD 36a9bf923c895dd13766d20c9dc41fb668222702 after local locked RED e6b0c645 (1 FAIL/1 PASS), GREEN (2 PASS), complete lint/types/84 files477 tests/build PASS. Earlier undiscovered tsx test was not valid RED; package manifest actually already includes RTL/jsdom, correcting the earlier dependency claim.
+
+Physical phone now partially exercised: OnePlus7Pro/Android11, Jovi manually opened public site after automatic browser launch was blocked. Actual map selection of 巴中光雾山, expansion and upward swipe succeeded. ICON facts cloud21%/rain0.0mm/wind1.9m/s; original sourceFetchedAt2026-10-07T06:16:41.313Z. Visibility missing, score withheld. Large summary, delayed facts and nested scrolling need redesign; separate map-layer error remains untraced. This is not full phone or screen-reader acceptance.
+
+Next remote stage: finish exact T1 timezone repair and corrected test handoff, then implement compact mobile and independent astronomy/raw-fact display per docs/MOBILE_DENSITY_REDESIGN_20261007.md. Local precise-SHA tests and real-device checks precede release. Owner tasks notes remain protected and uncommitted.
+

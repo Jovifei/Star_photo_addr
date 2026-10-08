@@ -50,6 +50,7 @@ export default function DecisionSummary({
     evaluation,
     loading: state.loading,
     unavailableReason,
+    hasWeatherFacts: forecast?.locationId === state.selectedLocation?.id && forecast?.hourly.some(hour => [hour.cloudCover, hour.precipitation, hour.windSpeed].some(value => value != null && Number.isFinite(value))),
     updatedAt:
       state.forecast?.metadata?.fetchedAt ??
       state.forecast?.fetchedAt ??

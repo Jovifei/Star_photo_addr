@@ -6,11 +6,26 @@
     "timezone": "Asia/Shanghai",
     "utc_offset_seconds": 28800,
     "hourly": {
-      "time": ["2026-08-20T20:00", "2026-08-20T21:00"],
-      "cloud_cover": [10, 20],
-      "cloud_cover_low": [5, 8],
-      "cloud_cover_mid": [12, 15],
-      "cloud_cover_high": [25, 30]
+      "time": [
+        1787227200,
+        1787230800
+      ],
+      "cloud_cover": [
+        10,
+        20
+      ],
+      "cloud_cover_low": [
+        5,
+        8
+      ],
+      "cloud_cover_mid": [
+        12,
+        15
+      ],
+      "cloud_cover_high": [
+        25,
+        30
+      ]
     }
   },
   "mixedType": {
@@ -19,11 +34,26 @@
     "elevation": 20,
     "timezone": "Asia/Shanghai",
     "hourly": {
-      "time": ["2026-08-20T20:00", "2026-08-20T21:00"],
-      "cloud_cover": [10, 20],
-      "cloud_cover_low": [5, "8"],
-      "cloud_cover_mid": [12, 15],
-      "cloud_cover_high": [25, 30]
+      "time": [
+        1787227200,
+        1787230800
+      ],
+      "cloud_cover": [
+        10,
+        20
+      ],
+      "cloud_cover_low": [
+        5,
+        "8"
+      ],
+      "cloud_cover_mid": [
+        12,
+        15
+      ],
+      "cloud_cover_high": [
+        25,
+        30
+      ]
     }
   },
   "misaligned": {
@@ -32,11 +62,25 @@
     "elevation": 20,
     "timezone": "Asia/Shanghai",
     "hourly": {
-      "time": ["2026-08-20T20:00", "2026-08-20T21:00"],
-      "cloud_cover": [10, 20],
-      "cloud_cover_low": [5, 8],
-      "cloud_cover_mid": [12],
-      "cloud_cover_high": [25, 30]
+      "time": [
+        1787227200,
+        1787230800
+      ],
+      "cloud_cover": [
+        10,
+        20
+      ],
+      "cloud_cover_low": [
+        5,
+        8
+      ],
+      "cloud_cover_mid": [
+        12
+      ],
+      "cloud_cover_high": [
+        25,
+        30
+      ]
     }
   },
   "allNull": {
@@ -45,11 +89,26 @@
     "elevation": 20,
     "timezone": "Asia/Shanghai",
     "hourly": {
-      "time": ["2026-08-20T20:00", "2026-08-20T21:00"],
-      "cloud_cover": [10, 20],
-      "cloud_cover_low": [5, 8],
-      "cloud_cover_mid": [12, 15],
-      "cloud_cover_high": [null, null]
+      "time": [
+        1787227200,
+        1787230800
+      ],
+      "cloud_cover": [
+        10,
+        20
+      ],
+      "cloud_cover_low": [
+        5,
+        8
+      ],
+      "cloud_cover_mid": [
+        12,
+        15
+      ],
+      "cloud_cover_high": [
+        null,
+        null
+      ]
     }
   },
   "invalidTime": {
@@ -58,11 +117,26 @@
     "elevation": 20,
     "timezone": "Asia/Shanghai",
     "hourly": {
-      "time": ["2026-08-20T20:00", 123],
-      "cloud_cover": [10, 20],
-      "cloud_cover_low": [5, 8],
-      "cloud_cover_mid": [12, 15],
-      "cloud_cover_high": [25, 30]
+      "time": [
+        "2026-08-20T20:00",
+        123
+      ],
+      "cloud_cover": [
+        10,
+        20
+      ],
+      "cloud_cover_low": [
+        5,
+        8
+      ],
+      "cloud_cover_mid": [
+        12,
+        15
+      ],
+      "cloud_cover_high": [
+        25,
+        30
+      ]
     }
   }
 }

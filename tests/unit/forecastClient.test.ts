@@ -9,6 +9,8 @@ function payload(model = "icon", sourceFetchedAt = new Date().toISOString()) {
     metadata,
     locations: [{
       locationId: "loc-0",
+      requestedLatitude: POINT.latitude as number | null | undefined,
+      requestedLongitude: POINT.longitude as number | null | undefined,
       modelLatitude: POINT.latitude,
       modelLongitude: POINT.longitude,
       modelElevation: 1402,
@@ -75,6 +77,8 @@ describe("shared forecast client", () => {
       const latitude = Number(parsed.searchParams.get("latitude"));
       const body = payload("icon", old);
       body.locations[0]!.modelLatitude = latitude;
+      body.locations[0]!.requestedLatitude = latitude;
+      body.locations[0]!.requestedLongitude = Number(parsed.searchParams.get("longitude"));
       return Response.json(body, { headers: { "X-Data-Stale": "true" } });
     }));
     const { requestForecastResponse } = await import("@/lib/forecastClient");
@@ -83,5 +87,31 @@ describe("shared forecast client", () => {
     ));
     expect(maximum).toBeLessThanOrEqual(4);
     expect(results.every((result) => result.stale && result.data.locations[0]?.metadata?.stale)).toBe(true);
+  });
+
+  for (const fault of ["missing", "partial", "non-finite", "wrong-slot"] as const) {
+    it(`rejects ${fault} request-coordinate identity before any local ID binding`, async () => {
+      vi.resetModules();
+      const body = payload();
+      const location = body.locations[0]!;
+      if (fault === "missing") { location.requestedLatitude = undefined; location.requestedLongitude = undefined; }
+      if (fault === "partial") location.requestedLatitude = undefined;
+      if (fault === "non-finite") location.requestedLatitude = NaN;
+      if (fault === "wrong-slot") location.requestedLongitude = POINT.longitude + 1;
+      vi.stubGlobal("fetch", vi.fn(async () => Response.json(body)));
+      const { requestForecastResponse } = await import("@/lib/forecastClient");
+      await expect(requestForecastResponse([POINT], "icon")).rejects.toThrow("坐标映射不一致");
+    });
+  }
+
+  it("retains old API coordinate IDs only when they independently match the request", async () => {
+    vi.resetModules();
+    const body = payload();
+    body.locations[0]!.requestedLatitude = undefined;
+    body.locations[0]!.requestedLongitude = undefined;
+    body.locations[0]!.locationId = `api-${POINT.latitude.toFixed(5)}-${POINT.longitude.toFixed(5)}`;
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(body)));
+    const { requestForecastResponse } = await import("@/lib/forecastClient");
+    await expect(requestForecastResponse([POINT], "icon")).resolves.toMatchObject({ stale: false });
   });
 });

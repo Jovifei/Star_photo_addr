@@ -2395,6 +2395,8 @@
 }
 .star-window-add-input {
   flex: 1;
+  min-width: 0;
+  width: 100%;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -4677,17 +4679,32 @@
 
 .candidate-card-top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
 
 .candidate-card-identity {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
+  flex: 1 1 max-content;
   min-width: 0;
+  max-width: 100%;
+}
+
+.candidate-card-identity:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .candidate-rank-badge {
@@ -4735,10 +4752,14 @@
   font-size: 13px;
   font-weight: 700;
   color: #f8fafc;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
+
+/* Preserve the normal 21px rows, but grow them with enlarged glyphs rather
+   than letting name/province text escape the identity button's line boxes. */
+.candidate-name,
+.candidate-meta { line-height: max(21px, 1.5em); }
 
 .candidate-meta {
   font-size: 10px;
@@ -4824,8 +4845,8 @@
 }
 
 .candidate-metrics-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background: rgba(5, 15, 22, 0.55);
   border: 1px solid rgba(165, 205, 216, 0.08);
@@ -4835,13 +4856,18 @@
 
 .candidate-metric-item {
   display: flex;
+  flex: 1 1 max-content;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: 3px;
   font-size: 10px;
   color: #8da3ad;
-  white-space: nowrap;
-  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
+
+.candidate-metric-item > span { min-width: 0; line-height: 1.5; }
 
 .candidate-metric-item .metric-icon {
   opacity: 0.65;
@@ -5121,3 +5147,16 @@
 .tone-warn {
   color: #fbbf24 !important;
 }
+
+.location-transfer-notice { margin: .35rem .75rem; font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+
+.snapshot-source-note { margin: 0 .75rem; font-size: .75rem; line-height: 1.5; overflow-wrap: anywhere; }
+.snapshot-source-note > summary { min-height: 32px; align-content: center; cursor: pointer; }
+.snapshot-source-note > summary:focus-visible { outline: 2px solid var(--green-soft); outline-offset: 2px; }
+@media (pointer: coarse) { .snapshot-source-note > summary { min-height: 44px; } }
+
+/* A failed basemap must not consume blank-map gestures behind its text. */
+.fireglow-map .map-tile-error,
+.cloudsea-map-pane .map-tile-error { pointer-events: none; }
+.fireglow-map .map-tile-error button,
+.cloudsea-map-pane .map-tile-error button { pointer-events: auto; }

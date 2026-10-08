@@ -85,7 +85,7 @@ export default function WorkspaceShell({
             scrolls (overflow: auto), which would clip the outer half of the
             24px grab rail. This mirrors .workspace-inspector-frame. */}
         <div className="workspace-input-frame">
-          <aside className="workspace-input" data-testid="workspace-input">
+          <aside className="workspace-input" data-testid="workspace-input" aria-label="候选地点与观测计划">
             {!mobile ? (
               <WidthControls
                 label="输入栏宽度"
@@ -147,7 +147,7 @@ export default function WorkspaceShell({
               onKeyDown={inspectorWidth.onResizeKeyDown}
               onDoubleClick={inspectorWidth.reset}
             />
-            <aside className="workspace-inspector">
+            <aside className="workspace-inspector" aria-label="观测数据与证据">
               <WidthControls
                 label="证据栏宽度"
                 unit="证据栏"

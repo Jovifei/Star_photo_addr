@@ -69,6 +69,15 @@ interface AppState {
   forecast: LocationForecast | null;
   nightKeys: string[];
   selectedNight: string;
+  /** User/URL choices survive location hydration, even if their value is unchanged. */
+  pointClockSource: "auto" | "explicit";
+  /** Stable selected-point page-session start for the weather rail. */
+  forecastWindowStart: string;
+  /** China observing-catalog clock remains independent from an overseas selected point. */
+  catalogNightKeys: string[];
+  catalogSelectedNight: string;
+  catalogForecastWindowStart: string;
+  catalogForecastTime: string | null;
   bortleEnabled: boolean;
   cloudState: CloudState;
   /** Single model used by the candidate comparison surfaces, independent of the raster model. */
@@ -113,6 +122,12 @@ function createInitialState(initialNow: string): AppState {
     forecast: null,
     nightKeys: nightRangeKeys(homeNight, 7),
     selectedNight: homeNight,
+    pointClockSource: "auto",
+    forecastWindowStart: homeForecastTime,
+    catalogNightKeys: nightRangeKeys(homeNight, 7),
+    catalogSelectedNight: homeNight,
+    catalogForecastWindowStart: homeForecastTime,
+    catalogForecastTime: homeForecastTime,
     bortleEnabled: hasDarkSkyLayer(),
     cloudState: {
       ...DEFAULT_CLOUD_STATE,
@@ -152,6 +167,17 @@ type Action =
   | { type: "HYDRATE_LOCATION"; location: Location }
   | { type: "SET_FORECAST"; forecast: LocationForecast | null }
   | { type: "SELECT_NIGHT"; nightKey: string }
+  | { type: "SELECT_CATALOG_NIGHT"; nightKey: string }
+  | { type: "SET_CATALOG_FORECAST_TIME"; forecastTime: string | null }
+  | {
+      type: "SYNC_LOCATION_CLOCK";
+      locationId: string;
+      expectedNight: string;
+      expectedForecastTime: string | null;
+      timeZone: string;
+      night: string;
+      forecastTime: string;
+    }
   | {
       type: "SYNC_INITIAL_CLOCK";
       expectedNight: string;
@@ -160,7 +186,7 @@ type Action =
       forecastTime: string;
     }
   | { type: "SET_BORTLE"; enabled: boolean }
-  | { type: "SET_CLOUD"; partial: Partial<CloudState> }
+  | { type: "SET_CLOUD"; partial: Partial<CloudState>; source: "auto" | "explicit" }
   | { type: "SET_CANDIDATE_FORECAST_MODEL"; model: ForecastModel }
   | { type: "SET_CANDIDATES"; candidates: CityCandidate[] }
   | { type: "ADD_CANDIDATE"; candidate: CityCandidate }
@@ -193,9 +219,12 @@ export function cachedForecast(
   cache: Map<string, LocationForecast>,
   locationId: string,
   model: ForecastModel,
+  location?: Pick<Location, "latitude" | "longitude">,
 ): LocationForecast | null {
   const value = cache.get(forecastCacheKey(locationId, model));
-  return value?.metadata?.model === model ? value : null;
+  if (!value || value.metadata?.model !== model) return null;
+  if (location && (!Number.isFinite(value.requestedLatitude) || !Number.isFinite(value.requestedLongitude) || Math.abs(value.requestedLatitude! - location.latitude) > 1e-5 || Math.abs(value.requestedLongitude! - location.longitude) > 1e-5)) return null;
+  return value;
 }
 
 function markForecastStale(forecast: LocationForecast): LocationForecast {
@@ -218,36 +247,92 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_FORECAST":
       return { ...state, forecast: action.forecast };
     case "SELECT_NIGHT":
-      return { ...state, selectedNight: action.nightKey };
-    case "SYNC_INITIAL_CLOCK":
+      return { ...state, selectedNight: action.nightKey, pointClockSource: "explicit" };
+    case "SELECT_CATALOG_NIGHT":
+      return { ...state, catalogSelectedNight: action.nightKey };
+    case "SET_CATALOG_FORECAST_TIME":
+      return { ...state, catalogForecastTime: action.forecastTime };
+    case "SYNC_LOCATION_CLOCK": {
+      if (state.selectedLocation?.id !== action.locationId) return state;
+      const selectedLocation = { ...state.selectedLocation, timezone: action.timeZone };
       if (
+        state.pointClockSource === "explicit" ||
         state.selectedNight !== action.expectedNight ||
         state.cloudState.activeForecastTime !== action.expectedForecastTime
-      ) return state;
+      ) return { ...state, selectedLocation, forecastWindowStart: action.forecastTime };
       return {
         ...state,
+        selectedLocation,
+        forecastWindowStart: action.forecastTime,
         nightKeys: nightRangeKeys(action.night, 7),
         selectedNight: action.night,
         cloudState: {
           ...state.cloudState,
           activeForecastTime: action.forecastTime,
+          activeForecastEpoch: null,
           timeIndex: nightHourIndex(action.forecastTime),
         },
       };
+    }
+    case "SYNC_INITIAL_CLOCK": {
+      const catalogClockIsAutomatic =
+        state.catalogSelectedNight === action.expectedNight &&
+        state.catalogForecastTime === action.expectedForecastTime;
+      const pointClockIsAutomatic =
+        state.pointClockSource === "auto" &&
+        state.selectedNight === action.expectedNight &&
+        state.cloudState.activeForecastTime === action.expectedForecastTime;
+      const next = {
+        ...state,
+        forecastWindowStart: action.forecastTime,
+        ...(catalogClockIsAutomatic
+          ? {
+              catalogNightKeys: nightRangeKeys(action.night, 7),
+              catalogSelectedNight: action.night,
+              catalogForecastWindowStart: action.forecastTime,
+              catalogForecastTime: action.forecastTime,
+            }
+          : {}),
+      };
+      if (!pointClockIsAutomatic) return next;
+      return {
+        ...next,
+        nightKeys: nightRangeKeys(action.night, 7),
+        selectedNight: action.night,
+        cloudState: {
+          ...state.cloudState,
+          activeForecastTime: action.forecastTime,
+          activeForecastEpoch: null,
+          timeIndex: nightHourIndex(action.forecastTime),
+        },
+      };
+    }
     case "SET_BORTLE":
       return { ...state, bortleEnabled: action.enabled };
-    case "SET_CLOUD":
-      if (action.partial.model && action.partial.model !== state.cloudState.model) {
+    case "SET_CLOUD": {
+      const partial = { ...action.partial };
+      if (partial.activeForecastTime !== undefined && partial.activeForecastEpoch === undefined) partial.activeForecastEpoch = null;
+      if (action.source === "auto" && state.pointClockSource === "explicit") {
+        if (partial.activeForecastTime !== state.cloudState.activeForecastTime) delete partial.timeIndex;
+        delete partial.activeForecastTime;
+        delete partial.activeForecastEpoch;
+        if (!Object.keys(partial).length) return state;
+      }
+      const pointClockSource = action.source === "explicit" && partial.activeForecastTime != null
+        ? "explicit" as const : state.pointClockSource;
+      if (partial.model && partial.model !== state.cloudState.model) {
         return {
           ...state,
-          cloudState: { ...state.cloudState, ...action.partial },
+          pointClockSource,
+          cloudState: { ...state.cloudState, ...partial },
           forecast: null,
           loading: false,
           error: "",
           forecastAvailability: { error: null, lastSuccessAt: null, staleInUse: false },
         };
       }
-      return { ...state, cloudState: { ...state.cloudState, ...action.partial } };
+      return { ...state, pointClockSource, cloudState: { ...state.cloudState, ...partial } };
+    }
     case "SET_CANDIDATE_FORECAST_MODEL":
       return state.candidateForecastModel === action.model ? state : { ...state, candidateForecastModel: action.model };
     case "SET_CANDIDATES":
@@ -367,7 +452,9 @@ async function fetchForecastFor(
   );
   const forecast = result.data.locations[0] ?? null;
   if (!forecast) throw new Error("天气响应没有返回选中地点");
-  return forecast;
+  // forecastClient has verified this response slot's requested coordinates.
+  // API coordinate IDs and local catalog/search IDs are different namespaces.
+  return { ...forecast, locationId: location.id };
 }
 
 interface StoreContextValue {
@@ -383,8 +470,11 @@ interface StoreContextValue {
   ) => Promise<void>;
   refreshData: () => Promise<void>;
   selectNight: (nightKey: string) => void;
+  selectCatalogCandidate: (candidate: CityCandidate) => Promise<void>;
+  selectCatalogNight: (nightKey: string) => void;
+  setCatalogForecastTime: (forecastTime: string | null) => void;
   toggleBortle: () => void;
-  setCloud: (partial: Partial<CloudState>) => void;
+  setCloud: (partial: Partial<CloudState>, source?: "auto" | "explicit") => void;
   setCandidateForecastModel: (model: ForecastModel) => void;
   setCandidates: (candidates: CityCandidate[]) => void;
   addCandidate: (location: Location) => void;
@@ -613,9 +703,35 @@ export function StoreProvider({
     }
   }, [candidatesHydrated, state.candidates]);
 
+  const syncLocationClock = useCallback((
+    locationId: string,
+    forecast: LocationForecast,
+    expectedNight: string,
+    expectedForecastTime: string | null,
+  ) => {
+    try {
+      const now = new Date();
+      const night = currentNightKey(now, forecast.timezone);
+      const forecastTime = initialForecastTime(now, forecast.timezone);
+      dispatch({
+        type: "SYNC_LOCATION_CLOCK",
+        locationId,
+        expectedNight,
+        expectedForecastTime,
+        timeZone: forecast.timezone,
+        night,
+        forecastTime,
+      });
+    } catch {
+      // Invalid provider timezone: preserve the existing point clock.
+    }
+  }, []);
+
   const selectLocation = useCallback(
     async (location: Location, model?: CloudState["model"]) => {
       const selectedModel = model ?? state.cloudState.model;
+      const expectedNight = state.selectedNight;
+      const expectedForecastTime = state.cloudState.activeForecastTime ?? null;
       currentModelRef.current = selectedModel;
       pendingModelRef.current = selectedModel;
       const requestId = ++latestForecastRequestRef.current;
@@ -624,7 +740,7 @@ export function StoreProvider({
       // so the background hydration effect does not silently retry it: such a
       // retry used to land after a 429 and hide the failure from the user.
       forecastHydrationKeyRef.current = `${location.id}|${selectedModel}`;
-      const cached = cachedForecast(state.forecastCache, location.id, selectedModel);
+      const cached = cachedForecast(state.forecastCache, location.id, selectedModel, location);
       dispatch({ type: "SET_LOCATION", location });
       dispatch({ type: "SET_DETAIL_OPEN", open: true });
       dispatch({ type: "SET_LOADING", loading: true });
@@ -635,6 +751,7 @@ export function StoreProvider({
         dispatch({ type: "SET_FORECAST", forecast: cached });
         const cachedIssue = forecastTrustIssue(cached, Date.now(), selectedModel);
         if (cachedIssue) dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: cachedIssue });
+        else syncLocationClock(location.id, cached, expectedNight, expectedForecastTime);
       } else {
         dispatch({ type: "SET_FORECAST", forecast: null });
       }
@@ -647,6 +764,7 @@ export function StoreProvider({
           dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: issue ?? "天气数据不可用" });
         } else {
           dispatch({ type: "SET_FORECAST_SUCCESS", fetchedAt: forecast.fetchedAt });
+          syncLocationClock(location.id, forecast, expectedNight, expectedForecastTime);
         }
         if (forecast) {
           dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
@@ -654,7 +772,7 @@ export function StoreProvider({
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current || currentModelRef.current !== selectedModel) return;
         const message = error instanceof Error ? error.message : "天气请求失败";
-        const fallback = cachedForecast(state.forecastCache, location.id, selectedModel);
+        const fallback = cachedForecast(state.forecastCache, location.id, selectedModel, location);
         if (fallback) {
           const staleFallback = markForecastStale(fallback);
           dispatch({ type: "SET_FORECAST", forecast: staleFallback });
@@ -672,7 +790,7 @@ export function StoreProvider({
         if (requestId === latestForecastRequestRef.current) forecastInFlightRef.current = false;
       }
     },
-    [state.cloudState.model, state.forecastCache],
+    [state.cloudState.activeForecastTime, state.cloudState.model, state.forecastCache, state.selectedNight, syncLocationClock],
   );
 
   const sampleAt = useCallback(
@@ -685,6 +803,8 @@ export function StoreProvider({
       forceRefresh = false,
     ) => {
       const selectedModel = model ?? state.cloudState.model;
+      const expectedNight = state.selectedNight;
+      const expectedForecastTime = state.cloudState.activeForecastTime ?? null;
       currentModelRef.current = selectedModel;
       pendingModelRef.current = selectedModel;
       const locationId = stableSampleLocationId(latitude, longitude);
@@ -719,7 +839,7 @@ export function StoreProvider({
       // location+model pair, so the hydration effect must not retry it and
       // mask a 429 the user is supposed to see.
       forecastHydrationKeyRef.current = `${locationId}|${selectedModel}`;
-      const cached = cachedForecast(state.forecastCache, locationId, selectedModel);
+      const cached = cachedForecast(state.forecastCache, locationId, selectedModel, location);
       const requestId = ++latestForecastRequestRef.current;
       forecastInFlightRef.current = true;
       dispatch({ type: "SET_LOADING", loading: true });
@@ -728,6 +848,7 @@ export function StoreProvider({
         dispatch({ type: "SET_FORECAST", forecast: cached });
         const cachedIssue = forecastTrustIssue(cached, Date.now(), selectedModel);
         if (cachedIssue) dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: cachedIssue });
+        else syncLocationClock(location.id, cached, expectedNight, expectedForecastTime);
       } else {
         dispatch({ type: "SET_FORECAST", forecast: null });
       }
@@ -744,6 +865,7 @@ export function StoreProvider({
           dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: issue ?? "天气数据不可用" });
         } else {
           dispatch({ type: "SET_FORECAST_SUCCESS", fetchedAt: forecast.fetchedAt });
+          syncLocationClock(location.id, forecast, expectedNight, expectedForecastTime);
         }
         if (forecast) {
           dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
@@ -751,7 +873,7 @@ export function StoreProvider({
       } catch (error) {
         if (requestId !== latestForecastRequestRef.current || currentModelRef.current !== selectedModel) return;
         const message = error instanceof Error ? error.message : "取样或天气请求失败";
-        const fallback = cachedForecast(state.forecastCache, locationId, selectedModel);
+        const fallback = cachedForecast(state.forecastCache, locationId, selectedModel, location);
         if (fallback) {
           const staleFallback = markForecastStale(fallback);
           dispatch({ type: "SET_FORECAST", forecast: staleFallback });
@@ -766,10 +888,12 @@ export function StoreProvider({
         if (requestId === latestForecastRequestRef.current) forecastInFlightRef.current = false;
       }
     },
-    [state.cloudState.model, state.forecastCache],
+    [state.cloudState.activeForecastTime, state.cloudState.model, state.forecastCache, state.selectedNight, syncLocationClock],
   );
 
   const refreshData = useCallback(async () => {
+    const expectedNight = state.selectedNight;
+    const expectedForecastTime = state.cloudState.activeForecastTime ?? null;
     const location = state.selectedLocation;
     const requestStartedAt = Date.now();
     const lastAttempt = lastForecastAttemptRef.current;
@@ -815,6 +939,7 @@ export function StoreProvider({
         dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: issue ?? "天气数据不可用" });
       } else {
         dispatch({ type: "SET_FORECAST_SUCCESS", fetchedAt: forecast.fetchedAt });
+        syncLocationClock(location.id, forecast, expectedNight, expectedForecastTime);
       }
       if (forecast) {
         dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
@@ -822,7 +947,7 @@ export function StoreProvider({
     } catch (error) {
       if (requestId !== latestForecastRequestRef.current || currentModelRef.current !== state.cloudState.model) return;
       const message = error instanceof Error ? error.message : "数据刷新失败";
-      const fallback = cachedForecast(state.forecastCache, location.id, state.cloudState.model);
+      const fallback = cachedForecast(state.forecastCache, location.id, state.cloudState.model, location);
       if (fallback) {
         const staleFallback = markForecastStale(fallback);
         dispatch({ type: "SET_FORECAST", forecast: staleFallback });
@@ -836,7 +961,7 @@ export function StoreProvider({
       }
       if (requestId === latestForecastRequestRef.current) forecastInFlightRef.current = false;
     }
-  }, [state.cloudState.model, state.forecastCache, state.selectedLocation]);
+  }, [state.cloudState.activeForecastTime, state.cloudState.model, state.forecastCache, state.selectedLocation, state.selectedNight, syncLocationClock]);
 
   const locate = useCallback(
     (latitude: number, longitude: number) => {
@@ -847,13 +972,26 @@ export function StoreProvider({
   const selectNight = useCallback((nightKey: string) => {
     dispatch({ type: "SELECT_NIGHT", nightKey });
   }, []);
+  const selectCatalogNight = useCallback((nightKey: string) => {
+    dispatch({ type: "SELECT_CATALOG_NIGHT", nightKey });
+  }, []);
+  const setCatalogForecastTime = useCallback((forecastTime: string | null) => {
+    dispatch({ type: "SET_CATALOG_FORECAST_TIME", forecastTime });
+  }, []);
   const toggleBortle = useCallback(() => {
     if (!hasDarkSkyLayer()) return;
     dispatch({ type: "SET_BORTLE", enabled: !state.bortleEnabled });
   }, [state.bortleEnabled]);
-  const setCloud = useCallback((partial: Partial<CloudState>) => {
-    dispatch({ type: "SET_CLOUD", partial });
+  const setCloud = useCallback((partial: Partial<CloudState>, source: "auto" | "explicit" = "explicit") => {
+    dispatch({ type: "SET_CLOUD", partial, source });
   }, []);
+  const selectCatalogCandidate = useCallback(async (candidate: CityCandidate) => {
+    // A candidate click inspects the evening the user was comparing, rather
+    // than silently returning to the selected point's current local night.
+    selectNight(state.catalogSelectedNight);
+    setCloud({ activeForecastTime: `${state.catalogSelectedNight}T20:00`, playing: false });
+    await selectLocation({ ...candidate, elevation: candidate.elevation ?? null, source: "参考点位" });
+  }, [selectLocation, selectNight, setCloud, state.catalogSelectedNight]);
   const setCandidateForecastModel = useCallback((model: ForecastModel) => {
     dispatch({ type: "SET_CANDIDATE_FORECAST_MODEL", model });
   }, []);
@@ -917,6 +1055,8 @@ export function StoreProvider({
     // effect. Request identity guards own the completion; an effect cleanup
     // flag would cancel this request because of its own loading transition.
     const hydrationRequestId = latestForecastRequestRef.current;
+    const expectedNight = state.selectedNight;
+    const expectedForecastTime = state.cloudState.activeForecastTime ?? null;
     dispatch({ type: "SET_LOADING", loading: true });
     void fetchForecastFor(location, model)
       .then((forecast) => {
@@ -934,6 +1074,7 @@ export function StoreProvider({
           dispatch({ type: "SET_FORECAST_UNAVAILABLE", error: issue });
         } else {
           dispatch({ type: "SET_FORECAST_SUCCESS", fetchedAt: forecast.fetchedAt });
+          syncLocationClock(location.id, forecast, expectedNight, expectedForecastTime);
         }
         dispatch({ type: "CACHE_FORECAST", locationId: location.id, forecast });
         if (currentModelRef.current === model && selectedLocationIdRef.current === location.id && hydrationRequestId === latestForecastRequestRef.current) {
@@ -948,7 +1089,7 @@ export function StoreProvider({
           dispatch({ type: "SET_LOADING", loading: false });
         }
       });
-  }, [state.cloudState.model, state.forecast, state.loading, state.selectedLocation]);
+  }, [state.cloudState.activeForecastTime, state.cloudState.model, state.forecast, state.loading, state.selectedLocation, state.selectedNight, syncLocationClock]);
 
   // Quiet periodic recheck: only while a location is selected, the tab is
   // visible, and no request is already in flight. The latest-request guard
@@ -1113,6 +1254,9 @@ export function StoreProvider({
       sampleAt,
       refreshData,
       selectNight,
+      selectCatalogCandidate,
+      selectCatalogNight,
+      setCatalogForecastTime,
       toggleBortle,
       setCloud,
       setCandidateForecastModel,
@@ -1141,6 +1285,9 @@ export function StoreProvider({
       sampleAt,
       refreshData,
       selectNight,
+      selectCatalogCandidate,
+      selectCatalogNight,
+      setCatalogForecastTime,
       toggleBortle,
       setCloud,
       setCandidateForecastModel,

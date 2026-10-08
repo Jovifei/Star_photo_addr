@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+      - codex/overnight-forecast-coverage-20261003
   workflow_dispatch:
   schedule:
     - cron: "30 2 * * *"
@@ -116,6 +117,7 @@ jobs:
           for attempt in $(seq 1 90); do
             if curl -fsS http://127.0.0.1:3100/healthz > /tmp/health.json; then
               cat /tmp/health.json
+              docker compose -f docker-compose.yml -f docker-compose.aliyun.yml exec -T star-weather node scripts/check-release-frontend.mjs /app
               exit 0
             fi
             sleep 1

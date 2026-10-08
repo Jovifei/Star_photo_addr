@@ -1,7 +1,7 @@
 "use client";
 
 import { SlidersHorizontal } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   OBSERVING_SITES,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/bortleFilters";
 import {
   forecastTimeWindow,
+  formatHourWithDate,
   formatNightLabel,
   isInNight,
   scoreDateForForecastTime,
@@ -48,7 +49,8 @@ export default function ObservingMapControl({
 }: {
   docked?: boolean;
 } = {}) {
-  const { state, setCloud, setRecommendationThreshold, setObservingBortleLevels, setObservingBortleLimit, setRecommendationBands } = useStore();
+  const { state, setCloud, setCatalogForecastTime, setRecommendationThreshold, setObservingBortleLevels, setObservingBortleLimit, setRecommendationBands } = useStore();
+  const updateCatalogForecastTime = useMemo(() => setCatalogForecastTime ?? ((time: string | null) => setCloud({ activeForecastTime: time, playing: false })), [setCatalogForecastTime, setCloud]);
   const isSitesWorkspace = state.mapWorkspace === "sites";
   // Floating phone panels default to a title strip. Inside the mobile drawer
   // the full form remains expanded because the drawer itself provides the
@@ -60,35 +62,35 @@ export default function ObservingMapControl({
     if (!query.matches) return;
     queueMicrotask(() => setCollapsed(true));
   }, [docked]);
-  // The score window anchors on the current hour, which can tick between
-  // server render and hydration (e.g. 17:59 -> 18:00) and break hydration.
-  // Render the empty placeholder on both sides, then adopt the store value
-  // after mount.
-  const [scoreWindowStart, setScoreWindowStart] = useState("");
-  const initialScoreWindowRef = useRef(state.cloudState.activeForecastTime ?? "");
-  useEffect(() => {
-    queueMicrotask(() => setScoreWindowStart(initialScoreWindowRef.current));
-  }, []);
+  // This panel can mount after a rail selection. It must not re-anchor the
+  // shared forward window to that selected hour and clamp another control.
+  const scoreWindowStart = state.catalogForecastWindowStart ?? state.forecastWindowStart;
+  const catalogSelectedNight = state.catalogSelectedNight ?? state.selectedNight;
+  const catalogForecastTime = state.catalogForecastTime ?? state.cloudState.activeForecastTime;
+  const windowNoteId = useId();
   const scoreTimes = useMemo(() => forecastTimeWindow(scoreWindowStart, 72), [scoreWindowStart]);
   const [snapshot, setSnapshot] = useState<ObservationSnapshot | null>(null);
   const [snapshotErrorTime, setSnapshotErrorTime] = useState<string | null>(null);
   const snapshotRequestId = useRef(0);
-  const activeScoreTime = scoreTimes.includes(state.cloudState.activeForecastTime ?? "")
-    ? state.cloudState.activeForecastTime!
+  const forwardScoreTime = scoreTimes.includes(catalogForecastTime ?? "")
+    ? catalogForecastTime!
     : scoreTimes[0] ?? "";
-  const snapshotRequestKey = `${activeScoreTime}|${state.cloudState.model}|${state.selectedNight}`;
+  const selectedTime = catalogForecastTime;
+  const selectedNightOutsideWindow = Boolean(selectedTime && !scoreTimes.includes(selectedTime) && isInNight(selectedTime, catalogSelectedNight));
+  const activeScoreTime = selectedNightOutsideWindow ? selectedTime! : forwardScoreTime;
+  const snapshotRequestKey = `${activeScoreTime}|${state.cloudState.model}|${catalogSelectedNight}`;
 
   useEffect(() => {
     if (
       !activeScoreTime ||
       !shouldClampActiveForecastTime(
-        state.cloudState.activeForecastTime,
+        catalogForecastTime,
         scoreTimes,
-        state.selectedNight,
+        catalogSelectedNight,
       )
     ) return;
-    setCloud({ activeForecastTime: activeScoreTime, playing: false });
-  }, [activeScoreTime, scoreTimes, setCloud, state.cloudState.activeForecastTime, state.selectedNight]);
+    updateCatalogForecastTime(activeScoreTime);
+  }, [activeScoreTime, scoreTimes, updateCatalogForecastTime, catalogForecastTime, catalogSelectedNight]);
 
   useEffect(() => {
     if (!activeScoreTime) return;
@@ -96,7 +98,7 @@ export default function ObservingMapControl({
     snapshotRequestId.current = requestId;
     const controller = new AbortController();
     const params = new URLSearchParams({
-      date: scoreDateForForecastTime(activeScoreTime, state.selectedNight),
+      date: scoreDateForForecastTime(activeScoreTime, catalogSelectedNight),
       days: "1",
       model: state.cloudState.model,
       time: activeScoreTime,
@@ -121,7 +123,7 @@ export default function ObservingMapControl({
         }
       });
     return () => controller.abort();
-  }, [activeScoreTime, snapshotRequestKey, state.cloudState.model, state.selectedNight]);
+  }, [activeScoreTime, snapshotRequestKey, state.cloudState.model, catalogSelectedNight]);
 
   // A response for the previous slider position must not be used while the
   // new hourly snapshot is in flight. The API cache key includes focusTime,
@@ -199,7 +201,7 @@ export default function ObservingMapControl({
 
   function setScoreTime(index: number) {
     const time = scoreTimes[Math.min(Math.max(index, 0), Math.max(0, scoreTimes.length - 1))];
-    if (time) setCloud({ activeForecastTime: time, playing: false });
+    if (time) updateCatalogForecastTime(time);
   }
 
   return (
@@ -285,18 +287,20 @@ export default function ObservingMapControl({
           <div className="observing-score-window" aria-label="观星评分时间窗口">
             <div className="observing-score-window-title">
               <span>评分时次</span>
-              <strong>{describeScoreTime(activeScoreTime)}</strong>
+              <strong>{selectedNightOutsideWindow ? `观测夜 · ${formatNightLabel(catalogSelectedNight, true)} ${formatHourWithDate(activeScoreTime, catalogSelectedNight)}` : describeScoreTime(activeScoreTime)}</strong>
             </div>
             <input
               type="range"
               min="0"
               max={Math.max(0, scoreTimes.length - 1)}
-              value={Math.max(0, scoreTimes.indexOf(activeScoreTime))}
+              value={Math.max(0, scoreTimes.indexOf(forwardScoreTime))}
               onChange={(event) => setScoreTime(Number(event.target.value))}
               aria-label="观星评分时间滑窗"
-              aria-valuetext={describeScoreTime(activeScoreTime)}
+              aria-valuetext={describeScoreTime(forwardScoreTime)}
+              aria-describedby={selectedNightOutsideWindow ? windowNoteId : undefined}
               disabled={!scoreTimes.length}
             />
+            {selectedNightOutsideWindow && <small id={windowNoteId}>当前选择来自观测夜，拖动滑窗切回未来72小时</small>}
             <div className="observing-score-window-ticks" aria-hidden="true">
               <span>现在</span><span>明天</span><span>后天</span><span>+72h</span>
             </div>

@@ -1,5 +1,6 @@
 import { statusMeta } from "@/lib/scoring";
 import type { Location, NightEvaluation } from "@/lib/types";
+import { formatSourceUpdateTime } from "@/lib/sourceTime";
 
 export type DecisionSummaryKind = "empty" | "unknown" | "ready";
 
@@ -20,6 +21,7 @@ export function buildDecisionSummary(input: {
   loading: boolean;
   updatedAt: string | null;
   unavailableReason?: string | null;
+  hasWeatherFacts?: boolean;
 }): DecisionSummaryModel {
   const updatedLabel = formatUpdatedLabel(input.updatedAt);
 
@@ -40,7 +42,7 @@ export function buildDecisionSummary(input: {
     return {
       kind: "unknown",
       locationName: input.location.name,
-      gradeLabel: "数据不足",
+      gradeLabel: !input.loading && input.hasWeatherFacts ? "评分暂缓" : "数据不足",
       gradeTone: "muted",
       windowLabel: "—",
       riskTitle: "评分未知",
@@ -70,13 +72,5 @@ export function buildDecisionSummary(input: {
 }
 
 function formatUpdatedLabel(iso: string | null): string {
-  if (!iso) return "尚未更新";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "尚未更新";
-  return new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).format(date);
+  return formatSourceUpdateTime(iso) ?? "尚未更新";
 }

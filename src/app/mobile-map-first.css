@@ -12,7 +12,7 @@
     height: var(--mobile-visual-height, 100dvh);
     min-height: 0;
     max-height: var(--mobile-visual-height, 100dvh);
-    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    padding-bottom: var(--product-navigation-height, calc(56px + env(safe-area-inset-bottom)));
     overflow: hidden;
   }
 .app-shell > .app-header {
@@ -38,8 +38,10 @@
     inset: auto 0 0 0;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: center;
     width: 100%;
-    height: calc(56px + env(safe-area-inset-bottom));
+    height: auto;
+    min-height: calc(56px + env(safe-area-inset-bottom));
     padding: 2px max(5px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(5px, env(safe-area-inset-left));
     gap: 2px;
     border: 0;
@@ -51,8 +53,8 @@
 .app-header .nav-tabs .nav-tab {
     min-width: 0;
     min-height: 48px;
-    height: 48px;
-    padding: 0 2px;
+    height: auto;
+    padding: 4px 2px;
     border: 0;
     border-radius: 8px;
     font-size: 13px;
@@ -336,10 +338,11 @@
 
   .workspace-canvas .mobile-map-panel-rail {
     position: absolute; z-index: 500; inset: auto 8px 8px auto;
-    display: block; width: 52px; max-width: none; padding: 2px;
+    display: block; width: max-content; min-width: 52px; max-width: none; padding: 2px;
     transform: none;
   }
-  .workspace-canvas .mobile-map-panel-rail button { width: 48px; min-width: 48px; height: 48px; font-size: 11px; }
+  .workspace-canvas .mobile-map-panel-rail button { width: auto; min-width: 48px; height: auto; min-height: 48px; font-size: 11px; }
+  .workspace-canvas .mobile-map-panel-rail button > span { white-space: nowrap; }
   .workspace-canvas .map-viewport .map-render-status--tile {
     top: 10px;
     right: max(10px, env(safe-area-inset-right));
@@ -353,8 +356,11 @@
   }
   .workspace-canvas .map-viewport .map-render-status--tile button { min-height: 48px; }
   .workspace-canvas .map-viewport .map-render-status--tile {
-    grid-template-columns: minmax(0, 1fr);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
   }
+  .workspace-canvas .map-viewport .map-render-status--tile > span { flex-basis: auto; }
   .workspace-canvas .map-viewport .map-render-status--tile button {
     margin-top: 6px;
   }
@@ -452,9 +458,43 @@
 
   .workspace-canvas .map-viewport {
     flex: none;
-    height: min(52svh, 560px) !important;
-    min-height: 340px;
+    height: clamp(220px, 40svh, 440px) !important;
+    min-height: 0;
   }
+
+  /* Non-modal data belongs to the document. Only modal tool/filter sheets
+     retain their independent scroll regions and page locks. */
+  .mobile-data-sheet,
+  .mobile-data-sheet[data-level="half"],
+  .mobile-data-sheet[data-level="full"] {
+    flex: none;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .mobile-data-sheet-summary {
+    flex: none;
+    min-height: 60px;
+    padding: 2px 10px 6px;
+  }
+  .mobile-data-sheet-copy strong { font-size: 15px; line-height: 1.3; white-space: normal; }
+  .mobile-data-sheet-copy small { font-size: 12px; white-space: normal; }
+  .mobile-data-sheet-body {
+    flex: none;
+    overflow: visible;
+    overscroll-behavior: auto;
+    touch-action: auto;
+    scrollbar-gutter: auto;
+    padding: 2px 10px 16px;
+  }
+  .mobile-data-sheet-body .decision-summary h2 { font-size: 15px; }
+  .mobile-data-sheet-body .decision-summary .status-pill { font-size: 12px; }
+  .mobile-data-sheet-body .decision-data-state,
+  .mobile-data-sheet-body .decision-summary-evidence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .mobile-data-sheet-body .panel-location-name { font-size: 15px; }
+  .mobile-data-sheet-body .metric-grid { gap: 6px; }
+  .mobile-data-sheet-body .metric { padding: 7px; }
+  .mobile-data-sheet-body .metric .value { font-size: 16px; margin-top: 3px; }
 
   .fireglow-root .fireglow-workspace,
   .cloudsea-root .cloudsea-body {
@@ -467,8 +507,8 @@
   .fireglow-root .fireglow-map,
   .cloudsea-root .cloudsea-map-pane {
     flex: none;
-    height: min(52svh, 560px);
-    min-height: 340px;
+    height: clamp(220px, 40svh, 440px);
+    min-height: 0;
     overflow: visible;
   }
 }

@@ -1,4 +1,6 @@
 "use client";
+import { useTopicContext, usePublishTopicContext } from "@/hooks/useTopicContext";
+import SnapshotSourceDisclosure from "@/components/SnapshotSourceDisclosure";
 import type { ReactNode } from "react";
 import MapViewportObserver from "@/components/MapViewportObserver";
 import MapTileStatus from "@/components/MapTileStatus";
@@ -134,16 +136,18 @@ interface SnapshotLoadResult {
 }
 
 export default function CloudSeaApp() {
-  const [phase, setPhase] = useState<Phase>("morning");
-  const [range, setRange] = useState<RangeMode>(0);
+  const contextBaseDate = todayKey();
+  const topicContext = useTopicContext(CLOUD_SEA_SITES, "cloudsea", contextBaseDate);
+  const [phase, setPhase] = useState<Phase>(topicContext.incoming.phase ?? "morning");
+  const [range, setRange] = useState<RangeMode>(topicContext.initialRange);
   const [snapshots, setSnapshots] = useState<Record<string, CloudSeaSnapshot>>(
     {},
   );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dataNotice, setDataNotice] = useState("");
-  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
-  const [pickedPoint, setPickedPoint] = useState<Coordinate | null>(null);
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(topicContext.transfer?.site?.id ?? null);
+  const [pickedPoint, setPickedPoint] = useState<Coordinate | null>(topicContext.incoming.identity && !topicContext.transfer?.site ? { latitude: topicContext.incoming.identity.latitude, longitude: topicContext.incoming.identity.longitude } : null);
   const mobile = useMobilePanelViewport();
   const [scoreThreshold, setScoreThreshold] = useState(0);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -477,13 +481,15 @@ export default function CloudSeaApp() {
     }
   };
 
+  usePublishTopicContext("/cloudsea", CLOUD_SEA_SITES, "cloudsea", selectedSiteId, pickedPoint, selectedContext?.dateKey ?? primaryDate, phase, topicContext.incoming, topicContext.preservedDate);
+
   return (
     <div className="cloudsea-root app-shell">
       <TopicMapSearch sites={CLOUD_SEA_SITES}
         onSite={(site) => {
           const forecast = rankedSites.find((entry) => entry.site.id === site.id);
           if (forecast) handleSelectSite(site.id);
-          else { setPickedPoint({ latitude: site.latitude, longitude: site.longitude }); mapRef.current?.flyTo([site.latitude, site.longitude], 8); }
+          else { handleSelectSite(site.id); }
         }}
         onCoordinate={(point) => { setSelectedSiteId(null); setPickedPoint(point); mapRef.current?.flyTo([point.latitude, point.longitude], 8); }} />
       <ProductHeader
@@ -523,7 +529,7 @@ export default function CloudSeaApp() {
                 type="button"
                 aria-pressed={range === option.value}
                 className={range === option.value ? "active" : ""}
-                onClick={() => setRange(option.value)}
+                onClick={() => { topicContext.acceptDate(); setRange(option.value); }}
                 title={option.hint}
               >
                 {rangeOptionLabel(option, baseDate)}
@@ -546,6 +552,9 @@ export default function CloudSeaApp() {
           </button>
         </div>
       </ProductHeader>
+      {topicContext.transfer?.status === "conflict" && !selectedSiteId && pickedPoint?.latitude === topicContext.incoming.identity?.latitude && pickedPoint?.longitude === topicContext.incoming.identity?.longitude ? <p role="status" className="location-transfer-notice" data-testid="location-transfer-conflict">所选地点与本入口目录坐标冲突（相距约 {topicContext.transfer.distanceKm?.toFixed(1) ?? "未知"} km），保留原坐标，未自动合并或套用目录评分。</p> : null}
+      {topicContext.dateNotice ? <p role="status" className="location-transfer-notice">{topicContext.dateNotice}</p> : null}
+
 
       <details className="cloudsea-beta-banner forecast-method-note">
         <summary>GFS 模型 · 条件指数，非实测概率</summary>
@@ -907,6 +916,7 @@ export default function CloudSeaApp() {
           </ResponsiveTopicDetail>
         ) : null}
       </div>
+      <SnapshotSourceDisclosure snapshot={selectedContext?.snapshot ?? snapshots[primaryDate]} siteId={selectedSiteId} />
     </div>
   );
 }

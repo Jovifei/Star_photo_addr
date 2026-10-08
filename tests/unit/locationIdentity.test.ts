@@ -60,3 +60,38 @@ describe("location identity", () => {
     expect(dedupeLocationIdentities([first, second])).toEqual([first]);
   });
 });
+
+import { locationIdentity, resolveLocationTransfer } from "@/lib/locationIdentity";
+
+describe("coordinate-bound catalogue transfers", () => {
+  const origin = locationIdentity({ id: "finder-147-location", name: "雅安牛背山", latitude: 29.782, longitude: 102.582 }, "observing");
+  const destination = { id: "cs-niubeishan", name: "雅安牛背山", latitude: 29.742, longitude: 102.325 };
+  it("keeps the two Niubeishan coordinates separate", () => {
+    const result = resolveLocationTransfer(origin, [destination], "cloudsea");
+    expect(result.status).toBe("conflict");
+    expect(result.site).toBeNull();
+    expect(result.distanceKm).toBeGreaterThan(24);
+    expect(result.distanceKm).toBeLessThan(26);
+  });
+  it("rejects contradictory coordinates even with matching canonical and source IDs", () => {
+    const forged = { ...origin, sourceScope: "cloudsea" as const, sourceId: destination.id, canonicalId: "cloudsea:cs-niubeishan" };
+    expect(resolveLocationTransfer(forged, [destination], "cloudsea").status).toBe("conflict");
+  });
+  it("does not announce unrelated catalogue differences", () => {
+    expect(resolveLocationTransfer({ ...origin, name: "任意地点" }, [destination], "cloudsea").status).toBe("coordinate");
+  });
+  it("matches a catalogue ID only when its coordinates also agree", () => {
+    const exact = locationIdentity(destination, "cloudsea");
+    expect(resolveLocationTransfer(exact, [destination], "cloudsea").site?.id).toBe(destination.id);
+  });
+  it("does not merge distinct same-name viewpoints", () => {
+    expect(resolveLocationTransfer(origin, [{ ...destination, latitude: origin.latitude, longitude: origin.longitude }, destination], "cloudsea").status).toBe("conflict");
+  });
+});
+
+it("same IDs cannot bypass conflicting coordinates in shared store identity", () => {
+  const a = { id: "same", latitude: 29.782, longitude: 102.582 };
+  const b = { id: "same", latitude: 29.742, longitude: 102.325 };
+  expect(sameLocationIdentity(a, b)).toBe(false);
+  expect(dedupeLocationIdentities([a,b])).toHaveLength(2);
+});

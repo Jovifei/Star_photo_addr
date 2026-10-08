@@ -23,7 +23,8 @@ function samePoint(a: { latitude: number; longitude: number }, b: { latitude: nu
 /** Consumes the same candidate request service. Never borrows scores by fuzzy place name/distance. */
 export default function StarWindowTable() {
   const { state, addCandidate, removeCandidate, selectLocation, setCandidateForecastModel } = useStore();
-  const { candidates, nightKeys, forecastCache, selectedLocation } = state;
+  const { candidates, forecastCache, selectedLocation } = state;
+  const nightKeys = state.catalogNightKeys ?? state.nightKeys;
   const candidateForecastError = useCandidateForecasts(candidates);
   const selectedForecastRequest = useMemo(() => {
     if (!selectedLocation || candidates.some((candidate) => samePoint(candidate, selectedLocation))) return [];
@@ -126,7 +127,7 @@ export default function StarWindowTable() {
       <div className="star-window-table-wrap"><table className="star-window-table">
         <thead><tr><th className="star-window-loc-col">地点</th>{nightKeys.map((night) => <th key={night} className={`star-window-date-col${sortKey === night ? " sorted" : ""}`} aria-sort={sortKey === night ? sortDir === "asc" ? "ascending" : "descending" : "none"}>
           <button type="button" title={`${formatNightLabel(night, false)}；点击按该夜评分排序地点`} onClick={() => handleSort(night)}><span>{formatNightLabel(night, true)}</span>{sortKey === night ? sortDir === "asc" ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" /> : null}</button>
-        </th>)}<th className="star-window-action-col" /></tr></thead>
+        </th>)}<th className="star-window-action-col" scope="col"><span className="sr-only">候选操作</span></th></tr></thead>
         <tbody>{sortedLocations.map((location) => <tr key={location.id} className={selectedLocation?.id === location.id ? "active" : ""}>
           <td className="star-window-loc-cell"><button type="button" className="star-window-location-button" disabled={!location.isCandidate} onClick={() => handleRowClick(location)}><span className="star-window-loc-name">{location.name}</span></button>{(location.bortle ?? 0) > 0 && <span className="bortle-chip">参考 B{location.bortle}</span>}</td>
           {nightKeys.map((night) => {

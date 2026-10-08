@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 const POINT = { latitude: 30.182, longitude: 108.882 };
-function response(model = "icon", stale = false) {
+function response(model = "icon", stale = false, point = POINT) {
   const fetchedAt = new Date().toISOString();
   const metadata = { source: "Open-Meteo", model, fetchedAt, stale, units: {} };
-  return Response.json({ metadata, locations: [{ locationId: "loc-0", modelLatitude: 30.18, modelLongitude: 108.88, modelElevation: 1402, timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, fetchedAt, metadata, hourly: [{ time: "2026-09-13T21:00" }] }] });
+  return Response.json({ metadata, locations: [{ locationId: "loc-0", requestedLatitude: point.latitude, requestedLongitude: point.longitude, modelLatitude: 30.18, modelLongitude: 108.88, modelElevation: 1402, timezone: "Asia/Shanghai", utcOffsetSeconds: 28_800, fetchedAt, metadata, hourly: [{ time: "2026-09-13T21:00" }] }] });
 }
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 describe("bounded shared candidate loader", () => {
@@ -49,6 +49,7 @@ describe("bounded shared candidate loader", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(new URL(String(fetchMock.mock.calls[0]![0]), "http://localhost").searchParams.get("latitude")).toBe("30.1,31.6");
     expect(first.map((entry) => entry.id)).toEqual(["a", "z"]);
+    expect(first.map((entry) => entry.forecast.locationId)).toEqual(["a", "z"]);
     expect(second.map((entry) => entry.forecast.metadata?.model)).toEqual(["best_match", "best_match"]);
   });
 
@@ -62,7 +63,7 @@ describe("bounded shared candidate loader", () => {
   });
   it("bounds concurrency to two across different coordinates", async () => {
     vi.resetModules(); let active = 0, maximum = 0;
-    vi.stubGlobal("fetch", vi.fn(async () => { active++; maximum = Math.max(maximum, active); await new Promise((resolve) => setTimeout(resolve, 2)); active--; return response(); }));
+    vi.stubGlobal("fetch", vi.fn(async (input: string) => { active++; maximum = Math.max(maximum, active); await new Promise((resolve) => setTimeout(resolve, 2)); active--; const url = new URL(input, "http://localhost"); return response("icon", false, {latitude: Number(url.searchParams.get("latitude")), longitude: Number(url.searchParams.get("longitude"))}); }));
     const { requestCandidateForecast } = await import("@/lib/candidateForecastClient");
     await Promise.all(Array.from({ length: 20 }, (_, i) => requestCandidateForecast({ ...POINT, latitude: 30 + i / 100 }, "icon")));
     expect(maximum).toBe(2);
