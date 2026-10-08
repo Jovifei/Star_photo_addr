@@ -91,12 +91,23 @@ export async function GET(request: NextRequest) {
     Number.isFinite(daysRaw) ? daysRaw : 7,
     model,
   );
-  const key = `${model}|${days}|${latitude.toFixed(5)}|${longitude.toFixed(5)}`;
+  const key = `epoch-v1|${model}|${days}|${latitude.toFixed(5)}|${longitude.toFixed(5)}`;
   const cached = pressureCache.read(key);
+
+  if (params.get("cache_only") === "1") {
+    if (!cached || cached.ageMs > STALE_TTL_MS) return NextResponse.json(
+      { error: "气压只读缓存未命中", stale: true },
+      { status: 503, headers: { "Cache-Control": "no-store", "X-Pressure-Cache": "cache-only-miss" } },
+    );
+    const stale = cached.ageMs > FRESH_TTL_MS || Boolean(cached.value.stale);
+    return NextResponse.json({ ...cached.value, stale }, {
+      headers: { ...responseHeaders(false, "cache-only", stale, false, null), "Cache-Control": "no-store" },
+    });
+  }
 
   if (!forceRefresh && cached && cached.ageMs <= FRESH_TTL_MS) {
     return NextResponse.json(cached.value, {
-      headers: responseHeaders(false, "memory", false, false, null),
+      headers: responseHeaders(false, "memory", Boolean(cached.value.stale), false, null),
     });
   }
 
@@ -153,7 +164,7 @@ export async function GET(request: NextRequest) {
       headers: responseHeaders(
         forceRefresh,
         coordinated.coalesced ? "coalesced" : "refresh",
-        false,
+        Boolean(data.stale),
         decision.suppressed,
         decision.retryAfterSeconds,
       ),

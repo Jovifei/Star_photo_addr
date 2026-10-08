@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { Cloud, Moon, Mountain, AlertTriangle, Loader2 } from "lucide-react";
 import type { HourEvaluation, Location } from "@/lib/types";
+import { pressureProfileAt } from "@/lib/pressureIntegrity";
+import type { PressureForecastResponse } from "@/lib/pressure";
 import { deriveCloudLayers } from "@/lib/cloudLayers";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
@@ -26,11 +28,6 @@ interface PressureLevel {
   heightMsl: number;
   cloudCover: number;
   humidity?: number;
-}
-
-interface PressureForecastResult {
-  modelElevation: number;
-  profiles: Record<string, PressureLevel[]>;
 }
 
 function formatHour(timeString?: string | null): string {
@@ -236,7 +233,9 @@ export default function LocationDetailCharts({
   const hours = useMemo(() => evaluation?.hours ?? [], [evaluation?.hours]);
   const siteElevation = location?.elevation == null ? null : Math.round(location.elevation);
 
-  const [pressure, setPressure] = useState<PressureForecastResult | null>(null);
+  const requestKey = location ? `${model}|${location.latitude}|${location.longitude}` : null;
+  const [pressureState, setPressureState] = useState<{ key: string; data: PressureForecastResponse } | null>(null);
+  const pressure = pressureState?.key === requestKey ? pressureState.data : null;
   const [pressureLoading, setPressureLoading] = useState(false);
   const [pressureError, setPressureError] = useState<string | null>(null);
 
@@ -248,6 +247,7 @@ export default function LocationDetailCharts({
 
     queueMicrotask(() => {
       if (isMounted) {
+        setPressureState(null);
         setPressureLoading(true);
         setPressureError(null);
       }
@@ -268,33 +268,41 @@ export default function LocationDetailCharts({
         if (!res.ok) throw new Error("气压剖面获取失败");
         return res.json();
       })
-      .then((data: PressureForecastResult) => {
-        setPressure(data);
+      .then((data: PressureForecastResponse) => {
+        if (!isMounted) return;
+        if (data.model !== model || data.requestedLatitude !== location.latitude || data.requestedLongitude !== location.longitude) {
+          throw new Error("气压数据身份不匹配");
+        }
+        if (requestKey) setPressureState({ key: requestKey, data });
       })
       .catch((err: unknown) => {
         if (err instanceof Error && err.name === "AbortError") return;
-        setPressureError("垂直云层暂时不可用");
+        if (isMounted) setPressureError("垂直云层暂时不可用");
       })
       .finally(() => {
-        setPressureLoading(false);
+        if (isMounted) setPressureLoading(false);
       });
 
     return () => {
       isMounted = false;
       controller.abort();
     };
-  }, [location, model]);
+  }, [location, model, requestKey]);
 
   // Determine active hour
   const effectiveHour = activeHour ?? hours[0]?.time ?? null;
 
   const profile = useMemo(() => {
     if (!pressure?.profiles || !effectiveHour) return [];
-    return pressure.profiles[effectiveHour] ?? [];
-  }, [pressure, effectiveHour]);
+    return (pressureProfileAt(pressure, effectiveHour, activeEpoch) ?? []).map(sample => ({
+      pressure: sample.pressure, heightMsl: sample.heightMsl ?? Number.NaN,
+      cloudCover: sample.cloudCover ?? Number.NaN,
+      ...(sample.humidity == null ? {} : { humidity: sample.humidity }),
+    }));
+  }, [pressure, effectiveHour, activeEpoch]);
 
   const layers = useMemo(() => {
-    if (!pressure || !profile.length || siteElevation == null) return [];
+    if (!pressure || pressure.stale || !profile.length || siteElevation == null) return [];
     return deriveCloudLayers(profile, pressure.modelElevation, siteElevation);
   }, [pressure, profile, siteElevation]);
 
@@ -383,7 +391,7 @@ export default function LocationDetailCharts({
             <span className="detail-chart-title">低云垂直剖面与海拔</span>
           </div>
           <span className="detail-chart-subtitle">
-            {effectiveHour ? `${formatHour(effectiveHour)} 时次推导` : "气压层推导"}
+            {effectiveHour ? `${evaluatedHourLabel(hours.find(hour => hour.time === effectiveHour && (activeEpoch == null || hour.epochSeconds === activeEpoch)) ?? { time: effectiveHour } as HourEvaluation, hours)} 时次推导` : "气压层推导"}
           </span>
         </div>
 
@@ -401,6 +409,7 @@ export default function LocationDetailCharts({
           </div>
         )}
 
+        {pressure?.stale && <p className="chart-error-box">气压资料已降级，仅显示原始剖面，暂缓云层关系推导。</p>}
         {!pressureLoading && profileOption && (
           <div className="chart-wrapper">
             <Suspense fallback={<div className="chart-loading-box">图表加载中…</div>}>

@@ -1,4 +1,4 @@
-import type { PressureLevelSample } from "./pressure";
+import type { PressureForecastResponse, PressureLevelSample } from "./pressure";
 
 /** Pure validation shared by scoring in the browser and server ingestion. */
 export function isCompletePressureLevelSample(sample: PressureLevelSample): boolean {
@@ -15,4 +15,18 @@ export function usablePressureLevelCount(samples: PressureLevelSample[] | null |
 
 export function hasUsablePressureProfile(samples: PressureLevelSample[] | null | undefined, minimumLevels = 6): boolean {
   return usablePressureLevelCount(samples) >= minimumLevels;
+}
+
+/** Exact epoch lookup for versioned profiles; old ISO remains display-only. */
+export function pressureProfileAt(
+  pressure: Pick<PressureForecastResponse, "hourly" | "profiles" | "profilesByEpoch" | "timeAxisVersion"> | null | undefined,
+  time: string,
+  epochSeconds?: number | null,
+): PressureLevelSample[] | null {
+  if (!pressure) return null;
+  if (pressure.timeAxisVersion === "epoch-v1") {
+    const hour = pressure.hourly.find(hour => hour.time === time && (epochSeconds == null || hour.epochSeconds === epochSeconds));
+    return hour?.epochSeconds == null ? null : pressure.profilesByEpoch?.[String(hour.epochSeconds)] ?? null;
+  }
+  return pressure.profiles[time] ?? pressure.profiles[time.slice(0, 16)] ?? null;
 }

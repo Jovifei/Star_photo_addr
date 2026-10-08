@@ -42,7 +42,7 @@ const HEIGHTS: Record<number, number> = {
 
 function pressureEntry() {
   const hourly: Record<string, unknown> = {
-    time: TIME,
+    time: TIME.map(time => Date.parse(time + ":00+08:00") / 1000),
     temperature_2m: [9, 9, 10, 11],
   };
   for (const pressure of PRESSURE_LEVELS) {

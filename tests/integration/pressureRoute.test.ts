@@ -12,6 +12,28 @@ async function route() {
 }
 const request = (query = "") => new NextRequest(`http://localhost/api/pressure-forecast?latitude=30&longitude=120&model=icon${query}`);
 describe("pressure provider cooldown", () => {
+  it("cache-only miss and refresh=1 never contact the provider", async () => {
+    const { GET } = await route();
+    const response = await GET(request("&cache_only=1&refresh=1"));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("x-pressure-cache")).toBe("cache-only-miss");
+    expect(fetchPressureForecast).not.toHaveBeenCalled();
+  });
+  it("cache-only preserves original acquisition and marks old data stale", async () => {
+    vi.useFakeTimers();
+    try {
+      const { GET } = await route();
+      const fetchedAt = new Date().toISOString();
+      fetchPressureForecast.mockResolvedValue({ model: "icon", hourly: [], fetchedAt, stale: false });
+      await GET(request());
+      vi.advanceTimersByTime(11 * 60_000);
+      const response = await GET(request("&cache_only=1&refresh=1"));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ fetchedAt, stale: true });
+      expect(fetchPressureForecast).toHaveBeenCalledTimes(1);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+    } finally { vi.useRealTimers(); }
+  });
   it("returns429 with provider retry-after when no snapshot exists", async () => {
     const { GET, OpenMeteoRateLimitError } = await route();
     fetchPressureForecast.mockRejectedValue(new OpenMeteoRateLimitError(120_000));
