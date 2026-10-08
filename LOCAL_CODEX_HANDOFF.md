@@ -1,6 +1,6 @@
 # 当前云端交接 — 2026-10-08 全球压力时序与证据资格（未部署）
 
-本条优先于下方历史。授权main父基线 `f167501c0f52270d0a6f14268ab6274ca33265bb`；独立分支 `codex/decision-evidence-20261008`。最终精确head/tree和CI终态以本阶段Draft PR顶部为准（普通push，未合main）。报告：[REMOTE_PRESSURE_EVIDENCE_STAGE_20261008](docs/REMOTE_PRESSURE_EVIDENCE_STAGE_20261008.md)。已实际完成压力epoch/IANA/重复小时、旧ISOstale、地点模型归属、当前小时六层门禁、四入口模型传递与429停止、48行只读输入资格工具。PR53评论6064335323的两项独立反馈已复现并修复：完整坐标缓存/coalescing身份、HTTP200冷却保留原始快照并停止后续日期。完整check为97文件542项PASS；最终精确候选CI见PR53顶部。下方e057/旧发布只是历史。
+本条优先于下方历史。授权main父基线 `f167501c0f52270d0a6f14268ab6274ca33265bb`；独立分支 `codex/decision-evidence-20261008`。最终精确head/tree和CI终态以本阶段Draft PR顶部为准（普通push，未合main）。报告：[REMOTE_PRESSURE_EVIDENCE_STAGE_20261008](docs/REMOTE_PRESSURE_EVIDENCE_STAGE_20261008.md)。已实际完成压力epoch/IANA/重复小时、旧ISOstale、地点模型归属、当前小时六层门禁、四入口模型传递与429停止、48行只读输入资格工具。PR53评论6064335323的两项独立反馈已复现并修复：完整坐标缓存/coalescing身份、HTTP200冷却保留原始快照并停止后续日期。完整check为97文件542项PASS；本地c2390b9接收发现tmp历史CJS产物误入lint，新增最小tmp/** ignore；Owner备份不删移，源码no-require-imports仍severity2。请接收PR最终新SHA后重跑canonical check，不能用独立typecheck/unit/build代替。最终精确候选CI见PR53顶部。下方e057/旧发布只是历史。
 
 本地只在 `E:/project/Star_photo_addr` 接收，不创建C盘worktree、不代写业务代码：
 

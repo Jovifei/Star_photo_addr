@@ -56,8 +56,16 @@
 - Fireglow有效HTTP200携带Retry-After：旧构建桌面/移动首次加载均丢弃score72原始快照（2 FAIL）。现先校验并保存当前快照及原始来源/stale，再用传输冷却停止后续日期；429和不可用回退仍立即停止。新增真实浏览器路由回归核对首次原始事实、三日仅当前日期、降级提示、详情原始sourceFetchedAt与总请求次数。fixture仅验证行为，不作真实天气/科学证明。
 - 新增顺序策略unit验证保留同一原始对象；完整npm run check退出0，97文件542项PASS，lint/typecheck/build PASS。移动三日列表分数前含日期，新测试首轮误用纯分数文本断言，按现有完整格式修正，保留数值、来源和次数断言。最终浏览器与精确候选五任务CI终态见PR顶部；旧4e03 CI不作为修正候选验收。
 - 完整VM Chromium额外发现既有candidate自动恢复测试1 FAIL：测试锚点在route收到请求，慢浏览器消费响应后才注册61秒定时器，62秒断言会提前。实际trace确认第二请求未发生；在返回503前冻结浏览器时钟，让失败响应和定时器共享同一时刻，保留59秒仅1次/62秒共2次/无refresh/分数恢复全部断言。修复桌面、移动2 PASS；不修改业务冷却时长。中断有失败的VM完整运行，不计完整PASS；最终404 Chromium以精确候选CI为准。
-- 精确2168a65的CI #417（37811075098）完整Chromium终态277 PASS/126适用性SKIP/1 FAIL；其余四任务SUCCESS。唯一失败为新Cloudsea429回归在mobile用.first()误选隐藏的desktop侧栏错误节点。展开mobile面板后仍复现13 PASS/1 FAIL；现场mobile状态已有原错误文本。加入现有expandMobileDataSheet真实展开步骤，并按设备限定对应面板status，保留错误文本/可见及仅1次请求断言；不改Cloudsea业务/布局。修复后完整跨入口组14 PASS，新精确CI终态见PR顶部，不能把#417称完整PASS。
+- 精确2168a65的CI #417（37811075098）完整Chromium终态277 PASS/126适用性SKIP/1 FAIL；其余四任务SUCCESS。唯一失败为新Cloudsea429回归在mobile用.first()误选隐藏的desktop侧栏错误节点。展开mobile面板后仍复现13 PASS/1 FAIL；现场mobile状态已有原错误文本。加入现有expandMobileDataSheet真实展开步骤，并按设备限定对应面板status，保留错误文本/可见及仅1次请求断言；不改Cloudsea业务/布局。修复后完整跨入口组14 PASS；c2390b9的#418（37814365990）五任务SUCCESS、Chromium278 PASS/126适用性SKIP，Firefox/WebKit12 PASS。随后本地tmp lint配置反馈继续同一阶段；最终新SHA/CI终态见PR顶部，不能把#417称完整PASS。
 - 独立复核最终diff：未放宽坐标/模型归属、六层/ICON能见度评分门禁，未改来源时间、清旧缓存或重复冷却供应商请求。main/Owner笔记/内容一致性脚本保持。
+
+## 本地精确接收与临时产物lint闭环
+
+实际读取[本地评论6065213233](https://github.com/Jovifei/Star_photo_addr/pull/53#issuecomment-6065213233)：c2390b9在原E目录npm ci/audit0、独立typecheck/97文件542测试/build及三HTML一致（build/哈希依本轮用户补充），canonical check因Git已忽略tmp中的Owner历史CJS备份而FAIL；此结果不冒称canonical PASS。本地两份48行只读矩阵NOT_RUN，旧生产能力缺失时零天气请求；本地完整Chromium仍在独立执行，未冒称其已通过。
+
+同时读取[独立源码复核6064502013](https://github.com/Jovifei/Star_photo_addr/pull/53#issuecomment-6064502013)：两项P2源码已闭环，独立执行顺序策略保留原始对象/来源与一次load，exit0；这不替代浏览器/全套CI。
+
+最小配置修正只有eslint.config.mjs的既有 `tmp/deploy-*/**` 改为 `tmp/**`，对应已有.gitignore临时产物范围。源码/测试lint策略和所有规则保持，Owner备份不删除/移动。VM自建tmp/codex-reception-lint-probe-20261008/verify-native.cjs复现：旧 `npm run lint` exit1、no-require-imports severity2；修正后ESLint确认archiveIgnored=true、archiveErrors=0。对现有跟踪文件src/lib/topicRequestPolicy.ts的内存副本加入require，sourceIgnored=false且同规则severity2，源码文件本身未写入违规代码。实际范围证据：[TMP_ESLINT_SCOPE_20261008.json](evidence/TMP_ESLINT_SCOPE_20261008.json)。保留探针CJS产物执行完整npm run check，退出0：lint/typecheck/97文件542测试/build PASS。最终精确SHA与新CI终态见PR顶部，c2390b9的成功CI不替代配置修正候选验收。
 
 ## 每文件原因与风险
 
@@ -93,6 +101,8 @@
 | docs/plans/2026-10-08-pressure-and-evidence.md | 实施前问题/文件/验收/风险和研究方案；非仅计划交付 |
 | docs/evidence/CACHE_ONLY_MATRIX_20261008.json | VM实际只读执行原始结果，明确local base/NOT_RUN |
 | docs/REMOTE_PRESSURE_EVIDENCE_STAGE_20261008.md | 本报告、迁移/风险/真实边界 |
+| eslint.config.mjs | 仅忽略Git已有tmp临时产物范围；源码规则/测试lint策略保持 |
+| docs/evidence/TMP_ESLINT_SCOPE_20261008.json | 实际ESLint忽略与源码违规诊断证据，源文件仅在内存注入探针 |
 | LOCAL_CODEX_HANDOFF.md | 前置当前精确阶段接收步骤，保留历史记录 |
 
 ## 迁移、回滚与剩余门槛
