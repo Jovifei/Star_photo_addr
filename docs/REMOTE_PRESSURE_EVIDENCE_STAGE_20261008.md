@@ -55,6 +55,7 @@
 - pressure缓存/coalescing五位舍入：30.123451和30.123452顺序与并发均在原代码复现错误身份（2 FAIL/5 PASS）。key改用完整数值坐标；严格详情身份守卫未改。修复后相邻坐标分别返回、相同坐标仍缓存/合并且只请求一次，相关16项回归PASS。
 - Fireglow有效HTTP200携带Retry-After：旧构建桌面/移动首次加载均丢弃score72原始快照（2 FAIL）。现先校验并保存当前快照及原始来源/stale，再用传输冷却停止后续日期；429和不可用回退仍立即停止。新增真实浏览器路由回归核对首次原始事实、三日仅当前日期、降级提示、详情原始sourceFetchedAt与总请求次数。fixture仅验证行为，不作真实天气/科学证明。
 - 新增顺序策略unit验证保留同一原始对象；完整npm run check退出0，97文件542项PASS，lint/typecheck/build PASS。移动三日列表分数前含日期，新测试首轮误用纯分数文本断言，按现有完整格式修正，保留数值、来源和次数断言。最终浏览器与精确候选五任务CI终态见PR顶部；旧4e03 CI不作为修正候选验收。
+- 完整VM Chromium额外发现既有candidate自动恢复测试1 FAIL：测试锚点在route收到请求，慢浏览器消费响应后才注册61秒定时器，62秒断言会提前。实际trace确认第二请求未发生；在返回503前冻结浏览器时钟，让失败响应和定时器共享同一时刻，保留59秒仅1次/62秒共2次/无refresh/分数恢复全部断言。修复桌面、移动2 PASS；不修改业务冷却时长。中断有失败的VM完整运行，不计完整PASS；最终404 Chromium以精确候选CI为准。
 - 独立复核最终diff：未放宽坐标/模型归属、六层/ICON能见度评分门禁，未改来源时间、清旧缓存或重复冷却供应商请求。main/Owner笔记/内容一致性脚本保持。
 
 ## 每文件原因与风险
@@ -85,6 +86,7 @@
 | tests/integration/weatherEvidenceCli.test.ts | 执行真正CLI、一次能力读取和48次cache-only天气请求，全部非科学结果 |
 | tests/integration/cloudseaRoute.test.ts | 供应商fixture使用实际unixtime请求契约；原评分与覆盖断言保留 |
 | tests/e2e/mock-open-meteo.js | pressure原fixture字段保留，仅按供应商新契约编码epoch |
+| tests/e2e/data-state-presentation.spec.ts | 失败响应前冻结时钟，消除VM耗时干扰；冷却/仅一次恢复断言保持 |
 | tests/e2e/fireglow-data-integrity.spec.ts | HTTP200冷却保留原始事实、来源/stale与桌面/移动请求次数回归 |
 | tests/e2e/location-transfer.spec.ts | 两专题请求模型/回链与真实429请求次数；原坐标/日期断言保留 |
 | docs/plans/2026-10-08-pressure-and-evidence.md | 实施前问题/文件/验收/风险和研究方案；非仅计划交付 |

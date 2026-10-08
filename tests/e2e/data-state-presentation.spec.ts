@@ -244,6 +244,9 @@ test("candidate batch recovers once after transient failure without manual refre
     attempts += 1;
     expect(url.searchParams.has("refresh")).toBe(false);
     if (attempts === 1) {
+      // Freeze before delivering the failure: response parsing/rendering must
+      // not consume the 60-second recovery interval on a slower browser.
+      await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 1_000));
       firstFailureTime = await page.evaluate(() => Date.now());
       return route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"天气服务暂时不可用"})});
     }
@@ -252,8 +255,7 @@ test("candidate batch recovers once after transient failure without manual refre
   await page.goto(selectedUrl);
   if (info.project.name === "mobile") await expandMobileDataSheet(page);
   await expect(page.getByTestId("candidate-forecast-request-status")).toContainText("天气服务暂时不可用");
-  // Rendering/expanding the sheet consumes real time while the installed clock
-  // runs. Assert at 59 seconds from the failure, not 59 seconds after rendering.
+  // The response and recovery timer share the frozen failure instant.
   await page.clock.pauseAt(new Date(firstFailureTime + 59_000));
   expect(attempts).toBe(1);
   await page.clock.fastForward(3_000);
