@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 2,
+  "mode": "CACHE_ONLY",
+  "collectedAt": "2026-10-08T16:21:22.720Z",
+  "base": "http://127.0.0.1:3103",
+  "date": "2026-10-09",
+  "rows": [
+    {
+      "product": "surface",
+      "name": "Shanghai",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "model": "icon",
+      "http": 429,
+      "retryAfter": "60",
+      "status": "NOT_RUN",
+      "reason": "天气上游冷却中，此地点暂无有效缓存"
+    },
+    {
+      "product": "pressure",
+      "name": "Shanghai",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Niubeishan-observing",
+      "latitude": 29.782,
+      "longitude": 102.582,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Niubeishan-observing",
+      "latitude": 29.782,
+      "longitude": 102.582,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Niubeishan-cloudsea",
+      "latitude": 29.742,
+      "longitude": 102.325,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Niubeishan-cloudsea",
+      "latitude": 29.742,
+      "longitude": 102.325,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Los-Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Los-Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Kathmandu",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Kathmandu",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "model": "icon",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "fireglow",
+      "model": "icon",
+      "date": "2026-10-09",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "cloudsea",
+      "model": "icon",
+      "date": "2026-10-09",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Shanghai",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Shanghai",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Niubeishan-observing",
+      "latitude": 29.782,
+      "longitude": 102.582,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Niubeishan-observing",
+      "latitude": 29.782,
+      "longitude": 102.582,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Niubeishan-cloudsea",
+      "latitude": 29.742,
+      "longitude": 102.325,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Niubeishan-cloudsea",
+      "latitude": 29.742,
+      "longitude": 102.325,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Los-Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Los-Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Kathmandu",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Kathmandu",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "model": "gfs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "fireglow",
+      "model": "gfs",
+      "date": "2026-10-09",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "cloudsea",
+      "model": "gfs",
+      "date": "2026-10-09",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Shanghai",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Shanghai",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Niubeishan-observing",
+      "latitude": 29.782,
+      "longitude": 102.582,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Niubeishan-observing",
+      "latitude": 29.782,
+      "longitude": 102.582,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Niubeishan-cloudsea",
+      "latitude": 29.742,
+      "longitude": 102.325,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Niubeishan-cloudsea",
+      "latitude": 29.742,
+      "longitude": 102.325,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Los-Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Los-Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Kathmandu",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Kathmandu",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "model": "aifs",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "fireglow",
+      "model": "aifs",
+      "date": "2026-10-09",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "cloudsea",
+      "model": "aifs",
+      "date": "2026-10-09",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Shanghai",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Shanghai",
+      "latitude": 31.2304,
+      "longitude": 121.4737,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Niubeishan-observing",
+      "latitude": 29.782,
+      "longitude": 102.582,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Niubeishan-observing",
+      "latitude": 29.782,
+      "longitude": 102.582,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Niubeishan-cloudsea",
+      "latitude": 29.742,
+      "longitude": 102.325,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Niubeishan-cloudsea",
+      "latitude": 29.742,
+      "longitude": 102.325,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Los-Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Los-Angeles",
+      "latitude": 34.0522,
+      "longitude": -118.2437,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "surface",
+      "name": "Kathmandu",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "pressure",
+      "name": "Kathmandu",
+      "latitude": 27.7172,
+      "longitude": 85.324,
+      "model": "best_match",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "fireglow",
+      "model": "best_match",
+      "date": "2026-10-09",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    },
+    {
+      "product": "cloudsea",
+      "model": "best_match",
+      "date": "2026-10-09",
+      "status": "NOT_RUN",
+      "reason": "cooldown-stop"
+    }
+  ],
+  "capability": {
+    "app": "star-weather-planner",
+    "version": "1.0.27",
+    "buildRevision": "local",
+    "cacheOnlyVersion": 1,
+    "products": [
+      "surface",
+      "pressure",
+      "fireglow",
+      "cloudsea"
+    ]
+  },
+  "stopped": true,
+  "scientificAccuracy": "NOT_RUN",
+  "physicalDevice": "NOT_RUN",
+  "screenReader": "NOT_RUN"
+}
