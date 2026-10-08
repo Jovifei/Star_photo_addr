@@ -42,6 +42,7 @@
 
 ## 证据位置与剩余门槛
 
+- 独立审查的非阻断加强项：`qualifyTopic`使用some检查来源。合成的GFS/ICON重复surface来源能获得QUALIFIED_INPUT；未发现当前服务端生成这种重复来源的真实路径，也不据此声称生产存在混模。后续资格验证应补这种矛盾来源负例；本次两个真实矩阵均NOT_RUN，没有把该类合成负例当真实天气通过。
 - `tmp/pressure-reception-c2390b9/`：npm-ci、audit、canonical失败、source-only lint、typecheck、542测试、build、完整Chromium、三HTML、local/production矩阵原始日志。
 - `tmp/pressure-reception-011cd37/`：首次完整失败、finder-focused、完整check-repeat、cross-browser、frontend、local-matrix日志与JSON。
 - 实际OnePlus/iOS、TalkBack/VoiceOver、长期科学准确率及生产完整天气矩阵仍NOT_RUN；模拟、供应商smoke、健康200都不替代。
