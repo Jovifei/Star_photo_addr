@@ -1,0 +1,75 @@
+{
+  "health": {
+    "status": "ok",
+    "app": "star-weather-planner",
+    "version": "1.0.27",
+    "buildRevision": "7a2202ce4b24b2e3ac956ef70e6e9f9f8d97e3a3"
+  },
+  "rows": [
+    {
+      "route": "/",
+      "status": 200,
+      "bytes": 136660,
+      "sha256": "34be3a4cbb6e3e86add6da98340136c304efc739bab4c03f9ab521d3120d0625",
+      "hasBrand": true
+    },
+    {
+      "route": "/sites",
+      "status": 200,
+      "bytes": 136660,
+      "sha256": "34be3a4cbb6e3e86add6da98340136c304efc739bab4c03f9ab521d3120d0625",
+      "hasBrand": true
+    },
+    {
+      "route": "/fireglow",
+      "status": 200,
+      "bytes": 11295,
+      "sha256": "52de0b51062cd18425a18b85a613f4d4fc58c5d8eaa7092d0632ec446e1212b2",
+      "hasBrand": true
+    },
+    {
+      "route": "/cloudsea",
+      "status": 200,
+      "bytes": 11450,
+      "sha256": "259ad7505add4615b869de6445d9698647d2f1a56745c95b1b487da8d0eccd5d",
+      "hasBrand": true
+    }
+  ],
+  "schemaVersion": 1,
+  "deployedSourceSHA": "7a2202ce4b24b2e3ac956ef70e6e9f9f8d97e3a3",
+  "imageID": "sha256:bfafed1693acb62b3f4430235b13dcbacc986fc49fcd7e7a879bd5e4fddd526f",
+  "application": "healthy",
+  "worker": "healthy",
+  "originalSnapshotVolumeRetained": true,
+  "snapshotBackupSHA256": "6f902be52d9180ca27703978a48cd0def78fd6096330e433094ed212a1f2c6ef",
+  "checks": {
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "unitIntegrationTests": {
+      "files": 99,
+      "passed": 568
+    },
+    "build": "PASS",
+    "focusedChromium": {
+      "passed": 21,
+      "skipped": 15,
+      "failed": 0
+    }
+  },
+  "browser": {
+    "desktopAnd375x812": "PASS",
+    "productionForwardedGridTicks": 40,
+    "publicHTTPSDirectGridTicks": 41,
+    "midnightEpoch": 1791561600,
+    "publicHTTPSDirectOpened": true,
+    "cloudLayerErrors": 0
+  },
+  "cacheOnlyMatrix": {
+    "NOT_RUN": 48
+  },
+  "scientificAccuracy": "NOT_RUN",
+  "physicalDevice": "NOT_RUN",
+  "screenReader": "NOT_RUN",
+  "ordinaryChatGPTReview": "BLOCKED_LOGIN",
+  "hubReport": "NOT_SENT"
+}
