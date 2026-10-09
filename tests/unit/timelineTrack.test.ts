@@ -15,6 +15,28 @@ function gridAt(epochs: number[]): CloudGridData {
 }
 
 describe("grid timeline clock", () => {
+  it("uses the owner's full-hour axis when the first cell has half-hour epochs", () => {
+    const epochs = [Date.parse("2026-10-09T12:00:00Z") / 1000, Date.parse("2026-10-09T13:00:00Z") / 1000];
+    const grid = gridAt(epochs);
+    grid.forecasts[0].timezone = "Asia/Kolkata";
+    grid.forecasts[0].utcOffsetSeconds = 19800;
+    grid.forecasts[0].hourly = normalizeEpochHours(epochs.map(epoch => epoch + 1800), "Asia/Kolkata").map(hour => ({ ...hour, cloudCover: 20 }));
+    grid.forecasts[1].timezone = "Asia/Shanghai";
+    grid.forecasts[1].utcOffsetSeconds = 28800;
+    grid.forecasts[1].hourly = normalizeEpochHours(epochs, "Asia/Shanghai").map(hour => ({ ...hour, cloudCover: 80 }));
+    const hours = buildGridTimelineHours(grid, "Asia/Shanghai");
+    expect(hours.map(hour => hour.time)).toEqual(["2026-10-09T20:00", "2026-10-09T21:00"]);
+    expect(hours.map(hour => hour.epochSeconds)).toEqual(epochs);
+    expect(hours.map(hour => hour.cloudCover)).toEqual([80, 80]);
+    // A different full-hour zone is sufficient when there is no owner-zone cell.
+    grid.forecasts[1].timezone = "Asia/Tokyo";
+    grid.forecasts[1].hourly = normalizeEpochHours(epochs, "Asia/Tokyo").map(hour => ({ ...hour, cloudCover: 80 }));
+    expect(buildGridTimelineHours(grid, "Asia/Shanghai").map(hour => hour.time)).toEqual(["2026-10-09T20:00", "2026-10-09T21:00"]);
+    // No exact owner-phase hours means missing, never a nearest :30 substitution.
+    grid.forecasts = grid.forecasts.slice(0, 1);
+    expect(buildGridTimelineHours(grid, "Asia/Shanghai")).toEqual([]);
+  });
+
   it("labels all cells in the owning timezone and averages only equal instants", () => {
     const epochs = [Date.parse("2026-10-09T12:00:00Z") / 1000, Date.parse("2026-10-09T13:00:00Z") / 1000];
     const hours = buildGridTimelineHours(gridAt(epochs), "Asia/Shanghai");

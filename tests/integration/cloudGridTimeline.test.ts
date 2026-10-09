@@ -13,11 +13,11 @@ import CloudTimeline from "@/components/CloudTimeline";
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); store.current = null; });
 
-function setup(selectedPoint: boolean, stale = false) {
+function setup(selectedPoint: boolean, stale = false, halfHourFirst = false) {
   const epoch = Date.parse("2026-10-09T12:00:00Z") / 1000;
-  const forecasts = ["Asia/Tokyo", "Asia/Shanghai"].map((timezone, index) => ({
+  const forecasts = [halfHourFirst ? "Asia/Kolkata" : "Asia/Tokyo", "Asia/Shanghai"].map((timezone, index) => ({
     timezone, metadata: { model: "icon", timeAxisVersion: "epoch-v1" },
-    hourly: normalizeEpochHours([epoch], timezone).map(hour => ({ ...hour,
+    hourly: normalizeEpochHours([halfHourFirst && index === 0 ? epoch + 1800 : epoch], timezone).map(hour => ({ ...hour,
       cloudCover: index ? 80 : 20, precipitation: 0, windSpeed: 2, windDirection: 90,
       visibility: 20000, temperature: 10, humidity: 40, dewPoint: 0,
     })),
@@ -37,6 +37,14 @@ function setup(selectedPoint: boolean, stale = false) {
 }
 
 describe("live grid timeline fallback", () => {
+  it("renders real full-hour ticks when grid cell zero uses half-hour epochs", () => {
+    const { container } = setup(false, false, true);
+    expect(container.querySelector('.cloud-tick[title="10/9 20:00"]')).not.toBeNull();
+    expect(container.querySelector(".cloud-timeline-data-card")?.textContent).toContain("云量 80%");
+    expect(container.querySelector(".cloud-timeline-data-card")?.textContent).toContain("2026-10-09 20:00");
+    expect(container.querySelector('.cloud-tick[title="10/9 20:30"]')).toBeNull();
+  });
+
   it("uses catalog clock and real grid averages, never the first cell's local label/value", () => {
     const { container } = setup(false);
     expect(container.querySelector('.cloud-tick[title="10/9 20:00"]')).not.toBeNull();

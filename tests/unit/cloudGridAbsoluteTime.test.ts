@@ -51,6 +51,16 @@ describe("absolute grid sampling", () => {
     expect(resolveCloudGridEpoch(grid(), "2026-10-09T22:00", null, "Asia/Tokyo", selected)).toBeNull();
     expect(resolveCloudGridEpoch(grid(), "2026-10-09T21:00", null, "Asia/Tokyo", selected)).toBe(epoch);
   });
+  it("resolves a whole-hour owning clock from a later grid axis when grid0 has a half-hour phase", () => {
+    const data = grid([point("Asia/Kolkata", 0, [epoch - 1800, epoch + 1800]), point("Asia/Shanghai", 1)]);
+    const active = resolveCloudGridEpoch(data, "2026-10-09T20:00", null, "Asia/Shanghai");
+    expect(active).toBe(epoch);
+    expect(getValuesAtTime(data, "2026-10-09T20:00", active).high).toEqual([null, 30]);
+    expect(getCloudCoverAtTime(data, "2026-10-09T20:00", active)).toEqual([null, 10]);
+    expect(getWeatherValuesAtTime(data, "2026-10-09T20:00", active)).toEqual({ precipitation: [null, 1], windSpeed: [null, 3], windDirection: [null, 90] });
+    const missingPointHour = point("Asia/Shanghai", 0, [epoch + 3600]);
+    expect(resolveCloudGridEpoch(data, "2026-10-09T20:00", null, "Asia/Shanghai", missingPointHour)).toBeNull();
+  });
   it("preserves explicit instants and treats missing source samples as unavailable", () => {
     const data = grid([point("Asia/Shanghai", 0), point("Asia/Tokyo", 1, [epoch + 3600, epoch + 7200])]);
     expect(resolveCloudGridEpoch(data, "wrong-wall", epoch, "Asia/Shanghai")).toBe(epoch);

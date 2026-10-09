@@ -37,7 +37,13 @@ function buildGridTimelineHours(grid: CloudGridData | null, timeZone?: string): 
   if (source.metadata?.timeAxisVersion === "epoch-v1") {
     if (grid.forecasts.some(forecast => forecast.metadata?.timeAxisVersion !== "epoch-v1")) return [];
     try {
-      return normalizeEpochHours(source.hourly.map(hour => hour.epochSeconds!), timeZone).map(clock => ({
+      const clocks = grid.forecasts.map(forecast => ({
+        timezone: forecast.timezone,
+        hours: normalizeEpochHours(forecast.hourly.map(hour => hour.epochSeconds!), timeZone),
+      }));
+      const clock = clocks.find(item => item.timezone === timeZone) ??
+        clocks.find(item => item.hours.length && item.hours.every(hour => hour.time.endsWith(":00")));
+      return (clock?.hours ?? []).map(clock => ({
         ...aggregateForecastHour(grid.forecasts.map(forecast => forecast.hourly.find(hour => hour.epochSeconds === clock.epochSeconds)), clock.time),
         ...clock,
       }));

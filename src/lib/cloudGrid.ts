@@ -240,14 +240,22 @@ export function resolveCloudGridEpoch(
 ): number | null {
   if (epochSeconds != null) return Number.isSafeInteger(epochSeconds) ? epochSeconds : null;
   if (!time || !timeZone) return null;
-  if (pointForecast?.metadata?.timeAxisVersion === "epoch-v1") {
-    return resolveWallHour(pointForecast.hourly, time)?.epochSeconds ?? null;
+  if (pointForecast) {
+    return pointForecast.metadata?.timeAxisVersion === "epoch-v1"
+      ? resolveWallHour(pointForecast.hourly, time)?.epochSeconds ?? null : null;
   }
-  const source = grid.forecasts[0];
-  if (source?.metadata?.timeAxisVersion !== "epoch-v1") return null;
+  const sources = [
+    ...grid.forecasts.filter(forecast => forecast.timezone === timeZone),
+    ...grid.forecasts.filter(forecast => forecast.timezone !== timeZone),
+  ];
   try {
-    return resolveWallHour(normalizeEpochHours(source.hourly.map(hour => hour.epochSeconds!), timeZone), time)?.epochSeconds ?? null;
+    for (const source of sources) {
+      if (source.metadata?.timeAxisVersion !== "epoch-v1") continue;
+      const hour = resolveWallHour(normalizeEpochHours(source.hourly.map(hour => hour.epochSeconds!), timeZone), time);
+      if (hour) return hour.epochSeconds ?? null;
+    }
   } catch { return null; }
+  return null;
 }
 
 function hoursAt(
