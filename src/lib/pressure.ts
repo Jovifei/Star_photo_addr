@@ -1,6 +1,6 @@
 import { OpenMeteoRateLimitError, withOpenMeteoProviderSlot, noteOpenMeteoRateLimit } from "./forecast";
 import { hasUsablePressureProfile } from "./pressureIntegrity";
-export { hasUsablePressureProfile, isCompletePressureLevelSample, usablePressureLevelCount } from "./pressureIntegrity";
+export { pressureProfileAt, hasUsablePressureProfile, isCompletePressureLevelSample, usablePressureLevelCount } from "./pressureIntegrity";
 import {
   applyOpenMeteoApiKey,
   buildForecastUrl,
@@ -8,6 +8,8 @@ import {
   OPEN_METEO_FORECAST_URL,
   openMeteoModelParameter,
 } from "./forecast";
+import { normalizeEpochHours } from "./absoluteForecastTime";
+import { validProductDate } from "./productRoutes";
 import { PRESSURE_LEVELS } from "./pressureLevels";
 import type { ForecastModel } from "./types";
 
@@ -23,6 +25,10 @@ export interface PressureLevelSample {
 
 export interface PressureForecastResponse {
   locationId: string;
+  requestedLatitude?: number;
+  requestedLongitude?: number;
+  modelLatitude?: number | null;
+  modelLongitude?: number | null;
   modelElevation: number;
   timezone: string;
   utcOffsetSeconds: number;
@@ -30,7 +36,9 @@ export interface PressureForecastResponse {
   source: "Open-Meteo";
   model: ForecastModel;
   stale?: boolean;
-  hourly: Array<{ time: string; temperature: number | null }>;
+  timeAxisVersion?: "epoch-v1";
+  profilesByEpoch?: Record<string, PressureLevelSample[]>;
+  hourly: Array<{ time: string; epochSeconds?: number; utcOffsetSeconds?: number; temperature: number | null }>;
   profiles: Record<string, PressureLevelSample[]>;
 }
 
@@ -63,8 +71,7 @@ function pressureVariables(): string[] {
 
 function withPressureVariables(url: string): string {
   const parsed = new URL(url);
-  // Pressure profiles remain China-scoped ISO records; do not inherit surface epoch format.
-  parsed.searchParams.set("timeformat", "iso8601");
+  parsed.searchParams.set("timeformat", "unixtime");
   const current = parsed.searchParams.get("hourly");
   parsed.searchParams.set(
     "hourly",
@@ -102,7 +109,7 @@ export function buildPressureForecastBatchUrl(
   model: ForecastModel,
 ): string {
   validatePressureLocations(locations);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  if (!validProductDate(date)) {
     throw new Error("气压批量请求日期必须是 YYYY-MM-DD");
   }
   const params = new URLSearchParams({
@@ -110,6 +117,7 @@ export function buildPressureForecastBatchUrl(
     longitude: locations.map((item) => item.longitude).join(","),
     hourly: ["temperature_2m", ...pressureVariables()].join(","),
     timezone: "Asia/Shanghai",
+    timeformat: "unixtime",
     start_date: date,
     end_date: date,
   });
@@ -235,7 +243,7 @@ function valueAt(
 
 function validTimeAxis(value: unknown): value is string[] {
   return Array.isArray(value) && value.length > 0 &&
-    value.every((time) => typeof time === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(time)) &&
+    value.every((time) => typeof time === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(time) && validProductDate(time.slice(0, 10)) && Number(time.slice(11, 13)) < 24 && Number(time.slice(14, 16)) < 60 && (time.length === 16 || Number(time.slice(17, 19)) < 60)) &&
     new Set(value).size === value.length &&
     value.every((time, index) => index === 0 || time > value[index - 1]!);
 }
@@ -256,19 +264,21 @@ export function parsePressureForecast(
   }
   const hourly = raw.hourly;
   const rawTimes = hourly.time;
-  if (
-    !Array.isArray(rawTimes) ||
-    rawTimes.length === 0 ||
-    !validTimeAxis(rawTimes)
-  ) {
-    throw new Error("气压上游返回了无效逐小时时间轴");
+  const absolute = Array.isArray(rawTimes) && rawTimes.length > 0 && rawTimes.every(time => typeof time === "number");
+  let clocks: Array<{ time: string; epochSeconds?: number; utcOffsetSeconds?: number }>;
+  if (absolute) {
+    if (typeof raw.timezone !== "string" || !raw.timezone) throw new Error("气压上游缺少时区身份");
+    clocks = normalizeEpochHours(rawTimes as number[], raw.timezone);
+  } else {
+    if (!validTimeAxis(rawTimes)) throw new Error("气压上游返回了无效逐小时时间轴");
+    clocks = rawTimes.map(time => ({ time }));
   }
   const modelElevation = numberOrNull(raw.elevation);
   if (modelElevation === null) {
     throw new Error("气压上游缺少可靠的模式地形高程 elevation");
   }
 
-  const times = rawTimes;
+  const times = clocks.map(clock => clock.time);
   const availableLevels = PRESSURE_LEVELS.filter((level) =>
     [
       `cloud_cover_${level}hPa`,
@@ -284,8 +294,9 @@ export function parsePressureForecast(
   }
 
   const profiles: PressureForecastResponse["profiles"] = {};
+  const profilesByEpoch: Record<string, PressureLevelSample[]> = {};
   times.forEach((time, index) => {
-    profiles[time] = PRESSURE_LEVELS.map((pressure) => ({
+    const profile = PRESSURE_LEVELS.map((pressure) => ({
       pressure,
       cloudCover: numberOrNull(
         valueAt(hourly, `cloud_cover_${pressure}hPa`, index),
@@ -300,23 +311,29 @@ export function parsePressureForecast(
         valueAt(hourly, `geopotential_height_${pressure}hPa`, index),
       ),
     }));
+    // Legacy wall-clock lookup deterministically chooses the earlier occurrence.
+    if (!profiles[time]) profiles[time] = profile;
+    if (absolute) profilesByEpoch[String(clocks[index].epochSeconds)] = profile;
   });
 
-  if (!Object.values(profiles).some((profile) => hasUsablePressureProfile(profile))) {
+  if (!Object.values(profilesByEpoch).concat(Object.values(profiles)).some((profile) => hasUsablePressureProfile(profile))) {
     throw new Error("气压上游没有任何小时具备至少 6 个完整压力层");
   }
 
   return {
     locationId,
     modelElevation,
+    modelLatitude: numberOrNull(raw.latitude),
+    modelLongitude: numberOrNull(raw.longitude),
     timezone: typeof raw.timezone === "string" ? raw.timezone : "Asia/Shanghai",
     utcOffsetSeconds: numberOrNull(raw.utc_offset_seconds) ?? 0,
     fetchedAt: new Date().toISOString(),
     source: "Open-Meteo",
     model,
-    stale: false,
-    hourly: times.map((time, index) => ({
-      time,
+    stale: !absolute,
+    ...(absolute ? { timeAxisVersion: "epoch-v1" as const, profilesByEpoch } : {}),
+    hourly: clocks.map((clock, index) => ({
+      ...clock,
       temperature: numberOrNull(valueAt(hourly, "temperature_2m", index)),
     })),
     profiles,
@@ -347,7 +364,7 @@ export async function fetchPressureForecastBatch(
   const errors: Record<string, string> = {};
   locations.forEach((location, index) => {
     try {
-      data[location.id] = parsePressureForecast(list[index], location.id, model);
+      data[location.id] = { ...parsePressureForecast(list[index], location.id, model), requestedLatitude: location.latitude, requestedLongitude: location.longitude };
     } catch (error) {
       errors[location.id] =
         error instanceof Error ? error.message : "气压剖面解析失败";
@@ -388,9 +405,10 @@ export async function fetchPressureForecast(
   if (entry === undefined) {
     throw new Error("气压上游没有返回地点数据");
   }
-  return parsePressureForecast(entry, "pressure", model);
+  return { ...parsePressureForecast(entry, "pressure", model), requestedLatitude: latitude, requestedLongitude: longitude };
 }
 
 function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
+

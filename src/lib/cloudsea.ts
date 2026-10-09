@@ -17,6 +17,7 @@ import {
   hasUsablePressureProfile,
   isCompletePressureLevelSample,
 } from "@/lib/pressureIntegrity";
+import { pressureProfileAt } from "@/lib/pressureIntegrity";
 import type { PressureForecastResponse, PressureLevelSample } from "@/lib/pressure";
 import type { CloudLayer, ForecastModel, PressureLevel } from "@/lib/types";
 
@@ -256,19 +257,6 @@ function pressureLevelFromSample(sample: PressureLevelSample): PressureLevel {
   };
 }
 
-function pressureProfileAt(
-  pressure: PressureForecastResponse | undefined,
-  time: string,
-): PressureLevelSample[] | null {
-  if (!pressure) return null;
-  const direct = pressure.profiles[time];
-  if (direct) return direct;
-  const key = Object.keys(pressure.profiles).find(
-    (candidate) => candidate.slice(0, 16) === time.slice(0, 16),
-  );
-  return key ? pressure.profiles[key] ?? null : null;
-}
-
 /**
  * Select the lowest pressure-derived cloud deck that still belongs to the
  * lower troposphere. An hour is only treated as pressure-available when at
@@ -324,7 +312,7 @@ function evaluateConditions(
   pressure: PressureForecastResponse | undefined,
   time: string,
 ): HourEvaluation {
-  const samples = pressureProfileAt(pressure, time);
+  const samples = pressure?.stale ? null : pressureProfileAt(pressure, time);
   const vertical = deriveCloudSeaVerticalEvidence(
     samples,
     pressure?.modelElevation ?? 0,
@@ -617,7 +605,8 @@ export function buildCloudSeaSnapshot(
     const siteHourly = dateWeather
       ? (dateWeather[site.id] ?? dateWeather[site.name])
       : null;
-    const pressure = pressureBySite[site.id];
+    const candidate = pressureBySite[site.id];
+    const pressure = candidate && !candidate.stale && candidate.model === model ? candidate : undefined;
 
     if (!siteHourly) {
       sitesRecord[site.id] = {
@@ -661,7 +650,7 @@ export function buildCloudSeaSnapshot(
   const surfaceFailedSites = totalSites - surfaceAvailableSites;
 
   const availableSites = CLOUD_SEA_SITES.filter(
-    (site) => pressureBySite[site.id],
+    (site) => pressureBySite[site.id] && !pressureBySite[site.id].stale && pressureBySite[site.id].model === model,
   ).length;
   const failedSites = Math.max(
     totalSites - availableSites,
@@ -680,7 +669,7 @@ export function buildCloudSeaSnapshot(
       availableSites > 0
         ? "Open-Meteo surface weather + pressure-level model profile (Beta)"
         : "Open-Meteo surface weather; pressure-level model profile unavailable (Beta)",
-    stale: Object.values(weatherByDate[date] ?? {}).some(record => !Number.isFinite(dataAgeMs(record.sourceFetchedAt))) || Object.values(pressureBySite).some(record => !Number.isFinite(dataAgeMs(record.fetchedAt))),
+    stale: Object.values(weatherByDate[date] ?? {}).some(record => !Number.isFinite(dataAgeMs(record.sourceFetchedAt))) || Object.values(pressureBySite).some(record => record.stale || record.model !== model || !Number.isFinite(dataAgeMs(record.fetchedAt))),
     surface: {
       status: pressureStatusFor(surfaceAvailableSites, totalSites),
       availableSites: surfaceAvailableSites,

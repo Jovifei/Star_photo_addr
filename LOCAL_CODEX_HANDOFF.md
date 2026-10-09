@@ -1,3 +1,21 @@
+# 当前云端交接 — 2026-10-08 全球压力时序与证据资格（未部署）
+
+本条优先于下方历史。授权main父基线 `f167501c0f52270d0a6f14268ab6274ca33265bb`；独立分支 `codex/decision-evidence-20261008`。最终精确head/tree和CI终态以本阶段Draft PR顶部为准（普通push，未合main）。报告：[REMOTE_PRESSURE_EVIDENCE_STAGE_20261008](docs/REMOTE_PRESSURE_EVIDENCE_STAGE_20261008.md)。已实际完成压力epoch/IANA/重复小时、旧ISOstale、地点模型归属、当前小时六层门禁、四入口模型传递与429停止、48行只读输入资格工具。PR53评论6064335323的两项独立反馈已复现并修复：完整坐标缓存/coalescing身份、HTTP200冷却保留原始快照并停止后续日期。完整check为97文件542项PASS；本地c2390b9接收发现tmp历史CJS产物误入lint，新增最小tmp/** ignore；Owner备份不删移，源码no-require-imports仍severity2。请接收PR最终新SHA后重跑canonical check，不能用独立typecheck/unit/build代替。最终精确候选CI见PR53顶部。下方e057/旧发布只是历史。
+
+本地只在 `E:/project/Star_photo_addr` 接收，不创建C盘worktree、不代写业务代码：
+
+1. 保留Owner本地未提交文件；`git fetch origin` 后核对PR最终完整SHA，`git rev-parse <SHA>`及 `<SHA>^{tree}` 必须逐字匹配。独立接收分支可用 `git switch -c verify/remote-pressure-20261008 <SHA>`；如已有本地改动先保护，不覆盖。不得凭浮动branch名直接部署。
+2. Node24，`npm ci`；`npm audit --omit=dev --audit-level=high`；`npm run check`；生产构建后 `npm run test:e2e`、`npm run test:e2e:cross-browser`。记录命令/时间/退出码/原始日志，不用旧main结果冒充新SHA。
+3. 非生产临时服务运行 `RELEASE_CHECK_BASE_URL=http://127.0.0.1:<测试端口> node scripts/check-release-frontend.mjs <仓库目录>`，三HTML逐字节门禁不得跳过。没有部署授权，不动原生产卷/缓存/凭据/镜像。
+4. 生产只读天气：`node scripts/acceptance-weather-matrix.mjs --base=https://photo.joviluma.com --cache-only --output=<本地证据路径>`。工具先读取不触发天气的 `/api/acceptance-capabilities`；旧版本/未知服务自动整批NOT_RUN、零天气请求。标明实际运行SHA；可在精确候选非生产服务运行以验证48行读取。429/Retry-After即停止，不加refresh，NOT_RUN不改PASS。
+5. OnePlus/iOS实际设备（非Playwright模拟）：四入口同级/直接日期、选点和真实手指地图拖放、单滚动、弹层开关/旋转、系统字体200%；记录型号/OS/浏览器、候选实际服务SHA、屏幕与操作证据。TalkBack/VoiceOver实际朗读控件、焦点循环/返回、重复小时UTC偏移和失效状态。无设备/读屏则NOT_RUN。
+6. 科学验收：保留来源/providerRunAt null语义；ICON缺能见度检查raw事实与独立天文可见且评分暂缓。LA两个回拨1时由各自epoch选不同压力剖面，春跳2时无剖面，Kathmandu分钟偏移；这仍只是时序/算法验收。长期实际预报误差需独立实拍/探空/台站标签、位置与时次/模型分层样本，不用fixture或供应商smoke宣布准确率。
+7. 回传GitHub证据：接收HEAD/tree、命令/退出码、实际结果/截图/日志、48行JSON、设备/读屏状态、发现问题和运行SHA。云端继续审核/修复；不得要求本地写下一阶段业务代码。
+
+保护：Owner `tasks/todo.md`/`tasks/lessons.md`、`scripts/check-release-frontend.mjs`无修改；main新增日期CSS/测试时钟保留；无部署/清缓存/网络或凭据修改/force push。VM真实供应商/生产CONNECT403，真机工具缺失，原始NOT_RUN见报告。
+
+---
+
 # 当前交接 — 2026-10-08 主线整合与仓库整理
 
 本条优先于历史。最新e057云端功能及九历史tip已整合，本地全套测试通过。当前任务将已验证源码归并main并同步E:/project/Star_photo_addr；精确Git状态以main实际HEAD为准。此前的Draft49禁止合并记录已由Jovi本次主线合并授权取代。此轮未部署，定时循环保持PAUSED。

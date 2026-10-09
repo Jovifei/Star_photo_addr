@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 test("only the relevant Niubeishan transfer reports a coordinate conflict and keeps the selected coordinate", async ({ page }) => {
   await page.route("**/api/**", route => route.fulfill({ status: 502, json: { error: "fixture: no supplier request" } }));
   await page.goto("/fireglow?contextVersion=2&lat=29.782&lng=102.582&name=雅安牛背山&sourceScope=observing&sourceId=finder-147-location&night=2026-10-08");
@@ -47,4 +48,38 @@ test("a versioned unsupported home date is retained without substituting today's
   await expect(fireglow).toHaveAttribute("href", /lat=31.2.*lng=121.5/);
   await expect(fireglow).toHaveAttribute("href", /night=2030-01-02/);
   await expect(fireglow).toHaveAttribute("href", /forecastTime=2030-01-02T20%3A00/);
+});
+
+test("selected model survives both topic requests and the home return link", async ({ page }) => {
+  const requests: string[] = [];
+  await page.route("**/api/**", route => {
+    requests.push(route.request().url());
+    return route.fulfill({ status: 502, json: { error: "fixture no supplier" } });
+  });
+  await page.goto("/fireglow?contextVersion=2&lat=31.2&lng=121.5&model=gfs");
+  await expect.poll(() => requests.filter(url => url.includes("/api/fireglow/snapshot")).length).toBeGreaterThan(0);
+  expect(requests.filter(url => url.includes("/api/fireglow/snapshot")).every(url => new URL(url).searchParams.get("model") === "gfs")).toBe(true);
+  await expect(page.getByRole("link", { name: /^云海/ })).toHaveAttribute("href", /model=gfs/);
+  await page.getByRole("link", { name: /^云海/ }).click();
+  await expect.poll(() => requests.filter(url => url.includes("/api/cloudsea/snapshot")).length).toBeGreaterThan(0);
+  expect(requests.filter(url => url.includes("/api/cloudsea/snapshot")).every(url => new URL(url).searchParams.get("model") === "gfs")).toBe(true);
+  await expect(page.getByRole("link", { name: /^今夜观测/ })).toHaveAttribute("href", /model=gfs/);
+});
+
+test("cloudsea stops retries and later dates on provider cooldown", async ({ page }, testInfo) => {
+  let calls = 0;
+  await page.route("**/api/cloudsea/snapshot**", route => {
+    calls += 1;
+    return route.fulfill({ status: 429, headers: { "Retry-After": "600" }, json: { error: "fixture provider cooldown" } });
+  });
+  await page.goto("/cloudsea");
+  if (testInfo.project.name === "mobile") await expandMobileDataSheet(page);
+  const evidence = testInfo.project.name === "mobile"
+    ? page.getByTestId("mobile-data-sheet").getByRole("status")
+    : page.getByTestId("cloudsea-evidence-status");
+  await expect(evidence).toContainText("fixture provider cooldown");
+  await expect(evidence).toBeVisible();
+  // The UI has processed the error; no timer-based retry is permitted.
+  await page.waitForTimeout(700);
+  expect(calls).toBe(1);
 });

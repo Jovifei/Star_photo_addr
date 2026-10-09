@@ -145,31 +145,40 @@ async function probeForecastModel(name, providerModel) {
 }
 
 async function probePressure() {
-  const levels = [1000, 925, 850, 700, 500];
-  const variables = levels.flatMap((level) => [
-    `cloud_cover_${level}hPa`,
-    `relative_humidity_${level}hPa`,
-    `temperature_${level}hPa`,
-    `geopotential_height_${level}hPa`,
-  ]);
+  // Reuse the existing single pressure request, now with the actual six-level
+  // ingestion contract and all five coordinate/timezone contexts.
+  const levels = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500];
+  const fields = ["cloud_cover", "relative_humidity", "temperature", "geopotential_height"];
+  const variables = levels.flatMap(level => fields.map(field => `${field}_${level}hPa`));
   const url = new URL(ENDPOINTS.forecast);
-  url.searchParams.set("latitude", "30.2741");
-  url.searchParams.set("longitude", "120.1551");
+  url.searchParams.set("latitude", MATRIX_POINTS.map(point => point[1]).join(","));
+  url.searchParams.set("longitude", MATRIX_POINTS.map(point => point[2]).join(","));
   url.searchParams.set("hourly", variables.join(","));
-  url.searchParams.set("timezone", "Asia/Shanghai");
+  url.searchParams.set("timezone", "auto");
+  url.searchParams.set("timeformat", "unixtime");
+  url.searchParams.set("models", "gfs_seamless");
   url.searchParams.set("forecast_days", "1");
   const startedAt = Date.now();
   const data = await (await fetchWithRetry(url)).json();
-  const available = levels.filter(
-    (level) => numericCount(data.hourly?.[`cloud_cover_${level}hPa`]) > 0,
-  );
-  assert(available.length >= 4, "pressure: fewer than four cloud levels");
-  return {
-    source: "Open-Meteo pressure cloud profile",
-    status: "ok",
-    levels: available.length,
-    latencyMs: Date.now() - startedAt,
-  };
+  const sourceFetchedAt = new Date().toISOString();
+  assert(Array.isArray(data) && data.length === MATRIX_POINTS.length, "pressure: coordinate-count mismatch");
+  const matrix = data.map((forecast, index) => {
+    const point = MATRIX_POINTS[index];
+    const times = forecast.hourly?.time;
+    assert(Array.isArray(times) && times.length > 0 && times.every((time, hour) => Number.isSafeInteger(time) && (hour === 0 || time > times[hour - 1])), `pressure/${point[0]}: invalid UTC epoch axis`);
+    assert(typeof forecast.timezone === "string" && forecast.timezone, `pressure/${point[0]}: missing timezone`);
+    new Intl.DateTimeFormat("en-CA", { timeZone: forecast.timezone }).format(new Date(times[0] * 1000));
+    assert(Number.isFinite(forecast.elevation), `pressure/${point[0]}: missing model elevation`);
+    const completeHours = times.filter((_time, hour) => levels.filter(level => fields.every(field => {
+      const values = forecast.hourly?.[`${field}_${level}hPa`];
+      return Array.isArray(values) && values.length === times.length && typeof values[hour] === "number" && Number.isFinite(values[hour]);
+    })).length >= 6).length;
+    assert(completeHours === times.length, `pressure/${point[0]}: only ${completeHours}/${times.length} hours have six complete levels`);
+    return { point: point[0], requestedLatitude: point[1], requestedLongitude: point[2], returnedLatitude: forecast.latitude, returnedLongitude: forecast.longitude,
+      provider: "Open-Meteo", requestedModel: "gfs", timezone: forecast.timezone, sourceFetchedAt, providerRunAt: null, observedAt: null,
+      hours: times.length, completeHours, firstEpoch: times[0], lastEpoch: times.at(-1), acceptance: "LIVE_PROVIDER_CONTRACT_ONLY; NOT_SCIENTIFIC_ACCURACY" };
+  });
+  return { source: "Open-Meteo GFS pressure profile", status: "ok", latencyMs: Date.now() - startedAt, matrix };
 }
 
 async function probeGeocode() {

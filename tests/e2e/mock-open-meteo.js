@@ -167,6 +167,7 @@ function buildPressureRaw(fixture, days) {
       (t) => profiles[t]?.find((p) => p.pressure === level)?.heightMsl ?? null,
     );
   }
+  hourly.time = times.map(time => Date.parse(time + (time.length === 16 ? ":00+08:00" : "+08:00")) / 1000);
   return {
     latitude: fixture.pressure.modelLatitude ?? 30,
     longitude: fixture.pressure.modelLongitude ?? 119,
