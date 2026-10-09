@@ -1,4 +1,5 @@
 "use client";
+import type { CloudState } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { buildProductHref, readProductLinkContext } from "@/lib/productRoutes";
 import { locationIdentity, resolveLocationTransfer, type IdentityPoint, type LocationSourceScope } from "@/lib/locationIdentity";
@@ -18,7 +19,7 @@ export function useTopicContext<T extends IdentityPoint>(catalogue: readonly T[]
 export function usePublishTopicContext<T extends IdentityPoint>(
   path: "/fireglow" | "/cloudsea", catalogue: readonly T[], scope: LocationSourceScope,
   selectedId: string | null, point: { latitude: number; longitude: number } | null,
-  date: string, phase: "morning" | "evening", incoming: ReturnType<typeof readProductLinkContext>, preservedDate?: string,
+  date: string, phase: "morning" | "evening", incoming: ReturnType<typeof readProductLinkContext>, preservedDate?: string, model?: CloudState["model"],
 ) {
   useEffect(() => {
     const site = catalogue.find(item => item.id === selectedId);
@@ -28,8 +29,8 @@ export function usePublishTopicContext<T extends IdentityPoint>(
       : sameIncomingPoint ? incoming.identity
       : point ? locationIdentity({ ...point, name: "所选坐标" }, "coordinate") : null;
     const contextDate = preservedDate ?? date;
-    const href = buildProductHref(path, { identity, night: contextDate, phase, contextVersion: 2,
+    const href = buildProductHref(path, { identity, model: model ?? incoming.model, night: contextDate, phase, contextVersion: 2,
       forecastTime: contextDate + (phase === "morning" ? "T05:00" : "T20:00") });
     if (window.location.pathname + window.location.search !== href) window.history.replaceState(null, "", href);
-  }, [path, catalogue, scope, selectedId, point, date, phase, incoming, preservedDate]);
+  }, [path, catalogue, scope, selectedId, point, date, phase, incoming, preservedDate, model]);
 }

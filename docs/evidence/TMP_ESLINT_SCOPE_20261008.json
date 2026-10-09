@@ -1,0 +1,16 @@
+{
+  "artifact": "tmp/codex-reception-lint-probe-20261008/verify-native.cjs",
+  "archiveIgnored": true,
+  "archiveErrors": 0,
+  "sourcePath": "src/lib/topicRequestPolicy.ts",
+  "sourceProbe": "Existing tracked source with an appended require in memory; source file unchanged",
+  "sourceIgnored": false,
+  "sourceDiagnostics": [
+    {
+      "ruleId": "@typescript-eslint/no-require-imports",
+      "severity": 2,
+      "line": 26,
+      "message": "A `require()` style import is forbidden."
+    }
+  ]
+}

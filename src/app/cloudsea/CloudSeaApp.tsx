@@ -138,6 +138,7 @@ interface SnapshotLoadResult {
 export default function CloudSeaApp() {
   const contextBaseDate = todayKey();
   const topicContext = useTopicContext(CLOUD_SEA_SITES, "cloudsea", contextBaseDate);
+  const model = topicContext.incoming.model ?? "gfs";
   const [phase, setPhase] = useState<Phase>(topicContext.incoming.phase ?? "morning");
   const [range, setRange] = useState<RangeMode>(topicContext.initialRange);
   const [snapshots, setSnapshots] = useState<Record<string, CloudSeaSnapshot>>(
@@ -176,6 +177,7 @@ export default function CloudSeaApp() {
       setLoading(true);
       try {
         const results: SnapshotLoadResult[] = [];
+        let providerCooldown = false;
         // Do not fan out all three dates at once: each date already fans out
         // surface plus pressure batches, and the provider may throttle the
         // last date even though today/tomorrow succeeded.
@@ -186,16 +188,17 @@ export default function CloudSeaApp() {
           for (let attempt = 0; attempt < 2; attempt += 1) {
             if (controller.signal.aborted) return;
             try {
-              const url = `/api/cloudsea/snapshot?date=${date}&model=gfs&refresh=${forceRefresh ? "1" : "0"}`;
+              const url = `/api/cloudsea/snapshot?date=${date}&model=${model}&refresh=${forceRefresh ? "1" : "0"}`;
               const response = await fetch(url, {
                 cache: "no-store",
                 signal: controller.signal,
               });
+              providerCooldown = response.status === 429 || response.headers.has("Retry-After");
               const payload = (await response.json().catch(() => null)) as
                 | (CloudSeaSnapshot & { error?: string })
                 | null;
               if (response.ok && payload?.sites) {
-                if (payload.date !== date || payload.model !== "gfs") {
+                if (payload.date !== date || payload.model !== model) {
                   throw new Error("云海快照日期或模型与请求不一致");
                 }
                 const pressureComplete = hasCompleteCloudSeaCoverage(
@@ -240,6 +243,7 @@ export default function CloudSeaApp() {
               lastError =
                 error instanceof Error ? error.message : "云海快照请求失败";
             }
+            if (providerCooldown) break;
             if (attempt === 0) {
               await new Promise((resolve) => setTimeout(resolve, 600));
             }
@@ -250,6 +254,10 @@ export default function CloudSeaApp() {
                 ? { date, snapshot: degradedSnapshot, error: lastError }
                 : { date, snapshot: null, error: lastError },
             );
+          }
+          if (providerCooldown) {
+            for (const pendingDate of activeDates.slice(results.length)) results.push({ date: pendingDate, snapshot: null, error: "天气供应商冷却中，未继续请求后续日期" });
+            break;
           }
         }
 
@@ -323,7 +331,7 @@ export default function CloudSeaApp() {
         }
       }
     },
-    [activeDates],
+    [activeDates, model],
   );
 
   useEffect(() => {
@@ -481,7 +489,7 @@ export default function CloudSeaApp() {
     }
   };
 
-  usePublishTopicContext("/cloudsea", CLOUD_SEA_SITES, "cloudsea", selectedSiteId, pickedPoint, selectedContext?.dateKey ?? primaryDate, phase, topicContext.incoming, topicContext.preservedDate);
+  usePublishTopicContext("/cloudsea", CLOUD_SEA_SITES, "cloudsea", selectedSiteId, pickedPoint, selectedContext?.dateKey ?? primaryDate, phase, topicContext.incoming, topicContext.preservedDate, model);
 
   return (
     <div className="cloudsea-root app-shell">
@@ -557,9 +565,9 @@ export default function CloudSeaApp() {
 
 
       <details className="cloudsea-beta-banner forecast-method-note">
-        <summary>GFS 模型 · 条件指数，非实测概率</summary>
+        <summary>{model.toUpperCase()} 模型 · 条件指数，非实测概率</summary>
         <p>
-        Beta · 条件指数综合 Open-Meteo GFS surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
+        Beta · 条件指数综合 Open-Meteo {model.toUpperCase()} surface 天气与压力层数值模式剖面；云底/云顶、山顶相对层位和逆温均为模式推导，不是探空或现场仪器实测，也不是实拍样本校准的事件概率。
         </p>
       </details>
       <div
@@ -886,7 +894,7 @@ export default function CloudSeaApp() {
           {level === "full" && selectedRanked && selectedWindow ? <CloudSeaSiteDetail site={selectedRanked.site} window={selectedWindow} phase={phase} dateKey={selectedContext?.dateKey ?? selectedRanked.dateKey} onClose={() => setSelectedSiteId(null)} /> : null}
           {level === "full" ? <details className="mobile-sheet-explainer">
             <summary>数据口径与地图色阶</summary>
-            <p>条件指数综合 GFS 地面天气与压力层模式剖面；云底、云顶和逆温为模式推导，不是现场实测。地图色面是目录点位指数插值，缺失数据不推断分数。</p>
+            <p>条件指数综合 {model.toUpperCase()} 地面天气与压力层模式剖面；云底、云顶和逆温为模式推导，不是现场实测。地图色面是目录点位指数插值，缺失数据不推断分数。</p>
             <p>{LEVEL_LABELS.map((entry) => entry.range).join(" · ")} · 数据不足</p>
           </details> : null}
           {!pickedPoint ? <div className="mobile-sheet-ranking" aria-label="云海山峰排行">

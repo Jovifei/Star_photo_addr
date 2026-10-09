@@ -13,7 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     // Generated output is never source input.
     "dist/**",
-    "tmp/deploy-*/**",
+    "tmp/**",
     "playwright-report/**",
     "playwright-report-local/**",
     "test-results/**",

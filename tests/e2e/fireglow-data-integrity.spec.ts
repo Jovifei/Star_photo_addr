@@ -240,3 +240,39 @@ test("retains the selected-phase warning when another date in the range fails", 
   await expect(page.locator(".fireglow-phase-unavailable")).toContainText("晚霞");
   await expect(page.locator(".fireglow-error:not(.fireglow-phase-unavailable)")).toContainText("fixture HTTP 503");
 });
+
+test("HTTP200 retained snapshot with Retry-After stays visible and stops later dates", async ({ page }, testInfo) => {
+  const mobile = testInfo.project.name === "mobile";
+  const requestedDates: string[] = [];
+  const sourceFetchedAt = new Date(Date.now() - 25 * 60_000).toISOString();
+  await page.route("**/api/fireglow/snapshot**", async route => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? "";
+    requestedDates.push(date);
+    await route.fulfill({ status: 200, headers: { "Retry-After": "600" }, json: {
+      date, model: "icon", generatedAt: new Date().toISOString(), source: "retained fixture", stale: true,
+      refreshError: "provider cooldown; retained original snapshot",
+      provenance: { version: 1, sourcesBySite: { "finder-001-location": [{ provider: "Open-Meteo", model: "icon", dataset: "surface", sourceFetchedAt, providerRunAt: null, observedAt: null }] } },
+      sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(72) } },
+    } });
+  });
+  await page.goto("/fireglow");
+  if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
+  const scoreLabel = mobile ? page.locator(".mobile-sheet-ranking button").first().locator("strong") : page.locator(".fireglow-score b").first();
+  await expect(scoreLabel).toHaveText("72/100");
+  const settings = page.getByRole("button", { name: "展开日期与时段设置" });
+  if (await settings.isVisible()) await settings.click();
+  await page.getByRole("button", { name: /三日总览/ }).click();
+  await expect.poll(() => requestedDates.length).toBe(2);
+  await expect(scoreLabel).toHaveText(mobile ? /^\d+月\d+日 周. · 72\/100$/ : "72/100");
+  expect(new Set(requestedDates).size).toBe(1);
+  if (mobile) await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("旧数据 · 不作推荐");
+  else await expect(page.locator(".fireglow-map-status")).toContainText("数据已降级");
+  await (mobile ? page.locator(".mobile-sheet-ranking button").first() : page.locator(".fireglow-list button").first()).click();
+  if (mobile) await expandMobileDataSheet(page);
+  await expect(page.locator(".fg-detail-data-status")).toContainText("数据已降级");
+  await expect(page.locator(".fg-hero-score-number")).toHaveText("72/100");
+  const source = page.getByTestId("snapshot-source-times");
+  await source.locator("summary").click();
+  await expect(source).toContainText(sourceFetchedAt);
+  expect(requestedDates).toHaveLength(2);
+});
