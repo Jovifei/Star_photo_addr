@@ -7,6 +7,7 @@ import {
   forecastDaysForRange,
   generateGridBounds,
   fetchCloudGrid,
+  resolveCloudGridEpoch,
 } from "@/lib/cloudGrid";
 import { nightRangeKeys } from "@/lib/nighttime";
 import CloudCanvasOverlay from "@/components/CloudCanvasOverlay";
@@ -249,6 +250,11 @@ export default function CloudLayer() {
   }
 
   const activeGrid = cloudGrid?.model === cloudState.model ? cloudGrid : null;
+  const pointForecast = state.forecast?.metadata?.model === cloudState.model ? state.forecast : null;
+  const activeEpoch = activeGrid ? resolveCloudGridEpoch(
+    activeGrid, cloudState.activeForecastTime, cloudState.activeForecastEpoch,
+    pointForecast?.timezone ?? (state.selectedLocation ? state.selectedLocation.timezone : "Asia/Shanghai"), pointForecast,
+  ) : null;
   const bounds = activeGrid
     ? ([
         [activeGrid.bounds.south, activeGrid.bounds.west],
@@ -263,7 +269,7 @@ export default function CloudLayer() {
           gridData={activeGrid}
           timeIndex={cloudState.timeIndex}
           activeForecastTime={cloudState.activeForecastTime}
-          activeForecastEpoch={cloudState.activeForecastEpoch}
+          activeForecastEpoch={activeEpoch}
           displayMode={cloudState.cloudDisplayMode}
           showPrecipitation={cloudState.precipitationEnabled}
           showWind={cloudState.windEnabled}

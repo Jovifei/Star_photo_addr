@@ -1,5 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { buildTrackSegments, nightKeyOfTime } from "@/components/CloudTimeline";
+import { buildGridTimelineHours, buildTrackSegments, nightKeyOfTime } from "@/components/CloudTimeline";
+import { normalizeEpochHours } from "@/lib/absoluteForecastTime";
+import type { CloudGridData } from "@/lib/types";
+
+function gridAt(epochs: number[]): CloudGridData {
+  return {
+    model: "icon", samples: [], bounds: { north: 40, south: 30, east: 120, west: 110 }, nightKeys: [], fetchedAt: "2026-10-09T00:00:00Z",
+    forecasts: ["Asia/Shanghai", "Asia/Tokyo"].map((timezone, index) => ({
+      timezone, locationId: String(index), modelLatitude: 35, modelLongitude: 115, modelElevation: 0, utcOffsetSeconds: index ? 32400 : 28800, fetchedAt: "2026-10-09T00:00:00Z",
+      metadata: { source: "Open-Meteo" as const, model: "icon" as const, timeAxisVersion: "epoch-v1" as const, fetchedAt: "2026-10-09T00:00:00Z", stale: false, units: {} },
+      hourly: normalizeEpochHours(index ? epochs.slice(1) : epochs, timezone).map(hour => ({ ...hour, cloudCover: index ? 80 : 20 })),
+    })),
+  };
+}
+
+describe("grid timeline clock", () => {
+  it("labels all cells in the owning timezone and averages only equal instants", () => {
+    const epochs = [Date.parse("2026-10-09T12:00:00Z") / 1000, Date.parse("2026-10-09T13:00:00Z") / 1000];
+    const hours = buildGridTimelineHours(gridAt(epochs), "Asia/Shanghai");
+    expect(hours.map(hour => hour.time)).toEqual(["2026-10-09T20:00", "2026-10-09T21:00"]);
+    expect(hours.map(hour => hour.cloudCover)).toEqual([20, 50]);
+    expect(hours.map(hour => hour.epochSeconds)).toEqual(epochs);
+    expect(hours[1].utcOffsetSeconds).toBe(28800);
+  });
+
+  it("preserves both repeated DST hours and exact click identities", () => {
+    const epochs = [Date.parse("2026-11-01T05:00:00Z") / 1000, Date.parse("2026-11-01T06:00:00Z") / 1000];
+    const hours = buildGridTimelineHours(gridAt(epochs), "America/New_York");
+    expect(hours.map(hour => hour.time)).toEqual(["2026-11-01T01:00", "2026-11-01T01:00"]);
+    expect(hours.map(hour => hour.utcOffsetSeconds)).toEqual([-14400, -18000]);
+    expect(buildTrackSegments(hours, false)[0].ticks.map(tick => tick.epochSeconds)).toEqual(epochs);
+  });
+
+  it("does not borrow the first grid timezone when point timezone is unknown", () => {
+    const grid = gridAt([Date.parse("2026-10-09T12:00:00Z") / 1000, Date.parse("2026-10-09T13:00:00Z") / 1000]);
+    expect(buildGridTimelineHours(grid)).toEqual([]);
+    expect(buildGridTimelineHours(grid, "invalid/timezone")).toEqual([]);
+  });
+
+  it("retains absolute identity on daytime ticks", () => {
+    expect(buildTrackSegments([{ time: "2026-10-09T12:00", epochSeconds: 1 }], false)[0].ticks[0].epochSeconds).toBe(1);
+  });
+});
 
 describe("nightKeyOfTime", () => {
   it("rolls post-midnight hours into the previous date", () => {

@@ -1,4 +1,4 @@
-import { resolveWallHour } from "./absoluteForecastTime";
+import { normalizeEpochHours, resolveWallHour, validAbsoluteHours } from "./absoluteForecastTime";
 import type L from "leaflet";
 import { maxForecastDaysForModel } from "@/lib/forecastModelPolicy";
 import { normalizeForecastDaysForModel, requestForecastResponse } from "@/lib/forecastClient";
@@ -68,16 +68,25 @@ export async function fetchCloudGrid(
       `云图网格响应数量不匹配：采样 ${samples.length} 点，收到 ${forecasts.length} 点`,
     );
   }
+  const absolute = forecasts.every(forecast => forecast.metadata?.timeAxisVersion === "epoch-v1");
+  const legacy = forecasts.every(forecast => forecast.metadata?.timeAxisVersion === undefined);
   const expectedTimes = forecasts[0]?.hourly.map((hour) => hour.time) ?? [];
   if (!expectedTimes.length || forecasts.some((forecast, index) =>
     forecast.metadata?.model !== model ||
     (forecast.requestedLatitude !== undefined && Math.abs(forecast.requestedLatitude - samples[index]!.latitude) > 1e-5) ||
     (forecast.requestedLongitude !== undefined && Math.abs(forecast.requestedLongitude - samples[index]!.longitude) > 1e-5) ||
-    forecast.hourly.length !== expectedTimes.length ||
-    forecast.hourly.some((hour, hourIndex) => hour.time !== expectedTimes[hourIndex]),
+    (absolute ? !validAbsoluteHours(forecast.hourly, forecast.timezone) :
+      !legacy || forecast.timezone !== forecasts[0].timezone || forecast.utcOffsetSeconds !== forecasts[0].utcOffsetSeconds ||
+      forecast.hourly.length !== expectedTimes.length ||
+      forecast.hourly.some((hour, hourIndex) => hour.time !== expectedTimes[hourIndex])),
   )) {
     throw new Error("云图网格返回的模型或时间轴不一致");
   }
+  if (absolute && Math.max(...forecasts.map(forecast => forecast.hourly[0].epochSeconds!)) >
+    Math.min(...forecasts.map(forecast => forecast.hourly.at(-1)!.epochSeconds!))) {
+    throw new Error("云图网格绝对时间范围没有重叠");
+  }
+  const stale = result.stale || legacy;
   const latitudes = samples.map((sample) => sample.latitude);
   const longitudes = samples.map((sample) => sample.longitude);
   const sourceTimes = [
@@ -103,8 +112,8 @@ export async function fetchCloudGrid(
     nightKeys,
     fetchedAt: data.metadata?.fetchedAt ?? forecasts[0]?.fetchedAt ?? "",
     sourceFetchedAt,
-    stale: result.stale,
-    ...(result.stale ? { missingFields: ["源天气数据过期或降级"] } : {}),
+    stale,
+    ...(stale ? { missingFields: [legacy ? "旧格式天气时间轴，仅供降级查看" : "源天气数据过期或降级"] } : {}),
     model,
     rows,
     cols,
@@ -221,20 +230,44 @@ export function bilinearInterpolate(
     : null;
 }
 
-function hourAt(
-  forecast: LocationForecast,
+/** Resolve the display clock once; a grid point never owns the selected-point timezone. */
+export function resolveCloudGridEpoch(
+  grid: CloudGridData,
+  time: string | null | undefined,
+  epochSeconds: number | null | undefined,
+  timeZone: string | undefined,
+  pointForecast?: LocationForecast | null,
+): number | null {
+  if (epochSeconds != null) return Number.isSafeInteger(epochSeconds) ? epochSeconds : null;
+  if (!time || !timeZone) return null;
+  if (pointForecast?.metadata?.timeAxisVersion === "epoch-v1") {
+    return resolveWallHour(pointForecast.hourly, time)?.epochSeconds ?? null;
+  }
+  const source = grid.forecasts[0];
+  if (source?.metadata?.timeAxisVersion !== "epoch-v1") return null;
+  try {
+    return resolveWallHour(normalizeEpochHours(source.hourly.map(hour => hour.epochSeconds!), timeZone), time)?.epochSeconds ?? null;
+  } catch { return null; }
+}
+
+function hoursAt(
+  grid: CloudGridData,
   timeOrIndex: string | number,
   epochSeconds?: number | null,
-): HourWeather | undefined {
-  if (typeof timeOrIndex === "string") {
-    return epochSeconds != null ? forecast.hourly.find(hour => hour.epochSeconds === epochSeconds) : resolveWallHour(forecast.hourly, timeOrIndex) ?? undefined;
+): Array<HourWeather | undefined> {
+  if (epochSeconds != null) {
+    return grid.forecasts.map(forecast => forecast.hourly.find(hour => hour.epochSeconds === epochSeconds));
   }
-  return forecast.hourly[
-    Math.min(
-      Math.max(0, timeOrIndex),
-      Math.max(0, forecast.hourly.length - 1),
-    )
-  ];
+  const source = grid.forecasts[0];
+  const sameClock = source && grid.forecasts.every(forecast => forecast.timezone === source.timezone && forecast.utcOffsetSeconds === source.utcOffsetSeconds);
+  if (!sameClock) return grid.forecasts.map(() => undefined);
+  const sourceHour = typeof timeOrIndex === "string" ? resolveWallHour(source.hourly, timeOrIndex) : source.hourly[timeOrIndex];
+  if (source?.metadata?.timeAxisVersion === "epoch-v1") {
+    // null explicitly means that the owning clock could not resolve this selection.
+    return grid.forecasts.map(forecast => epochSeconds === null || sourceHour?.epochSeconds == null ? undefined :
+      forecast.hourly.find(hour => hour.epochSeconds === sourceHour.epochSeconds));
+  }
+  return grid.forecasts.map(forecast => sourceHour ? resolveWallHour(forecast.hourly, sourceHour.time) ?? undefined : undefined);
 }
 
 function meanNumber(
@@ -315,15 +348,16 @@ export function getValuesAtTime(
   mid: Array<number | null>;
   low: Array<number | null>;
 } {
+  const hours = hoursAt(gridData, timeOrIndex, epochSeconds);
   return {
-    high: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.cloudHigh ?? null,
+    high: hours.map(
+      (hour) => hour?.cloudHigh ?? null,
     ),
-    mid: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.cloudMid ?? null,
+    mid: hours.map(
+      (hour) => hour?.cloudMid ?? null,
     ),
-    low: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.cloudLow ?? null,
+    low: hours.map(
+      (hour) => hour?.cloudLow ?? null,
     ),
   };
 }
@@ -333,8 +367,8 @@ export function getCloudCoverAtTime(
   timeOrIndex: string | number,
   epochSeconds?: number | null,
 ): Array<number | null> {
-  return gridData.forecasts.map(
-    (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.cloudCover ?? null,
+  return hoursAt(gridData, timeOrIndex, epochSeconds).map(
+    (hour) => hour?.cloudCover ?? null,
   );
 }
 
@@ -347,15 +381,16 @@ export function getWeatherValuesAtTime(
   windSpeed: Array<number | null>;
   windDirection: Array<number | null>;
 } {
+  const hours = hoursAt(gridData, timeOrIndex, epochSeconds);
   return {
-    precipitation: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.precipitation ?? null,
+    precipitation: hours.map(
+      (hour) => hour?.precipitation ?? null,
     ),
-    windSpeed: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.windSpeed ?? null,
+    windSpeed: hours.map(
+      (hour) => hour?.windSpeed ?? null,
     ),
-    windDirection: gridData.forecasts.map(
-      (forecast) => hourAt(forecast, timeOrIndex, epochSeconds)?.windDirection ?? null,
+    windDirection: hours.map(
+      (hour) => hour?.windDirection ?? null,
     ),
   };
 }

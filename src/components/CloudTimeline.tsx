@@ -1,5 +1,5 @@
 "use client";
-import { resolveWallHour } from "@/lib/absoluteForecastTime";
+import { normalizeEpochHours, resolveWallHour } from "@/lib/absoluteForecastTime";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Pause, Play } from "lucide-react";
@@ -11,7 +11,7 @@ import { isInNight } from "@/lib/nighttime";
 import { aggregateForecastHour, getValuesAtTime } from "@/lib/cloudGrid";
 import { missingNightInputs, scoreCoreWeather } from "@/lib/forecastIntegrity";
 import { presentHourlyDataValidity } from "@/lib/dataPresentation";
-import type { SatelliteFrame } from "@/lib/types";
+import type { CloudGridData, HourWeather, SatelliteFrame } from "@/lib/types";
 import HourlyForecastMatrix, { buildNightTimes } from "@/components/HourlyForecastMatrix";
 import { nightAstronomyFacts } from "@/lib/nightAstronomyFacts";
 import { evaluateNight } from "@/lib/scoring";
@@ -28,6 +28,26 @@ function buildSchedule(nightKeys: string[]): Array<{ time: string; nightKey: str
   return nightKeys.flatMap((nightKey) =>
     buildNightTimes(nightKey).map((time) => ({ time, nightKey })),
   );
+}
+
+/** Grid cells share instants, while labels belong to the point or catalog clock. */
+function buildGridTimelineHours(grid: CloudGridData | null, timeZone?: string): HourWeather[] {
+  const source = grid?.forecasts[0];
+  if (!grid || !source || !timeZone) return [];
+  if (source.metadata?.timeAxisVersion === "epoch-v1") {
+    if (grid.forecasts.some(forecast => forecast.metadata?.timeAxisVersion !== "epoch-v1")) return [];
+    try {
+      return normalizeEpochHours(source.hourly.map(hour => hour.epochSeconds!), timeZone).map(clock => ({
+        ...aggregateForecastHour(grid.forecasts.map(forecast => forecast.hourly.find(hour => hour.epochSeconds === clock.epochSeconds)), clock.time),
+        ...clock,
+      }));
+    } catch { return []; }
+  }
+  if (source.metadata?.timeAxisVersion !== undefined || source.timezone !== timeZone ||
+    grid.forecasts.some(forecast => forecast.metadata?.timeAxisVersion !== undefined || forecast.timezone !== timeZone || forecast.utcOffsetSeconds !== source.utcOffsetSeconds)) return [];
+  return source.hourly.map(hour => aggregateForecastHour(
+    grid.forecasts.map(forecast => resolveWallHour(forecast.hourly, hour.time) ?? undefined), hour.time,
+  ) ?? { time: hour.time });
 }
 
 function formatTimelineTime(time: string): string {
@@ -106,7 +126,7 @@ function buildTrackSegments(
         day = { key: `day-${item.time.slice(0, 10)}`, kind: "day", label: "白天", ticks: [] };
         segments.push(day);
       }
-      day.ticks.push({ time: item.time, label: String(hour) });
+      day.ticks.push({ time: item.time, epochSeconds: item.epochSeconds, label: String(hour) });
       continue;
     }
     const nightKey = nightKeyOfTime(item.time);
@@ -140,15 +160,17 @@ export default function CloudTimeline() {
   const canExpandDetails = !isNightLightsMode;
   const timelineExpanded = canExpandDetails && expanded;
   const pointForecast = forecast?.metadata?.model === cloudState.model ? forecast : null;
-  const gridForecast = cloudGrid?.model === cloudState.model ? cloudGrid.forecasts[0] ?? null : null;
+  const activeGrid = cloudGrid?.model === cloudState.model ? cloudGrid : null;
+  const displayTimeZone = pointForecast?.timezone ?? (selectedLocation ? selectedLocation.timezone : "Asia/Shanghai");
+  const gridHours = useMemo(() => buildGridTimelineHours(activeGrid, displayTimeZone), [activeGrid, displayTimeZone]);
   const forecastSource = pointForecast
     ? "取样点"
-    : gridForecast
+    : gridHours.length
       ? "地图采样网格平均"
       : "暂无有效预报";
   const forecastHours = useMemo(
-    () => pointForecast?.hourly ?? gridForecast?.hourly ?? [],
-    [gridForecast, pointForecast],
+    () => pointForecast?.hourly ?? gridHours,
+    [gridHours, pointForecast],
   );
   const forwardTimes = useMemo(
     () => forecastTimeWindow(state.forecastWindowStart, 72),
@@ -194,15 +216,9 @@ export default function CloudTimeline() {
     : displayNight;
   const matrixTimes = useMemo(() => buildNightTimes(displayNight), [displayNight]);
   const matrixHours = useMemo(() => {
-    const clockSource = pointForecast ?? gridForecast;
-    if (clockSource?.metadata?.timeAxisVersion === "epoch-v1") return clockSource.hourly.filter(hour => isInNight(hour.time, displayNight)).map(hour => pointForecast ? hour : aggregateForecastHour(cloudGrid!.forecasts.map(forecast => forecast.hourly.find(item => item.epochSeconds === hour.epochSeconds)), hour.time) ?? hour);
-    return matrixTimes.map((time) => {
-    const selectedHour = pointForecast?.hourly.find((hour) => hour.time === time);
-    const gridHour = cloudGrid?.model === cloudState.model
-      ? aggregateForecastHour(cloudGrid.forecasts.map((item) => item.hourly.find((hour) => hour.time === time)), time)
-      : null;
-    return selectedHour ?? gridHour ?? { time };
-  }); }, [cloudGrid, cloudState.model, displayNight, gridForecast, matrixTimes, pointForecast]);
+    if (forecastHours.some(hour => hour.epochSeconds != null)) return forecastHours.filter(hour => isInNight(hour.time, displayNight));
+    return matrixTimes.map(time => resolveWallHour(forecastHours, time) ?? { time });
+  }, [displayNight, forecastHours, matrixTimes]);
   const activeForecastHour = resolveWallHour(forecastHours, cloudState.activeForecastTime ?? "", cloudState.activeForecastEpoch);
   const selectedMatrixTime = matrixTimes.includes(cloudState.activeForecastTime ?? "")
     ? cloudState.activeForecastTime
@@ -211,10 +227,10 @@ export default function CloudTimeline() {
   // a 72-hour forecast. Keep the summary/card bound to the actual active hour
   // even when the selected hour is outside the currently expanded night.
   const selectedHour = activeForecastHour ?? matrixHours.find((hour) => hour.time === selectedMatrixTime && (cloudState.activeForecastEpoch == null || hour.epochSeconds === cloudState.activeForecastEpoch));
-  const selectedWeatherScore = selectedHour ? scoreCoreWeather(selectedHour)?.weatherScore ?? null : null;
   const forecastStale = pointForecast
     ? Boolean(pointForecast.metadata?.stale)
     : Boolean(cloudGrid?.stale);
+  const selectedWeatherScore = selectedHour && !forecastStale && (!selectedLocation || pointForecast) ? scoreCoreWeather(selectedHour)?.weatherScore ?? null : null;
   const hourlyDataState = presentHourlyDataValidity({
     hasSource: forecastSource !== "暂无有效预报",
     stale: forecastStale,
@@ -495,4 +511,4 @@ export default function CloudTimeline() {
   );
 }
 
-export { buildSchedule, buildTrackSegments, nightKeyOfTime, HOURS_PER_NIGHT, NIGHT_START, NIGHT_END, isInNight, getValuesAtTime };
+export { buildSchedule, buildGridTimelineHours, buildTrackSegments, nightKeyOfTime, HOURS_PER_NIGHT, NIGHT_START, NIGHT_END, isInNight, getValuesAtTime };

@@ -16,6 +16,7 @@ import {
   getCloudCoverAtTime,
   getValuesAtTime,
   averageLayer,
+  resolveCloudGridEpoch,
 } from "@/lib/cloudGrid";
 import { isInNight } from "@/lib/nighttime";
 import {
@@ -193,9 +194,11 @@ export default function CloudControl() {
     cloudState.overlayMode === "forecast-cloud" &&
     cloudGrid?.model === cloudState.model
   ) {
-    const layers = getValuesAtTime(cloudGrid, time, cloudState.activeForecastEpoch);
+    const epoch = resolveCloudGridEpoch(cloudGrid, cloudState.activeForecastTime, cloudState.activeForecastEpoch,
+      state.selectedLocation ? state.selectedLocation.timezone : "Asia/Shanghai");
+    const layers = getValuesAtTime(cloudGrid, time, epoch);
     values = {
-      total: averageLayer(getCloudCoverAtTime(cloudGrid, time, cloudState.activeForecastEpoch)),
+      total: averageLayer(getCloudCoverAtTime(cloudGrid, time, epoch)),
       high: averageLayer(layers.high),
       mid: averageLayer(layers.mid),
       low: averageLayer(layers.low),
