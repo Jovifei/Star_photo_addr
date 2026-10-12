@@ -7,7 +7,7 @@ import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { buildFireGlowSnapshot } from "@/lib/fireglow";
 import type { FireGlowSnapshot } from "@/lib/fireglow";
 import {
-  fetchFinderWeatherRange,
+  fetchFireGlowWeather,
   isFinderDateAllowed,
 } from "@/lib/stargazingFinderWeather";
 import type { ForecastModel } from "@/lib/types";
@@ -229,13 +229,11 @@ export async function GET(request: NextRequest) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {
-        const weather = await fetchFinderWeatherRange([date], controller.signal, Boolean(forceRefresh), model);
-        const weatherByDate = Object.fromEntries(
-          Object.entries(weather).map(([night, response]) => [night, response.data]),
-        );
+        const weather = await fetchFireGlowWeather(date, controller.signal, Boolean(forceRefresh), model);
+        const weatherByDate = { [date]: weather.data };
         const snapshot = buildFireGlowSnapshot(date, model, weatherByDate);
         if (countValidScores(snapshot) === 0) {
-          const providerError = Object.values(weather[date]?.data ?? {})
+          const providerError = Object.values(weather.data)
             .map((record) => record.error)
             .find((message): message is string => Boolean(message));
           throw new Error(providerError ?? "上游未返回有效火烧云评分");

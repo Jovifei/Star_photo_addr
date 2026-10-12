@@ -8,9 +8,9 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/stargazingFinderWeather", () => ({
-  fetchFinderWeatherRange: vi.fn(async () => {
+  fetchFireGlowWeather: vi.fn(async () => {
     state.fetchCalls += 1;
-    return {};
+    return { data: {} };
   }),
   isFinderDateAllowed: () => true,
 }));

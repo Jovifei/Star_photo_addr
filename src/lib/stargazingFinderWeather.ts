@@ -165,11 +165,19 @@ interface BatchResult {
   provenance: ForecastProvenance[];
 }
 
-function sliceHourly(raw: RawForecast, date: string): FinderHourlyData {
+export type FinderForecastWindow = "observing-night" | "calendar-day";
+
+function sliceHourly(
+  raw: RawForecast,
+  date: string,
+  window: FinderForecastWindow = "observing-night",
+): FinderHourlyData {
   const hourly = raw.hourly ?? {};
   const times = stringArray(hourly.time);
-  const start = `${date}T07:00`;
-  const end = `${addFinderDays(date, 1)}T15:00`;
+  const start = `${date}T${window === "calendar-day" ? "00:00" : "07:00"}`;
+  const end = window === "calendar-day"
+    ? `${date}T23:00`
+    : `${addFinderDays(date, 1)}T15:00`;
   const indices = times
     .map((time, index) => ({ time, index }))
     .filter(({ time }) => time >= start && time <= end);
@@ -202,14 +210,17 @@ export function isFinderRangeAllowedForModel(
   dates: string[],
   model: ForecastModel,
   today = getShanghaiDate(),
+  window: FinderForecastWindow = "observing-night",
 ): boolean {
   if (!dates.length || dates.some((date) => !isFinderDateAllowed(date, today))) {
     return false;
   }
-  const lastNight = [...dates].sort().at(-1)!;
-  // A night includes the following morning, so its end day must remain inside
-  // the provider model's advertised forecast horizon.
-  const requiredEndDate = addFinderDays(lastNight, 1);
+  const lastDate = [...dates].sort().at(-1)!;
+  // Finder's selected night includes the following morning; FireGlow consumes
+  // one calendar day. Validate the actual end of each product's time window.
+  const requiredEndDate = window === "calendar-day"
+    ? lastDate
+    : addFinderDays(lastDate, 1);
   const latestAvailableDate = addFinderDays(
     today,
     maxForecastDaysForModel(model) - 1,
@@ -221,6 +232,7 @@ export function buildFinderWeatherUrl(
   locations: FinderLocation[],
   dates: string[],
   model: ForecastModel,
+  window: FinderForecastWindow = "observing-night",
 ): string {
   if (!locations.length || !dates.length) {
     throw new Error("地点和日期不能为空");
@@ -232,8 +244,11 @@ export function buildFinderWeatherUrl(
     hourly: HOURLY_VARIABLES,
     timezone: "Asia/Shanghai",
     start_date: sortedDates[0],
-    // Include the morning after the last observation night.
-    end_date: addFinderDays(sortedDates.at(-1)!, 1),
+    // Finder needs the following morning; FireGlow scores the requested local
+    // calendar day and must not spend a forecast day on an unrelated morning.
+    end_date: window === "calendar-day"
+      ? sortedDates.at(-1)!
+      : addFinderDays(sortedDates.at(-1)!, 1),
     wind_speed_unit: "ms",
   });
   const providerModel = openMeteoModelParameter(model);
@@ -248,30 +263,41 @@ const rawBatchCache = new Map<string, RawBatchCache>();
 const rawBatchInFlight = new Map<string, Promise<RawBatchCache>>();
 const rawCacheDirectory = path.join(process.env.OBSERVING_SNAPSHOT_DIR || os.tmpdir(), "finder-raw-cache-v1");
 
-function validRawCache(value: unknown, locations: FinderLocation[], dates: string[], maxAgeMs = RAW_TTL_MS): value is RawBatchCache {
+function validRawCache(
+  value: unknown,
+  locations: FinderLocation[],
+  dates: string[],
+  window: FinderForecastWindow = "observing-night",
+  maxAgeMs = RAW_TTL_MS,
+): value is RawBatchCache {
   try {
     const candidate = value as RawBatchCache;
     if (!candidate || dataAgeMs(candidate.fetchedAt) >= maxAgeMs || !Array.isArray(candidate.forecasts) || candidate.forecasts.length !== locations.length) return false;
     candidate.forecasts.forEach((forecast, index) => {
       validateFinderRawForecast(forecast);
       if (distanceKm(locations[index]!.latitude, locations[index]!.longitude, Number(forecast.latitude), Number(forecast.longitude)) > 50) throw new Error("coordinate mismatch");
-      dates.forEach((date) => sliceHourly(forecast, date));
+      dates.forEach((date) => sliceHourly(forecast, date, window));
     });
     return true;
   } catch { return false; }
 }
 
-async function cachedRawBatch(url: string, locations: FinderLocation[], dates: string[]): Promise<RawBatchCache> {
+async function cachedRawBatch(
+  url: string,
+  locations: FinderLocation[],
+  dates: string[],
+  window: FinderForecastWindow,
+): Promise<RawBatchCache> {
   const key = createHash("sha256").update(url).digest("hex");
   const memory = rawBatchCache.get(key);
-  if (validRawCache(memory, locations, dates)) return memory;
-  let fallback: RawBatchCache | null = validRawCache(memory, locations, dates, 6 * 60 * 60_000) ? memory : null;
+  if (validRawCache(memory, locations, dates, window)) return memory;
+  let fallback: RawBatchCache | null = validRawCache(memory, locations, dates, window, 6 * 60 * 60_000) ? memory : null;
   const diskEnabled = process.env.NODE_ENV !== "test" || process.env.FINDER_ENABLE_DISK_CACHE === "1";
   if (diskEnabled) {
     try {
       const disk: unknown = JSON.parse(fs.readFileSync(path.join(rawCacheDirectory, `${key}.json`), "utf8"));
-      if (validRawCache(disk, locations, dates)) { rawBatchCache.set(key, disk); return disk; }
-      if (validRawCache(disk, locations, dates, 6 * 60 * 60_000)) fallback = disk;
+      if (validRawCache(disk, locations, dates, window)) { rawBatchCache.set(key, disk); return disk; }
+      if (validRawCache(disk, locations, dates, window, 6 * 60 * 60_000)) fallback = disk;
     } catch { /* Optional persistence never supplies invalid data. */ }
   }
   const existing = rawBatchInFlight.get(key);
@@ -289,7 +315,7 @@ async function cachedRawBatch(url: string, locations: FinderLocation[], dates: s
     const entry = { forecasts: Array.isArray(body) ? body : [body], fetchedAt: new Date().toISOString() } as RawBatchCache;
     // A provider may truncate the requested horizon. Such responses are still
     // validated by the caller for its requested dates, but never persisted.
-    if (validRawCache(entry, locations, dates)) {
+    if (validRawCache(entry, locations, dates, window)) {
       rawBatchCache.set(key, entry);
       while (rawBatchCache.size > 128) rawBatchCache.delete(rawBatchCache.keys().next().value!);
       if (diskEnabled) {
@@ -304,7 +330,7 @@ async function cachedRawBatch(url: string, locations: FinderLocation[], dates: s
     }
     return entry;
   })().catch((error: unknown) => {
-    if (fallback && validRawCache(fallback, locations, dates, 6 * 60 * 60_000)) {
+    if (fallback && validRawCache(fallback, locations, dates, window, 6 * 60 * 60_000)) {
       return { ...fallback, stale: true };
     }
     throw error;
@@ -318,6 +344,7 @@ async function requestBatch(
   dates: string[],
   signal: AbortSignal,
   model: ForecastModel,
+  window: FinderForecastWindow,
 ): Promise<BatchResult> {
   const today = getShanghaiDate();
   const start = [...dates, today].sort()[0]!;
@@ -326,11 +353,11 @@ async function requestBatch(
   const end = [...dates, standardEnd].sort().at(-1)!;
   const coverageDates: string[] = [];
   for (let date = start; date <= end; date = addFinderDays(date, 1)) coverageDates.push(date);
-  const url = buildFinderWeatherUrl(locations, coverageDates, model);
+  const url = buildFinderWeatherUrl(locations, coverageDates, model, window);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const raw = await cachedRawBatch(url, locations, coverageDates);
+      const raw = await cachedRawBatch(url, locations, coverageDates, window);
       const forecasts = raw.forecasts;
       if (forecasts.length !== locations.length) throw new Error("Open-Meteo 返回的地点数量与请求不匹配");
       forecasts.forEach(validateFinderRawForecast);
@@ -353,7 +380,7 @@ async function requestBatch(
       return {
         stale: raw.stale === true,
         hourlyByDate: Object.fromEntries(
-          dates.map((date) => [date, forecasts.map((forecast) => sliceHourly(forecast, date))]),
+          dates.map((date) => [date, forecasts.map((forecast) => sliceHourly(forecast, date, window))]),
         ),
         provenance: forecasts.map((forecast, index) => ({
           requestedLatitude: locations[index]!.latitude,
@@ -415,6 +442,17 @@ export async function fetchFinderWeather(
   )[date] as FinderWeatherResponse;
 }
 
+export async function fetchFireGlowWeather(
+  date: string,
+  signal: AbortSignal,
+  forceRefresh = false,
+  model: ForecastModel = "best_match",
+): Promise<FinderWeatherResponse> {
+  return (
+    await fetchFinderWeatherRange([date], signal, forceRefresh, model, "calendar-day")
+  )[date] as FinderWeatherResponse;
+}
+
 /**
  * Fetch a group of observing nights in one upstream request per coordinate
  * batch. `start_date/end_date` are used instead of `forecast_days`, so a
@@ -425,18 +463,20 @@ export async function fetchFinderWeatherRange(
   signal: AbortSignal,
   forceRefresh = false,
   model: ForecastModel = "best_match",
+  window: FinderForecastWindow = "observing-night",
 ): Promise<Record<string, FinderWeatherResponse>> {
   const uniqueDates = [...new Set(dates)].sort();
-  if (!isFinderRangeAllowedForModel(uniqueDates, model)) {
+  if (!isFinderRangeAllowedForModel(uniqueDates, model, getShanghaiDate(), window)) {
+    const selectedPeriod = window === "calendar-day" ? "所选日期" : "所选夜晚";
     throw new Error(
-      `${model.toUpperCase()} 预报范围不足以覆盖所选夜晚；请缩短范围或切换 GFS / Best Match`,
+      `${model.toUpperCase()} 预报范围不足以覆盖${selectedPeriod}；请缩短范围或切换 GFS / Best Match`,
     );
   }
 
   const responses: Record<string, FinderWeatherResponse> = {};
   const missingDates: string[] = [];
   for (const date of uniqueDates) {
-    const cached = responseCache.get(`${model}|${date}`);
+    const cached = responseCache.get(`${model}|${window}|${date}`);
     if (
       !forceRefresh &&
       cached &&
@@ -484,6 +524,7 @@ export async function fetchFinderWeatherRange(
           missingDates,
           signal,
           model,
+          window,
         );
         const { hourlyByDate, provenance } = batchResult;
         const sourceFetchedAt = provenance[0]?.sourceFetchedAt;
@@ -541,7 +582,7 @@ export async function fetchFinderWeatherRange(
       ),
       data,
     };
-    const cacheKey = `${model}|${date}`;
+    const cacheKey = `${model}|${window}|${date}`;
     const cached = responseCache.get(cacheKey);
     if (
       Object.values(data).some((record) => record.status === "available")

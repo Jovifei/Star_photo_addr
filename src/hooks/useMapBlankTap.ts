@@ -17,9 +17,19 @@ export function useMapBlankTap(
 
   useEffect(() => {
     const container = map.getContainer();
-    let start: { x: number; y: number } | null = null;
-    let dragged = false;
-    let startedInControl = false;
+    type Gesture = {
+      pointerId: number;
+      x: number;
+      y: number;
+      dragged: boolean;
+      startedInControl: boolean;
+      invalid: boolean;
+      suppressClick: boolean;
+    };
+    let gesture: Gesture | null = null;
+    const activeTouchPointers = new Set<number>();
+    let invalidTouchGesture = false;
+    let suppressClickUntilPointerDown = false;
     // Leaflet's internal click-disable flag does not guard this independent
     // native listener. Status controls are never blank canvas to sample.
     const blocked = (target: EventTarget | null) => target instanceof Element &&
@@ -27,25 +37,108 @@ export function useMapBlankTap(
     const pick = (event: MouseEvent) => {
       const point = map.mouseEventToLatLng(event);
       callback.current(point.lat, point.lng);
-      start = null;
     };
     const down = (event: PointerEvent) => {
-      start = { x: event.clientX, y: event.clientY };
-      startedInControl = blocked(event.target);
-      dragged = false;
+      if (event.pointerType === "touch") {
+        if (activeTouchPointers.size === 0) {
+          invalidTouchGesture = false;
+          suppressClickUntilPointerDown = false;
+          gesture = {
+            pointerId: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+            dragged: false,
+            startedInControl: blocked(event.target),
+            invalid: false,
+            suppressClick: false,
+          };
+        } else if (!activeTouchPointers.has(event.pointerId)) {
+          // Once a second finger joins, none of the pointers in this gesture
+          // may select a location. Keep the invalid state through all ups.
+          invalidTouchGesture = true;
+          if (gesture) gesture.invalid = true;
+          if (gesture) gesture.suppressClick = true;
+        }
+        activeTouchPointers.add(event.pointerId);
+        return;
+      }
+
+      // A fresh mouse/pen sequence also ends suppression left by a cancelled
+      // touch gesture; its own down/up/click still follows the mouse path.
+      invalidTouchGesture = false;
+      suppressClickUntilPointerDown = false;
+      gesture = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        dragged: false,
+        startedInControl: blocked(event.target),
+        invalid: false,
+        suppressClick: false,
+      };
     };
     const move = (event: PointerEvent) => {
-      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) dragged = true;
+      if (!gesture || event.pointerId !== gesture.pointerId || gesture.invalid) return;
+      if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 8) {
+        gesture.dragged = true;
+      }
     };
     const up = (event: PointerEvent) => {
-      if (event.pointerType !== "touch" || dragged || startedInControl || blocked(event.target)) return;
-      lastTouchPick.current = { x: event.clientX, y: event.clientY, at: Date.now() };
-      pick(event);
+      if (event.pointerType !== "touch" || !activeTouchPointers.has(event.pointerId)) return;
+
+      activeTouchPointers.delete(event.pointerId);
+      // A touch pointer-up is followed by a synthesized click when the browser
+      // chooses to emit one. The touch path above owns selection for this
+      // sequence, including rejected taps that began on controls or dragged.
+      suppressClickUntilPointerDown = true;
+      const active = gesture;
+      if (
+        active && event.pointerId === active.pointerId &&
+        !invalidTouchGesture && !active.invalid && !active.dragged &&
+        !active.startedInControl && !blocked(event.target)
+      ) {
+        lastTouchPick.current = { x: event.clientX, y: event.clientY, at: Date.now() };
+        pick(event);
+        active.suppressClick = true;
+      } else if (active) {
+        active.suppressClick = true;
+      }
+
+      if (activeTouchPointers.size === 0) {
+        gesture = null;
+        if (invalidTouchGesture) suppressClickUntilPointerDown = true;
+      }
+    };
+    const cancel = (event: PointerEvent) => {
+      const active = gesture;
+      if (!active || event.pointerId !== active.pointerId) {
+        if (event.pointerType === "touch" && activeTouchPointers.has(event.pointerId)) {
+          activeTouchPointers.delete(event.pointerId);
+          invalidTouchGesture = true;
+          if (gesture) gesture.invalid = true;
+          if (activeTouchPointers.size === 0) {
+            gesture = null;
+            suppressClickUntilPointerDown = true;
+          }
+        }
+        return;
+      }
+      active.invalid = true;
+      active.suppressClick = true;
+      if (event.pointerType === "touch") {
+        activeTouchPointers.delete(event.pointerId);
+        invalidTouchGesture = true;
+        if (activeTouchPointers.size === 0) {
+          gesture = null;
+          suppressClickUntilPointerDown = true;
+        }
+      }
     };
     const click = (event: MouseEvent) => {
-      const beganInControl = startedInControl;
-      startedInControl = false;
-      if (dragged || beganInControl || blocked(event.target)) return;
+      const active = gesture;
+      if (suppressClickUntilPointerDown || invalidTouchGesture) return;
+      if (active && (active.invalid || active.dragged || active.startedInControl || active.suppressClick)) return;
+      if (blocked(event.target)) return;
       const lastTouch = lastTouchPick.current;
       if (lastTouch && Date.now() - lastTouch.at < 700 &&
         Math.hypot(event.clientX - lastTouch.x, event.clientY - lastTouch.y) < 8) return;
@@ -54,11 +147,13 @@ export function useMapBlankTap(
     container.addEventListener("pointerdown", down);
     container.addEventListener("pointermove", move);
     container.addEventListener("pointerup", up);
+    container.addEventListener("pointercancel", cancel);
     container.addEventListener("click", click);
     return () => {
       container.removeEventListener("pointerdown", down);
       container.removeEventListener("pointermove", move);
       container.removeEventListener("pointerup", up);
+      container.removeEventListener("pointercancel", cancel);
       container.removeEventListener("click", click);
     };
   }, [map, blockedSelector]);
