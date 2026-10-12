@@ -33,7 +33,7 @@
 - Code commit: 737daed694c7bcfc4d36883456ff39a7d6623aa5 (fix: close weather and map data boundaries).
 - Code commit tree: d467b6d3e0f0b22273693aba5c2253f945878777.
 - Code commit parent: cd54bc4a02ae06503e45f6a3a88c04ba9cfeed10.
-- The code commit was pushed to origin without force before the report commits. The two report commits remained local when a subsequent normal push could not connect to github.com port 443; no retry was attempted. The branch tracks origin/codex/data-boundaries-20261012 and is two documentation commits ahead.
+- The original code commit was pushed to origin without force. The previous closeout-report push failed to connect to github.com port 443; it was not retried during that run. The follow-up code commit is listed below. Remote status for the latest branch SHA is recorded only after a normal push and exact SHA check.
 - No pull request was created. No CI, browser E2E, device install, deployment, credential edit, or paid external service call was performed. Push and local tests are not final project acceptance.
 
 ## Reporting blocker
@@ -41,3 +41,13 @@
 The owner-authorized project-hub template was generated as event 5db1f5e1-19f9-4ca5-8092-7e68153eca85 at expected revision 10. Sending it was rejected with invalid reported_status because the supplied in_progress value was not accepted. The pending JSON was preserved at E:\project\codex-project-hub\reports\star-photo-addr-5db1f5e1-19f9-4ca5-8092-7e68153eca85.json; no successful hub update is claimed, and the rejected event was not overwritten or retried.
 
 A direct progress-message attempt to the source thread returned thread not found. This closeout is delivered with the completed delegated task.
+
+## Follow-up review and repairs - 2026-10-12
+
+- Independent review found that the Finder slice began at 07:00, excluding FireGlow's 04:00-06:00 dawn hours for forecast dates D+4 through D+6. FireGlow now uses a calendar-day slice and requests through the selected local date; Finder keeps its observing-night slice from 07:00 on the selected date through 15:00 the following day.
+- The FireGlow route now calls `fetchFireGlowWeather`, which shares provider/cache handling but validates the model horizon against the calendar day. The route-to-slice-to-score integration test covers D+4, D+5, and D+6 with a mocked provider response, confirms the target dawn cloud values reach the score, and confirms the request end date differs from the unchanged Finder overnight request.
+- `useMapBlankTap` now associates movement/up/cancel with the active pointer, invalidates a touch gesture when another pointer joins until the fingers are released, ignores up events without a matching down, suppresses click after cancel, and accepts the next valid tap. Unit regressions cover pointer mismatch, two-finger gestures, cancel recovery, and ordinary next taps, while retaining drag/control exclusions.
+- Before the hook repair, the new focused regressions reproduced three hook failures; the FireGlow route-to-score case returned no target-dawn score with the old slice. After repair, the focused run passed 5 files / 34 tests.
+- Final follow-up verification: **100 test files passed, 582 tests passed**; `npm run lint`, `npm run typecheck`, `npm run build`, and `git diff --check` all completed successfully. The integration test stubs the provider and writes only to a temporary directory; no live weather data was requested.
+- Follow-up code commit: `19e016b52c70d4aeb74b1bf6771b27c00050de0d` (`fix: complete dawn and map gesture boundaries`).
+- Per the follow-up instruction, this run did not write to the project hub. The attempt to send progress to the source thread returned `thread not found`; progress was reported in the delegated task instead.
