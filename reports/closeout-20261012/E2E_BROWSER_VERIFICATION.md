@@ -32,9 +32,9 @@ The touch run found that Leaflet did not copy the pick marker's `pathOptions.cla
 
 ## Remote and CI status
 
-The repository's `.github/workflows/ci.yml` runs on pushes to `main` and pull requests to `main` (and the named overnight forecast branch), as well as manual and scheduled triggers. A pull request to `main` would run `live-data-smoke` (`npm run test:live`) against live providers, contrary to this task's no-live-weather constraint. No pull request or CI run was started.
+The repository's `.github/workflows/ci.yml` runs on pushes to `main` and pull requests to `main` (and the named overnight forecast branch), as well as manual and scheduled triggers. A PR to `main` runs `live-data-smoke` (`npm run test:live`) against live providers, contrary to this task's no-live-weather constraint. A read-only scan found no other workflow with a push trigger.
 
-`gh auth status` confirmed that this environment is not logged into GitHub, so I could not inspect whether this branch already has a PR. I left the remote untouched: pushing could update an unknown existing PR and trigger its live-provider smoke job. The code is committed on the authorized repair branch, and the reviewable single-commit patch is saved alongside this report. No force push, merge, deployment, device install, or credential change occurred.
+The normal push `git push origin HEAD:refs/heads/codex/data-boundaries-20261012` succeeded as a fast-forward from `b8050a0` to `30dcec27820cb156c6a8fc2f9d3366a316c79579`. This branch is not in the workflow's `push.branches` list, so that push event does not trigger CI. `gh auth status` confirmed that this environment is not logged into GitHub, so I could not inspect whether an existing PR is attached to the branch or verify PR-triggered CI status. No PR was created, and no CI result is claimed. No force push, merge, deployment, device install, or credential change occurred.
 
 ## Artifacts
 
