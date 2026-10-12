@@ -38,6 +38,31 @@ function recordWithHours(
 const SITE = { id: "test-site", latitude: 30, longitude: 110 };
 
 describe("scoreFireGlowSite", () => {
+  it("keeps a morning score on the requested dawn date instead of mixing in the next day", () => {
+    const score = scoreFireGlowSite(
+      SITE,
+      recordWithHours([
+        ...[4, 5, 6, 7, 8, 9].map((hour) => ({
+          time: `2026-08-22T${String(hour).padStart(2, "0")}:00`,
+          low: 5,
+          mid: 40,
+          high: 20,
+        })),
+        ...[4, 5, 6, 7, 8, 9].map((hour) => ({
+          time: `2026-08-23T${String(hour).padStart(2, "0")}:00`,
+          low: 0,
+          mid: 0,
+          high: 73,
+        })),
+      ]),
+      "2026-08-22",
+    );
+
+    expect(score.morning.score).not.toBeNull();
+    expect(score.morning.midCloud).toBe(40);
+    expect(score.morning.highCloud).toBe(20);
+  });
+
   it("rewards a broad mid/high deck with thin low cloud at twilight", () => {
     const score = scoreFireGlowSite(
       SITE,

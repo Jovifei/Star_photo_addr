@@ -220,6 +220,7 @@ function collectGlowHours(
   record: FinderWeatherRecord | undefined,
   site: { latitude: number; longitude: number },
   phase: "evening" | "morning",
+  dateKey: string,
 ): GlowHourCollection {
   const hourly = record?.hourly;
   if (!hourly?.time?.length) return { hours: [], incomplete: false };
@@ -229,6 +230,7 @@ function collectGlowHours(
   for (let index = 0; index < hourly.time.length; index += 1) {
     const time = hourly.time[index];
     if (!time) continue;
+    if (time.slice(0, 10) !== dateKey) continue;
     const localHour = Number(time.slice(11, 13));
     if (localHour < hourRange[0] || localHour > hourRange[1]) continue;
     const date = parseShanghaiTime(time);
@@ -412,8 +414,8 @@ export function scoreFireGlowSite(
   }
   const sunSeries = daySunAltitudeSeries(record.hourly.time, site, dateKey);
   return {
-    evening: scoreWindow(collectGlowHours(record, site, "evening"), sunSeries, "evening"),
-    morning: scoreWindow(collectGlowHours(record, site, "morning"), sunSeries, "morning"),
+    evening: scoreWindow(collectGlowHours(record, site, "evening", dateKey), sunSeries, "evening"),
+    morning: scoreWindow(collectGlowHours(record, site, "morning", dateKey), sunSeries, "morning"),
   };
 }
 

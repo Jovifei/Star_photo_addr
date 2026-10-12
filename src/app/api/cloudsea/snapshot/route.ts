@@ -11,8 +11,13 @@ import {
 } from "@/lib/cloudsea";
 import {
   applyOpenMeteoApiKey,
+  currentOpenMeteoRateLimit,
+  noteOpenMeteoRateLimit,
+  openMeteoRateLimitHeaders,
+  OpenMeteoRateLimitError,
   openMeteoModelParameter,
   OPEN_METEO_FORECAST_URL,
+  withOpenMeteoProviderSlot,
 } from "@/lib/forecast";
 import {
   fetchPressureForecastBatch,
@@ -186,6 +191,7 @@ async function fetchCloudSeaWeather(
       "precipitation",
       "wind_speed_10m",
     ].join(","),
+    wind_speed_unit: "ms",
     timezone: "Asia/Shanghai",
     start_date: date,
     end_date: date,
@@ -199,12 +205,16 @@ async function fetchCloudSeaWeather(
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      const response = await withOpenMeteoProviderSlot(() => fetch(url, {
         signal,
         headers: { Accept: "application/json" },
         cache: "no-store",
-      });
+      }));
       if (!response.ok) {
+        if (response.status === 429) {
+          const body = await response.json().catch(() => null) as { reason?: string } | null;
+          throw noteOpenMeteoRateLimit(response.headers.get("Retry-After"), body?.reason ?? "");
+        }
         throw new Error(`Open-Meteo HTTP ${response.status}`);
       }
 
@@ -247,6 +257,9 @@ async function fetchCloudSeaWeather(
     } catch (error) {
       lastError = error;
       if (signal.aborted) throw error;
+      if (error instanceof OpenMeteoRateLimitError || currentOpenMeteoRateLimit()) {
+        throw error;
+      }
       if (attempt === 0) {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
@@ -450,6 +463,7 @@ export async function GET(request: NextRequest) {
           {
             headers: {
               "Cache-Control": "no-store",
+              ...openMeteoRateLimitHeaders(),
               "X-Cloudsea-Cache": "degraded-fallback",
             },
           },
@@ -463,6 +477,7 @@ export async function GET(request: NextRequest) {
           "Cache-Control": cacheable
             ? "public, max-age=0, s-maxage=300, stale-while-revalidate=600"
             : "no-store",
+          ...openMeteoRateLimitHeaders(),
           "X-Cloudsea-Cache": cacheable
             ? forceRefresh
               ? "forced-fresh"
@@ -479,6 +494,7 @@ export async function GET(request: NextRequest) {
       return snapshotJson(withCacheFreshness(fallback, message), {
         headers: {
           "Cache-Control": "no-store",
+          ...openMeteoRateLimitHeaders(),
           "X-Cloudsea-Cache": "stale-on-error",
         },
       });
@@ -487,8 +503,11 @@ export async function GET(request: NextRequest) {
     return snapshotJson(
       { error: timedOut ? "云海 surface 数据请求超时" : message },
       {
-        status: timedOut ? 504 : 502,
-        headers: { "Cache-Control": "no-store" },
+        status: error instanceof OpenMeteoRateLimitError ? 429 : timedOut ? 504 : 502,
+        headers: {
+          "Cache-Control": "no-store",
+          ...openMeteoRateLimitHeaders(),
+        },
       },
     );
   }

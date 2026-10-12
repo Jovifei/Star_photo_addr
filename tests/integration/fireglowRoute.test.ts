@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   mode: "empty" as "empty" | "valid",
   fetchCalls: 0,
+  sourceFetchedAt: null as string | null,
 }));
 
 vi.mock("@/lib/stargazingFinderWeather", () => ({
@@ -19,6 +20,19 @@ vi.mock("@/lib/fireglow", () => ({
     date,
     model,
     generatedAt: new Date().toISOString(),
+    provenance: {
+      version: 1,
+      sourcesBySite: {
+        "test-site": [{
+          provider: "Open-Meteo",
+          dataset: "surface",
+          model,
+          sourceFetchedAt: state.sourceFetchedAt ?? new Date().toISOString(),
+          providerRunAt: null,
+          observedAt: null,
+        }],
+      },
+    },
     source: "test",
     stale: false,
     sites: {
@@ -76,6 +90,7 @@ beforeEach(() => {
   vi.resetModules();
   state.mode = "empty";
   state.fetchCalls = 0;
+  state.sourceFetchedAt = null;
 });
 
 describe("GET /api/fireglow/snapshot", () => {
@@ -107,5 +122,18 @@ describe("GET /api/fireglow/snapshot", () => {
     expect(body.stale).toBe(true);
     expect(body.refreshError).toContain("未返回有效火烧云评分");
     expect(body.sites["test-site"].evening.score).toBe(72);
+  });
+
+  it("keeps a newly generated snapshot stale when its reused source is older than 30 minutes", async () => {
+    state.mode = "valid";
+    state.sourceFetchedAt = new Date(Date.now() - 45 * 60_000).toISOString();
+    const { GET } = await import("@/app/api/fireglow/snapshot/route");
+
+    const response = await GET(request("date=2026-09-22&model=icon"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(Date.now() - Date.parse(body.generatedAt)).toBeLessThan(60_000);
+    expect(body.stale).toBe(true);
   });
 });

@@ -16,7 +16,11 @@ export const dynamic = "force-dynamic";
 function snapshotJson(value: unknown, init?: ResponseInit) {
   if (value && typeof value === "object" && "sites" in value && "generatedAt" in value) {
     const snapshot = value as { generatedAt: string; stale?: boolean; provenance?: import("@/lib/snapshotProvenance").SnapshotProvenance };
-    return NextResponse.json(snapshotTransport({ ...snapshot, stale: Boolean(snapshot.stale) || !Number.isFinite(snapshotSourceAgeMs(snapshot.provenance)) }), init);
+    const sourceAgeMs = snapshotSourceAgeMs(snapshot.provenance);
+    return NextResponse.json(snapshotTransport({
+      ...snapshot,
+      stale: Boolean(snapshot.stale) || !Number.isFinite(sourceAgeMs) || sourceAgeMs > TTL_MS,
+    }), init);
   }
   return NextResponse.json(value, init);
 }

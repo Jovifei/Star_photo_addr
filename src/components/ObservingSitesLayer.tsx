@@ -24,6 +24,53 @@ function markerIcon(color: string, selected: boolean, bortle: number): L.DivIcon
   });
 }
 
+interface TouchGestureTracker {
+  activePointerIds: Set<number>;
+  generation: number;
+  subscribers: number;
+  onPointerDown: (event: PointerEvent) => void;
+  onPointerFinished: (event: PointerEvent) => void;
+}
+
+const touchGestureTrackers = new WeakMap<Document, TouchGestureTracker>();
+
+function subscribeTouchGestureTracker(document: Document) {
+  let tracker = touchGestureTrackers.get(document);
+  if (!tracker) {
+    tracker = {
+      activePointerIds: new Set<number>(),
+      generation: 0,
+      subscribers: 0,
+      onPointerDown: (event) => {
+        if (event.pointerType !== "touch") return;
+        tracker!.activePointerIds.add(event.pointerId);
+        if (tracker!.activePointerIds.size > 1) tracker!.generation += 1;
+      },
+      onPointerFinished: (event) => {
+        if (event.pointerType === "touch") tracker!.activePointerIds.delete(event.pointerId);
+      },
+    };
+    touchGestureTrackers.set(document, tracker);
+    document.addEventListener("pointerdown", tracker.onPointerDown, true);
+    document.addEventListener("pointerup", tracker.onPointerFinished, true);
+    document.addEventListener("pointercancel", tracker.onPointerFinished, true);
+  }
+  tracker.subscribers += 1;
+
+  return {
+    tracker,
+    unsubscribe() {
+      tracker!.subscribers -= 1;
+      if (tracker!.subscribers > 0) return;
+      document.removeEventListener("pointerdown", tracker!.onPointerDown, true);
+      document.removeEventListener("pointerup", tracker!.onPointerFinished, true);
+      document.removeEventListener("pointercancel", tracker!.onPointerFinished, true);
+      tracker!.activePointerIds.clear();
+      touchGestureTrackers.delete(document);
+    },
+  };
+}
+
 export function ObservingSiteMarker({ color, selected, bortle, ...props }: Omit<MarkerProps, "icon"> & {
   color: string; selected: boolean; bortle: number;
 }) {
@@ -36,19 +83,40 @@ export function ObservingSiteMarker({ color, selected, bortle, ...props }: Omit<
     const marker = markerRef.current;
     const element = marker?.getElement();
     if (!marker || !element) return;
+    const touchTracker = subscribeTouchGestureTracker(element.ownerDocument);
     let start: { x: number; y: number } | null = null;
+    let activePointerId: number | null = null;
+    let startGestureGeneration = touchTracker.tracker.generation;
     let dragged = false;
     const down = (event: PointerEvent) => {
-      start = event.pointerType === "touch" ? { x: event.clientX, y: event.clientY } : null;
+      if (event.pointerType !== "touch") return;
+      if (
+        !event.isPrimary ||
+        activePointerId !== null ||
+        touchTracker.tracker.activePointerIds.size > 1
+      ) {
+        activePointerId = null;
+        start = null;
+        dragged = false;
+        lastTouch.current = Date.now();
+        return;
+      }
+      activePointerId = event.pointerId;
+      startGestureGeneration = touchTracker.tracker.generation;
+      start = { x: event.clientX, y: event.clientY };
       dragged = false;
     };
     const move = (event: PointerEvent) => {
-      if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) dragged = true;
+      if (start && event.pointerId === activePointerId && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) dragged = true;
     };
     const up = (event: PointerEvent) => {
-      if (event.pointerType !== "touch" || !start || dragged) return;
+      if (event.pointerType !== "touch" || event.pointerId !== activePointerId || !start) return;
+      const wasTap = !dragged && startGestureGeneration === touchTracker.tracker.generation;
+      activePointerId = null;
       start = null;
+      dragged = false;
       lastTouch.current = Date.now();
+      if (!wasTap) return;
       // The browser can omit its synthesized click immediately after a sheet
       // touch-drag. Preserve the curated marker's exact identity on pointer-up.
       marker.fire("click", { latlng: marker.getLatLng(), originalEvent: event });
@@ -59,7 +127,13 @@ export function ObservingSiteMarker({ color, selected, bortle, ...props }: Omit<
         event.stopImmediatePropagation();
       }
     };
-    const cancel = () => { start = null; dragged = false; };
+    const cancel = (event: PointerEvent) => {
+      if (event.pointerType !== "touch" || event.pointerId !== activePointerId) return;
+      activePointerId = null;
+      start = null;
+      dragged = false;
+      lastTouch.current = Date.now();
+    };
     element.addEventListener("pointerdown", down);
     element.addEventListener("pointermove", move);
     element.addEventListener("pointerup", up);
@@ -71,6 +145,7 @@ export function ObservingSiteMarker({ color, selected, bortle, ...props }: Omit<
       element.removeEventListener("pointerup", up);
       element.removeEventListener("pointercancel", cancel);
       element.removeEventListener("click", click, true);
+      touchTracker.unsubscribe();
     };
   }, [icon]);
   return <Marker {...props} ref={markerRef} icon={icon} />;

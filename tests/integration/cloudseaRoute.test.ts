@@ -217,6 +217,20 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(first.morning.pressureStatus).toBe("available");
   });
 
+  it("requests ground wind in the m/s units used by CloudSea scoring and UI", async () => {
+    const requested: URL[] = [];
+    vi.stubGlobal("fetch", successfulFetch(requested));
+
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-06&model=icon"));
+
+    expect(response.status).toBe(200);
+    const surfaceUrl = requested.find(
+      (url) => !(url.searchParams.get("hourly") ?? "").includes("geopotential_height_"),
+    );
+    expect(surfaceUrl?.searchParams.get("wind_speed_unit")).toBe("ms");
+  });
+
   it("does not cache a pressure-degraded snapshot as fresh for the next-day retry", async () => {
     let pressureAvailable = false;
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
@@ -375,6 +389,37 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(body.sites).toBeUndefined();
     expect(String(body.error)).toContain("provider unavailable");
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a provider 429 and forwards its Retry-After cooldown", async () => {
+    const fetchMock = vi.fn(async () => Response.json(
+      { reason: "Daily API request limit exceeded" },
+      { status: 429, headers: { "Retry-After": "600" } },
+    ));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-07&model=icon"));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("600");
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("preserves an active provider cooldown when a concurrent request fails with 502", async () => {
+    const { noteOpenMeteoRateLimit } = await import("@/lib/forecast");
+    const fetchMock = vi.fn(async () => {
+      noteOpenMeteoRateLimit("600");
+      throw new Error("provider HTTP 502");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-08&model=icon"));
+
+    expect(response.status).toBe(502);
+    expect(response.headers.get("Retry-After")).toBe("600");
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("keeps real surface data but fails vertical cloud-sea conclusions closed when pressure is unavailable", async () => {
