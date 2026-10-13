@@ -4641,7 +4641,7 @@
 .candidate-date-tab-sub {
   font-size: 9px;
   font-family: var(--font-data);
-  opacity: 0.75;
+  opacity: 1;
 }
 
 .candidate-cards-container {
@@ -4978,7 +4978,7 @@
 
 .candidate-footer-hint {
   font-size: 11px;
-  color: #69828c;
+  color: #8da4ad;
   line-height: 1.4;
   padding: 4px 6px;
   text-align: center;

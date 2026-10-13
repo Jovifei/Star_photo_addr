@@ -49,6 +49,18 @@ new directory for each round to preserve failed-run evidence.
 TypeScript excludes these generated output directories, matching the existing
 lint exclusions. Retained trace-viewer JS bundles must not become compiler input.
 
+Run Vitest and browser suites sequentially on a constrained host; concurrent
+workers can turn their existing wall-clock deadlines into resource failures.
+`npm test -- --maxWorkers=1` retains the original unit timeout limits.
+
+The accessibility spec uses normal blending for its synthetic pixel tiles because
+axe 4.13 cannot process Leaflet's `plus-lighter` mode. Product tile CSS is unchanged.
+It still audits the entire document with default rules, preserves all violation
+and manual/incomplete details, and fails on rule-execution errors. Only redundant
+passing-node examples are shortened; a controlled old-color regression checks
+that the contrast rule still detects the original defect. Real tile blending is
+outside this fixture's qualification.
+
 ## Meaning of results
 
 Project guards remain active and their skips must be reported separately from

@@ -23,6 +23,14 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
     sessionStorage.clear();
+    // These tests use synthetic pixel tiles, which need no seam compositing.
+    // Leaflet's plus-lighter mode is unsupported by axe 4.13 and otherwise
+    // crashes the complete color-contrast rule. Product/real-tile CSS is unchanged.
+    document.addEventListener("DOMContentLoaded", () => {
+      const style = document.createElement("style");
+      style.textContent = ".leaflet-container img.leaflet-tile { mix-blend-mode: normal !important; }";
+      document.head.append(style);
+    }, { once: true });
   });
   await installOpenMeteoMock(page, fixture);
   await installGeocodingMock(page);
@@ -33,15 +41,24 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
+async function analyzeDocument(page: Page) {
+  // Scan the complete rendered document with axe's default rules. Keep every
+  // violation and incomplete/manual node. Only redundant passing-node examples
+  // are reduced to one per rule, avoiding costly selector/report serialization
+  // for the map's large DOM without excluding elements or disabling any rule.
+  return new AxeBuilder({ page })
+    .options({ resultTypes: ["violations", "incomplete", "inapplicable"] })
+    .analyze();
+}
+
 async function scanDocument(page: Page, testInfo: TestInfo, state: string) {
-  // Scan the complete rendered document with axe's default rules. Do not hide
-  // findings behind element exclusions or disabled rules. Lesser violations and
-  // incomplete/manual checks remain in the attachment even when this gate passes.
-  const results = await new AxeBuilder({ page }).analyze();
+  const results = await analyzeDocument(page);
   await testInfo.attach(`axe-${state}`, {
     body: Buffer.from(JSON.stringify(results, null, 2)),
     contentType: "application/json",
   });
+  expect(results.incomplete.filter(rule => Reflect.get(rule, "error")),
+    "axe rule execution errors invalidate this audit").toEqual([]);
   const blockers = results.violations.filter((violation) =>
     violation.impact === "serious" || violation.impact === "critical" ||
     violation.id === "empty-table-header" || violation.id === "landmark-unique",
@@ -99,6 +116,32 @@ test("dark-sky compatibility view has no serious accessibility violations", asyn
   await expect(page.getByTestId("home-context-strip")).toHaveAttribute("data-updated-at", /\d{4}-/);
   expect(new URL(page.url()).searchParams.get("name")).toBe("accessibility-fixture");
   await scanDocument(page, testInfo, "dark-sky-compatibility");
+});
+
+test("original date-label opacity remains a detected contrast violation", async ({ page }, testInfo) => {
+  // Recreate the recorded foreground/background in a fresh wide document. This
+  // avoids repeated-audit state and translucent/hover backgrounds in the control.
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`/sites?${selectedPoint}`);
+  await expect(page.getByTestId("home-context-strip")).toHaveAttribute("data-updated-at", /\d{4}-/);
+  await page.addStyleTag({ content: `
+    .candidate-date-tab { background: #08151e !important; color: #8da4ad !important; }
+    .candidate-date-tab-sub { opacity: 0.75 !important; }
+  ` });
+  const label = page.locator(".candidate-date-tab-sub").first();
+  await expect(label).toBeVisible();
+  await expect(label).toHaveCSS("opacity", "0.75");
+  const control = await analyzeDocument(page);
+  await testInfo.attach("axe-original-date-opacity-control", {
+    body: Buffer.from(JSON.stringify(control)), contentType: "application/json",
+  });
+  expect(control.incomplete.filter(rule => Reflect.get(rule, "error"))).toEqual([]);
+  const originalDefect = control.violations.filter(violation =>
+    violation.id === "color-contrast" && violation.nodes.some(node =>
+      node.html.includes("candidate-date-tab-sub"),
+    ),
+  );
+  expect(originalDefect.length).toBeGreaterThan(0);
 });
 
 test("candidate keyboard actions keep selection, date changes and removal independent", async ({ page }, testInfo) => {
