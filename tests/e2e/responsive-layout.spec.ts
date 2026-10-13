@@ -39,7 +39,10 @@ function pressureAwareWindow(date: string) {
 }
 
 async function expectCloudSeaDetailContentToFit(page: Page) {
-  const detail = page.locator(".cloudsea-site-detail");
+  // At the desktop breakpoint the mobile sheet remains mounted but hidden.
+  // Measure the visible detail after its responsive host has changed.
+  const detail = page.locator(".cloudsea-site-detail:visible");
+  await expect(detail).toBeVisible();
   const layout = await detail.evaluate((element) => {
     const scroll = element.querySelector<HTMLElement>(".cs-detail-scroll-content");
     const cards = Array.from(
