@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
 import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 test("only the relevant Niubeishan transfer reports a coordinate conflict and keeps the selected coordinate", async ({ page }) => {
   await page.route("**/api/**", route => route.fulfill({ status: 502, json: { error: "fixture: no supplier request" } }));

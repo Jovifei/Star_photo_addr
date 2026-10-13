@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
 
 test("主页搜索可以命中本地点位目录中的太子尖", async ({ page }) => {
   await page.route("**/geocoding-api.open-meteo.com/v1/search**", async (route) => {

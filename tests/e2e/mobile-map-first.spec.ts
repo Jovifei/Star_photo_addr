@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./offline-test.js";
 import { readFileSync } from "node:fs";
 import { installNextApiMock, installOpenMeteoMock, installGeocodingMock } from "./mock-open-meteo.js";
 

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
 
 const invalidCases = [
   ["forecast blank coordinates", "/api/forecast?latitude=&longitude=&model=gfs"],

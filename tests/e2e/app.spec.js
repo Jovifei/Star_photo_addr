@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./offline-test.js";
 import { readFileSync } from "node:fs";
 import { installGeocodingMock, installNextApiMock, installOpenMeteoMock } from "./mock-open-meteo.js";
 import { closeMobileMapPanel, openMobileMapPanel } from "./mobile-map-panel.js";

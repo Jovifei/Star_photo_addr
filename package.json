@@ -21,6 +21,7 @@
     "test:contract": "vitest run tests/contract",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
+    "test:e2e:offline": "node scripts/run-offline-e2e.mjs",
     "test:e2e:cross-browser": "playwright test --config=playwright.cross-browser.config.js",
     "test:live": "node scripts/live-smoke.mjs",
     "check:data-sources": "node scripts/check-data-sources.mjs",

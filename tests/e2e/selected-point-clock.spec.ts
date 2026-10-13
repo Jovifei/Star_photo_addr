@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./offline-test.js";
 import { readFileSync } from "node:fs";
 import { buildNormalizedForecasts, installNextApiMock, installOpenMeteoMock } from "./mock-open-meteo.js";
 import { addDays, currentNightKey, initialForecastTime } from "../../src/lib/nighttime";

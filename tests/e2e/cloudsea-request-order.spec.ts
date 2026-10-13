@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
 
 function shanghaiDateKey(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {

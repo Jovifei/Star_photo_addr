@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
 import { openMobileMapPanel } from "./mobile-map-panel.js";
 
 function hourlyTimes(): string[] {

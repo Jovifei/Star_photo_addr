@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
 import { closeMobileMapPanel } from "./mobile-map-panel.js";
 import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 

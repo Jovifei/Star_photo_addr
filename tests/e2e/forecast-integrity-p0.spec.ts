@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
 import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 import { readFileSync } from "node:fs";
 import {
@@ -160,7 +160,9 @@ test("stale=true 的旧 94 分不能进入地图、候选或详情推荐", async
   const panel = page.locator(".observing-map-control:visible");
   await expect(panel).toHaveAttribute("data-score-status", "degraded", { timeout: 20_000 });
   await expect(panel).toContainText("推荐门禁：不发布推荐");
-  await page.screenshot({ path: `tmp/p0-integrity-stale-${testInfo.project.name}.png`, fullPage: true });
+  // Capture the asserted degraded controls without expanding the entire mobile
+  // document into a large temporary viewport after all behavior checks pass.
+  await panel.screenshot({ path: `tmp/p0-integrity-stale-${testInfo.project.name}.png` });
 });
 
 test("总云 8 但低云 61 时，浏览器不显示正常推荐", async ({ page }, testInfo) => {

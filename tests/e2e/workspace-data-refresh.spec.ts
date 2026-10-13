@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
+import type { Page } from "./offline-test.js";
 import { readFileSync } from "node:fs";
 import {
   installGeocodingMock,

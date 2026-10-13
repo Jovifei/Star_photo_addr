@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./offline-test.js";
 import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 function windowScore(score: number | null) {

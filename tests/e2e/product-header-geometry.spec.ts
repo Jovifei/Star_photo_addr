@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./offline-test.js";
 
 test("four peer products retain the same compact header and navigation geometry", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
