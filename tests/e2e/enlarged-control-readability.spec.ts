@@ -215,10 +215,14 @@ async function measureTextScale(page: Page, multiplier: number, evidence: Eviden
   expect(measured.failures).toEqual([]);
   expect(measured.samples.length).toBeGreaterThan(4);
   expect(measured.measuredTargetCount).toBe(measured.currentTargetCount);
-  for (const sample of measured.samples) {
-    expect(sample.connected, `${sample.className}: detached final target`).toBe(true);
-    expect(sample.ratio, `${sample.className}: ${sample.text}`).toBeCloseTo(multiplier, 2);
-  }
+  // Keep the same per-target checks, but emit one trace assertion rather than
+  // thousands of steps per state. Full samples remain in the evidence above.
+  // toBeCloseTo(..., 2) requires an absolute difference strictly below .005.
+  const invalidSamples = measured.samples.filter(sample =>
+    sample.connected !== true || !Number.isFinite(sample.ratio) ||
+    Math.abs(sample.ratio - multiplier) >= 0.005,
+  );
+  expect(invalidSamples, "detached or incorrectly scaled final text targets").toEqual([]);
   expect(measured.innerWidth).toBe(page.viewportSize()!.width);
   expect(measured.innerHeight).toBe(page.viewportSize()!.height);
   expect(measured.scale).toBe(1);
