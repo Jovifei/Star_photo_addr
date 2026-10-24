@@ -15,12 +15,15 @@ const TIME = [
   "2026-09-06T19:00",
 ];
 
-function hourlyEntry() {
+function fixtureTimes(date = "2026-09-06") {
+  return TIME.map((time) => `${date}${time.slice(10)}`);
+}
+function hourlyEntry(date = "2026-09-06") {
   return {
     latitude: 30, longitude: 120, timezone: "Asia/Shanghai", utc_offset_seconds: 28800,
     hourly_units: providerUnits(),
     hourly: {
-      time: TIME,
+      time: fixtureTimes(date),
       cloud_cover_low: [75, 78, 80, 76, 75, 78, 80],
       cloud_cover_mid: [10, 10, 8, 8, 10, 10, 8],
       cloud_cover_high: [5, 5, 5, 5, 5, 5, 5],
@@ -44,10 +47,11 @@ const HEIGHTS: Record<number, number> = {
   500: 5600,
 };
 
-function pressureEntry() {
+function pressureEntry(date = "2026-09-06") {
+  const times = fixtureTimes(date);
   const hourly: Record<string, unknown> = {
-    time: TIME.map(time => Date.parse(time + ":00+08:00") / 1000),
-    temperature_2m: TIME.map(() => 10),
+    time: times.map(time => Date.parse(time + ":00+08:00") / 1000),
+    temperature_2m: times.map(() => 10),
   };
   for (const pressure of PRESSURE_LEVELS) {
     const cloudy = [950, 925, 900].includes(pressure);
@@ -57,12 +61,12 @@ function pressureEntry() {
         : pressure === 925
           ? 10
           : 12 - (1000 - pressure) * 0.012;
-    hourly[`cloud_cover_${pressure}hPa`] = TIME.map(() => (cloudy ? 82 : 10));
-    hourly[`relative_humidity_${pressure}hPa`] = TIME.map(() =>
+    hourly[`cloud_cover_${pressure}hPa`] = times.map(() => (cloudy ? 82 : 10));
+    hourly[`relative_humidity_${pressure}hPa`] = times.map(() =>
       cloudy ? 92 : 55,
     );
-    hourly[`temperature_${pressure}hPa`] = TIME.map(() => temperature);
-    hourly[`geopotential_height_${pressure}hPa`] = TIME.map(
+    hourly[`temperature_${pressure}hPa`] = times.map(() => temperature);
+    hourly[`geopotential_height_${pressure}hPa`] = times.map(
       () => HEIGHTS[pressure],
     );
   }
@@ -90,10 +94,11 @@ function successfulFetch(requested?: URL[]) {
     const url = new URL(String(input));
     requested?.push(url);
     const count = coordinateCount(url);
+    const date = url.searchParams.get("start_date") ?? "2026-09-06";
     const hourly = url.searchParams.get("hourly") ?? "";
     const payload = hourly.includes("geopotential_height_")
-      ? Array.from({ length: count }, () => pressureEntry())
-      : Array.from({ length: count }, () => hourlyEntry());
+      ? Array.from({ length: count }, () => pressureEntry(date))
+      : Array.from({ length: count }, () => hourlyEntry(date));
     return new Response(JSON.stringify(payload), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -166,10 +171,11 @@ describe("GET /api/cloudsea/snapshot", () => {
       vi.fn(async (input: string | URL | Request) => {
         const url = new URL(String(input));
         const count = coordinateCount(url);
+        const date = url.searchParams.get("start_date") ?? "2026-09-06";
         const hourly = url.searchParams.get("hourly") ?? "";
         if (!hourly.includes("geopotential_height_")) {
           return new Response(
-            JSON.stringify(Array.from({ length: count }, () => hourlyEntry())),
+            JSON.stringify(Array.from({ length: count }, () => hourlyEntry(date))),
             { status: 200, headers: { "Content-Type": "application/json" } },
           );
         }
@@ -180,7 +186,7 @@ describe("GET /api/cloudsea/snapshot", () => {
         await new Promise((resolve) => setTimeout(resolve, 20));
         activePressureRequests -= 1;
         return new Response(
-          JSON.stringify(Array.from({ length: count }, () => pressureEntry())),
+          JSON.stringify(Array.from({ length: count }, () => pressureEntry(date))),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }),
@@ -271,15 +277,16 @@ describe("GET /api/cloudsea/snapshot", () => {
       const url = new URL(String(input));
       const hourly = url.searchParams.get("hourly") ?? "";
       const count = coordinateCount(url);
+      const date = url.searchParams.get("start_date") ?? "2026-09-06";
       if (hourly.includes("geopotential_height_")) {
         if (!pressureAvailable) throw new Error("pressure temporarily unavailable");
         return new Response(
-          JSON.stringify(Array.from({ length: count }, () => pressureEntry())),
+          JSON.stringify(Array.from({ length: count }, () => pressureEntry(date))),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
       return new Response(
-        JSON.stringify(Array.from({ length: count }, () => hourlyEntry())),
+        JSON.stringify(Array.from({ length: count }, () => hourlyEntry(date))),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     });
@@ -307,10 +314,11 @@ describe("GET /api/cloudsea/snapshot", () => {
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = new URL(String(input));
       const count = coordinateCount(url);
+      const date = url.searchParams.get("start_date") ?? "2026-09-06";
       const hourly = url.searchParams.get("hourly") ?? "";
       if (hourly.includes("geopotential_height_")) {
         return new Response(
-          JSON.stringify(Array.from({ length: count }, () => pressureEntry())),
+          JSON.stringify(Array.from({ length: count }, () => pressureEntry(date))),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
@@ -318,7 +326,7 @@ describe("GET /api/cloudsea/snapshot", () => {
       const rows = Array.from({ length: count }, () => ({
         latitude: 30, longitude: 120, timezone: "Asia/Shanghai", utc_offset_seconds: 28800,
         hourly_units: providerUnits(),
-        hourly: { ...hourlyEntry().hourly },
+        hourly: { ...hourlyEntry(date).hourly },
       }));
       if (!surfaceRecovered && rows[0]) {
         rows[0].hourly.wind_speed_10m = Array(TIME.length).fill(null);
