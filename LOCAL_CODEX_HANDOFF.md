@@ -110,6 +110,7 @@ Next remote stage: finish exact T1 timezone repair and corrected test handoff, t
 **Remote code commit:** `24d337c5c0b81fe132894c85c2da30107e8ed2ad`.
 **Public fixture commits:** `82efeddea222c74355394b1e515e345d24855b11` and `15de1636f384d33da74d2357ef8d0ec451471ccc`.
 **Integration test commit:** `8467d4225345a6fc37436a1ca09af3882f56c9c3`.
+**Snapshot-builder regression extension:** `b7997620dc21ce25f6e6e8ee372af6a9715f5e15` — verifies the public fixed-run day scoping at both the pure window function and the actual snapshot builder; archived source without acquisition time remains stale.
 **Independent audit/report commit:** `f5e8b62b685bf07d09dd844a58a86699cf8ab48e`.
 The final handoff HEAD is the commit containing this section, and must be resolved from GitHub by local Codex; this avoids self-referential SHA claims.
 
