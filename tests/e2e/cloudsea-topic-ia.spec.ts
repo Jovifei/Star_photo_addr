@@ -256,6 +256,27 @@ test("CloudSea stale partial snapshot remains explicitly old despite retaining e
   await expect(page.locator(".mobile-data-sheet-status")).toContainText("保留原快照");
 });
 
+test("CloudSea provenance labels absent fresh source as coverage loss, not legacy cache", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "来源时刻披露在桌面 Chromium 验收");
+  const date = shanghaiDateKey();
+  const current = snapshot(date, {
+    score: null,
+    cloudPosition: "unknown",
+    pressureStatus: "unavailable",
+    pressure: { status: "unavailable", availableSites: 0 },
+  });
+  await mockSnapshot(page, {
+    ...current,
+    provenance: { version: 1, sourcesBySite: { "cs-taizijian": [] } },
+  });
+  await page.goto("/cloudsea");
+  await selectTaizijian(page);
+  const source = page.getByTestId("snapshot-source-times");
+  await source.locator("summary").click();
+  await expect(source).toContainText("该地点未取得可核验原始来源时间的数据集");
+  await expect(source).not.toContainText("旧快照未记录原始供应商时间");
+});
+
 test("CloudSea selected detail keeps the winning date window in three-day mode", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "三日 winning-window contract 在 desktop Chromium 验证一次");
   const base = shanghaiDateKey();
