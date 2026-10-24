@@ -100,3 +100,63 @@ Physical phone now partially exercised: OnePlus7Pro/Android11, Jovi manually ope
 
 Next remote stage: finish exact T1 timezone repair and corrected test handoff, then implement compact mobile and independent astronomy/raw-fact display per docs/MOBILE_DENSITY_REDESIGN_20261007.md. Local precise-SHA tests and real-device checks precede release. Owner tasks notes remain protected and uncommitted.
 
+
+
+## 2026-10-24 Remote scoring A–D audit, public fixed-run replay
+
+**Identity gate:** `Star_photo_addr`, workspaceId `19420f082390`; reviewed original `main@da159975f7a32f02fa2b9ed869e4ec729e2553a4`.
+**Isolated branch:** `codex/scoring-review-20261024`.
+**Base parent SHA:** `da159975f7a32f02fa2b9ed869e4ec729e2553a4`.
+**Remote code commit:** `24d337c5c0b81fe132894c85c2da30107e8ed2ad`.
+**Public fixture commits:** `82efeddea222c74355394b1e515e345d24855b11` and `15de1636f384d33da74d2357ef8d0ec451471ccc`.
+**Integration test commit:** `8467d4225345a6fc37436a1ca09af3882f56c9c3`.
+**Snapshot-builder regression extension:** `b7997620dc21ce25f6e6e8ee372af6a9715f5e15` — verifies the public fixed-run day scoping at both the pure window function and the actual snapshot builder; archived source without acquisition time remains stale.
+**Independent audit/report commit:** `f5e8b62b685bf07d09dd844a58a86699cf8ab48e`.
+The final handoff HEAD is the commit containing this section, and must be resolved from GitHub by local Codex; this avoids self-referential SHA claims.
+
+### Product scope and exact failure examples
+
+- `src/lib/cloudsea.ts`: restrict each CloudSea morning/evening window to its **actual local calendar date**, not the first occurrence of each hour in an arbitrary multi-day source payload. In the immutable public GFS Single Runs fixture, Oct 22 morning 08:00 wrongly came from Oct 21 (null) before the correction, withholding a publishable 8/100 *condition index*.
+- `src/lib/cloudsea.ts`: only emit a `snapshotSourceTime` entry when the source dataset actually exists; missing sites/pressure are represented in the surface/pressure coverage summaries rather than fabricated null acquisition-time rows. A *present* source with an invalid timestamp still fails freshness closed; empty source sets remain age `Infinity`.
+- `tests/integration/cloudseaPublicSingleRun.test.ts` (new): validates 13,092-byte SHA-256-attributed public Single Runs GFS input, epoch/Shang­hai date, exact 2026-10-22 morning time slice, 4/4 surface, 3/4 scoreable, 4/4 pressure, window mean 8/100; separately tests recent partial coverage versus stale and invalid source timestamp.
+- `tests/fixtures/public-single-run-gfs-20261021.json` plus `-source.json`: original publicly obtained Open-Meteo fixed forecast, `run=2026-10-21T00:00` UTC; **NOT** Jovi's photograph or observed outcome. Original report stays untracked/unchanged in the Owner worktree.
+- Full independent review: `docs/audits/SCORING_PUBLIC_REPLAY_REMOTE_REVIEW_20261024.md`. Preserves existing scoring weights, sky twilight caps, Fireglow bands/solar windows, pressure profile maths, cache TTLs and model selection.
+
+### Gate status — do not infer a test PASS
+
+- Remote source/diff review: completed at the mentioned commit SHAs.
+- Remote `npm run check`, Vitest, Playwright, `git diff --check`, Docker or production: **NOT_RUN**; GitHub Contents write operations do not execute a Node test runner.
+- Previous original `da159975` local gate, recorded in the 2026-10-24 audit: lint/typecheck/build, 106 files/649 tests, Chromium 287 PASS/131 applicable SKIP, Firefox/WebKit 12 PASS, prod audit 0. These results apply **only to the parent SHA** and do not validate this remote follow-up.
+- Exact-head GitHub CI: must be checked against the resulting Draft PR and its precise head. Successful CI does not imply a working production weather provider.
+- Scientific cloud-sea event probability calibration and Jovi's two case reconstructions: **NOT_VERIFIED**, insufficient location/time/original issued forecast/observed label.
+- Merge: **NO**. Deployment: **NO**. Do not change production or delete old reports.
+
+### Local Codex reception contract
+
+Receive this branch at its exact final remote SHA in a controlled workspace without overwriting current Owner untracked reports. Verify the public fixture SHA and its CC BY 4.0 Open-Meteo attribution (https://open-meteo.com/en/terms).
+
+Required focused commands:
+```bash
+npm run test -- tests/integration/cloudseaPublicSingleRun.test.ts tests/unit/cloudseaCoverage.test.ts tests/unit/cloudsea.test.ts tests/unit/cloudseaWindowSelection.test.ts tests/unit/pressureAbsoluteTime.test.ts tests/unit/providerWeatherIntegrity.test.ts tests/unit/nightAstronomySafety.test.ts tests/unit/fireglow.test.ts tests/integration/cloudseaRoute.test.ts tests/integration/fireglowCacheVersion.test.ts
+npm run check
+npm run test:e2e:offline
+git diff --check
+```
+Also run the previously accepted Firefox/WebKit cross-browser subset, production audit and isolated Linux production image preflight at **this exact SHA**. If the new replay test fails, record RED and repair on a follow-up branch before merge. Do not skip it or falsify expected values. Keep the parent/source raw file unchanged.
+
+Before production approval verify real HTTPS page and selected model/time/coordinate/provenance, surface-versus-pressure partial semantics, CloudSea published window mean versus best single hour, stargazing weather/astronomy and Fireglow band agreement. Stale and provider 429 cannot publish fresh recommendations. Field-event calibration is separately pending.
+
+### Next phase
+
+After local tests and remote exact-SHA review: fixed-run replay matrix across additional public model/lead-time combinations with immutable `run` versus *actual availability time*, versioned source fact masks and controlled quota; only then seek independently verified field labels and calibration. Do not introduce paid providers or claim fitted probabilities without a separate Jovi decision.
+
+
+## 2026-10-24 独立完整集成候选（C1–C4）
+
+- 基线 main: `da159975f7a32f02fa2b9ed869e4ec729e2553a4`。本集成分支 `codex/scoring-combined-20261024` 从 PR #54 固定 HEAD `e76541db0d6e068a49f62240950e376dbc35afb9` 派生，随后按相同 repo 的不可变 Git blob 合入 PR #55 固定 HEAD `e7d723de50edcc3c654280464769c48b92fe909f` 的四个文件；未更改 PR #54/#55 原分支、main 或 Owner 的未跟踪 reports。
+- 不可变来源：PR #54 https://github.com/Jovifei/Star_photo_addr/pull/54 （C1 跨日期 CloudSea 窗口串用；C2 缺席气象来源冒充时间错误；原始 GFS 单次起报回放）。PR #55 https://github.com/Jovifei/Star_photo_addr/pull/55 （C3 stale=false/refreshError 被误称旧数据；C4 新快照来源缺席被误称旧快照；三条浏览器回归）。
+- 本集成候选的精确 HEAD 必须从 `git rev-parse HEAD` 或 GitHub PR refs 取得，并在本地回执写入；不可依赖此文自我引用生成 commit SHA。集成差异清单见 `docs/audits/SCORING_COMBINED_ACCEPTANCE_20261024.md`。
+- GitHub 托管 CI 在 *独立源 PR* 的记录：PR #54 #446 quality=PASS（107 文件651 Vitest）/live=PASS/Firefox+WebKit=12 PASS/container=PASS；PR #55 #450 已知 quality=PASS（106 文件649 Vitest）/live=PASS/container=PASS。**这些不是集成 HEAD 的 PASS**。集成候选须单独验 CI 终态，Chromium 与 FF/WebKit 的新三条用例不能按未运行冒称通过。
+- Remote connector 不提供本机 Shell/Node/Playwright，不曾在 E 盘执行 `npm run check`、`git diff --check`、Docker/设备测试；GitHub Actions 日志是 **GitHub 托管 runner 证据**。本地验收需在保留 Owner 工作树/未跟踪报告前提下接收精确 HEAD，独立校验 13,092 字节固定公开数据 SHA-256 `88208d4c95e68a02cade14fc6a4b63a895979c0ce1f49d6e4cdf4e42c54961b6`，重跑 `npm run check`、`npm run test:e2e`、`npm run test:e2e:cross-browser`、生产 audit 和 `git diff --check`。
+- 必查 C1–C4：2026-10-22 05–08 上海窗口 surface=4/4、scoreable=3/4、pressure=4/4、均分8/100；缺失/旧来源与正常时钟不同；fresh partial 不标旧，真实 `stale=true` 仍标旧；新快照站点没有 provenance 来源显示「数据集缺席」，旧缓存无 provenance 显示旧版缺采集时间。
+- 发布门禁：集成 exact HEAD CI 成功、Linux 依赖/配置匹配的隔离镜像（不是仅容器 healthz）、生产卷与配置备份回滚、最终生产 HTTPS `/healthz` 精确 SHA，星空/云海/晚霞真实时次与来源、429/缺测 UI 及移动真机验证。404/429 与模拟页面不能冒充实际 provider 成功；科学实拍命中率缺观察标签，不能声称 PASS。禁止直接 merge main、部署或删除原报告，除非验收门禁关闭。

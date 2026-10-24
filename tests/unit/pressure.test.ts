@@ -44,6 +44,8 @@ function rawPressure(
   });
   return {
     ...(options.omitElevation ? {} : { elevation: 980 }),
+    latitude: 30.1,
+    longitude: 119.2,
     timezone: "Asia/Shanghai",
     utc_offset_seconds: 28800,
     hourly_units: providerUnits(),
@@ -201,11 +203,66 @@ describe("pressure forecast batch", () => {
     );
   });
 
+  it.each(["timezone", "offset", "latitude", "longitude"] as const)(
+    "rejects one pressure batch site with invalid %s while preserving a trustworthy peer",
+    async (fault) => {
+      const bad = rawPressure();
+      if (fault === "timezone") bad.timezone = "UTC";
+      if (fault === "offset") bad.utc_offset_seconds = 0;
+      if (fault === "latitude") bad.latitude = 91;
+      if (fault === "longitude") bad.longitude = 181;
+      vi.stubGlobal("fetch", vi.fn(async () => Response.json([rawPressure(), bad])));
+
+      const result = await fetchPressureForecastBatch(
+        [
+          { id: "good", latitude: 30.1, longitude: 119.2 },
+          { id: "bad", latitude: 30.2, longitude: 119.3 },
+        ],
+        "2026-09-08",
+        undefined,
+        "gfs",
+      );
+      expect(result.data.good?.model).toBe("gfs");
+      expect(result.data.bad).toBeUndefined();
+      expect(result.errors.bad).toMatch(/时区|坐标/);
+    },
+  );
+
+  it("does not report a valid epoch pressure profile for the wrong requested Shanghai calendar day", async () => {
+    const buildEpoch = (date: string) => {
+      const row = rawPressure();
+      row.hourly.time = [5, 6].map((hour) =>
+        Date.parse(`${date}T${String(hour).padStart(2, "0")}:00:00+08:00`) / 1000,
+      );
+      row.hourly_units = providerUnits("unixtime");
+      return row;
+    };
+    vi.stubGlobal("fetch", vi.fn(async () =>
+      Response.json([buildEpoch("2026-09-08"), buildEpoch("2026-09-09")]),
+    ));
+    const result = await fetchPressureForecastBatch(
+      [
+        { id: "same-day", latitude: 30.1, longitude: 119.2 },
+        { id: "wrong-day", latitude: 30.2, longitude: 119.3 },
+      ],
+      "2026-09-08",
+      undefined,
+      "gfs",
+    );
+    expect(result.data["same-day"]?.stale).toBe(false);
+    expect(result.data["same-day"]?.hourly.map(hour => hour.time)).toEqual([
+      "2026-09-08T05:00",
+      "2026-09-08T06:00",
+    ]);
+    expect(result.data["wrong-day"]).toBeUndefined();
+    expect(result.errors["wrong-day"]).toMatch(/目标日期|日期/);
+  });
+
   it("isolates one malformed site without discarding valid peers", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        new Response(JSON.stringify([rawPressure(), { elevation: 1200 }]), {
+        new Response(JSON.stringify([rawPressure(), { ...rawPressure(), hourly: null }]), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
