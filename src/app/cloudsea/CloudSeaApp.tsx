@@ -431,10 +431,10 @@ export default function CloudSeaApp() {
       selectedWindow.windSpeed != null
     ),
   );
-  const snapshotStale = activeDates.some((date) => Boolean(
-    snapshots[date]?.stale || snapshots[date]?.refreshError,
-  ));
-  const selectedSnapshotStale = Boolean(selectedSnapshot?.stale || selectedSnapshot?.refreshError);
+  // Fresh but partial evidence is not old. refreshError also describes
+  // incomplete coverage while stale=false; keep that reason in dataNotice.
+  const snapshotStale = activeDates.some((date) => Boolean(snapshots[date]?.stale));
+  const selectedSnapshotStale = Boolean(selectedSnapshot?.stale);
   const mainConclusionStale = selectedContext ? selectedSnapshotStale : snapshotStale;
   const mobileConclusion =
     loading && !hasActiveSnapshot
