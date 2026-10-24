@@ -269,8 +269,10 @@ test("CloudSea provenance labels absent fresh source as coverage loss, not legac
     ...current,
     provenance: { version: 1, sourcesBySite: { "cs-taizijian": [] } },
   });
-  await page.goto("/cloudsea");
-  await selectTaizijian(page);
+  // Desktop uses the already-tested canonical selection URL; the mobile-only
+  // catalogue searchbox is not present on this desktop surface.
+  await page.goto(selectedTaizijianHref);
+  await expect(page.locator(".cloudsea-site-detail")).toBeVisible();
   const source = page.getByTestId("snapshot-source-times");
   await source.locator("summary").click();
   await expect(source).toContainText("该地点未取得可核验原始来源时间的数据集");
