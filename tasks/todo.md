@@ -1473,7 +1473,16 @@ Jovi已明确停止本地后续执行，本次只提交并推送现有完成记�
 ## 2026-10-24 三类评分与来源加固（补充授权）
 - [x] 星空、云海、晚霞算法与共同来源独立审查；反例回归及最小修复。
 - [x] 安全依赖升级、完整工程与浏览器门禁、原报告哈希一致。
-- [ ] 精确GitHub提交与生产发布；正式网页三类真实数据和计算验证。
+- [x] 精确GitHub提交与生产发布；正式网页三类真实数据和计算验证。
 计划：tasks/plans/2026-10-24-score-source-hardening.md。工程计算验证与现场预报命中率分开记录，不能保证每次天气预测命中。
 
 验收：全仓check649PASS、生产audit0，Chromium287PASS/131适用SKIP、Firefox/WebKit12PASS；原始59报告哈希相同。首次失败日志保留，未延长时限或跳过失败用例。最后非法observer输入改为暂缓评分，完整check已验证。当前冻结实现范围，仅推进GitHub、部署及正式数据验算。
+
+### 2026-10-24 最终交付（覆盖上方本轮待发布状态）
+- [x] 原E目录接收远端完整C1–C5，PR57合入main864e550；运行源bce9940与其树一致，保留全部原报告。
+- [x] 本地107文件657测试/lint/types/build，Chromium290PASS/134适用SKIP、FF/WebKit12PASS；精确bce9940 CI五项SUCCESS。
+- [x] 精确Linux镜像预检、原配置/卷一致备份和回滚；正式app/worker同镜像healthy，HTTPS revision和三HTML内容一致。
+- [x] 真实GFS54地点108窗口独立Python均分/峰值/最佳时次/层位回算0差异；星空72小时输入与晚霞282地点/453窗口口径验证，旧采集明确标降级。
+- [ ] 科学命中率/两次实拍事件回放：缺地点、时刻、当时原预报和独立标签；不能用条件指数冒充概率。真机/读屏另保留NOT_RUN。
+- Hub：新交付revision请求连接拒绝，未成功上报，待发JSON保留，不自动重试。
+文档：docs/SCORING_FINAL_DELIVERY_20261024.md；结构化回执：docs/evidence/SCORING_FINAL_DELIVERY_20261024.json。

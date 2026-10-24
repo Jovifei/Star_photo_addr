@@ -1,0 +1,188 @@
+{
+  "verifiedAt": "2026-10-24T04:58:59.946812+00:00",
+  "site": "https://photo.joviluma.com",
+  "deployedSource": "bce9940ae630823c6e12252af9020ccd73d010cd",
+  "mainCodeMerge": "864e5507c7b49e4a7235ba2adf175bf503250b58",
+  "qualifiedSourceTree": "5c52da0919f05bd50b956648fabeabe80a501a88",
+  "mainMergeTreeEqualsQualifiedHead": true,
+  "pullRequest": "https://github.com/Jovifei/Star_photo_addr/pull/57",
+  "ci": {
+    "source": "bce9940ae630823c6e12252af9020ccd73d010cd",
+    "runId": 40061516950,
+    "url": "https://github.com/Jovifei/Star_photo_addr/actions/runs/40061516950",
+    "jobs": [
+      {
+        "name": "quality",
+        "conclusion": "success"
+      },
+      {
+        "name": "live-data-smoke",
+        "conclusion": "success"
+      },
+      {
+        "name": "e2e",
+        "conclusion": "success"
+      },
+      {
+        "name": "container-smoke",
+        "conclusion": "success"
+      },
+      {
+        "name": "cross-browser-smoke",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "local": {
+    "check": "PASS",
+    "testFiles": 107,
+    "unitContractIntegrationPassed": 657,
+    "productCheckAt": "80a644ed78811904d7762f7e73717cce77cab751",
+    "finalHeadDifference": "One E2E assertion only; no product-code difference",
+    "chromiumPassed": 290,
+    "chromiumApplicableSkipped": 134,
+    "firefoxWebkitPassed": 12,
+    "productionAuditVulnerabilities": 0
+  },
+  "server": {
+    "source": "bce9940ae630823c6e12252af9020ccd73d010cd",
+    "services": [
+      {
+        "name": "star-photo-star-weather-1",
+        "image": "sha256:b0f70c9859b9e2131a7191df6ac5a69ec0febea1b92d11b82d832acb55ba3ba2",
+        "health": "healthy",
+        "revision": "bce9940ae630823c6e12252af9020ccd73d010cd",
+        "providerHost": "api.open-meteo.com",
+        "providerPath": "/v1/forecast",
+        "providerKeyConfigured": false
+      },
+      {
+        "name": "star-photo-star-weather-worker-1",
+        "image": "sha256:b0f70c9859b9e2131a7191df6ac5a69ec0febea1b92d11b82d832acb55ba3ba2",
+        "health": "healthy",
+        "revision": "bce9940ae630823c6e12252af9020ccd73d010cd",
+        "providerHost": "api.open-meteo.com",
+        "providerPath": "/v1/forecast",
+        "providerKeyConfigured": false
+      }
+    ],
+    "frontend": [
+      {
+        "route": "/",
+        "matches": true,
+        "servedSHA": "9bf4ed2724b5196a202ccca4110350e1615f08eb8e6ac17f724a0a51de61cdde",
+        "packagedSHA": "9bf4ed2724b5196a202ccca4110350e1615f08eb8e6ac17f724a0a51de61cdde"
+      },
+      {
+        "route": "/fireglow",
+        "matches": true,
+        "servedSHA": "7ff4cc6c27a564b7145d74ad69c4717eb16eec37e0cfa9d13f8b4c2a5c4d3e10",
+        "packagedSHA": "7ff4cc6c27a564b7145d74ad69c4717eb16eec37e0cfa9d13f8b4c2a5c4d3e10"
+      },
+      {
+        "route": "/cloudsea",
+        "matches": true,
+        "servedSHA": "669505df36b0930c8d148405eefa282bfd9608e3aeb87c0565d012907d8aded4",
+        "packagedSHA": "669505df36b0930c8d148405eefa282bfd9608e3aeb87c0565d012907d8aded4"
+      }
+    ],
+    "volumeRetained": true,
+    "backupBytes": 57389485,
+    "backupSHA256": "5b3e919236f2079d5e4bb21ba6d3495d8036dececcb8d42b7f88755aa8d00619",
+    "privateConfigBackupsPresent": true,
+    "rollback": "star-photo-addr:rollback-before-bce9940ae630",
+    "completionVerifiedIndependentlyAfterSSHTransportClosed": true
+  },
+  "publicHttpsHtmlHashes": [
+    {
+      "route": "/",
+      "servedSHA": "9bf4ed2724b5196a202ccca4110350e1615f08eb8e6ac17f724a0a51de61cdde",
+      "packagedSHA": "9bf4ed2724b5196a202ccca4110350e1615f08eb8e6ac17f724a0a51de61cdde",
+      "matches": true
+    },
+    {
+      "route": "/fireglow",
+      "servedSHA": "7ff4cc6c27a564b7145d74ad69c4717eb16eec37e0cfa9d13f8b4c2a5c4d3e10",
+      "packagedSHA": "7ff4cc6c27a564b7145d74ad69c4717eb16eec37e0cfa9d13f8b4c2a5c4d3e10",
+      "matches": true
+    },
+    {
+      "route": "/cloudsea",
+      "servedSHA": "669505df36b0930c8d148405eefa282bfd9608e3aeb87c0565d012907d8aded4",
+      "packagedSHA": "669505df36b0930c8d148405eefa282bfd9608e3aeb87c0565d012907d8aded4",
+      "matches": true
+    }
+  ],
+  "cloudsea": {
+    "model": "gfs",
+    "stale": false,
+    "sites": 54,
+    "publishedWindows": 93,
+    "unknownWindows": 15,
+    "surface": {
+      "status": "available",
+      "availableSites": 54,
+      "totalSites": 54,
+      "failedSites": 0
+    },
+    "pressure": {
+      "status": "available",
+      "availableSites": 54,
+      "totalSites": 54,
+      "failedSites": 0
+    }
+  },
+  "independentCloudsea": {
+    "method": "independent Python arithmetic and deck reconstruction over captured real Open-Meteo responses",
+    "sites": 54,
+    "windows": 108,
+    "meanPeakFailures": 0,
+    "peakGeometryFailures": 0,
+    "productionDifferences": 0,
+    "capturedRequests": [
+      {
+        "file": "01-request.json",
+        "responseSha256": "90ec87f5fa4c212341f8eff68fdb0f1a8d0bab39cccec2eab17d25f4d8d25f67",
+        "locations": 54
+      },
+      {
+        "file": "02-request.json",
+        "responseSha256": "64665cbd5827d23d44273a2850762a965d218a3f1be5fb082364d3616cde6839",
+        "locations": 18
+      },
+      {
+        "file": "03-request.json",
+        "responseSha256": "87e2554f86f3418e6cc5b18283aa7934d2c8202440afb1767f05d58ebfba13b5",
+        "locations": 18
+      },
+      {
+        "file": "04-request.json",
+        "responseSha256": "c81f75138b6f9999da1ddf781515477ba1b3a5a12a6de5b92b5a059c0d2b4d62",
+        "locations": 18
+      }
+    ]
+  },
+  "starRealInput": {
+    "model": "gfs",
+    "totalHours": 72,
+    "scoreableHours": 72,
+    "nightScore": 39,
+    "nightStatus": "no"
+  },
+  "fireglow": {
+    "result": "LIVE_OUTPUT_RANGE_PASS",
+    "model": "gfs",
+    "stale": true,
+    "version": "fireglow-v3-solar-index",
+    "sites": 282,
+    "publishedWindows": 453
+  },
+  "sourceFreshnessBoundary": "At final probe GFS Fireglow retained original acquisition times and stale=true; snapshot regeneration is not a new acquisition. Earlier complete fresh probe is retained separately.",
+  "originalReports": {
+    "files": 59,
+    "changedOrMissing": []
+  },
+  "science": "NOT_VERIFIED: no independent field-event labels; condition index is not calibrated occurrence probability.",
+  "devices": "Live desktop and mobile viewport verified; physical phone and screen reader NOT_RUN.",
+  "hub": "UNSENT: new final-delivery revision request failed WinError 10061; pending draft retained; no automatic retry."
+}
