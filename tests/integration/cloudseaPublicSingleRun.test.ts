@@ -113,7 +113,9 @@ describe("public fixed GFS run / CloudSea date and provenance contract", () => {
     expect(snapshotSourceAgeMs(onlyOneSite.provenance)).toBeLessThan(60_000);
     expect(onlyOneSite.provenance?.sourcesBySite[site.id]).toHaveLength(1);
     expect(onlyOneSite.provenance?.sourcesBySite["cs-taizijian"]).toEqual([]);
-    expect(onlyOneSite.sites[site.id]?.morning.score).toBe(8);
+    // With lowCloud=10 and no pressure, the defined low-cloud-clear branch
+    // computes round(8 + 10 * 0.35) = 12; this is NOT the public run's 8.
+    expect(onlyOneSite.sites[site.id]?.morning.score).toBe(12);
 
     const noWeather = buildCloudSeaSnapshot(date, "gfs", {});
     expect(snapshotSourceAgeMs(noWeather.provenance)).toBe(Infinity);
