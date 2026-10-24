@@ -71,6 +71,19 @@ describe("public fixed GFS run / CloudSea date and provenance contract", () => {
     expect(result.peakScore).toBe(8);
     expect(result.peakTime).toBe("05:00");
     expect(result.conditionLabel).toBe("8/100");
+    // The production snapshot builder must bind its actual date as well;
+    // it cannot recompute the desired day from the first matching hour.
+    const snapshot = buildCloudSeaSnapshot(
+      "2026-10-22",
+      "gfs",
+      { "2026-10-22": { [site.id]: hourly } },
+      { [site.id]: pressure },
+    );
+    expect(snapshot.sites[site.id]?.morning.score).toBe(8);
+    expect(snapshot.sites[site.id]?.morning.coverage).toEqual(result.coverage);
+    // This historical run has no original acquisition timestamp. Its numeric
+    // replay is not fresh forecast evidence or an eligible recommendation.
+    expect(snapshot.stale).toBe(true);
     // This is a reproducible forecast INDEX only, not an observed probability.
   });
 
