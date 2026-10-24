@@ -474,6 +474,7 @@ export function evaluateCloudSeaWindow(
   hourly: RawSiteHourly,
   windowHours: number[],
   pressure?: PressureForecastResponse,
+  targetDate?: string,
 ): CloudSeaWindowScore {
   const targetHours = new Set(windowHours);
   const coverage = {
@@ -488,6 +489,9 @@ export function evaluateCloudSeaWindow(
   const activeIndices: number[] = [];
   const seenHours = new Set<number>();
   hourly.time.forEach((time, index) => {
+    // Single Runs can contain multiple calendar dates. Never satisfy a
+    // selected day's hour with the same wall-clock hour from an earlier day.
+    if (targetDate && !time.startsWith(`${targetDate}T`)) return;
     const match = time.match(/T(\d{2}):/);
     const hour = match
       ? Number.parseInt(match[1], 10)
@@ -650,12 +654,14 @@ export function buildCloudSeaSnapshot(
         siteHourly ?? { time: [] },
         morningHours,
         pressure,
+        date,
       ),
       evening: evaluateCloudSeaWindow(
         site,
         siteHourly ?? { time: [] },
         eveningHours,
         pressure,
+        date,
       ),
     };
   }
@@ -692,10 +698,20 @@ export function buildCloudSeaSnapshot(
     date,
     model,
     generatedAt: new Date().toISOString(),
-    provenance: { version: 1, sourcesBySite: Object.fromEntries(CLOUD_SEA_SITES.map(site => [site.id, [
-      snapshotSourceTime("surface", model, weatherByDate[date]?.[site.id]?.sourceFetchedAt),
-      snapshotSourceTime("pressure", pressureBySite[site.id]?.model ?? model, pressureBySite[site.id]?.fetchedAt),
-    ]])) },
+    provenance: {
+      version: 1,
+      sourcesBySite: Object.fromEntries(CLOUD_SEA_SITES.map((site) => {
+        const surface = weatherByDate[date]?.[site.id] ?? weatherByDate[date]?.[site.name];
+        const pressureSource = pressureBySite[site.id];
+        // Omitted data sets belong to coverage, not to an invented source
+        // timestamp. A PRESENT source with an invalid timestamp still
+        // contributes an invalid provenance entry and fails freshness closed.
+        return [site.id, [
+          ...(surface ? [snapshotSourceTime("surface", model, surface.sourceFetchedAt)] : []),
+          ...(pressureSource ? [snapshotSourceTime("pressure", pressureSource.model, pressureSource.fetchedAt)] : []),
+        ]];
+      })),
+    },
     source:
       availableSites > 0
         ? "Open-Meteo surface weather + pressure-level model profile (Beta)"
