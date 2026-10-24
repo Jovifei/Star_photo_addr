@@ -72,6 +72,8 @@ function pressureEntry(date = "2026-09-06") {
   }
   return {
     elevation: 400,
+    latitude: 30,
+    longitude: 120,
     timezone: "Asia/Shanghai",
     utc_offset_seconds: 28800,
     hourly_units: providerUnits("unixtime"),
@@ -144,6 +146,30 @@ describe("GET /api/cloudsea/snapshot", () => {
     const { GET } = await import("@/app/api/cloudsea/snapshot/route");
     expect((await GET(request("date=2026-09-21&model=icon"))).status).toBe(502);
   });
+  it("keeps valid surface weather but withholds false pressure availability from wrong-zone batches", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      const count = coordinateCount(url);
+      const date = url.searchParams.get("start_date") ?? "2026-09-06";
+      const isPressure = (url.searchParams.get("hourly") ?? "").includes("geopotential_height_");
+      return Response.json(Array.from({ length: count }, () => isPressure
+        ? { ...pressureEntry(date), timezone: "UTC", utc_offset_seconds: 0 }
+        : hourlyEntry(date),
+      ));
+    }));
+
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-06&model=gfs"));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.surface.status).toBe("available");
+    expect(body.pressure.status).toBe("unavailable");
+    expect(body.pressure.availableSites).toBe(0);
+    expect(body.sites["cs-taizijian"].morning.score).toBeNull();
+    expect(body.sites["cs-taizijian"].morning.pressureStatus).toBe("unavailable");
+    expect(response.headers.get("X-Cloudsea-Cache")).toBe("degraded");
+  });
+
   it("defaults to GFS so every catalog site uses one pressure model with third-day coverage", async () => {
     const requested: URL[] = [];
     vi.stubGlobal("fetch", successfulFetch(requested));
