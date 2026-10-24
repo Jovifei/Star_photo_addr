@@ -345,6 +345,24 @@ export function parsePressureForecast(
   };
 }
 
+/** Fixed-date CloudSea batches require the identity requested from Open-Meteo.
+ * Returned grid coordinates may legitimately differ from the input location,
+ * but a missing/out-of-range grid position is never trustworthy.
+ */
+function assertShanghaiPressureBatchIdentity(value: unknown): void {
+  if (!isRecord(value) || value.timezone !== "Asia/Shanghai" || value.utc_offset_seconds !== 28800) {
+    throw new Error("气压批量响应时区与 Asia/Shanghai（UTC+08:00）请求不一致");
+  }
+  const latitude = value.latitude;
+  const longitude = value.longitude;
+  if (
+    typeof latitude !== "number" || !Number.isFinite(latitude) || Math.abs(latitude) > 90 ||
+    typeof longitude !== "number" || !Number.isFinite(longitude) || Math.abs(longitude) > 180
+  ) {
+    throw new Error("气压批量响应缺少有效模式网格坐标");
+  }
+}
+
 /**
  * Fetch one Open-Meteo multi-coordinate pressure request. The caller may pass
  * a bounded chunk of sites; malformed profiles are isolated per site, while a
@@ -369,7 +387,15 @@ export async function fetchPressureForecastBatch(
   const errors: Record<string, string> = {};
   locations.forEach((location, index) => {
     try {
-      data[location.id] = { ...parsePressureForecast(list[index], location.id, model), requestedLatitude: location.latitude, requestedLongitude: location.longitude };
+      const entry = list[index];
+      assertShanghaiPressureBatchIdentity(entry);
+      const parsed = parsePressureForecast(entry, location.id, model);
+      // An epoch-v1 source must belong to the requested local calendar day.
+      // Legacy wall-clock profiles remain stale facts, never fresh evidence.
+      if (parsed.timeAxisVersion === "epoch-v1" && parsed.hourly.some(hour => !hour.time.startsWith(`${date}T`))) {
+        throw new Error("气压绝对时间轴与目标日期不一致");
+      }
+      data[location.id] = { ...parsed, requestedLatitude: location.latitude, requestedLongitude: location.longitude };
     } catch (error) {
       errors[location.id] =
         error instanceof Error ? error.message : "气压剖面解析失败";
