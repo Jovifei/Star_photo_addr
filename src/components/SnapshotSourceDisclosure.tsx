@@ -11,7 +11,9 @@ export default function SnapshotSourceDisclosure({ snapshot, siteId }: {
         原始采集 {source.sourceFetchedAt ?? "未知"}；
         模型起报 {source.providerRunAt ?? "未知"}；
         观测时间 {source.observedAt ?? "未知（数值预报）"}</p>)
-      : <p>旧快照未记录原始供应商时间，不能用生成时间替代。</p>}
+      : snapshot?.provenance
+        ? <p>该地点未取得可核验原始来源时间的数据集；按覆盖缺失处理，不能用生成时间代替。</p>
+        : <p>旧快照未记录原始供应商时间，不能用生成时间替代。</p>}
     <p>快照生成 {snapshot?.generatedAt ?? "未知"}；本次传输 {snapshot?.transport?.servedAt ?? "未知"}。采集时间不等于模型起报或观测时间。</p>
   </details>;
 }
