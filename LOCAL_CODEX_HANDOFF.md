@@ -100,3 +100,51 @@ Physical phone now partially exercised: OnePlus7Pro/Android11, Jovi manually ope
 
 Next remote stage: finish exact T1 timezone repair and corrected test handoff, then implement compact mobile and independent astronomy/raw-fact display per docs/MOBILE_DENSITY_REDESIGN_20261007.md. Local precise-SHA tests and real-device checks precede release. Owner tasks notes remain protected and uncommitted.
 
+
+
+## 2026-10-24 Remote scoring A–D audit, public fixed-run replay
+
+**Identity gate:** `Star_photo_addr`, workspaceId `19420f082390`; reviewed original `main@da159975f7a32f02fa2b9ed869e4ec729e2553a4`.
+**Isolated branch:** `codex/scoring-review-20261024`.
+**Base parent SHA:** `da159975f7a32f02fa2b9ed869e4ec729e2553a4`.
+**Remote code commit:** `24d337c5c0b81fe132894c85c2da30107e8ed2ad`.
+**Public fixture commits:** `82efeddea222c74355394b1e515e345d24855b11` and `15de1636f384d33da74d2357ef8d0ec451471ccc`.
+**Integration test commit:** `8467d4225345a6fc37436a1ca09af3882f56c9c3`.
+**Independent audit/report commit:** `f5e8b62b685bf07d09dd844a58a86699cf8ab48e`.
+The final handoff HEAD is the commit containing this section, and must be resolved from GitHub by local Codex; this avoids self-referential SHA claims.
+
+### Product scope and exact failure examples
+
+- `src/lib/cloudsea.ts`: restrict each CloudSea morning/evening window to its **actual local calendar date**, not the first occurrence of each hour in an arbitrary multi-day source payload. In the immutable public GFS Single Runs fixture, Oct 22 morning 08:00 wrongly came from Oct 21 (null) before the correction, withholding a publishable 8/100 *condition index*.
+- `src/lib/cloudsea.ts`: only emit a `snapshotSourceTime` entry when the source dataset actually exists; missing sites/pressure are represented in the surface/pressure coverage summaries rather than fabricated null acquisition-time rows. A *present* source with an invalid timestamp still fails freshness closed; empty source sets remain age `Infinity`.
+- `tests/integration/cloudseaPublicSingleRun.test.ts` (new): validates 13,092-byte SHA-256-attributed public Single Runs GFS input, epoch/Shang­hai date, exact 2026-10-22 morning time slice, 4/4 surface, 3/4 scoreable, 4/4 pressure, window mean 8/100; separately tests recent partial coverage versus stale and invalid source timestamp.
+- `tests/fixtures/public-single-run-gfs-20261021.json` plus `-source.json`: original publicly obtained Open-Meteo fixed forecast, `run=2026-10-21T00:00` UTC; **NOT** Jovi's photograph or observed outcome. Original report stays untracked/unchanged in the Owner worktree.
+- Full independent review: `docs/audits/SCORING_PUBLIC_REPLAY_REMOTE_REVIEW_20261024.md`. Preserves existing scoring weights, sky twilight caps, Fireglow bands/solar windows, pressure profile maths, cache TTLs and model selection.
+
+### Gate status — do not infer a test PASS
+
+- Remote source/diff review: completed at the mentioned commit SHAs.
+- Remote `npm run check`, Vitest, Playwright, `git diff --check`, Docker or production: **NOT_RUN**; GitHub Contents write operations do not execute a Node test runner.
+- Previous original `da159975` local gate, recorded in the 2026-10-24 audit: lint/typecheck/build, 106 files/649 tests, Chromium 287 PASS/131 applicable SKIP, Firefox/WebKit 12 PASS, prod audit 0. These results apply **only to the parent SHA** and do not validate this remote follow-up.
+- Exact-head GitHub CI: must be checked against the resulting Draft PR and its precise head. Successful CI does not imply a working production weather provider.
+- Scientific cloud-sea event probability calibration and Jovi's two case reconstructions: **NOT_VERIFIED**, insufficient location/time/original issued forecast/observed label.
+- Merge: **NO**. Deployment: **NO**. Do not change production or delete old reports.
+
+### Local Codex reception contract
+
+Receive this branch at its exact final remote SHA in a controlled workspace without overwriting current Owner untracked reports. Verify the public fixture SHA and its CC BY 4.0 Open-Meteo attribution (https://open-meteo.com/en/terms).
+
+Required focused commands:
+```bash
+npm run test -- tests/integration/cloudseaPublicSingleRun.test.ts tests/unit/cloudseaCoverage.test.ts tests/unit/cloudsea.test.ts tests/unit/cloudseaWindowSelection.test.ts tests/unit/pressureAbsoluteTime.test.ts tests/unit/providerWeatherIntegrity.test.ts tests/unit/nightAstronomySafety.test.ts tests/unit/fireglow.test.ts tests/integration/cloudseaRoute.test.ts tests/integration/fireglowCacheVersion.test.ts
+npm run check
+npm run test:e2e:offline
+git diff --check
+```
+Also run the previously accepted Firefox/WebKit cross-browser subset, production audit and isolated Linux production image preflight at **this exact SHA**. If the new replay test fails, record RED and repair on a follow-up branch before merge. Do not skip it or falsify expected values. Keep the parent/source raw file unchanged.
+
+Before production approval verify real HTTPS page and selected model/time/coordinate/provenance, surface-versus-pressure partial semantics, CloudSea published window mean versus best single hour, stargazing weather/astronomy and Fireglow band agreement. Stale and provider 429 cannot publish fresh recommendations. Field-event calibration is separately pending.
+
+### Next phase
+
+After local tests and remote exact-SHA review: fixed-run replay matrix across additional public model/lead-time combinations with immutable `run` versus *actual availability time*, versioned source fact masks and controlled quota; only then seek independently verified field labels and calibration. Do not introduce paid providers or claim fitted probabilities without a separate Jovi decision.
