@@ -215,6 +215,7 @@ describe("观星地点查询快照与评分", () => {
 
   it("uses the exact forecast hour for map distribution counts", () => {
     const site = OBSERVING_SITES[0]!;
+    const time = "2026-08-09T23:00"; // A dark sample, outside the new daylight cap.
     const clear = fixture({ cloud_cover: Array.from({ length: 33 }, () => 5) });
     const cloudy = fixture({
       cloud_cover: Array.from({ length: 33 }, () => 95),
@@ -222,12 +223,12 @@ describe("观星地点查询快照与评分", () => {
     const clearScore = scoreObservingSiteAtTime(
       site,
       available(clear),
-      "2026-08-09T20:00",
+      time,
     );
     const cloudyScore = scoreObservingSiteAtTime(
       site,
       available(cloudy),
-      "2026-08-09T20:00",
+      time,
     );
     expect(clearScore.score).not.toBe(cloudyScore.score);
     expect(clearScore.validHours).toBe(1);
@@ -241,9 +242,9 @@ describe("观星地点查询快照与评分", () => {
           ...allSites(clear),
         },
       },
-      "2026-08-09T20:00",
+      time,
     );
-    expect(snapshot.focusTime).toBe("2026-08-09T20:00");
+    expect(snapshot.focusTime).toBe(time);
     expect(snapshotScoreAtTime(snapshot, site.id)?.score).toBe(
       clearScore.score,
     );

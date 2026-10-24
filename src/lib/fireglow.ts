@@ -1,8 +1,10 @@
 import { dataAgeMs } from "./forecastIntegrity";
 import { snapshotSourceTime, type SnapshotProvenance } from "./snapshotProvenance";
+import { isValidProviderValue } from "./providerWeatherIntegrity";
 // Fire-glow (火烧云 / 朝晚霞) scoring for the curated site library.
 //
-// Model v2. Cloud-canvas weights (high×0.75 / mid×0.45 / low×0.10) and the
+// Model v3 uses actual solar direction and uninflated index ranges. Cloud-canvas
+// weights (high×0.75 / mid×0.45 / low×0.10) and the
 // phase-aware optimal moments (-6~-4° high-cloud eruption, -2~+2° mid-cloud,
 // +2~+5° low cloud) are adopted from the open-source
 // LibraHo/weather-sunset-predictor, which documents them against the
@@ -17,6 +19,16 @@ import type { ForecastModel } from "@/lib/types";
 import type { FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
 
 export type FireGlowBand = "strong" | "medium" | "light" | "faint" | "none" | "unknown";
+export const FIRE_GLOW_SCORE_VERSION = "fireglow-v3-solar-index";
+export const FIRE_GLOW_INDEX_BANDS = [
+  { minimum: 0, maximum: 20, level: "p20" },
+  { minimum: 20, maximum: 40, level: "p40" },
+  { minimum: 40, maximum: 60, level: "p60" },
+  { minimum: 60, maximum: 80, level: "p80" },
+  { minimum: 80, maximum: 88, level: "p88" },
+  { minimum: 88, maximum: 95, level: "p95" },
+  { minimum: 95, maximum: 100, level: "p100" },
+] as const;
 
 /**
  * 条件指数分级，供地图色阶与列表徽章共用。
@@ -68,6 +80,8 @@ export interface FireGlowSiteScore {
 }
 
 export interface FireGlowSnapshot {
+  scoreModelVersion?: string;
+  providerValidationVersion?: string;
   date: string;
   model: ForecastModel;
   generatedAt: string;
@@ -137,8 +151,10 @@ function sunAltitudeDegrees(date: Date, latitude: number, longitude: number): nu
 }
 
 interface SunAltitudePoint {
+  time: string;
   hour: number;
   altitude: number;
+  phase: "morning" | "evening" | null;
 }
 
 /** 全日太阳高度序列（北京时间小时），供晨昏穿越插值复用。 */
@@ -154,9 +170,12 @@ function daySunAltitudeSeries(
     const hour = Number(time.slice(11, 13)) + Number(time.slice(14, 16)) / 60;
     if (!Number.isFinite(hour)) continue;
     const date = parseShanghaiTime(time);
+    if (!date) continue;
     const equator = Astronomy.Equator(Astronomy.Body.Sun, date, observer, true, true);
     const altitude = Astronomy.Horizon(date, observer, equator.ra, equator.dec, "normal").altitude;
-    series.push({ hour, altitude });
+    const change = sunAltitudeDegrees(new Date(date.getTime() + 60_000), site.latitude, site.longitude) -
+      sunAltitudeDegrees(new Date(date.getTime() - 60_000), site.latitude, site.longitude);
+    series.push({ time, hour, altitude, phase: change > 0 ? "morning" : change < 0 ? "evening" : null });
   }
   return series.sort((left, right) => left.hour - right.hour);
 }
@@ -195,8 +214,12 @@ function twilightCrossing(
 }
 
 /** Finder times are wall-clock Asia/Shanghai; anchor them explicitly. */
-function parseShanghaiTime(time: string): Date {
-  return new Date(`${time}:00+08:00`);
+function parseShanghaiTime(time: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?$/.test(time)) return null;
+  const wall = time.length === 16 ? `${time}:00` : time;
+  const date = new Date(`${wall}+08:00`);
+  return Number.isFinite(date.getTime()) &&
+    new Date(date.getTime() + 8 * 3_600_000).toISOString().slice(0, 19) === wall ? date : null;
 }
 
 interface GlowHour {
@@ -218,13 +241,13 @@ interface GlowHourCollection {
 
 function collectGlowHours(
   record: FinderWeatherRecord | undefined,
-  site: { latitude: number; longitude: number },
   phase: "evening" | "morning",
   dateKey: string,
+  sunSeries: SunAltitudePoint[],
 ): GlowHourCollection {
   const hourly = record?.hourly;
   if (!hourly?.time?.length) return { hours: [], incomplete: false };
-  const hourRange = phase === "evening" ? [15, 20] : [4, 9];
+  const solarByTime = new Map(sunSeries.map((point) => [point.time, point]));
   const hours: GlowHour[] = [];
   let incomplete = false;
   for (let index = 0; index < hourly.time.length; index += 1) {
@@ -232,9 +255,9 @@ function collectGlowHours(
     if (!time) continue;
     if (time.slice(0, 10) !== dateKey) continue;
     const localHour = Number(time.slice(11, 13));
-    if (localHour < hourRange[0] || localHour > hourRange[1]) continue;
-    const date = parseShanghaiTime(time);
-    const sunAltitude = sunAltitudeDegrees(date, site.latitude, site.longitude);
+    const solar = solarByTime.get(time);
+    if (!solar || solar.phase !== phase) continue;
+    const sunAltitude = solar.altitude;
     if (sunAltitude < -6 || sunAltitude > 4) continue;
 
     const cloudLow = hourly.cloud_cover_low?.[index];
@@ -242,10 +265,10 @@ function collectGlowHours(
     const cloudHigh = hourly.cloud_cover_high?.[index];
     const precip = hourly.precipitation?.[index];
     if (
-      !finiteNumber(cloudLow) ||
-      !finiteNumber(cloudMid) ||
-      !finiteNumber(cloudHigh) ||
-      !finiteNumber(precip)
+      !isValidProviderValue("cloud_cover_low", cloudLow) ||
+      !isValidProviderValue("cloud_cover_mid", cloudMid) ||
+      !isValidProviderValue("cloud_cover_high", cloudHigh) ||
+      !isValidProviderValue("precipitation", precip)
     ) {
       incomplete = true;
       continue;
@@ -253,6 +276,11 @@ function collectGlowHours(
 
     const gust = hourly.wind_gusts_10m?.[index];
     const visibility = hourly.visibility?.[index];
+    if ((gust != null && !isValidProviderValue("wind_gusts_10m", gust)) ||
+        (visibility != null && !isValidProviderValue("visibility", visibility))) {
+      incomplete = true;
+      continue;
+    }
     hours.push({
       time,
       hour: localHour,
@@ -323,14 +351,9 @@ function bandFor(score: number): FireGlowBand {
 
 /** 条件指数分段；内部 level 名沿用旧 pXX 兼容既有快照。 */
 export function probabilityRangeFor(score: number | null): { label: string; level: FireGlowProbabilityLevel } | null {
-  if (score == null) return null;
-  if (score >= 88) return { label: "95–100", level: "p100" };
-  if (score >= 80) return { label: "88–95", level: "p95" };
-  if (score >= 72) return { label: "80–88", level: "p88" };
-  if (score >= 52) return { label: "60–80", level: "p80" };
-  if (score >= 34) return { label: "40–60", level: "p60" };
-  if (score >= 15) return { label: "20–40", level: "p40" };
-  return { label: "0–20", level: "p20" };
+  if (score == null || !Number.isFinite(score) || score < 0 || score > 100) return null;
+  const band = FIRE_GLOW_INDEX_BANDS.findLast(({ minimum }) => score >= minimum)!;
+  return { label: `${band.minimum}–${band.maximum}`, level: band.level };
 }
 
 const BAND_LABELS: Record<FireGlowBand, string> = {
@@ -409,13 +432,15 @@ export function scoreFireGlowSite(
   record: FinderWeatherRecord | undefined,
   dateKey?: string,
 ): FireGlowSiteScore {
-  if (!record?.hourly?.time?.length || !dateKey) {
+  if (!record?.hourly?.time?.length || !dateKey || !parseShanghaiTime(`${dateKey}T00:00`) ||
+      !Number.isFinite(site.latitude) || Math.abs(site.latitude) > 90 ||
+      !Number.isFinite(site.longitude) || Math.abs(site.longitude) > 180) {
     return { evening: { ...EMPTY_WINDOW }, morning: { ...EMPTY_WINDOW } };
   }
   const sunSeries = daySunAltitudeSeries(record.hourly.time, site, dateKey);
   return {
-    evening: scoreWindow(collectGlowHours(record, site, "evening", dateKey), sunSeries, "evening"),
-    morning: scoreWindow(collectGlowHours(record, site, "morning", dateKey), sunSeries, "morning"),
+    evening: scoreWindow(collectGlowHours(record, "evening", dateKey, sunSeries), sunSeries, "evening"),
+    morning: scoreWindow(collectGlowHours(record, "morning", dateKey, sunSeries), sunSeries, "morning"),
   };
 }
 
@@ -433,6 +458,7 @@ export function buildFireGlowSnapshot(
   return {
     date,
     model,
+    scoreModelVersion: FIRE_GLOW_SCORE_VERSION,
     generatedAt: new Date().toISOString(),
     provenance: { version: 1, sourcesBySite: Object.fromEntries(Object.entries(dayRecords).map(([id, record]) => [id, [snapshotSourceTime("surface", record.model ?? model, record.provenance?.sourceFetchedAt ?? record.fetchedAt, record.provenance?.providerRunAt)]])) },
     source: "Open-Meteo Forecast API（云层/降水/能见度）+ astronomy-engine 太阳高度角",

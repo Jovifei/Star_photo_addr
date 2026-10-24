@@ -1,4 +1,5 @@
 import { normalizeEpochHours } from "./absoluteForecastTime";
+import { PROVIDER_VALIDATION_VERSION, validateProviderHourlyFields } from "./providerWeatherIntegrity";
 // Server-only Open-Meteo forecast proxy logic.
 import fs from "node:fs";
 import path from "node:path";
@@ -41,6 +42,7 @@ interface RawForecastResponse {
   timezone: string;
   utc_offset_seconds?: number;
   hourly?: RawHourly;
+  hourly_units?: Record<string, unknown>;
 }
 
 export const OPEN_METEO_FORECAST_URL =
@@ -124,6 +126,8 @@ export function buildForecastUrl(
     // Keep its evening hours when the provider rolls its default start to 00:00.
     past_days: "1",
     wind_speed_unit: "ms",
+    temperature_unit: "celsius",
+    precipitation_unit: "mm",
   });
   const providerModel = MODEL_PARAMETERS[model];
   if (providerModel) params.set("models", providerModel);
@@ -183,6 +187,7 @@ export function validateRawForecast(
     }
   }
   requireUtcOffsetSeconds(item);
+  validateProviderHourlyFields(item.hourly, item.hourly_units);
 }
 
 const OPEN_METEO_MAX_CONCURRENCY = 2;
@@ -430,6 +435,7 @@ export async function fetchSurfaceForecasts(
   }
   const fetchedAt = new Date().toISOString();
   const metadata: ForecastMetadata = {
+    providerValidationVersion: PROVIDER_VALIDATION_VERSION,
     source: "Open-Meteo",
     timeAxisVersion: "epoch-v1",
     model,

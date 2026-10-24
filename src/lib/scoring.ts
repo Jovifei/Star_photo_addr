@@ -3,18 +3,12 @@ import { hourInstantMs } from "./absoluteForecastTime";
 import { moonPhaseName } from "./astronomy";
 import { formatHour, isInNight } from "./nighttime";
 import { forecastTrustIssue, missingNightInputs } from "./forecastIntegrity";
-import { scoreHour } from "./hourScore";
+import { NOT_DARK_BLOCKER, scoreHour } from "./hourScore";
 import type { HourEvaluation, HourWeather, Location, LocationForecast, NightEvaluation, NightStatus } from "./types";
 
 const clamp = (value: number, min = 0, max = 100): number => Math.min(max, Math.max(min, value));
 export const SCORE_MODEL_VERSION = "star-v1.2-integrity";
 
-/** Called only after missingNightInputs; no clear-weather defaults for missing core fields. */
-function evaluateHour(hour: HourWeather, location: Location, utcOffsetSeconds: number): HourEvaluation {
-  const result = scoreHour(hour, location, utcOffsetSeconds);
-  if (!result) throw new Error("关键天气字段缺失，不能计算小时评分");
-  return result;
-}
 function timestamp(hour: HourWeather): number { return hourInstantMs(hour); }
 function longestWindow(hours: HourEvaluation[], threshold = 62): HourEvaluation[] {
   let best: HourEvaluation[] = [];
@@ -48,7 +42,12 @@ export function evaluateNight(forecast: LocationForecast, location: Location, ni
   const source = forecast.hourly.filter((hour) => isInNight(hour.time, nightKey)).sort((a, b) => hourInstantMs(a) - hourInstantMs(b));
   if (source.length < 7 || new Set(source.map((hour) => hour.epochSeconds ?? hour.time)).size !== source.length) return null;
   if (source.some((hour) => !Number.isFinite(timestamp(hour)) || missingNightInputs(hour).length > 0)) return null;
-  const hours = source.map((hour) => evaluateHour(hour, location, forecast.utcOffsetSeconds));
+  const hours: HourEvaluation[] = [];
+  for (const hour of source) {
+    const evaluation = scoreHour(hour, location, forecast.utcOffsetSeconds);
+    if (!evaluation) return null;
+    hours.push(evaluation);
+  }
   const window = longestWindow(hours);
   const top = bestThreeHours(hours);
   // Without a 3-hour window, show an all-dark-hour summary and explicitly do not recommend it.
@@ -59,7 +58,11 @@ export function evaluateNight(forecast: LocationForecast, location: Location, ni
   const confidence = leadIndex >= 7
     ? { level: "趋势", kind: "trend" as const, reason: "8 天后趋势；单模型，未核验模型分歧" }
     : { level: "中", kind: "medium" as const, reason: "字段完整不等于预报准确；单模型，未核验模型分歧" };
-  const blockers = [...new Set(hours.flatMap((hour) => hour.blockers))];
+  // Twilight outside the chosen dark window does not veto that window.
+  // Weather hazards anywhere in the night remain visible and block departure.
+  const blockers = [...new Set(hours.flatMap((hour) => hour.blockers.filter((blocker) =>
+    blocker !== NOT_DARK_BLOCKER || !top.length || top.includes(hour),
+  )))];
   const status: NightStatus = leadIndex >= 7
     ? "trend"
     : blockers.length

@@ -16,6 +16,7 @@ vi.mock("@/lib/stargazingFinderWeather", () => ({
 }));
 
 vi.mock("@/lib/fireglow", () => ({
+  FIRE_GLOW_SCORE_VERSION: "fireglow-test-version",
   buildFireGlowSnapshot: (date: string, model: string) => ({
     date,
     model,

@@ -62,9 +62,14 @@ export function projectCandidateNight(
 ): CandidateNightEvidence {
   const model = forecast?.metadata?.model ?? null;
   const sourceFetchedAt = forecast?.metadata?.sourceFetchedAt ?? forecast?.fetchedAt ?? null;
-  const hours = forecast?.hourly
+  const coordinatesMismatch = Boolean(forecast &&
+    (forecast.requestedLatitude !== undefined || forecast.requestedLongitude !== undefined) &&
+    (!Number.isFinite(forecast.requestedLatitude) || !Number.isFinite(forecast.requestedLongitude) ||
+      Math.abs(forecast.requestedLatitude! - location.latitude) > 1e-5 ||
+      Math.abs(forecast.requestedLongitude! - location.longitude) > 1e-5));
+  const hours = (coordinatesMismatch ? [] : forecast?.hourly ?? [])
     .filter((hour) => isInNight(hour.time, nightKey))
-    .sort((a, b) => a.time.localeCompare(b.time)) ?? [];
+    .sort((a, b) => a.time.localeCompare(b.time));
   const metrics = {
     cloudCover: meanSummary(hours, "cloudCover"),
     precipitationProbability: maxSummary(hours, "precipitationProbability", 100),
@@ -73,7 +78,7 @@ export function projectCandidateNight(
   const blockedFields = collectBlockers(hours);
   const trustIssue = forecastTrustIssue(forecast, now, expectedModel);
   const uniqueTimes = new Set(hours.map((hour) => hour.time));
-  let reason = trustIssue ?? "";
+  let reason = coordinatesMismatch ? "天气数据坐标与当前地点不一致，不发布评分" : trustIssue ?? "";
   let evaluation: NightEvaluation | null = null;
 
   if (!reason && hours.length < 7) reason = `夜间时次不足（${hours.length}/7）`;

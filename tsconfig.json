@@ -35,6 +35,7 @@
   "exclude": [
     "node_modules",
     "tmp",
+    "reports",
     "playwright-report",
     "playwright-report-local",
     "playwright-report-cross-browser",

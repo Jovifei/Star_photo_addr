@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { interpolateScoreGrid } from "@/lib/fireglowOverlay";
+import { interpolateScoreGrid, LEVEL_THRESHOLDS } from "@/lib/fireglowOverlay";
+import { probabilityRangeFor } from "@/lib/fireglow";
 
 const BOUNDS: [[number, number], [number, number]] = [
   [25, 110],
@@ -16,6 +17,13 @@ function gridValue(grid: Float32Array, width: number, lat: number, lng: number):
 }
 
 describe("interpolateScoreGrid", () => {
+  it("uses the same score bands as markers and the displayed condition index", () => {
+    const levels = ["p20", "p40", "p60", "p80", "p88", "p95", "p100"];
+    for (let score = 0; score <= 100; score += 1) {
+      const index = LEVEL_THRESHOLDS.filter((threshold) => score >= threshold).length;
+      expect(levels[index], `score ${score}`).toBe(probabilityRangeFor(score)!.level);
+    }
+  });
   const width = 15;
   const height = 10;
 
@@ -59,6 +67,16 @@ describe("interpolateScoreGrid", () => {
   it("returns an all-NaN grid without valid points", () => {
     const grid = interpolateScoreGrid([], width, height, BOUNDS);
     expect(Array.from(grid).every((value) => Number.isNaN(value))).toBe(true);
+  });
+
+  it("excludes impossible scores before they can poison neighboring cells", () => {
+    for (const score of [NaN, Infinity, -1, 101]) {
+      const grid = interpolateScoreGrid([
+        { latitude: 30, longitude: 120, score },
+        { latitude: 30, longitude: 120, score: 80 },
+      ], 3, 3, [[29, 119], [31, 121]]);
+      expect(grid[4]).toBe(80);
+    }
   });
 
   it("excludes null-score sites from interpolation", () => {

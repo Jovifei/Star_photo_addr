@@ -139,7 +139,7 @@ test("stale=true 的旧 94 分不能进入地图、候选或详情推荐", async
       body: JSON.stringify({
         date: url.searchParams.get("date"), days: 1, model: url.searchParams.get("model") ?? "icon",
         generatedAt: new Date().toISOString(), sourceFetchedAt: new Date().toISOString(),
-        integrityVersion: "weather-integrity-v2", source: "P0 stale94 injection", stale: true, sites: {},
+        integrityVersion: "weather-integrity-v3", source: "P0 stale94 injection", stale: true, sites: {},
         ...(focusTime ? { focusTime, focusScores } : {}),
       }),
     });

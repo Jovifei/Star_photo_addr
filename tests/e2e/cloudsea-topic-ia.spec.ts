@@ -1,4 +1,12 @@
 import { expect, test, type Page } from "./offline-test.js";
+import { CLOUD_SEA_SITES } from "../../src/lib/cloudseaSites";
+import { conditionLevelFor } from "../../src/lib/cloudsea";
+
+const taizijian = CLOUD_SEA_SITES.find(site => site.id === "cs-taizijian")!;
+const selectedTaizijianHref = `/cloudsea?${new URLSearchParams({
+  sourceScope: "cloudsea", sourceId: taizijian.id, canonicalId: `cloudsea:${taizijian.id}`,
+  lat: String(taizijian.latitude), lng: String(taizijian.longitude), name: taizijian.name,
+})}`;
 
 const onePixelPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -29,6 +37,8 @@ type WindowOptions = {
   humidity?: number | null;
   windSpeed?: number | null;
   peakTime?: string | null;
+  peakScore?: number | null;
+  coverage?: { expectedHours: number; surfaceValidHours: number; scoreableHours: number; pressureHours: number };
 };
 
 function cloudWindow(date: string, options: WindowOptions = {}) {
@@ -44,9 +54,9 @@ function cloudWindow(date: string, options: WindowOptions = {}) {
   }[cloudPosition];
   return {
     score,
-    conditionLevel: score == null ? null : "p90",
+    conditionLevel: score == null ? null : conditionLevelFor(score),
     conditionLabel: score == null ? null : `${score}/100`,
-    probabilityLevel: score == null ? null : "p90",
+    probabilityLevel: score == null ? null : conditionLevelFor(score),
     probabilityLabel: score == null ? null : `${score}/100`,
     cloudPosition,
     positionLabel,
@@ -59,6 +69,8 @@ function cloudWindow(date: string, options: WindowOptions = {}) {
     humidity: options.humidity ?? 90,
     windSpeed: options.windSpeed ?? 2,
     peakTime: options.peakTime ?? "06:00",
+    ...(options.peakScore !== undefined ? { peakScore: options.peakScore } : {}),
+    ...(options.coverage ? { coverage: options.coverage } : {}),
     pressureTime: pressureStatus === "unavailable" ? null : `${date}T06:00`,
     pressureStatus,
     pressureConfidence: pressureStatus === "available" ? "中" : null,
@@ -202,7 +214,7 @@ test("CloudSea pressure partial keeps a selected numeric score above global cove
   }));
   await page.goto("/cloudsea");
   await selectTaizijian(page);
-  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100");
+  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100 · 窗口平均");
   await expect(page.locator(".mobile-data-sheet-status")).toContainText("压力层");
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toHaveText("数据降级 · 仅供参考");
 });
@@ -255,7 +267,7 @@ test("CloudSea selected fresh winner is not downgraded by another stale date", a
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "展开数据面板" }).click();
   await page.locator(".mobile-sheet-ranking button").first().click();
-  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100");
+  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100 · 窗口平均");
   await expect(page.locator(".mobile-key-metrics")).toContainText("93%");
   await expect(page.locator(".mobile-data-sheet-status")).toContainText("day1 stale fixture");
 });
@@ -268,4 +280,65 @@ test("CloudSea total surface failure is unavailable rather than pressure partial
   await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("数据不可用 · 请重试");
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toContainText("压力");
   await expect(page.locator(".cloudsea-map-pane")).toBeVisible();
+});
+
+test("CloudSea distinguishes the mean and peak in the ranking, detail and map popup", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "popup and detail run once on desktop");
+  const date = shanghaiDateKey();
+  await mockSnapshot(page, snapshot(date, { score: 31, peakTime: "05:00", peakScore: 98,
+    coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 4, pressureHours: 4 } }));
+  await page.goto("/cloudsea");
+  const card = page.locator(".cloudsea-card").filter({ hasText: "临安太子尖" });
+  await expect(card).toContainText("窗口平均");
+  await expect(card).toContainText("31/100");
+  await expect(card).toContainText("最佳 05:00 · 98/100");
+  await card.click();
+  await expect(page.locator(".cloudsea-site-detail")).toContainText("窗口平均");
+  await page.locator('.leaflet-overlay-pane path[stroke="#ffffff"]').click();
+  const popup = page.locator(".cloudsea-popup");
+  await expect(popup).toContainText("窗口平均条件指数: 31/100");
+  await expect(popup).toContainText("最佳 05:00 · 98/100");
+  await page.screenshot({ path: info.outputPath("mean-peak-desktop-fixture.png") });
+});
+
+test("CloudSea keeps partial evidence available without ranking its peak as a window mean", async ({ page }, info) => {
+  const date = shanghaiDateKey();
+  const partial = snapshot(date, { score: null, peakTime: "05:00", peakScore: 98, pressureStatus: "partial",
+    coverage: { expectedHours: 4, surfaceValidHours: 1, scoreableHours: 1, pressureHours: 1 } });
+  const other = cloudWindow(date, { score: 31 });
+  await mockSnapshot(page, { ...partial, sites: { ...partial.sites, "cs-fuzhishan": { morning: other, evening: other } } });
+  await page.goto(info.project.name === "desktop" ? selectedTaizijianHref : "/cloudsea");
+  if (info.project.name === "desktop") {
+    const card = page.locator(".cloudsea-card").filter({ hasText: "临安太子尖" });
+    await expect(card).toHaveCount(0);
+  } else {
+    await selectTaizijian(page);
+    await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("窗口覆盖不足");
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+  }
+  const detail = page.locator(".cloudsea-site-detail");
+  await expect(detail).toContainText("窗口覆盖不足");
+  await expect(detail).toContainText("可评分 1/4 时");
+  await expect(detail.locator(".cs-hero-score-number")).toHaveText("—");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath(`partial-${info.project.name}-fixture.png`) });
+});
+
+test("CloudSea keeps a partial best hour attached to its winning day in three-day mode", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "three-day evidence ownership runs once");
+  const base = shanghaiDateKey(), tomorrow = shiftDate(base, 1);
+  await page.route("**/api/cloudsea/snapshot**", async route => {
+    const date = new URL(route.request().url()).searchParams.get("date") ?? base;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot(date, {
+      score: null, peakTime: "05:00", peakScore: date === tomorrow ? 98 : 60, pressureStatus: "partial",
+      coverage: { expectedHours: 4, surfaceValidHours: 1, scoreableHours: 1, pressureHours: 1 },
+    })) });
+  });
+  await mockMapTiles(page);
+  await page.goto(selectedTaizijianHref);
+  await page.locator('[aria-label="预报日期选择"] button').nth(3).click();
+  const detail = page.locator(".cloudsea-site-detail");
+  await expect(detail.locator(".cs-date-chip")).toContainText(tomorrow);
+  await expect(detail).toContainText("最佳 05:00 · 98/100");
+  await expect(detail.locator(".cs-hero-score-number")).toHaveText("—");
 });

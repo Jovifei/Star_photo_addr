@@ -1,3 +1,5 @@
+import { providerUnits } from "../fixtures/providerUnits";
+import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildForecastUrl,
@@ -82,6 +84,9 @@ describe("forecast model routing", () => {
     for (const model of ["best_match", "icon", "gfs", "aifs"] as const) {
       const params = new URL(buildForecastUrl([location], 14, model)).searchParams;
       expect(params.get("past_days")).toBe("1");
+      expect(params.get("temperature_unit")).toBe("celsius");
+      expect(params.get("precipitation_unit")).toBe("mm");
+      expect(params.get("wind_speed_unit")).toBe("ms");
       expect(params.get("forecast_days")).toBe(String(clampForecastDays(14, model)));
     }
     expect(maxForecastDaysForModel("icon")).toBe(8);
@@ -108,7 +113,7 @@ describe("forecast model routing", () => {
           elevation: 0,
           timezone: "Asia/Shanghai",
           utc_offset_seconds: 28800,
-          hourly: VALID_CLOUD_HOURLY,
+          hourly_units: providerUnits("unixtime"), hourly: VALID_CLOUD_HOURLY,
         }),
       }),
     );
@@ -171,7 +176,7 @@ describe("forecast model routing", () => {
           longitude: 120,
           elevation: 0,
           timezone: "Asia/Shanghai",
-          hourly: VALID_CLOUD_HOURLY,
+          hourly_units: providerUnits("unixtime"), hourly: VALID_CLOUD_HOURLY,
         }),
       }),
     );
@@ -191,7 +196,7 @@ describe("forecast model routing", () => {
           elevation: 0,
           timezone: "UTC",
           utc_offset_seconds: 0,
-          hourly: VALID_CLOUD_HOURLY,
+          hourly_units: providerUnits("unixtime"), hourly: VALID_CLOUD_HOURLY,
         }),
       }),
     );
@@ -201,6 +206,7 @@ describe("forecast model routing", () => {
     );
     expect(forecast?.utcOffsetSeconds).toBe(0);
     expect(forecast?.provenance?.utcOffsetSeconds).toBe(0);
+    expect(forecast?.metadata?.providerValidationVersion).toBe(PROVIDER_VALIDATION_VERSION);
   });
 
   it("always fetches the upstream with no-store semantics", async () => {
@@ -212,7 +218,7 @@ describe("forecast model routing", () => {
         elevation: 0,
         timezone: "Asia/Shanghai",
         utc_offset_seconds: 28800,
-        hourly: VALID_CLOUD_HOURLY,
+        hourly_units: providerUnits("unixtime"), hourly: VALID_CLOUD_HOURLY,
       }),
     });
     vi.stubGlobal("fetch", fetchMock);

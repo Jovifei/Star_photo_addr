@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
+import { forecastTrustIssue } from "@/lib/forecastIntegrity";
 
 const NOW = Date.parse("2026-09-13T08:00:00Z");
 const LIMIT = 6 * 60 * 60_000;
@@ -58,6 +60,25 @@ afterEach(() => {
   fs.rmSync(directory, { recursive: true, force: true });
 });
 describe("forecast disk fallback original-age gate", () => {
+  it.each([undefined, "open-meteo-hourly-v0"])("retains an unverified epoch-key file (%s) read-only as stale and unscoreable", async version => {
+    const data = payload(new Date(NOW - 60_000).toISOString());
+    const value = { ...data, metadata: { ...data.metadata, providerValidationVersion: version, timeAxisVersion: "epoch-v1" }, locations: data.locations.map(location => ({ ...location, metadata: { ...location.metadata, providerValidationVersion: version, timeAxisVersion: "epoch-v1" }, hourly: location.hourly.map(hour => ({ ...hour, epochSeconds: Date.parse(hour.time + "Z") / 1000 - 28800, utcOffsetSeconds: 28800 })) })) };
+    writeDisk(value, EPOCH_KEY);
+    const folder = path.join(directory, "forecast-cache");
+    const filename = path.join(folder, fs.readdirSync(folder)[0]);
+    const before = fs.readFileSync(filename, "utf8");
+    const response = await request(true);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-data-stale")).toBe("true");
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    const body = await response.json();
+    expect(body.metadata.providerValidationVersion).toBe(version);
+    expect(body.locations[0].metadata.stale).toBe(true);
+    expect(forecastTrustIssue(body.locations[0], NOW)).not.toBeNull();
+    expect(body.locations[0].hourly[0].cloudCover).toBe(8);
+    expect(providerCalls).toBe(0);
+    expect(fs.readFileSync(filename, "utf8")).toBe(before);
+  });
   it("retains legacy fresh data only as stale in cache-only reads", async () => {
     writeDisk(payload(new Date(NOW - 60_000).toISOString()));
     const response = await request(true);
@@ -67,7 +88,7 @@ describe("forecast disk fallback original-age gate", () => {
   });
   it("accepts fresh data only with absolute instants under the epoch cache key", async () => {
     const data = payload(new Date(NOW - 60_000).toISOString());
-    const epochData = { ...data, metadata: { ...data.metadata, timeAxisVersion: "epoch-v1" }, locations: data.locations.map(location => ({ ...location, metadata: { ...location.metadata, timeAxisVersion: "epoch-v1" }, hourly: location.hourly.map(hour => ({ ...hour, epochSeconds: Date.parse(hour.time + "Z") / 1000 - 28800, utcOffsetSeconds: 28800 })) })) };
+    const epochData = { ...data, metadata: { ...data.metadata, providerValidationVersion: PROVIDER_VALIDATION_VERSION, timeAxisVersion: "epoch-v1" }, locations: data.locations.map(location => ({ ...location, metadata: { ...location.metadata, providerValidationVersion: PROVIDER_VALIDATION_VERSION, timeAxisVersion: "epoch-v1" }, hourly: location.hourly.map(hour => ({ ...hour, epochSeconds: Date.parse(hour.time + "Z") / 1000 - 28800, utcOffsetSeconds: 28800 })) })) };
     writeDisk(epochData, EPOCH_KEY);
     const response = await request(true);
     expect(response.status).toBe(200);

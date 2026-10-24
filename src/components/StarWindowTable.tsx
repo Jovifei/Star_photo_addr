@@ -52,7 +52,7 @@ export default function StarWindowTable() {
       const row = new Map<string, Cell>();
       const matchingCandidate = location.isCandidate ? null : candidates.find((candidate) => samePoint(candidate, location));
       const cacheId = location.isCandidate ? location.id : matchingCandidate?.id ?? `selected:${location.id}`;
-      const cached = cachedForecast(forecastCache, cacheId, state.candidateForecastModel);
+      const cached = cachedForecast(forecastCache, cacheId, state.candidateForecastModel, location);
       const available = cached?.metadata?.model === state.candidateForecastModel
         ? cached
         : !location.isCandidate ? state.forecast : null;

@@ -172,6 +172,119 @@ describe("pressure-derived cloud-sea vertical evidence", () => {
 });
 
 describe("evaluateCloudSeaWindow", () => {
+  it("does not count repeated source hours as additional window coverage", () => {
+    const hourly = { ...hourlyFixture(), time: Array(4).fill("2026-09-04T05:00") as string[] };
+    const result = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE, hourly, [5, 6, 7, 8], pressureFor(MOCK_HIGH_SITE.id, hourly.time),
+    );
+    expect(result.score).toBeNull();
+    expect(result.coverage?.surfaceValidHours).toBe(1);
+    expect(result.coverage?.expectedHours).toBe(4);
+  });
+
+  it("does not call a summit above the clouds when a second deck encloses it", () => {
+    const hourly = hourlyFixture();
+    const pressure = pressureFor(MOCK_HIGH_SITE.id, hourly.time);
+    for (const samples of Object.values(pressure.profiles)) {
+      for (const sample of samples) {
+        if (sample.pressure === 800 || sample.pressure === 700) {
+          sample.cloudCover = 90;
+          sample.humidity = 95;
+        }
+      }
+    }
+    const result = evaluateCloudSeaWindow(
+      { ...MOCK_HIGH_SITE, altitude: 2200 }, hourly, [5, 6, 7, 8], pressure,
+    );
+    expect(result.cloudPosition).toBe("in");
+    expect(result.score).toBeLessThanOrEqual(35);
+    expect(result.cloudBaseM).toBe(2000);
+    expect(result.cloudTopM).toBe(3000);
+  });
+
+  it("retains cloud-envelopment evidence even if surface low-cloud cover is small", () => {
+    const hourly = hourlyFixture({ cloud_cover_low: [10, 10, 10, 10] });
+    const result = evaluateCloudSeaWindow(
+      { ...MOCK_HIGH_SITE, altitude: 750 }, hourly, [5, 6, 7, 8],
+      pressureFor(MOCK_HIGH_SITE.id, hourly.time),
+    );
+    expect(result.cloudPosition).toBe("in");
+    expect(result.cloudBaseM).toBe(500);
+    expect(result.cloudTopM).toBe(1000);
+    expect(result.score).toBeLessThanOrEqual(35);
+  });
+
+  it("keeps a brief excellent hour separate from the window mean", () => {
+    const hourly = hourlyFixture({ cloud_cover_low: [90, 0, 0, 0] });
+    const result = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE, hourly, [5, 6, 7, 8], pressureFor(MOCK_HIGH_SITE.id, hourly.time),
+    );
+    expect(result.score).toBeLessThan(40);
+    expect(result.peakScore).toBeGreaterThan(90);
+    expect(result.peakTime).toBe("05:00");
+    expect(result.coverage).toEqual({
+      expectedHours: 4, surfaceValidHours: 4, scoreableHours: 4, pressureHours: 4,
+    });
+  });
+
+  it("withholds a four-hour mean when only one hour is valid, retaining that hour's evidence", () => {
+    const hourly = hourlyFixture({ cloud_cover_low: [90, null, null, null] });
+    const result = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE, hourly, [5, 6, 7, 8], pressureFor(MOCK_HIGH_SITE.id, hourly.time),
+    );
+    expect(result.score).toBeNull();
+    expect(result.conditionLabel).toBeNull();
+    expect(result.peakScore).toBeGreaterThan(90);
+    expect(result.peakTime).toBe("05:00");
+    expect(result.cloudPosition).toBe("above");
+    expect(result.coverage).toEqual({
+      expectedHours: 4, surfaceValidHours: 1, scoreableHours: 1, pressureHours: 1,
+    });
+  });
+
+  it("counts distinct target hours and publishes a majority without inventing the missing hour", () => {
+    const hourly = hourlyFixture({ cloud_cover_low: [90, 85, 80, null] });
+    const result = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE, hourly, [5, 5, 6, 7, 8], pressureFor(MOCK_HIGH_SITE.id, hourly.time),
+    );
+    expect(result.score).not.toBeNull();
+    expect(result.coverage).toEqual({
+      expectedHours: 4, surfaceValidHours: 3, scoreableHours: 3, pressureHours: 3,
+    });
+  });
+
+  it("reports zero scoreable hours rather than a peak when the pressure profile is unavailable", () => {
+    const result = evaluateCloudSeaWindow(MOCK_HIGH_SITE, hourlyFixture(), [5, 6, 7, 8]);
+    expect(result.score).toBeNull();
+    expect(result.peakScore).toBeNull();
+    expect(result.peakTime).toBeNull();
+    expect(result.coverage).toEqual({
+      expectedHours: 4, surfaceValidHours: 4, scoreableHours: 0, pressureHours: 0,
+    });
+  });
+
+  it("reports expected coverage even when the forecast has no target hours", () => {
+    const result = evaluateCloudSeaWindow(MOCK_HIGH_SITE, { time: [] }, [5, 6, 7, 8]);
+    expect(result.peakScore).toBeNull();
+    expect(result.coverage).toEqual({
+      expectedHours: 4, surfaceValidHours: 0, scoreableHours: 0, pressureHours: 0,
+    });
+  });
+
+  it("can publish an explicitly requested single hour without changing legacy score aliases", () => {
+    const hourly = hourlyFixture();
+    const result = evaluateCloudSeaWindow(
+      MOCK_HIGH_SITE, hourly, [5], pressureFor(MOCK_HIGH_SITE.id, hourly.time),
+    );
+    expect(result.score).not.toBeNull();
+    expect(result.score).toBe(result.peakScore);
+    expect(result.probabilityLabel).toBe(result.conditionLabel);
+    expect(result.probabilityLevel).toBe(result.conditionLevel);
+    expect(result.coverage).toEqual({
+      expectedHours: 1, surfaceValidHours: 1, scoreableHours: 1, pressureHours: 1,
+    });
+  });
+
   it("identifies a high summit above a pressure-derived low cloud deck", () => {
     const hourly = hourlyFixture();
     const result = evaluateCloudSeaWindow(

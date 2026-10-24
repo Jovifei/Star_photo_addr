@@ -240,6 +240,7 @@ export interface SourceStatus {
 }
 
 export interface ForecastMetadata {
+  providerValidationVersion?: string;
   timeAxisVersion?: "epoch-v1";
   source: "Open-Meteo";
   model: ForecastModel;

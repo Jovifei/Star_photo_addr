@@ -12,6 +12,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Local diagnostics and deployment history are not runtime dependencies.
+  outputFileTracingExcludes: { "/*": ["./reports/**/*", "./tmp/**/*"] },
   ...(process.env.STAR_BUILD_CPUS
     ? { experimental: { cpus: Number(process.env.STAR_BUILD_CPUS) } }
     : {}),

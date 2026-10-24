@@ -61,6 +61,29 @@ describe("candidate night evidence", () => {
     expect(result.stale).toBe(false);
   });
 
+  it("rejects a cached candidate whose requested coordinates belong to another point", () => {
+    const input = forecast("best_match", 20_000);
+    input.requestedLongitude = LOCATION.longitude + 0.1;
+    const result = projectCandidateNight(input, LOCATION, NIGHT, 0, "best_match", NOW);
+    expect(result.evaluation).toBeNull();
+    expect(result.reason).toContain("坐标");
+    expect(result.metrics.cloudCover.value).toBeNull();
+  });
+
+  it("retains a legal selected-location alias when request coordinates match", () => {
+    const input = { ...forecast("best_match", 20_000), locationId: `selected:${LOCATION.id}` };
+    const result = projectCandidateNight(input, LOCATION, NIGHT, 0, "best_match", NOW);
+    expect(result.evaluation, result.reason).not.toBeNull();
+  });
+
+  it("rejects an incomplete explicit coordinate identity", () => {
+    const input = forecast("best_match", 20_000);
+    delete input.requestedLatitude;
+    const result = projectCandidateNight(input, LOCATION, NIGHT, 0, "best_match", NOW);
+    expect(result.evaluation).toBeNull();
+    expect(result.reason).toContain("坐标");
+  });
+
   it("keeps stale raw facts visible while withholding the score", () => {
     const result = projectCandidateNight(forecast("best_match", 20_000, true), LOCATION, NIGHT, 0, "best_match", NOW);
     expect(result.evaluation).toBeNull();

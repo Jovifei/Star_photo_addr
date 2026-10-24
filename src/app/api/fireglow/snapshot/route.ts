@@ -4,7 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/data/observingSites/catalog";
-import { buildFireGlowSnapshot } from "@/lib/fireglow";
+import { buildFireGlowSnapshot, FIRE_GLOW_SCORE_VERSION } from "@/lib/fireglow";
+import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
 import type { FireGlowSnapshot } from "@/lib/fireglow";
 import {
   fetchFireGlowWeather,
@@ -43,14 +44,14 @@ const SNAPSHOT_DIRECTORY =
   path.join(process.cwd(), "data", "snapshots");
 
 function fireglowDiskPath(date: string, model: string): string {
-  return path.join(SNAPSHOT_DIRECTORY, `fireglow-source-v1-${date}-${model}.json`);
+  return path.join(SNAPSHOT_DIRECTORY, `fireglow-source-v2-${date}-${model}.json`);
 }
 
 function countValidScores(snapshot: FireGlowSnapshot | null | undefined): number {
   if (!snapshot?.sites) return 0;
   let count = 0;
   for (const s of Object.values(snapshot.sites)) {
-    if (s?.evening?.score != null || s?.morning?.score != null) {
+    if ([s?.evening?.score, s?.morning?.score].some((score) => typeof score === "number" && Number.isFinite(score) && score >= 0 && score <= 100)) {
       count++;
     }
   }
@@ -94,7 +95,9 @@ function readFireglowFromDisk(date: string, model: string): FireGlowSnapshot | n
     if (!fs.existsSync(/*turbopackIgnore: true*/ filePath)) return null;
     const content = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
     const snapshot = JSON.parse(content) as FireGlowSnapshot;
-    return snapshot?.date === date && snapshot.model === model && snapshot.sites && typeof snapshot.sites === "object" ? snapshot : null;
+    return snapshot?.date === date && snapshot.model === model &&
+      snapshot.scoreModelVersion === FIRE_GLOW_SCORE_VERSION && snapshot.providerValidationVersion === PROVIDER_VALIDATION_VERSION &&
+      snapshot.sites && typeof snapshot.sites === "object" ? snapshot : null;
   } catch {
     return null;
   }
@@ -158,7 +161,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const key = `source-v1|${date}|${model}`;
+  const key = `source-v2|${date}|${model}`;
   const diskCached = readUsableFireglowDiskSnapshot(date, model);
   if (params.get("cache_only") === "1") {
     const retained = cache.get(key)?.snapshot ?? diskCached;
@@ -231,7 +234,11 @@ export async function GET(request: NextRequest) {
       try {
         const weather = await fetchFireGlowWeather(date, controller.signal, Boolean(forceRefresh), model);
         const weatherByDate = { [date]: weather.data };
-        const snapshot = buildFireGlowSnapshot(date, model, weatherByDate);
+        const snapshot = {
+          ...buildFireGlowSnapshot(date, model, weatherByDate),
+          scoreModelVersion: FIRE_GLOW_SCORE_VERSION,
+          providerValidationVersion: PROVIDER_VALIDATION_VERSION,
+        };
         if (countValidScores(snapshot) === 0) {
           const providerError = Object.values(weather.data)
             .map((record) => record.error)

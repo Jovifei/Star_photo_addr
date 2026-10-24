@@ -4,6 +4,7 @@ import path from "node:path";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ForecastModel, ForecastResponse } from "@/lib/types";
+import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
 
 const ENV_KEYS = [
   "FORECAST_CACHE_TTL_MS",
@@ -17,6 +18,7 @@ let fetchForecastByCoords: ReturnType<typeof vi.fn>;
 
 function metadata(model: ForecastModel) {
   return {
+    providerValidationVersion: PROVIDER_VALIDATION_VERSION,
     source: "Open-Meteo" as const,
     timeAxisVersion: "epoch-v1" as const,
     model,

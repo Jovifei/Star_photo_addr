@@ -104,6 +104,8 @@ export function buildNormalizedForecasts(fixture, lats, lons, days, model = "ico
   }));
   return lats.map((lat, index) => ({
     locationId: `api-${Number(lat).toFixed(5)}-${Number(lons[index] ?? lat).toFixed(5)}`,
+    requestedLatitude: Number(lat),
+    requestedLongitude: Number(lons[index] ?? lat),
     modelLatitude: Number(lat),
     modelLongitude: Number(lons[index] ?? lat),
     modelElevation: fixture.surface.modelElevation + index * 7,
@@ -297,7 +299,7 @@ export async function installNextApiMock(page, fixture) {
         days,
         model,
         generatedAt: new Date().toISOString(),
-        integrityVersion: "weather-integrity-v2",
+        integrityVersion: "weather-integrity-v3",
         sourceFetchedAt: new Date().toISOString(),
         source: "E2E snapshot",
         stale: false,

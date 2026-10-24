@@ -52,6 +52,8 @@ import ScoreThresholdControl from "@/components/ScoreThresholdControl";
 import { formatCompactCalendarDate } from "@/lib/nighttime";
 import ResponsiveTopicDetail from "@/components/ResponsiveTopicDetail";
 import CloudSeaSiteDetail from "./CloudSeaSiteDetail";
+import CloudSeaWindowEvidence from "./CloudSeaWindowEvidence";
+import { selectCloudSeaWindow } from "@/lib/cloudseaWindowSelection";
 import "./cloudsea.css";
 
 type Phase = "morning" | "evening";
@@ -353,22 +355,11 @@ export default function CloudSeaApp() {
 
     const list: RankedSite[] = [];
     for (const site of CLOUD_SEA_SITES) {
-      let bestWindow: CloudSeaWindowScore = CLOUD_SEA_EMPTY_WINDOW;
-      let bestDate = primaryDate;
-
-      for (const date of activeDates) {
-        const snapshot = snapshots[date];
-        const siteData = snapshot?.sites?.[site.id];
-        const window = siteData
-          ? siteData[phase]
-          : CLOUD_SEA_EMPTY_WINDOW;
-        if ((window.score ?? -1) > (bestWindow.score ?? -1)) {
-          bestWindow = window;
-          bestDate = date;
-        }
-      }
-
-      list.push({ site, window: bestWindow, dateKey: bestDate });
+      const best = selectCloudSeaWindow(activeDates.flatMap(dateKey => {
+        const window = snapshots[dateKey]?.sites?.[site.id]?.[phase];
+        return window ? [{ window, dateKey }] : [];
+      }));
+      list.push({ site, window: best?.window ?? CLOUD_SEA_EMPTY_WINDOW, dateKey: best?.dateKey ?? primaryDate });
     }
 
     list.sort(
@@ -453,11 +444,14 @@ export default function CloudSeaApp() {
         : mainConclusionStale
           ? "旧数据 · 仅供参考"
           : selectedWindow?.score != null
-            ? `条件指数 ${selectedWindow.conditionLabel ?? `${selectedWindow.score}/100`}`
+            ? `条件指数 ${selectedWindow.conditionLabel ?? `${selectedWindow.score}/100`} · 窗口平均`
             : selectedWindow?.cloudPosition === "unknown" && (
               selectedWindowHasSurfaceEvidence || selectedWindow.pressureStatus !== "available"
             )
               ? "垂直证据不足"
+              : selectedWindow?.coverage && selectedWindow.coverage.expectedHours > 0 &&
+                selectedWindow.coverage.scoreableHours * 2 <= selectedWindow.coverage.expectedHours
+                ? "窗口覆盖不足"
               : hasPublishedScore && !filteredRankedSites.length
                 ? `暂无达到 ≥${scoreThreshold} 分的山峰`
                 : !hasPublishedScore
@@ -656,7 +650,7 @@ export default function CloudSeaApp() {
                         }}
                       >
                         <span>
-                          云海条件指数: {windowScore.conditionLabel ?? "—"}
+                          窗口平均条件指数: {windowScore.conditionLabel ?? "—"}
                         </span>
                         <span
                           style={{
@@ -666,9 +660,10 @@ export default function CloudSeaApp() {
                                 : "#d35400",
                           }}
                         >
-                          {windowScore.positionLabel}
+                          {windowScore.peakTime ? `${windowScore.peakTime} 层位 · ` : ""}{windowScore.positionLabel}
                         </span>
                       </div>
+                      <CloudSeaWindowEvidence window={windowScore} />
                       {windowScore.score == null ? (
                         <div className="cloudsea-popup-unavailable">数据不足</div>
                       ) : null}
@@ -810,13 +805,13 @@ export default function CloudSeaApp() {
                           className="cloudsea-score-badge"
                           data-level={level}
                           style={{ color: scoreColor }}
-                          title={isUnknown ? "数据不足" : undefined}
+                          title={isUnknown ? "窗口数据不足" : "窗口平均条件指数，不是发生概率"}
                         >
                           {windowScore.conditionLabel ?? "—"}
                         </span>
                         {isUnknown ? (
                           <small className="cloudsea-score-state">数据不足</small>
-                        ) : null}
+                        ) : <small className="cloudsea-score-state">窗口平均</small>}
                         <span
                           className={`cloudsea-pos-badge ${badgeTone}`}
                         >
@@ -824,6 +819,8 @@ export default function CloudSeaApp() {
                         </span>
                       </div>
                     </div>
+
+                    <CloudSeaWindowEvidence window={windowScore} />
 
                     {windowScore.pressureStatus === "partial" ? (
                       <span className="cloudsea-card-evidence">
@@ -872,7 +869,7 @@ export default function CloudSeaApp() {
         <MobileDataSheet
           title={selectedRanked?.site.name ?? (pickedPoint ? `所点坐标 ${pickedPoint.latitude.toFixed(3)}, ${pickedPoint.longitude.toFixed(3)}` : "云海 · 选择山峰")}
           conclusion={mobileConclusion}
-          bestTime={selectedWindow?.peakTime ? `最佳 ${selectedWindow.peakTime} · ${dateLabel(selectedContext?.dateKey ?? primaryDate)}` : `${phase === "morning" ? "晨间" : "傍晚"} · ${range === 3 ? "三日" : dateLabel(primaryDate)}`}
+          bestTime={selectedWindow?.peakTime ? `最佳 ${selectedWindow.peakTime}${selectedWindow.peakScore != null ? ` · ${selectedWindow.peakScore}/100` : ""} · ${dateLabel(selectedContext?.dateKey ?? primaryDate)}` : `${phase === "morning" ? "晨间" : "傍晚"} · ${range === 3 ? "三日" : dateLabel(primaryDate)}`}
           status={dataNotice || (loading ? "正在读取云海条件数据…" : "")}
           selectionKey={selectedSiteId ?? (pickedPoint ? `${pickedPoint.latitude.toFixed(4)},${pickedPoint.longitude.toFixed(4)}` : null)}
         >{(level) => <>
@@ -885,16 +882,17 @@ export default function CloudSeaApp() {
               </button>;
             })}
           </section> : null}
+          {selectedWindow ? <CloudSeaWindowEvidence window={selectedWindow} /> : null}
           {selectedRanked && selectedWindow ? <div className="mobile-key-metrics">
-            <span>山顶与云层 <strong>{selectedWindow.positionLabel}</strong></span>
+            <span>最佳层位 <strong>{selectedWindow.positionLabel}</strong></span>
             <span>最佳时刻 <strong>{selectedWindow.peakTime ?? "—"}</strong></span>
-            <span>湿度 <strong>{selectedWindow.humidity != null ? `${selectedWindow.humidity}%` : "—"}</strong></span>
-            <span>近地风 <strong>{selectedWindow.windSpeed != null ? `${selectedWindow.windSpeed}m/s` : "—"}</strong></span>
+            <span>湿度均值 <strong>{selectedWindow.humidity != null ? `${selectedWindow.humidity}%` : "—"}</strong></span>
+            <span>风速均值 <strong>{selectedWindow.windSpeed != null ? `${selectedWindow.windSpeed}m/s` : "—"}</strong></span>
           </div> : null}
           {level === "full" && selectedRanked && selectedWindow ? <CloudSeaSiteDetail site={selectedRanked.site} window={selectedWindow} phase={phase} dateKey={selectedContext?.dateKey ?? selectedRanked.dateKey} onClose={() => setSelectedSiteId(null)} /> : null}
           {level === "full" ? <details className="mobile-sheet-explainer">
             <summary>数据口径与地图色阶</summary>
-            <p>条件指数综合 {model.toUpperCase()} 地面天气与压力层模式剖面；云底、云顶和逆温为模式推导，不是现场实测。地图色面是目录点位指数插值，缺失数据不推断分数。</p>
+            <p>条件指数为窗口平均，不是发生概率；最佳时次分单列。云底、云顶和逆温由 {model.toUpperCase()} 压力层模式推导，不是现场实测。地图色面是目录点位指数插值，缺失数据不推断分数。</p>
             <p>{LEVEL_LABELS.map((entry) => entry.range).join(" · ")} · 数据不足</p>
           </details> : null}
           {!pickedPoint ? <div className="mobile-sheet-ranking" aria-label="云海山峰排行">

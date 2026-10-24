@@ -38,6 +38,43 @@ function recordWithHours(
 const SITE = { id: "test-site", latitude: 30, longitude: 110 };
 
 describe("scoreFireGlowSite", () => {
+  it("scores the catalog's western sunset after 20:00", () => {
+    const date = "2026-06-21";
+    const record = recordWithHours(Array.from({ length: 24 }, (_, hour) => ({
+      time: `${date}T${String(hour).padStart(2, "0")}:00`, low: 5, mid: 40, high: 55,
+    })));
+    const result = scoreFireGlowSite({ id: "finder-021-location", latitude: 44.603, longitude: 81.146 }, record, date);
+    expect(result.evening.score).not.toBeNull();
+    expect(["22:00", "23:00"]).toContain(result.evening.peakTime);
+    expect(result.evening.sunAltitude).toBeGreaterThanOrEqual(-6);
+    expect(result.evening.sunAltitude).toBeLessThanOrEqual(4);
+  });
+
+  it("scores an eastern dawn before 04:00 without mixing it with sunset", () => {
+    const date = "2026-06-21";
+    const record = recordWithHours([{ time: `${date}T03:00`, low: 5, mid: 40, high: 55 }] );
+    const result = scoreFireGlowSite({ id: "east", latitude: 48.36, longitude: 134.3 }, record, date);
+    expect(result.morning.score).not.toBeNull();
+    expect(result.morning.peakTime).toBe("03:00");
+    expect(result.evening.score).toBeNull();
+  });
+
+  it("accepts provider times with seconds and skips malformed instants", () => {
+    const record = recordWithHours([
+      { time: "2026-08-22T19:00:00", low: 5, mid: 40, high: 55 },
+      { time: "2026-08-22T99:00", low: 5, mid: 40, high: 55 },
+    ]);
+    const result = scoreFireGlowSite(SITE, record, "2026-08-22");
+    expect(result.evening.score).not.toBeNull();
+    expect(result.evening.peakTime).toBe("19:00");
+  });
+
+  it("withholds a score for impossible normalized cloud or precipitation inputs", () => {
+    for (const bad of [{ low: -50 }, { high: 101 }, { precip: -1 }, { gust: -1 }, { visibility: -1 }]) {
+      const record = recordWithHours([{ time: "2026-08-22T19:00", low: 5, mid: 40, high: 55, ...bad }]);
+      expect(scoreFireGlowSite(SITE, record, "2026-08-22").evening.score).toBeNull();
+    }
+  });
   it("keeps a morning score on the requested dawn date instead of mixing in the next day", () => {
     const score = scoreFireGlowSite(
       SITE,
@@ -184,13 +221,26 @@ describe("scoreFireGlowSite", () => {
 });
 
 describe("condition index presentation bands", () => {
+  it("shows an index range containing the computed score, without inflating it", () => {
+    for (let score = 0; score <= 100; score += 1) {
+      const [low, high] = probabilityRangeFor(score)!.label.split("–").map(Number);
+      expect(score, `index ${score} below display range`).toBeGreaterThanOrEqual(low!);
+      expect(score, `index ${score} above display range`).toBeLessThanOrEqual(high!);
+    }
+  });
+
+  it("does not give invalid scores a display range", () => {
+    for (const score of [NaN, Infinity, -1, 101]) {
+      expect(probabilityRangeFor(score)).toBeNull();
+    }
+  });
   it("maps scores to condition-index ranges while retaining legacy level ids", () => {
     expect(probabilityRangeFor(95)?.label).toBe("95–100");
-    expect(probabilityRangeFor(88)?.level).toBe("p100");
-    expect(probabilityRangeFor(84)?.label).toBe("88–95");
-    expect(probabilityRangeFor(80)?.level).toBe("p95");
-    expect(probabilityRangeFor(74)?.label).toBe("80–88");
-    expect(probabilityRangeFor(72)?.level).toBe("p88");
+    expect(probabilityRangeFor(88)?.level).toBe("p95");
+    expect(probabilityRangeFor(84)?.label).toBe("80–88");
+    expect(probabilityRangeFor(80)?.level).toBe("p88");
+    expect(probabilityRangeFor(74)?.label).toBe("60–80");
+    expect(probabilityRangeFor(72)?.level).toBe("p80");
     expect(probabilityRangeFor(60)?.label).toBe("60–80");
     expect(probabilityRangeFor(40)?.level).toBe("p60");
     expect(probabilityRangeFor(20)?.label).toBe("20–40");

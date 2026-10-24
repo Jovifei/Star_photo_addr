@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { providerUnits } from "../fixtures/providerUnits";
 import { parsePressureForecast, PRESSURE_LEVELS, pressureProfileAt } from "@/lib/pressure";
 function raw(iso: string[], timezone = "America/Los_Angeles") {
   const hourly: Record<string, unknown> = { time: iso.map(time => Date.parse(time) / 1000), temperature_2m: [10, 11] };
@@ -8,7 +9,7 @@ function raw(iso: string[], timezone = "America/Los_Angeles") {
     hourly[`temperature_${level}hPa`] = [5, 6];
     hourly[`geopotential_height_${level}hPa`] = [1000, 1100];
   }
-  return { elevation: 100, timezone, utc_offset_seconds: -25200, hourly };
+  return { elevation: 100, timezone, utc_offset_seconds: -25200, hourly_units: providerUnits("unixtime"), hourly };
 }
 it("keeps distinct pressure profiles for both repeated LA hours", () => {
   const data = parsePressureForecast(raw(["2026-11-01T08:00Z", "2026-11-01T09:00Z"]), "la", "gfs");
@@ -32,7 +33,7 @@ it("rejects duplicate epoch, missing zone and fabricated calendar wall time", ()
 });
 it("old ISO preserves facts but never upgrades to fresh epoch data", () => {
   const input = raw(["2026-10-07T12:00Z", "2026-10-07T13:00Z"], "Asia/Shanghai");
-  const data = parsePressureForecast({ ...input, hourly: { ...input.hourly, time: ["2026-10-07T20:00", "2026-10-07T21:00"] } }, "legacy", "icon");
+  const data = parsePressureForecast({ ...input, hourly_units: providerUnits("iso8601"), hourly: { ...input.hourly, time: ["2026-10-07T20:00", "2026-10-07T21:00"] } }, "legacy", "icon");
   expect(data.stale).toBe(true); expect(data.timeAxisVersion).toBeUndefined();
   expect(pressureProfileAt(data, "2026-10-07T20:00")?.[0].cloudCover).toBe(20);
 });

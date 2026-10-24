@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { validateProviderHourlyFields } from "./providerWeatherIntegrity";
 import path from "node:path";
 import os from "node:os";
 import { createHash } from "node:crypto";
@@ -68,6 +69,7 @@ interface RawForecast {
   timezone?: unknown;
   utc_offset_seconds?: unknown;
   hourly?: RawHourly;
+  hourly_units?: Record<string, unknown>;
 }
 
 const REQUIRED_SERIES = [
@@ -115,8 +117,8 @@ export function validateFinderRawForecast(value: unknown): asserts value is RawF
   }
   if (!Number.isFinite(value.latitude) || !Number.isFinite(value.longitude) ||
       Math.abs(Number(value.latitude)) > 90 || Math.abs(Number(value.longitude)) > 180 ||
-      !Number.isFinite(value.elevation) || typeof value.timezone !== "string" ||
-      !Number.isFinite(value.utc_offset_seconds)) {
+      !Number.isFinite(value.elevation) || value.timezone !== "Asia/Shanghai" ||
+      value.utc_offset_seconds !== 28800) {
     throw new Error("Open-Meteo 返回缺少地点坐标、海拔或时区身份");
   }
   const hourly = value.hourly as RawHourly;
@@ -126,6 +128,7 @@ export function validateFinderRawForecast(value: unknown): asserts value is RawF
       throw new Error(`Open-Meteo 返回的${label}数组缺失或未与时间轴对齐`);
     }
   }
+  validateProviderHourlyFields(hourly as Record<string, unknown>, value.hourly_units);
 }
 
 function numberArray(
@@ -250,6 +253,8 @@ export function buildFinderWeatherUrl(
       ? sortedDates.at(-1)!
       : addFinderDays(sortedDates.at(-1)!, 1),
     wind_speed_unit: "ms",
+    temperature_unit: "celsius",
+    precipitation_unit: "mm",
   });
   const providerModel = openMeteoModelParameter(model);
   if (providerModel) params.set("models", providerModel);

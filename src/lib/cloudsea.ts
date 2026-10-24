@@ -36,7 +36,17 @@ export type CloudSeaConditionLevel =
 export type CloudSeaProbabilityLevel = CloudSeaConditionLevel;
 
 export interface CloudSeaWindowScore {
+  /** Mean over scoreable hours; published only with a majority of target hours. */
   score: number | null;
+  /** Best known hour, even when coverage is too sparse to publish a window mean. */
+  peakScore?: number | null;
+  coverage?: {
+    expectedHours: number;
+    surfaceValidHours: number;
+    scoreableHours: number;
+    /** Surface-valid hours with a usable pressure profile at the same time. */
+    pressureHours: number;
+  };
   conditionLevel: CloudSeaConditionLevel | null;
   conditionLabel: string | null;
   /** @deprecated Compatibility alias; this is not a calibrated probability. */
@@ -111,6 +121,7 @@ export function hasCompleteCloudSeaCoverage(
 }
 
 export interface CloudSeaSnapshot {
+  providerValidationVersion?: string;
   date: string;
   model: ForecastModel;
   generatedAt: string;
@@ -134,6 +145,8 @@ const EMPTY_INVERSION: TemperatureInversionEvidence = {
 
 export const CLOUD_SEA_EMPTY_WINDOW: CloudSeaWindowScore = {
   score: null,
+  peakScore: null,
+  coverage: { expectedHours: 0, surfaceValidHours: 0, scoreableHours: 0, pressureHours: 0 },
   conditionLevel: null,
   conditionLabel: null,
   probabilityLevel: null,
@@ -258,8 +271,8 @@ function pressureLevelFromSample(sample: PressureLevelSample): PressureLevel {
 }
 
 /**
- * Select the lowest pressure-derived cloud deck that still belongs to the
- * lower troposphere. An hour is only treated as pressure-available when at
+ * Prefer a deck enveloping the summit; otherwise select the lowest cloud deck
+ * in the lower troposphere. An hour is only pressure-available when at
  * least six levels contain cloud/RH/temperature/geopotential-height together.
  * High-only 600/500 hPa decks are not treated as valley cloud sea.
  */
@@ -286,7 +299,9 @@ export function deriveCloudSeaVerticalEvidence(
         layer.baseAgl <= 3500,
     )
     .sort((left, right) => left.baseMsl - right.baseMsl);
-  const layer = lowerTroposphereLayers[0] ?? null;
+  // A higher deck can envelop the summit even when a valley deck lies below it.
+  const layer = layers.find((candidate) => candidate.relation === "云中") ??
+    lowerTroposphereLayers[0] ?? null;
   const inversion = detectTemperatureInversion(
     profile,
     modelElevation,
@@ -319,7 +334,7 @@ function evaluateConditions(
     site.altitude,
   );
 
-  if (conditions.lowCloud < 25) {
+  if (conditions.lowCloud < 25 && vertical.layer?.relation !== "云中") {
     const score = clamp(Math.round(8 + conditions.lowCloud * 0.35), 5, 20);
     return {
       score,
@@ -451,8 +466,8 @@ function pressureStatusFor(
 /**
  * Evaluate a morning/evening window. Surface metrics are averaged over hours
  * where all critical score inputs coexist. The 0–100 window score is the mean
- * of interpretable hourly scores. A strict majority of the surface-valid hours
- * must be scoreable; exactly half is not enough to publish a window conclusion.
+ * of interpretable hourly scores. A strict majority of the requested hours
+ * must be scoreable; missing surface hours stay in the coverage denominator.
  */
 export function evaluateCloudSeaWindow(
   site: CloudSeaSite,
@@ -460,20 +475,32 @@ export function evaluateCloudSeaWindow(
   windowHours: number[],
   pressure?: PressureForecastResponse,
 ): CloudSeaWindowScore {
-  if (!hourly.time?.length) return CLOUD_SEA_EMPTY_WINDOW;
+  const targetHours = new Set(windowHours);
+  const coverage = {
+    expectedHours: targetHours.size,
+    surfaceValidHours: 0,
+    scoreableHours: 0,
+    pressureHours: 0,
+  };
+  const emptyWindow = { ...CLOUD_SEA_EMPTY_WINDOW, coverage };
+  if (!hourly.time?.length) return emptyWindow;
 
   const activeIndices: number[] = [];
+  const seenHours = new Set<number>();
   hourly.time.forEach((time, index) => {
     const match = time.match(/T(\d{2}):/);
     const hour = match
       ? Number.parseInt(match[1], 10)
       : new Date(time).getHours();
-    if (windowHours.includes(hour)) activeIndices.push(index);
+    if (targetHours.has(hour) && !seenHours.has(hour)) {
+      activeIndices.push(index);
+      seenHours.add(hour);
+    }
   });
 
   if (activeIndices.length === 0) {
     return {
-      ...CLOUD_SEA_EMPTY_WINDOW,
+      ...emptyWindow,
       summary: "目标晨昏窗口没有对应的逐小时气象数据。",
     };
   }
@@ -487,10 +514,11 @@ export function evaluateCloudSeaWindow(
       finiteAt(hourly.wind_speed_10m, index) !== null &&
       finiteAt(hourly.precipitation, index) !== null,
   );
+  coverage.surfaceValidHours = validIndices.length;
 
   if (validIndices.length === 0) {
     return {
-      ...CLOUD_SEA_EMPTY_WINDOW,
+      ...emptyWindow,
       summary:
         "关键云量、湿度、风或降水数据不完整，无法计算云海条件指数。",
     };
@@ -533,12 +561,29 @@ export function evaluateCloudSeaWindow(
   ).length;
   const pressureStatus = pressureStatusFor(
     pressureHours,
-    validIndices.length,
+    coverage.expectedHours,
   );
   const scoreable = hourlyEvaluations.filter(
     ({ evaluation }) => evaluation.score !== null,
   );
-  const minimumScoreable = Math.floor(validIndices.length / 2) + 1;
+  coverage.pressureHours = pressureHours;
+  coverage.scoreableHours = scoreable.length;
+  const minimumScoreable = Math.floor(coverage.expectedHours / 2) + 1;
+  const peak = [...scoreable].sort(
+    (left, right) => right.evaluation.score! - left.evaluation.score!,
+  )[0];
+  const peakMetrics = peak ? {
+    peakScore: peak.evaluation.score,
+    peakTime: peak.time.slice(11, 16),
+    pressureTime: peak.evaluation.pressureAvailable ? peak.time : null,
+    cloudPosition: peak.evaluation.position,
+    positionLabel: positionLabel(peak.evaluation.position),
+    cloudBaseM: peak.evaluation.baseM,
+    cloudTopM: peak.evaluation.topM,
+    altitudeDiffM: peak.evaluation.altitudeDiffM,
+    pressureConfidence: peak.evaluation.pressureConfidence,
+    inversion: peak.evaluation.inversion,
+  } : {};
 
   const baseMetrics = {
     lowCloud: Math.round(averageConditions.lowCloud),
@@ -547,13 +592,15 @@ export function evaluateCloudSeaWindow(
     humidity: Math.round(averageConditions.humidity),
     windSpeed: Math.round(averageConditions.windSpeed * 10) / 10,
     pressureStatus,
+    coverage,
   };
 
-  if (scoreable.length < minimumScoreable) {
+  if (scoreable.length < minimumScoreable || !peak) {
     return {
-      ...CLOUD_SEA_EMPTY_WINDOW,
+      ...emptyWindow,
       ...baseMetrics,
-      summary: `窗口内仅 ${scoreable.length}/${validIndices.length} 个有效时次具备可解释的云海条件；必须超过半数才发布窗口指数，且不使用启发式云底补齐。`,
+      ...peakMetrics,
+      summary: `窗口内仅 ${scoreable.length}/${coverage.expectedHours} 个目标时次具备可解释的云海条件；必须超过半数才发布窗口指数，且不使用启发式云底补齐。${peak ? ` 最佳已知小时 ${peak.time.slice(11, 16)} 的单小时证据：${peak.evaluation.summary}` : ""}`,
     };
   }
 
@@ -561,30 +608,19 @@ export function evaluateCloudSeaWindow(
     scoreable.reduce((sum, item) => sum + item.evaluation.score!, 0) /
       scoreable.length,
   );
-  const peak = [...scoreable].sort(
-    (left, right) => right.evaluation.score! - left.evaluation.score!,
-  )[0]!;
   const conditionLevel = conditionLevelFor(score);
   const conditionLabel = `${score}/100`;
-  const pressureTime = peak.evaluation.pressureAvailable ? peak.time : null;
 
   return {
+    ...emptyWindow,
     score,
     conditionLevel,
     conditionLabel,
     probabilityLevel: conditionLevel,
     probabilityLabel: conditionLabel,
-    cloudPosition: peak.evaluation.position,
-    positionLabel: positionLabel(peak.evaluation.position),
-    cloudBaseM: peak.evaluation.baseM,
-    cloudTopM: peak.evaluation.topM,
-    altitudeDiffM: peak.evaluation.altitudeDiffM,
     ...baseMetrics,
-    peakTime: peak.time.slice(11, 16),
-    pressureTime,
-    pressureConfidence: peak.evaluation.pressureConfidence,
-    inversion: peak.evaluation.inversion,
-    summary: `${peak.evaluation.summary} 窗口 ${scoreable.length}/${validIndices.length} 个时次参与条件指数。`,
+    ...peakMetrics,
+    summary: `${peak.evaluation.summary} 窗口 ${scoreable.length}/${coverage.expectedHours} 个目标时次参与平均条件指数。`,
   };
 }
 
@@ -608,24 +644,16 @@ export function buildCloudSeaSnapshot(
     const candidate = pressureBySite[site.id];
     const pressure = candidate && !candidate.stale && candidate.model === model ? candidate : undefined;
 
-    if (!siteHourly) {
-      sitesRecord[site.id] = {
-        morning: CLOUD_SEA_EMPTY_WINDOW,
-        evening: CLOUD_SEA_EMPTY_WINDOW,
-      };
-      continue;
-    }
-
     sitesRecord[site.id] = {
       morning: evaluateCloudSeaWindow(
         site,
-        siteHourly,
+        siteHourly ?? { time: [] },
         morningHours,
         pressure,
       ),
       evening: evaluateCloudSeaWindow(
         site,
-        siteHourly,
+        siteHourly ?? { time: [] },
         eveningHours,
         pressure,
       ),
@@ -633,6 +661,9 @@ export function buildCloudSeaSnapshot(
   }
 
   const hasSurfaceWindow = (window: CloudSeaWindowScore) =>
+    window.coverage !== undefined &&
+    window.coverage.expectedHours > 0 &&
+    window.coverage.surfaceValidHours === window.coverage.expectedHours &&
     window.lowCloud !== null &&
     window.midCloud !== null &&
     window.highCloud !== null &&

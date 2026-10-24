@@ -5,7 +5,7 @@
     "elevation": 20,
     "timezone": "Asia/Shanghai",
     "utc_offset_seconds": 28800,
-    "hourly": {
+    "hourly_units": { "time": "unixtime", "cloud_cover": "%", "cloud_cover_low": "%", "cloud_cover_mid": "%", "cloud_cover_high": "%" }, "hourly": {
       "time": [
         1787227200,
         1787230800
@@ -33,7 +33,7 @@
     "longitude": 120.1551,
     "elevation": 20,
     "timezone": "Asia/Shanghai",
-    "hourly": {
+    "hourly_units": { "time": "unixtime", "cloud_cover": "%", "cloud_cover_low": "%", "cloud_cover_mid": "%", "cloud_cover_high": "%" }, "hourly": {
       "time": [
         1787227200,
         1787230800
@@ -61,7 +61,7 @@
     "longitude": 120.1551,
     "elevation": 20,
     "timezone": "Asia/Shanghai",
-    "hourly": {
+    "hourly_units": { "time": "unixtime", "cloud_cover": "%", "cloud_cover_low": "%", "cloud_cover_mid": "%", "cloud_cover_high": "%" }, "hourly": {
       "time": [
         1787227200,
         1787230800
@@ -88,7 +88,7 @@
     "longitude": 120.1551,
     "elevation": 20,
     "timezone": "Asia/Shanghai",
-    "hourly": {
+    "hourly_units": { "time": "unixtime", "cloud_cover": "%", "cloud_cover_low": "%", "cloud_cover_mid": "%", "cloud_cover_high": "%" }, "hourly": {
       "time": [
         1787227200,
         1787230800
@@ -116,7 +116,7 @@
     "longitude": 120.1551,
     "elevation": 20,
     "timezone": "Asia/Shanghai",
-    "hourly": {
+    "hourly_units": { "time": "unixtime", "cloud_cover": "%", "cloud_cover_low": "%", "cloud_cover_mid": "%", "cloud_cover_high": "%" }, "hourly": {
       "time": [
         "2026-08-20T20:00",
         123

@@ -1,4 +1,5 @@
 import { snapshotSourceAgeMs, snapshotTransport } from "@/lib/snapshotProvenance";
+import { PROVIDER_VALIDATION_VERSION, validateProviderHourlyFields } from "@/lib/providerWeatherIntegrity";
 import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
@@ -91,6 +92,7 @@ function cacheAgeMs(entry: CachedSnapshot): number {
 
 function isCacheableSnapshot(snapshot: CloudSeaSnapshot): boolean {
   return (
+    snapshot.providerValidationVersion === PROVIDER_VALIDATION_VERSION &&
     hasCompleteCloudSeaCoverage(snapshot.surface, CLOUD_SEA_SITES.length) &&
     hasCompleteCloudSeaCoverage(snapshot.pressure, CLOUD_SEA_SITES.length)
   );
@@ -192,6 +194,8 @@ async function fetchCloudSeaWeather(
       "wind_speed_10m",
     ].join(","),
     wind_speed_unit: "ms",
+    temperature_unit: "celsius",
+    precipitation_unit: "mm",
     timezone: "Asia/Shanghai",
     start_date: date,
     end_date: date,
@@ -230,9 +234,17 @@ async function fetchCloudSeaWeather(
       const result: Record<string, RawSiteHourly> = {};
       CLOUD_SEA_SITES.forEach((site, index) => {
         const entry = list[index] as
-          | { hourly?: Record<string, unknown> }
+          | { latitude?: unknown; longitude?: unknown; timezone?: unknown; utc_offset_seconds?: unknown; hourly?: Record<string, unknown>; hourly_units?: unknown }
           | undefined;
-        if (entry?.hourly && validCloudSeaHourly(entry.hourly)) {
+        if (entry?.hourly && Number.isFinite(entry.latitude) && Number.isFinite(entry.longitude) &&
+          Math.abs(Number(entry.latitude)) <= 90 && Math.abs(Number(entry.longitude)) <= 180 &&
+          entry.timezone === "Asia/Shanghai" && entry.utc_offset_seconds === 28800 && validCloudSeaHourly(entry.hourly)) {
+          try {
+            validateProviderHourlyFields(entry.hourly, entry.hourly_units);
+          } catch {
+            // A malformed site cannot invalidate trustworthy peers in the batch.
+            return;
+          }
           const hourly = entry.hourly as Record<
             string,
             Array<number | null> | string[]
@@ -428,13 +440,14 @@ export async function GET(request: NextRequest) {
           model,
           controller.signal,
         );
-        return buildCloudSeaSnapshot(
+        const snapshot = buildCloudSeaSnapshot(
           date,
           model,
           { [date]: siteWeather },
           pressure.data,
           pressure.errors,
         );
+        return { ...snapshot, providerValidationVersion: PROVIDER_VALIDATION_VERSION };
       } finally {
         clearTimeout(timeout);
       }

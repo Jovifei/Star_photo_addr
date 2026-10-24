@@ -1,3 +1,4 @@
+import { providerUnits } from "../fixtures/providerUnits";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -71,7 +72,7 @@ describe("FireGlow calendar-day weather window", () => {
         longitude: longitudes[index],
         elevation: 1200,
         timezone: "Asia/Shanghai",
-        utc_offset_seconds: 28_800,
+        utc_offset_seconds: 28_800, hourly_units: providerUnits(),
         hourly: {
           time: times,
           relative_humidity_2m: values(60),

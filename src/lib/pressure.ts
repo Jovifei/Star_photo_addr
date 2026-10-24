@@ -9,6 +9,7 @@ import {
   openMeteoModelParameter,
 } from "./forecast";
 import { normalizeEpochHours } from "./absoluteForecastTime";
+import { validateProviderHourlyFields } from "./providerWeatherIntegrity";
 import { validProductDate } from "./productRoutes";
 import { PRESSURE_LEVELS } from "./pressureLevels";
 import type { ForecastModel } from "./types";
@@ -292,6 +293,10 @@ export function parsePressureForecast(
       `气压上游仅返回 ${availableLevels.length} 个完整可用层，无法形成可靠剖面`,
     );
   }
+  const usedFields = Object.fromEntries(Object.entries(hourly).filter(([key]) =>
+    key === "time" || key === "temperature_2m" || availableLevels.some(level => key.endsWith(`_${level}hPa`)),
+  ));
+  validateProviderHourlyFields(usedFields, raw.hourly_units);
 
   const profiles: PressureForecastResponse["profiles"] = {};
   const profilesByEpoch: Record<string, PressureLevelSample[]> = {};
@@ -299,16 +304,16 @@ export function parsePressureForecast(
     const profile = PRESSURE_LEVELS.map((pressure) => ({
       pressure,
       cloudCover: numberOrNull(
-        valueAt(hourly, `cloud_cover_${pressure}hPa`, index),
+        valueAt(usedFields, `cloud_cover_${pressure}hPa`, index),
       ),
       humidity: numberOrNull(
-        valueAt(hourly, `relative_humidity_${pressure}hPa`, index),
+        valueAt(usedFields, `relative_humidity_${pressure}hPa`, index),
       ),
       temperature: numberOrNull(
-        valueAt(hourly, `temperature_${pressure}hPa`, index),
+        valueAt(usedFields, `temperature_${pressure}hPa`, index),
       ),
       heightMsl: numberOrNull(
-        valueAt(hourly, `geopotential_height_${pressure}hPa`, index),
+        valueAt(usedFields, `geopotential_height_${pressure}hPa`, index),
       ),
     }));
     // Legacy wall-clock lookup deterministically chooses the earlier occurrence.

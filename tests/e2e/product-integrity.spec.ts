@@ -205,7 +205,7 @@ test("当前时次评分不可用时明确显示数据不足，不把未知点�
       days: 1,
       model: url.searchParams.get("model") ?? "icon",
       generatedAt: "2026-08-26T00:00:00.000Z",
-      integrityVersion: "weather-integrity-v2",
+      integrityVersion: "weather-integrity-v3",
       sourceFetchedAt: "2026-08-26T00:00:00.000Z",
       source: "E2E unknown snapshot",
       stale: true,

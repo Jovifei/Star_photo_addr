@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { providerUnits } from "../fixtures/providerUnits";
 import {
   buildPressureForecastBatchUrl,
   fetchPressureForecast,
@@ -45,6 +46,7 @@ function rawPressure(
     ...(options.omitElevation ? {} : { elevation: 980 }),
     timezone: "Asia/Shanghai",
     utc_offset_seconds: 28800,
+    hourly_units: providerUnits(),
     hourly,
   };
 }

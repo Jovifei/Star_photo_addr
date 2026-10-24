@@ -1,11 +1,12 @@
-// Probability region fill for the fire-glow map.
+// Interpolated condition-index region fill for the fire-glow map.
 //
 // 282 curated sites become a continuous colour field via inverse-distance
 // weighting (power 3, ~340 km radius of influence), banded into the same
-// five 20% probability levels as the markers. The grid renders to a canvas
+// condition-index levels as the markers. The grid renders to a canvas
 // data URL for a Leaflet ImageOverlay, giving the light-pollution-style
 // "colour region" reading instead of isolated dots. Cells beyond the
 // influence radius stay transparent so empty regions are not painted.
+import { FIRE_GLOW_INDEX_BANDS } from "./fireglow";
 
 export interface OverlayPoint {
   latitude: number;
@@ -26,10 +27,10 @@ const DEFAULT_GRID_WIDTH = 176;
 const INFLUENCE_KM = 340;
 const IDW_POWER = 3;
 
-export const LEVEL_THRESHOLDS = [15, 34, 52, 72, 80, 88] as const;
+export const LEVEL_THRESHOLDS = FIRE_GLOW_INDEX_BANDS.slice(1).map(({ minimum }) => minimum);
 /**
  * 与页面 LEVEL_COLORS 一致：低→高 灰/绿/黄/橙 + 红三级递深
- * （80–88% 正红、88–95% 深红、95–100% 绛红），概率越高越深越实。
+ * （80–88、88–95、95–100 为高指数分段），不表示实拍概率。
  */
 export const LEVEL_RGB: Array<[number, number, number]> = [
   [95, 112, 120],
@@ -67,7 +68,7 @@ export function interpolateScoreGrid(
   bounds: [[number, number], [number, number]] = DEFAULT_BOUNDS,
 ): Float32Array {
   const grid = new Float32Array(width * height).fill(NaN);
-  const valid = points.filter((point) => point.score != null && Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+  const valid = points.filter((point) => point.score != null && Number.isFinite(point.score) && point.score >= 0 && point.score <= 100 && Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
   if (!valid.length) return grid;
   const [south, west] = bounds[0];
   const [north, east] = bounds[1];

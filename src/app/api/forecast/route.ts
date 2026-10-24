@@ -38,6 +38,7 @@ function readFromDiskCache(
   model: ForecastModel,
   count: number,
   maxAgeMs: number,
+  requireProviderValidation = true,
 ): ForecastResponse | null {
   if (process.env.NODE_ENV === "test" && process.env.FORECAST_ENABLE_DISK_CACHE !== "1") return null;
   // Retain existing short-name caches during migration; never clear stored facts.
@@ -48,7 +49,7 @@ function readFromDiskCache(
     try {
       const data: unknown = JSON.parse(fs.readFileSync(/*turbopackIgnore: true*/ filename, "utf-8"));
       // Check ORIGINAL fetch time; filesystem mtime is not provenance.
-      if (usableDiskForecast(data, model, count, maxAgeMs) && (!key.startsWith("surface-v4-epoch|") || data.locations.every(location => location.metadata?.timeAxisVersion === "epoch-v1" && validAbsoluteHours(location.hourly, location.timezone)))) return data;
+      if (usableDiskForecast(data, model, count, maxAgeMs, Date.now(), requireProviderValidation) && (!key.startsWith("surface-v4-epoch|") || data.locations.every(location => location.metadata?.timeAxisVersion === "epoch-v1" && validAbsoluteHours(location.hourly, location.timezone)))) return data;
     } catch { /* Missing or invalid cache entries do not fabricate data. */ }
   }
   return null;
@@ -61,7 +62,7 @@ function readPreOffsetDiskCache(
   longitudes: number[],
   maxAgeMs: number,
 ): ForecastResponse | null {
-  const data = readFromDiskCache(key, model, latitudes.length, maxAgeMs);
+  const data = readFromDiskCache(key, model, latitudes.length, maxAgeMs, false);
   if (!data) return null;
   const sameRequestedPoints = data.locations.every((location, index) =>
     Number.isFinite(location.requestedLatitude) &&
@@ -83,7 +84,9 @@ function readRetainedDiskForecast(
   longitudes: number[],
   maxAgeMs: number,
 ): { data: ForecastResponse; origin: RetainedDiskOrigin } | null {
-  const current = readFromDiskCache(currentKey, model, latitudes.length, maxAgeMs);
+  // Old validation versions remain read-only weather facts. Every caller of
+  // this retained path must mark them stale; only the fresh path uses strict tags.
+  const current = readFromDiskCache(currentKey, model, latitudes.length, maxAgeMs, false);
   if (current) return { data: current, origin: "current" };
   const preEpoch = readPreOffsetDiskCache(`surface-v3-offset|${legacyKey}`, model, latitudes, longitudes, maxAgeMs);
   if (preEpoch) return { data: preEpoch, origin: "pre-epoch" };
@@ -95,7 +98,7 @@ function readRetainedDiskForecast(
     maxAgeMs,
   );
   if (preOffset) return { data: preOffset, origin: "pre-offset" };
-  const legacy = readFromDiskCache(legacyKey, model, latitudes.length, maxAgeMs);
+  const legacy = readFromDiskCache(legacyKey, model, latitudes.length, maxAgeMs, false);
   return legacy ? { data: legacy, origin: "legacy" } : null;
 }
 

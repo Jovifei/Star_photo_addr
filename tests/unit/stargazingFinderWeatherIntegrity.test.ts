@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { providerUnits } from "../fixtures/providerUnits";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -28,7 +29,7 @@ function rawForecast(latitude: number, longitude: number, date: string, omitFiel
     temperature_2m: values(15),
   };
   if (omitField) delete hourly[omitField];
-  return { latitude, longitude, elevation: 1402, timezone: "Asia/Shanghai", utc_offset_seconds: 28_800, hourly };
+  return { latitude, longitude, elevation: 1402, timezone: "Asia/Shanghai", utc_offset_seconds: 28_800, hourly_units: providerUnits(), hourly };
 }
 
 let rawTestDirectory: string | undefined;

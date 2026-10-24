@@ -5,7 +5,7 @@ export function snapshotHealth(payload, expectedModel, expectedDate) {
     /(?:Z|[+-]\d{2}:\d{2})$/.test(payload.sourceFetchedAt);
   const stale =
     payload?.stale !== false ||
-    payload?.integrityVersion !== "weather-integrity-v2" ||
+    payload?.integrityVersion !== "weather-integrity-v3" ||
     !hasSourceFetchedAt ||
     (expectedModel !== undefined && payload?.model !== expectedModel) ||
     (expectedDate !== undefined && payload?.date !== expectedDate);

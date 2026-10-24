@@ -27,7 +27,7 @@ import {
 } from "@/lib/constants";
 import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
-import { fireGlowBandLabel } from "@/lib/fireglow";
+import { fireGlowBandLabel, FIRE_GLOW_INDEX_BANDS } from "@/lib/fireglow";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
@@ -50,15 +50,7 @@ const LEVEL_COLORS: Record<FireGlowProbabilityLevel, string> = {
   p100: "#a84814",
 };
 const UNKNOWN_MARKER_COLOR = "#6f7880";
-const LEVEL_LABELS: Array<{ level: FireGlowProbabilityLevel; range: string }> = [
-  { level: "p20", range: "0–20" },
-  { level: "p40", range: "20–40" },
-  { level: "p60", range: "40–60" },
-  { level: "p80", range: "60–80" },
-  { level: "p88", range: "80–88" },
-  { level: "p95", range: "88–95" },
-  { level: "p100", range: "95–100" },
-];
+const LEVEL_LABELS = FIRE_GLOW_INDEX_BANDS.map(({ level, minimum, maximum }) => ({ level, range: `${minimum}–${maximum}` }));
 
 const UNKNOWN_WINDOW: FireGlowWindowScore = {
   score: null,
@@ -602,7 +594,7 @@ export default function FireglowApp() {
             </div>
             <p className="fireglow-footnote">
               条件指数 = 云种加权画布（高云×0.75 / 中云×0.45 / 低云×0.10，口径来自开源 weather-sunset-predictor）
-              + 分相太阳高度（-6~+5°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项；该指数不是实拍校准概率。
+              + 分相太阳高度（-6~+4°）+ 低云遮挡/能见度/阵风修正。气溶胶（CAMS AOD）为规划增强项；该指数不是实拍校准概率。
             </p>
           </details>
         </aside>

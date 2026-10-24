@@ -4,6 +4,7 @@ import { scoreObservingSiteAtTime, snapshotScoreAtTime } from "@/lib/observingSi
 import { evaluateNight } from "@/lib/scoring";
 import type { HourWeather, LocationForecast, ObservingSite, RecommendationScore } from "@/lib/types";
 import type { FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
+import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
 
 const NOW = Date.parse("2026-09-13T08:00:00Z");
 const AT = new Date(NOW).toISOString();
@@ -14,7 +15,7 @@ function hour(time = "2026-09-13T21:00"): HourWeather {
 function forecast(): LocationForecast {
   return { locationId: "test", modelLatitude: 30.182, modelLongitude: 108.882, modelElevation: 1402,
     timezone: "Asia/Shanghai", utcOffsetSeconds: 28800, fetchedAt: AT,
-    metadata: { source: "Open-Meteo", model: "icon", fetchedAt: AT, stale: false, units: {} }, hourly: [hour()] };
+    metadata: { providerValidationVersion: PROVIDER_VALIDATION_VERSION, source: "Open-Meteo", model: "icon", fetchedAt: AT, stale: false, units: {} }, hourly: [hour()] };
 }
 const SCORE: RecommendationScore = { score: 94, band: "priority", cloud: 8, darkness: null, weatherRisk: 100,
   bestWindow: "21:00", blockers: [], confidence: "high", validHours: 1 };
@@ -31,6 +32,12 @@ function record(): FinderWeatherRecord {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("P0 original timestamps and stale scores", () => {
+  it("does not promote a pre-validation disk forecast into verified source data", () => {
+    const value = forecast();
+    delete value.metadata!.providerValidationVersion;
+    expect(usableDiskForecast({ locations: [value], metadata: forecast().metadata }, "icon", 1, MAX_FORECAST_AGE_MS, NOW)).toBe(false);
+    expect(usableDiskForecast({ locations: [forecast()], metadata: value.metadata }, "icon", 1, MAX_FORECAST_AGE_MS, NOW)).toBe(false);
+  });
   it("accepts the exact retention boundary but rejects 6h+1ms, 7 days, missing and future timestamps", () => {
     const value = forecast();
     for (const age of [MAX_FORECAST_AGE_MS, MAX_FORECAST_AGE_MS + 1, 7 * 86400000]) {
@@ -65,6 +72,7 @@ describe("P0 original timestamps and stale scores", () => {
     expect(safe.generatedAt).toBe(AT);
   });
   it("rejects recently generated legacy scoring caches and old source hidden by regenerated snapshot time", () => {
+    expect(sanitizeObservationSnapshot({ ...snapshot(), integrityVersion: "weather-integrity-v2" } as IntegritySnapshot, NOW).sites.test[0].score).toBeNull();
     expect(sanitizeObservationSnapshot({ ...snapshot(), integrityVersion: undefined } as IntegritySnapshot, NOW).sites.test[0].score).toBeNull();
     expect(sanitizeObservationSnapshot({ ...snapshot(), sourceFetchedAt: "2026-09-01T00:00:00Z" } as IntegritySnapshot, NOW).sites.test[0].score).toBeNull();
   });

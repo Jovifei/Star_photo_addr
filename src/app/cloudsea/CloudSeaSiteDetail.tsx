@@ -22,6 +22,7 @@ import { positionBadgeTone } from "@/lib/cloudsea";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
 import { ResponsiveTopicDetailModalContext } from "@/components/ResponsiveTopicDetail";
+import CloudSeaWindowEvidence from "./CloudSeaWindowEvidence";
 
 interface CloudSeaSiteDetailProps {
   site: CloudSeaSite;
@@ -232,28 +233,30 @@ export default function CloudSeaSiteDetail({
           <div className="cs-hero-top">
             <div className="cs-hero-score-block">
               <span className="cs-hero-kicker">
-                <Waves size={13} className="cs-wave-icon" /> 云海条件指数
+                <Waves size={13} className="cs-wave-icon" /> 云海条件指数 · 窗口平均
               </span>
               <div className="cs-hero-score-number" data-level={pLevel}>
                 {win.conditionLabel ?? "—"}
               </div>
             </div>
             <div className="cs-hero-badge-block">
-              <span className={`cs-pos-pill ${badgeTone}`}>
+              <span className={`cs-pos-pill ${badgeTone}`} title="最佳已知时次的云层关系">
                 {isAbove && <CheckCircle2 size={13} />}
                 {isIn && <CloudFog size={13} />}
                 {isBelow && <AlertTriangle size={13} />}
                 <span>{win.positionLabel}</span>
               </span>
-              <span className="cs-summary-hint">{positionHint}</span>
+              <span className="cs-summary-hint">{win.peakTime ? `${win.peakTime} 层位 · ` : ""}{positionHint}</span>
             </div>
           </div>
+
+          <CloudSeaWindowEvidence window={win} />
 
           <div className="cs-hero-metrics-strip">
             <div className="cs-mini-metric">
               <div className="cs-mini-metric-head">
                 <span className="cs-mini-label">
-                  <Droplets size={11} /> 近地湿度水平
+                  <Droplets size={11} /> 有效时次平均湿度
                 </span>
                 <span className="cs-mini-val">
                   {win.humidity != null ? `${win.humidity}%` : "—"}

@@ -1,16 +1,18 @@
 import type { PressureForecastResponse, PressureLevelSample } from "./pressure";
+import { PRESSURE_LEVELS } from "./pressureLevels";
+import { isValidProviderValue } from "./providerWeatherIntegrity";
 
 /** Pure validation shared by scoring in the browser and server ingestion. */
 export function isCompletePressureLevelSample(sample: PressureLevelSample): boolean {
-  return Number.isFinite(sample.pressure) &&
-    sample.cloudCover !== null && Number.isFinite(sample.cloudCover) &&
-    sample.humidity !== null && Number.isFinite(sample.humidity) &&
-    sample.temperature !== null && Number.isFinite(sample.temperature) &&
-    sample.heightMsl !== null && Number.isFinite(sample.heightMsl);
+  return (PRESSURE_LEVELS as readonly number[]).includes(sample.pressure) &&
+    isValidProviderValue(`cloud_cover_${sample.pressure}hPa`, sample.cloudCover) &&
+    isValidProviderValue(`relative_humidity_${sample.pressure}hPa`, sample.humidity) &&
+    isValidProviderValue(`temperature_${sample.pressure}hPa`, sample.temperature) &&
+    isValidProviderValue(`geopotential_height_${sample.pressure}hPa`, sample.heightMsl);
 }
 
 export function usablePressureLevelCount(samples: PressureLevelSample[] | null | undefined): number {
-  return samples ? samples.filter(isCompletePressureLevelSample).length : 0;
+  return new Set(samples?.filter(isCompletePressureLevelSample).map(sample => sample.pressure)).size;
 }
 
 export function hasUsablePressureProfile(samples: PressureLevelSample[] | null | undefined, minimumLevels = 6): boolean {

@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { providerUnits } from "../fixtures/providerUnits";
+import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
 import { PRESSURE_LEVELS } from "@/lib/pressure";
@@ -15,6 +17,8 @@ const TIME = [
 
 function hourlyEntry() {
   return {
+    latitude: 30, longitude: 120, timezone: "Asia/Shanghai", utc_offset_seconds: 28800,
+    hourly_units: providerUnits(),
     hourly: {
       time: TIME,
       cloud_cover_low: [75, 78, 80, 76, 75, 78, 80],
@@ -43,7 +47,7 @@ const HEIGHTS: Record<number, number> = {
 function pressureEntry() {
   const hourly: Record<string, unknown> = {
     time: TIME.map(time => Date.parse(time + ":00+08:00") / 1000),
-    temperature_2m: [9, 9, 10, 11],
+    temperature_2m: TIME.map(() => 10),
   };
   for (const pressure of PRESSURE_LEVELS) {
     const cloudy = [950, 925, 900].includes(pressure);
@@ -66,6 +70,7 @@ function pressureEntry() {
     elevation: 400,
     timezone: "Asia/Shanghai",
     utc_offset_seconds: 28800,
+    hourly_units: providerUnits("unixtime"),
     hourly,
   };
 }
@@ -106,6 +111,34 @@ afterEach(() => {
 });
 
 describe("GET /api/cloudsea/snapshot", () => {
+  it.each(["missing-unit", "wrong-unit", "range"])("does not publish provider surface data with %s", async fault => {
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      const rows = CLOUD_SEA_SITES.map(() => {
+        const entry = hourlyEntry();
+        if (fault === "missing-unit") delete entry.hourly_units.wind_speed_10m;
+        if (fault === "wrong-unit") entry.hourly_units.wind_speed_10m = "km/h";
+        if (fault === "range") entry.hourly.cloud_cover_low = TIME.map(() => 999);
+        return entry;
+      });
+      return Response.json(rows);
+    }));
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-21&model=icon"));
+    expect(response.status).toBe(502);
+    const body = await response.json();
+    expect(body.sites).toBeUndefined();
+  });
+  it.each(["timezone", "offset", "coordinate"])("rejects an untrustworthy fixed-Beijing provider identity (%s)", async fault => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(CLOUD_SEA_SITES.map(() => {
+      const entry = hourlyEntry();
+      if (fault === "timezone") entry.timezone = "UTC";
+      if (fault === "offset") entry.utc_offset_seconds = 0;
+      if (fault === "coordinate") entry.latitude = 91;
+      return entry;
+    }))));
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    expect((await GET(request("date=2026-09-21&model=icon"))).status).toBe(502);
+  });
   it("defaults to GFS so every catalog site uses one pressure model with third-day coverage", async () => {
     const requested: URL[] = [];
     vi.stubGlobal("fetch", successfulFetch(requested));
@@ -116,6 +149,7 @@ describe("GET /api/cloudsea/snapshot", () => {
 
     expect(response.status).toBe(200);
     expect(body.model).toBe("gfs");
+    expect(body.providerValidationVersion).toBe(PROVIDER_VALIDATION_VERSION);
     expect(requested.length).toBeGreaterThan(0);
     expect(
       requested.every((url) => url.searchParams.get("models") === "gfs_seamless"),
@@ -282,6 +316,8 @@ describe("GET /api/cloudsea/snapshot", () => {
       }
 
       const rows = Array.from({ length: count }, () => ({
+        latitude: 30, longitude: 120, timezone: "Asia/Shanghai", utc_offset_seconds: 28800,
+        hourly_units: providerUnits(),
         hourly: { ...hourlyEntry().hourly },
       }));
       if (!surfaceRecovered && rows[0]) {

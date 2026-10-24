@@ -1,10 +1,11 @@
 import { validAbsoluteHours } from "./absoluteForecastTime";
+import { PROVIDER_VALIDATION_VERSION } from "./providerWeatherIntegrity";
 import type { HourWeather, LocationForecast, ForecastModel, ForecastResponse, ObservationSnapshot, RecommendationScore } from "./types";
 
 /** Retention is not freshness. Even a retained response cannot be scored if stale. */
 export const MAX_FORECAST_AGE_MS = 6 * 60 * 60_000;
 export const FORECAST_FRESH_MS = 10 * 60_000;
-export const OBSERVATION_INTEGRITY_VERSION = "weather-integrity-v2";
+export const OBSERVATION_INTEGRITY_VERSION = "weather-integrity-v3";
 const FUTURE_CLOCK_TOLERANCE_MS = 5 * 60_000;
 
 /** Never substitute file mtime, client receive time or forecast valid time. */
@@ -40,14 +41,14 @@ export function forecastTrustIssue(
 }
 
 /** Disk files predate this contract; validate the decoded shape before returning it. */
-export function usableDiskForecast(value: unknown, model: ForecastModel, count: number, maxAgeMs: number, now = Date.now()): value is ForecastResponse {
+export function usableDiskForecast(value: unknown, model: ForecastModel, count: number, maxAgeMs: number, now = Date.now(), requireProviderValidation = true): value is ForecastResponse {
   if (!value || typeof value !== "object") return false;
   const data = value as ForecastResponse;
   if (!Array.isArray(data.locations) || data.locations.length !== count || !count) return false;
   const limit = Math.min(maxAgeMs, MAX_FORECAST_AGE_MS);
-  if (!data.metadata || data.metadata.model !== model || data.metadata.stale || dataAgeMs(data.metadata.fetchedAt, now) > limit) return false;
+  if (!data.metadata || (requireProviderValidation && data.metadata.providerValidationVersion !== PROVIDER_VALIDATION_VERSION) || data.metadata.model !== model || data.metadata.stale || dataAgeMs(data.metadata.fetchedAt, now) > limit) return false;
   return data.locations.every((location) => Boolean(
-    location && location.metadata?.model === model &&
+    location && location.metadata?.model === model && (!requireProviderValidation || location.metadata.providerValidationVersion === PROVIDER_VALIDATION_VERSION) &&
     Number.isFinite(location.modelLatitude) && Number.isFinite(location.modelLongitude) &&
     Array.isArray(location.hourly) && location.hourly.length > 0 &&
     (location.metadata?.timeAxisVersion === "epoch-v1" ? validAbsoluteHours(location.hourly, location.timezone) : new Set(location.hourly.map((hour) => hour?.time)).size === location.hourly.length) &&

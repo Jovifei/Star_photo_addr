@@ -27,16 +27,16 @@ describe("observing snapshot worker stale contract", () => {
   });
   it("classifies stale or identity-less snapshots as non-prewarmable", () => {
     expect(helperSource).toContain('payload?.stale !== false');
-    expect(helperSource).toContain('payload?.integrityVersion !== "weather-integrity-v2"');
+    expect(helperSource).toContain('payload?.integrityVersion !== "weather-integrity-v3"');
     expect(helperSource).toContain("!hasSourceFetchedAt");
     expect(helperSource).toContain("shouldPrewarm: !stale");
-    expect(snapshotHealth({ stale: false, integrityVersion: "weather-integrity-v2", sourceFetchedAt: "2026-09-13T12:00:00Z" })).toEqual({
+    expect(snapshotHealth({ stale: false, integrityVersion: "weather-integrity-v3", sourceFetchedAt: "2026-09-13T12:00:00Z" })).toEqual({
       stale: false,
       logLabel: "fresh",
       shouldPrewarm: true,
     });
-    expect(snapshotHealth({ stale: true, integrityVersion: "weather-integrity-v2", sourceFetchedAt: "2026-09-13T12:00:00Z" }).shouldPrewarm).toBe(false);
-    expect(snapshotHealth({ stale: false, integrityVersion: "weather-integrity-v2" }).logLabel).toBe("stale");
+    expect(snapshotHealth({ stale: true, integrityVersion: "weather-integrity-v3", sourceFetchedAt: "2026-09-13T12:00:00Z" }).shouldPrewarm).toBe(false);
+    expect(snapshotHealth({ stale: false, integrityVersion: "weather-integrity-v3" }).logLabel).toBe("stale");
   });
 
   it("does not log stale HTTP-200 snapshots as fresh or prewarm fireglow", () => {
@@ -55,7 +55,7 @@ describe("worker observing identity", () => {
     expect(observingContext(new Date("2026-10-01T22:00:00Z")).date).toBe("2026-10-02");
   });
   it("withholds prewarm for malformed source time or mismatched model/date", () => {
-    const good = { stale: false, integrityVersion: "weather-integrity-v2", sourceFetchedAt: "2026-10-01T12:00:00Z", model: "icon", date: "2026-10-01" };
+    const good = { stale: false, integrityVersion: "weather-integrity-v3", sourceFetchedAt: "2026-10-01T12:00:00Z", model: "icon", date: "2026-10-01" };
     expect(snapshotHealth(good, "icon", "2026-10-01").shouldPrewarm).toBe(true);
     expect(snapshotHealth(good, "gfs", "2026-10-01").shouldPrewarm).toBe(false);
     expect(snapshotHealth(good, "icon", "2026-10-02").shouldPrewarm).toBe(false);

@@ -1448,3 +1448,32 @@ Jovi已明确停止本地后续执行，本次只提交并推送现有完成记�
 - [x] cache-only矩阵实际执行并记录48NOT_RUN，保持科学/设备资格边界。
 - [ ] 普通ChatGPT网页最终审核：BLOCKED_LOGIN，需账户登录恢复；不创建Codex Cloud替代。Hub草案未发送，不自动重试。
 复核文档：docs/LIVE_WEB_DELIVERY_20261009.md；部署SHA和此后仅证据文档提交分别记录，不把文档tip冒称部署源码。
+
+## 2026-10-23 云海算法/数据校准审查
+- [x] 当前工程/远端/部署及Obsidian初核。
+- [x] 公式/压力层/时间窗口/页面口径检查和可复现实验。
+- [x] 开源算法与官方开放数据实际取样；现场事件回放仍待地点时间。
+- [x] 审查报告与明确授权；三项云海算法/UI及回归已修复，未部署。
+计划：tasks/plans/2026-10-23-cloudsea-calibration-audit.md。Hub本次revision WinError10061，未上报。
+
+### 2026-10-23 本地修复验收
+- [x] 多deck包裹、完整目标小时分母、均分/最佳时次及三日选择全链修复。
+- [x] 完整103文件602测试；源码lint；辅助TSC346文件0错误；dev离线浏览器16PASS/14适用SKIP；独立复核无阻断。
+- [ ] canonical lint/types/build：既有Owner reports诊断文件阻断，原样保留，不扩大范围改配置。
+- [ ] 两次实拍回放/概率校准：缺地点/精确时间/原预测标签，未拟合概率；公开数据能力已实测。
+- 本轮未提交/推送/部署；生产仍7a2202c。审查与证据：docs/audits/CLOUDSEA_CALIBRATION_AUDIT_20261023.md，reports/cloudsea-calibration-20261023/。
+
+## 2026-10-23 全仓检查闭环与云海发布（新授权）
+- [x] Jovi授权修复扫描范围、完整验证、提交和部署；原报告须保留。
+- [ ] canonical check/生产audit/完整生产包浏览器/跨浏览器通过。
+- [ ] 原报告哈希一致，提交精确候选并安全同步GitHub/main。
+- [ ] 新镜像预检、原卷与回滚备份后切换；正式云海原始数据和计算/页面验证。
+计划：tasks/plans/2026-10-23-cloudsea-release.md。
+
+## 2026-10-24 三类评分与来源加固（补充授权）
+- [x] 星空、云海、晚霞算法与共同来源独立审查；反例回归及最小修复。
+- [x] 安全依赖升级、完整工程与浏览器门禁、原报告哈希一致。
+- [ ] 精确GitHub提交与生产发布；正式网页三类真实数据和计算验证。
+计划：tasks/plans/2026-10-24-score-source-hardening.md。工程计算验证与现场预报命中率分开记录，不能保证每次天气预测命中。
+
+验收：全仓check649PASS、生产audit0，Chromium287PASS/131适用SKIP、Firefox/WebKit12PASS；原始59报告哈希相同。首次失败日志保留，未延长时限或跳过失败用例。最后非法observer输入改为暂缓评分，完整check已验证。当前冻结实现范围，仅推进GitHub、部署及正式数据验算。
