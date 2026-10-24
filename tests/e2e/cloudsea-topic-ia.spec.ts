@@ -219,6 +219,64 @@ test("CloudSea pressure partial keeps a selected numeric score above global cove
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toHaveText("数据降级 · 仅供参考");
 });
 
+test("CloudSea fresh partial snapshot reports coverage loss without claiming old data", async ({ page }, info) => {
+  test.skip(info.project.name !== "mobile", "新鲜部分覆盖与过期区分在移动端验收");
+  const date = shanghaiDateKey();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockSnapshot(page, snapshot(date, {
+    score: 88,
+    pressureStatus: "partial",
+    pressure: { status: "partial", availableSites: 20 },
+    stale: false,
+    refreshError: "压力层仅 20/54 地点可用",
+  }));
+  await page.goto("/cloudsea");
+  await selectTaizijian(page);
+  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100 · 窗口平均");
+  await expect(page.locator(".mobile-data-sheet-copy strong")).not.toContainText("旧数据");
+  await page.getByRole("button", { name: "展开数据面板" }).click();
+  await expect(page.locator(".mobile-data-sheet-status")).toContainText("压力层仅 20/54 地点可用");
+});
+
+test("CloudSea stale partial snapshot remains explicitly old despite retaining evidence", async ({ page }, info) => {
+  test.skip(info.project.name !== "mobile", "真正过期的部分覆盖仍应标记为旧数据");
+  const date = shanghaiDateKey();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockSnapshot(page, snapshot(date, {
+    score: 88,
+    pressureStatus: "partial",
+    pressure: { status: "partial", availableSites: 20 },
+    stale: true,
+    refreshError: "本次请求失败，保留原快照",
+  }));
+  await page.goto("/cloudsea");
+  await selectTaizijian(page);
+  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("旧数据 · 仅供参考");
+  await page.getByRole("button", { name: "展开数据面板" }).click();
+  await expect(page.locator(".mobile-data-sheet-status")).toContainText("保留原快照");
+});
+
+test("CloudSea provenance labels absent fresh source as coverage loss, not legacy cache", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "来源时刻披露在桌面 Chromium 验收");
+  const date = shanghaiDateKey();
+  const current = snapshot(date, {
+    score: null,
+    cloudPosition: "unknown",
+    pressureStatus: "unavailable",
+    pressure: { status: "unavailable", availableSites: 0 },
+  });
+  await mockSnapshot(page, {
+    ...current,
+    provenance: { version: 1, sourcesBySite: { "cs-taizijian": [] } },
+  });
+  await page.goto("/cloudsea");
+  await selectTaizijian(page);
+  const source = page.getByTestId("snapshot-source-times");
+  await source.locator("summary").click();
+  await expect(source).toContainText("该地点未取得可核验原始来源时间的数据集");
+  await expect(source).not.toContainText("旧快照未记录原始供应商时间");
+});
+
 test("CloudSea selected detail keeps the winning date window in three-day mode", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "三日 winning-window contract 在 desktop Chromium 验证一次");
   const base = shanghaiDateKey();

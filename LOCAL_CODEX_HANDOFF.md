@@ -149,3 +149,14 @@ Before production approval verify real HTTPS page and selected model/time/coordi
 ### Next phase
 
 After local tests and remote exact-SHA review: fixed-run replay matrix across additional public model/lead-time combinations with immutable `run` versus *actual availability time*, versioned source fact masks and controlled quota; only then seek independently verified field labels and calibration. Do not introduce paid providers or claim fitted probabilities without a separate Jovi decision.
+
+
+## 2026-10-24 独立完整集成候选（C1–C4）
+
+- 基线 main: `da159975f7a32f02fa2b9ed869e4ec729e2553a4`。本集成分支 `codex/scoring-combined-20261024` 从 PR #54 固定 HEAD `e76541db0d6e068a49f62240950e376dbc35afb9` 派生，随后按相同 repo 的不可变 Git blob 合入 PR #55 固定 HEAD `e7d723de50edcc3c654280464769c48b92fe909f` 的四个文件；未更改 PR #54/#55 原分支、main 或 Owner 的未跟踪 reports。
+- 不可变来源：PR #54 https://github.com/Jovifei/Star_photo_addr/pull/54 （C1 跨日期 CloudSea 窗口串用；C2 缺席气象来源冒充时间错误；原始 GFS 单次起报回放）。PR #55 https://github.com/Jovifei/Star_photo_addr/pull/55 （C3 stale=false/refreshError 被误称旧数据；C4 新快照来源缺席被误称旧快照；三条浏览器回归）。
+- 本集成候选的精确 HEAD 必须从 `git rev-parse HEAD` 或 GitHub PR refs 取得，并在本地回执写入；不可依赖此文自我引用生成 commit SHA。集成差异清单见 `docs/audits/SCORING_COMBINED_ACCEPTANCE_20261024.md`。
+- GitHub 托管 CI 在 *独立源 PR* 的记录：PR #54 #446 quality=PASS（107 文件651 Vitest）/live=PASS/Firefox+WebKit=12 PASS/container=PASS；PR #55 #450 已知 quality=PASS（106 文件649 Vitest）/live=PASS/container=PASS。**这些不是集成 HEAD 的 PASS**。集成候选须单独验 CI 终态，Chromium 与 FF/WebKit 的新三条用例不能按未运行冒称通过。
+- Remote connector 不提供本机 Shell/Node/Playwright，不曾在 E 盘执行 `npm run check`、`git diff --check`、Docker/设备测试；GitHub Actions 日志是 **GitHub 托管 runner 证据**。本地验收需在保留 Owner 工作树/未跟踪报告前提下接收精确 HEAD，独立校验 13,092 字节固定公开数据 SHA-256 `88208d4c95e68a02cade14fc6a4b63a895979c0ce1f49d6e4cdf4e42c54961b6`，重跑 `npm run check`、`npm run test:e2e`、`npm run test:e2e:cross-browser`、生产 audit 和 `git diff --check`。
+- 必查 C1–C4：2026-10-22 05–08 上海窗口 surface=4/4、scoreable=3/4、pressure=4/4、均分8/100；缺失/旧来源与正常时钟不同；fresh partial 不标旧，真实 `stale=true` 仍标旧；新快照站点没有 provenance 来源显示「数据集缺席」，旧缓存无 provenance 显示旧版缺采集时间。
+- 发布门禁：集成 exact HEAD CI 成功、Linux 依赖/配置匹配的隔离镜像（不是仅容器 healthz）、生产卷与配置备份回滚、最终生产 HTTPS `/healthz` 精确 SHA，星空/云海/晚霞真实时次与来源、429/缺测 UI 及移动真机验证。404/429 与模拟页面不能冒充实际 provider 成功；科学实拍命中率缺观察标签，不能声称 PASS。禁止直接 merge main、部署或删除原报告，除非验收门禁关闭。
