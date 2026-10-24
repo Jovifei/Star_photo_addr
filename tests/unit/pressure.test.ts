@@ -262,7 +262,7 @@ describe("pressure forecast batch", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        new Response(JSON.stringify([rawPressure(), { elevation: 1200 }]), {
+        new Response(JSON.stringify([rawPressure(), { ...rawPressure(), hourly: null }]), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
