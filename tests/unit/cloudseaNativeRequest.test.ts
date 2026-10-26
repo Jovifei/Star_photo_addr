@@ -13,6 +13,15 @@ function nativeResponses(){
 }
 
 describe("request-attested CloudSea native height",()=>{
+  it("keeps valid pressure evidence when unsupported surface temperature is entirely null",()=>{
+    const {pressure}=nativeResponses();
+    pressure.hourly.temperature_2m=[null];
+    pressure.hourly_units.temperature_2m="undefined";
+    const result=parsePressureForecast(pressure,"x","gfs",true);
+    expect(result.nativeGridElevationM).toBe(775);
+    expect(result.hourly[0].temperature).toBeNull();
+    expect(result.profiles[result.hourly[0].time]).toHaveLength(PRESSURE_LEVELS.length);
+  });
   it("keeps GFS025 pressure terrain separate when surface fields require GFS013",async()=>{
     const {pressure,surface}=nativeResponses();
     const fetcher=vi.fn(async(input:RequestInfo|URL)=>new Response(JSON.stringify(new URL(String(input)).searchParams.get("models")==="ncep_gfs013"?surface:pressure),{status:200}));

@@ -313,8 +313,10 @@ export function parsePressureForecast(
       `气压上游仅返回 ${availableLevels.length} 个完整可用层，无法形成可靠剖面`,
     );
   }
-  const usedFields = Object.fromEntries(Object.entries(hourly).filter(([key]) =>
-    key === "time" || key === "temperature_2m" || availableLevels.some(level => key.endsWith(`_${level}hPa`)),
+  // GFS025 may return unsupported 2m temperature as all-null with unit
+  // "undefined". It is optional chart context, not pressure-profile evidence.
+  const usedFields = Object.fromEntries(Object.entries(hourly).filter(([key, values]) =>
+    key === "time" || (key === "temperature_2m" && (!Array.isArray(values) || values.some(value => value !== null))) || availableLevels.some(level => key.endsWith(`_${level}hPa`)),
   ));
   validateProviderHourlyFields(usedFields, raw.hourly_units);
 
