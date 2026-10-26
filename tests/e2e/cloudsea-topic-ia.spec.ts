@@ -62,7 +62,8 @@ function cloudWindow(date: string, options: WindowOptions = {}) {
     positionLabel,
     cloudBaseM: cloudPosition === "unknown" || cloudPosition === "clear" ? null : 500,
     cloudTopM: cloudPosition === "unknown" || cloudPosition === "clear" ? null : 1000,
-    altitudeDiffM: cloudPosition === "unknown" || cloudPosition === "clear" ? null : 558,
+    cloudTopUpperM: cloudPosition === "unknown" || cloudPosition === "clear" ? null : 1250,
+    altitudeDiffM: cloudPosition === "unknown" || cloudPosition === "clear" ? null : 308,
     lowCloud: cloudPosition === "unknown" ? 80 : 82,
     midCloud: 8,
     highCloud: 5,
@@ -102,7 +103,8 @@ function snapshot(
   return {
     date,
     model: "gfs",
-    generatedAt: `${date}T00:30:00.000Z`,
+    scoreVersion: "cloudsea-native-conservative-v3",
+        generatedAt: `${date}T00:30:00.000Z`,
     source: "P5-B CloudSea topic IA fixture",
     stale: options.stale ?? false,
     ...(options.refreshError ? { refreshError: options.refreshError } : {}),
@@ -171,7 +173,7 @@ test("CloudSea desktop reduces map/card chrome and discloses detail evidence pro
   await expect(card.locator(".cloudsea-card-summary")).toHaveCount(0);
   await card.click();
   const detail = page.locator(".cloudsea-site-detail");
-  await expect(detail).toContainText("压力层证据完整");
+  await expect(detail).toContainText("压力层时次齐备");
   await expect(detail.getByTestId("cloudsea-field-blueprint")).not.toHaveAttribute("open");
   await detail.getByTestId("cloudsea-field-blueprint").locator("summary").click();
   await expect(detail.locator(".cs-gear-grid")).toBeVisible();
@@ -194,7 +196,7 @@ test("CloudSea pressure unavailable preserves surface facts and vertical unknown
   await page.getByRole("button", { name: "展开数据面板" }).click();
   await expect(page.locator(".cloudsea-site-detail")).toContainText("压力层证据不足");
   await expect(page.locator(".cloudsea-site-detail")).toContainText("不使用启发式云底补算");
-  await expect(page.locator(".cloudsea-site-detail")).toContainText("压力层云顶 (MSL)");
+  await expect(page.locator(".cloudsea-site-detail")).toContainText("模式云顶范围 (MSL)");
   await expect(page.locator(".cloudsea-site-detail")).toContainText("—");
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toContainText("数据降级");
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);

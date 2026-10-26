@@ -16,7 +16,8 @@ function pressureAwareWindow(date: string) {
     positionLabel: "山顶在云层上方",
     cloudBaseM: 500,
     cloudTopM: 1000,
-    altitudeDiffM: 558,
+    cloudTopUpperM: 1250,
+    altitudeDiffM: 308,
     lowCloud: 82,
     midCloud: 8,
     highCloud: 5,
@@ -34,7 +35,7 @@ function pressureAwareWindow(date: string) {
       strength: "moderate",
     },
     summary:
-      "数值模式压力剖面显示山顶高出低层云顶 558m；低云 82%，近地风较弱；并检测到约 2°C 的低层逆温证据。",
+      "数值模式压力剖面显示山顶至少高出低层云顶上界 308m；低云 82%，近地风较弱；并检测到约 2°C 的低层逆温证据。",
   };
 }
 
@@ -53,6 +54,7 @@ test("cloudsea renders pressure-derived evidence and opens the evidence inspecto
       body: JSON.stringify({
         date,
         model: "gfs",
+        scoreVersion: "cloudsea-native-conservative-v3",
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E surface + pressure-level model profile",
         stale: false,
@@ -105,8 +107,9 @@ test("cloudsea renders pressure-derived evidence and opens the evidence inspecto
   await expect(inspector).toContainText("数值模式垂直云层证据");
   await expect(inspector).toContainText("逆温证据");
   await expect(inspector).toContainText("中等逆温 · +2°C");
-  await expect(inspector).toContainText("压力层云顶 (MSL)");
-  await expect(inspector).toContainText("1000 m");
+  await expect(inspector).toContainText("模式云顶范围 (MSL)");
+  await expect(inspector).toContainText("1000–1250 m");
+  await expect(inspector).toContainText("模式云顶上界 308m");
   await expect(inspector).not.toContainText("估算云顶层位");
 });
 
@@ -121,6 +124,7 @@ test("cloudsea labels partial ground-weather coverage as degraded", async ({ pag
       body: JSON.stringify({
         date,
         model: "gfs",
+        scoreVersion: "cloudsea-native-conservative-v3",
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E partial surface coverage",
         stale: false,
@@ -150,6 +154,7 @@ test("cloudsea fails closed when a snapshot has no surface coverage summary", as
       body: JSON.stringify({
         date,
         model: "gfs",
+        scoreVersion: "cloudsea-native-conservative-v3",
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E legacy snapshot without surface coverage",
         stale: false,
@@ -178,6 +183,7 @@ test("cloudsea fails closed when an available surface summary omits coverage cou
       body: JSON.stringify({
         date,
         model: "gfs",
+        scoreVersion: "cloudsea-native-conservative-v3",
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E malformed surface summary",
         stale: false,

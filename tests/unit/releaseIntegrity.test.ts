@@ -81,7 +81,7 @@ describe("release integrity invariants", () => {
     expect(route).toContain("fetchPressureForecastBatch");
     expect(route).toContain("PRESSURE_BATCH_SIZE");
     const pressureLoaderStart = route.indexOf(
-      "async function fetchCloudSeaPressure",
+      "async function fetchCloudSeaInputs",
     );
     const pressureLoaderEnd = route.indexOf(
       "function isTimeoutError",

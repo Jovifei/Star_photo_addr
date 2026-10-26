@@ -1,4 +1,4 @@
-import { OpenMeteoRateLimitError, withOpenMeteoProviderSlot, noteOpenMeteoRateLimit } from "./forecast";
+import { OpenMeteoRateLimitError, withOpenMeteoProviderSlot, noteOpenMeteoRateLimit, currentOpenMeteoRateLimit } from "./forecast";
 import { hasUsablePressureProfile } from "./pressureIntegrity";
 export { pressureProfileAt, hasUsablePressureProfile, isCompletePressureLevelSample, usablePressureLevelCount } from "./pressureIntegrity";
 import {
@@ -13,6 +13,7 @@ import { validateProviderHourlyFields } from "./providerWeatherIntegrity";
 import { validProductDate } from "./productRoutes";
 import { PRESSURE_LEVELS } from "./pressureLevels";
 import type { ForecastModel } from "./types";
+import type { RawSiteHourly } from "./cloudsea";
 
 export { PRESSURE_LEVELS } from "./pressureLevels";
 
@@ -30,7 +31,14 @@ export interface PressureForecastResponse {
   requestedLongitude?: number;
   modelLatitude?: number | null;
   modelLongitude?: number | null;
+  /** Legacy API elevation; may be a downscaling DEM, not model terrain. */
   modelElevation: number;
+  /** Request-attested native model terrain; raw API elevation alone is a DEM/downscaling height. */
+  nativeGridElevationM?: number;
+  verticalReference?: "native-grid-v2";
+  providerModel?: string;
+  /** Native levels admitted by the current archived-data qualification. */
+  qualifiedPressureLevels?: readonly number[];
   timezone: string;
   utcOffsetSeconds: number;
   fetchedAt: string;
@@ -52,7 +60,11 @@ export interface PressureForecastLocation {
 export interface PressureForecastBatchResult {
   data: Record<string, PressureForecastResponse>;
   errors: Record<string, string>;
+  surface?: Record<string, RawSiteHourly>;
+  surfaceErrors?: Record<string, string>;
 }
+
+const CLOUD_SEA_SURFACE_FIELDS = ["cloud_cover_low", "cloud_cover_mid", "cloud_cover_high", "relative_humidity_2m", "wind_speed_10m", "precipitation"] as const;
 
 const MIN_USABLE_PRESSURE_LEVELS = 6;
 const PRESSURE_REQUEST_TIMEOUT_MS = 12_000;
@@ -108,6 +120,7 @@ export function buildPressureForecastBatchUrl(
   locations: PressureForecastLocation[],
   date: string,
   model: ForecastModel,
+  cloudSea = false,
 ): string {
   validatePressureLocations(locations);
   if (!validProductDate(date)) {
@@ -122,7 +135,13 @@ export function buildPressureForecastBatchUrl(
     start_date: date,
     end_date: date,
   });
-  const providerModel = openMeteoModelParameter(model);
+  if (cloudSea) {
+    params.set("cell_selection", "nearest");
+    params.set("elevation", locations.map(() => "nan").join(","));
+    params.set("hourly", ["temperature_2m", ...CLOUD_SEA_SURFACE_FIELDS, ...pressureVariables()].join(","));
+    params.set("wind_speed_unit", "ms");
+  }
+  const providerModel = cloudSea && model === "gfs" ? "ncep_gfs025" : cloudSea && model === "icon" ? "icon_global" : openMeteoModelParameter(model);
   if (providerModel) params.set("models", providerModel);
   applyOpenMeteoApiKey(params);
   return `${OPEN_METEO_FORECAST_URL}?${params.toString()}`;
@@ -211,7 +230,7 @@ async function requestPressureJson(
     } catch (error) {
       if (signal?.aborted) throw error;
       lastError = error;
-      if (error instanceof OpenMeteoRateLimitError) break;
+      if (error instanceof OpenMeteoRateLimitError || currentOpenMeteoRateLimit()) break;
     } finally {
       request.cleanup();
     }
@@ -259,6 +278,7 @@ export function parsePressureForecast(
   raw: unknown,
   locationId: string,
   model: ForecastModel,
+  nativeGrid = false,
 ): PressureForecastResponse {
   if (!isRecord(raw) || !isRecord(raw.hourly)) {
     throw new Error("气压上游返回了无法识别的 hourly 数据");
@@ -275,8 +295,8 @@ export function parsePressureForecast(
     clocks = rawTimes.map(time => ({ time }));
   }
   const modelElevation = numberOrNull(raw.elevation);
-  if (modelElevation === null) {
-    throw new Error("气压上游缺少可靠的模式地形高程 elevation");
+  if (modelElevation === null || modelElevation < -500 || modelElevation > 10000) {
+    throw new Error("气压上游 elevation 来源高度缺失或超出地表范围");
   }
 
   const times = clocks.map(clock => clock.time);
@@ -293,8 +313,10 @@ export function parsePressureForecast(
       `气压上游仅返回 ${availableLevels.length} 个完整可用层，无法形成可靠剖面`,
     );
   }
-  const usedFields = Object.fromEntries(Object.entries(hourly).filter(([key]) =>
-    key === "time" || key === "temperature_2m" || availableLevels.some(level => key.endsWith(`_${level}hPa`)),
+  // GFS025 may return unsupported 2m temperature as all-null with unit
+  // "undefined". It is optional chart context, not pressure-profile evidence.
+  const usedFields = Object.fromEntries(Object.entries(hourly).filter(([key, values]) =>
+    key === "time" || (key === "temperature_2m" && (!Array.isArray(values) || values.some(value => value !== null))) || availableLevels.some(level => key.endsWith(`_${level}hPa`)),
   ));
   validateProviderHourlyFields(usedFields, raw.hourly_units);
 
@@ -328,6 +350,8 @@ export function parsePressureForecast(
   return {
     locationId,
     modelElevation,
+    ...(nativeGrid ? { nativeGridElevationM: modelElevation, verticalReference: "native-grid-v2" as const,
+      qualifiedPressureLevels: model === "gfs" ? PRESSURE_LEVELS : [1000,975,950,925,900,850,800,700,600,500] } : {}),
     modelLatitude: numberOrNull(raw.latitude),
     modelLongitude: numberOrNull(raw.longitude),
     timezone: typeof raw.timezone === "string" ? raw.timezone : "Asia/Shanghai",
@@ -363,6 +387,20 @@ function assertShanghaiPressureBatchIdentity(value: unknown): void {
   }
 }
 
+function cloudSeaSurface(entry: unknown, date: string, providerModel: string): RawSiteHourly {
+  assertShanghaiPressureBatchIdentity(entry);
+  if (!isRecord(entry) || !isRecord(entry.hourly)) throw new Error("云海来源缺少地面字段");
+  const hourly = entry.hourly;
+  if (!Array.isArray(hourly.time) || hourly.time.length === 0 || !hourly.time.every(time => typeof time === "number" && Number.isFinite(time))) throw new Error("云海来源缺少绝对时间轴");
+  const used = Object.fromEntries(["time", ...CLOUD_SEA_SURFACE_FIELDS].map(field => [field, hourly[field]]));
+  validateProviderHourlyFields(used, entry.hourly_units);
+  const time = normalizeEpochHours(hourly.time, "Asia/Shanghai").map(clock => clock.time);
+  if (time.some(hour => !hour.startsWith(`${date}T`))) throw new Error("云海来源与目标日期不一致");
+  if (!CLOUD_SEA_SURFACE_FIELDS.every(field => isAlignedNumericSeries(hourly[field], time.length))) throw new Error("云海地面字段长度不一致");
+  return { ...Object.fromEntries(CLOUD_SEA_SURFACE_FIELDS.map(field => [field, hourly[field]])), time, sourceFetchedAt: new Date().toISOString(),
+    ...(Number.isFinite(entry.elevation) ? { sourceGrid: { providerModel, latitude: Number(entry.latitude), longitude: Number(entry.longitude), elevation: Number(entry.elevation) } } : {}) } as RawSiteHourly;
+}
+
 /**
  * Fetch one Open-Meteo multi-coordinate pressure request. The caller may pass
  * a bounded chunk of sites; malformed profiles are isolated per site, while a
@@ -373,8 +411,9 @@ export async function fetchPressureForecastBatch(
   date: string,
   signal?: AbortSignal,
   model: ForecastModel = "best_match",
+  cloudSea = false,
 ): Promise<PressureForecastBatchResult> {
-  const url = buildPressureForecastBatchUrl(locations, date, model);
+  const url = buildPressureForecastBatchUrl(locations, date, model, cloudSea);
   const raw = await requestPressureJson(url, signal);
   const list = Array.isArray(raw) ? raw : [raw];
   if (list.length !== locations.length) {
@@ -385,27 +424,62 @@ export async function fetchPressureForecastBatch(
 
   const data: Record<string, PressureForecastResponse> = {};
   const errors: Record<string, string> = {};
+  const surface: Record<string, RawSiteHourly> = {};
+  const surfaceErrors: Record<string, string> = {};
   locations.forEach((location, index) => {
     try {
       const entry = list[index];
       assertShanghaiPressureBatchIdentity(entry);
-      const parsed = parsePressureForecast(entry, location.id, model);
+      if (cloudSea) {
+        try { surface[location.id] = cloudSeaSurface(entry, date, new URL(url).searchParams.get("models") ?? "best_match"); }
+        catch (error) { surfaceErrors[location.id] = error instanceof Error ? error.message : "地面字段不可用"; }
+      }
+      // Seamless/best-match can combine grids per variable. Native elevation is
+      // only pressure terrain for an explicitly selected single model domain.
+      const singleGrid = cloudSea && (model === "gfs" || model === "icon");
+      const parsed = parsePressureForecast(entry, location.id, model, singleGrid);
       // An epoch-v1 source must belong to the requested local calendar day.
       // Legacy wall-clock profiles remain stale facts, never fresh evidence.
       if (parsed.timeAxisVersion === "epoch-v1" && parsed.hourly.some(hour => !hour.time.startsWith(`${date}T`))) {
         throw new Error("气压绝对时间轴与目标日期不一致");
       }
-      data[location.id] = { ...parsed, requestedLatitude: location.latitude, requestedLongitude: location.longitude };
+      data[location.id] = { ...parsed, providerModel: new URL(url).searchParams.get("models") ?? "best_match", requestedLatitude: location.latitude, requestedLongitude: location.longitude };
     } catch (error) {
       errors[location.id] =
         error instanceof Error ? error.message : "气压剖面解析失败";
     }
   });
 
-  if (Object.keys(data).length === 0) {
+  // Open-Meteo stores GFS025 pressure and GFS013 surface fields separately.
+  // Never reuse the surface grid's elevation to mask a pressure grid. Record
+  // both domains and replace the whole surface bundle, not individual fields.
+  if (cloudSea && model === "gfs") {
+    const pending = locations.filter(location => !CLOUD_SEA_SURFACE_FIELDS.every(field => surface[location.id]?.[field]?.some(value => typeof value === "number" && Number.isFinite(value))));
+    if (pending.length) {
+      const surfaceUrl = new URL(url);
+      surfaceUrl.searchParams.set("latitude", pending.map(location => location.latitude).join(","));
+      surfaceUrl.searchParams.set("longitude", pending.map(location => location.longitude).join(","));
+      surfaceUrl.searchParams.set("elevation", pending.map(() => "nan").join(","));
+      surfaceUrl.searchParams.set("models", "ncep_gfs013");
+      surfaceUrl.searchParams.set("hourly", CLOUD_SEA_SURFACE_FIELDS.join(","));
+      try {
+        const rawSurface = await requestPressureJson(surfaceUrl.toString(), signal);
+        const entries = Array.isArray(rawSurface) ? rawSurface : [rawSurface];
+        if (entries.length !== pending.length) throw new Error("GFS 地面来源地点数量不一致");
+        pending.forEach((location, index) => {
+          try { surface[location.id] = cloudSeaSurface(entries[index], date, "ncep_gfs013"); delete surfaceErrors[location.id]; }
+          catch (error) { surfaceErrors[location.id] = error instanceof Error ? error.message : "地面补取不可用"; }
+        });
+      } catch (error) {
+        pending.forEach(location => { surfaceErrors[location.id] = error instanceof Error ? error.message : "地面来源补取失败"; });
+      }
+    }
+  }
+
+  if (Object.keys(data).length === 0 && Object.keys(surface).length === 0) {
     throw new Error(Object.values(errors)[0] ?? "气压剖面不可用");
   }
-  return { data, errors };
+  return { data, errors, ...(cloudSea ? { surface, surfaceErrors } : {}) };
 }
 
 export async function fetchPressureForecast(

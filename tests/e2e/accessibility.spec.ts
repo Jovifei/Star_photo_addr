@@ -77,6 +77,11 @@ async function openSelectedForecast(page: Page) {
   }
   await expect(page.getByTestId("observation-reason-card")).toBeVisible();
   await expect(page.getByTestId("forecast-availability")).toHaveAttribute("data-tone", "ready");
+  // Read the central table through its real scroll container before auditing.
+  // axe 4.13 otherwise queries its offscreen scroll-box midpoint outside the
+  // parent's clipped grid and aborts color-contrast for the entire document.
+  const matrix = page.locator(".cloud-timeline-body .hourly-matrix-scroll");
+  if (await matrix.isVisible()) await matrix.scrollIntoViewIfNeeded();
 }
 
 test("selected forecast and disclosed source evidence have no serious accessibility violations", async ({ page }, testInfo) => {

@@ -1,24 +1,19 @@
 import { snapshotSourceAgeMs, snapshotTransport } from "@/lib/snapshotProvenance";
-import { PROVIDER_VALIDATION_VERSION, validateProviderHourlyFields } from "@/lib/providerWeatherIntegrity";
+import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
 import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
 import {
   buildCloudSeaSnapshot,
+  CLOUD_SEA_SCORE_VERSION,
   hasCompleteCloudSeaCoverage,
   hasValidCloudSeaCoverageCounts,
   type CloudSeaSnapshot,
-  type RawSiteHourly,
 } from "@/lib/cloudsea";
 import {
-  applyOpenMeteoApiKey,
   currentOpenMeteoRateLimit,
-  noteOpenMeteoRateLimit,
   openMeteoRateLimitHeaders,
   OpenMeteoRateLimitError,
-  openMeteoModelParameter,
-  OPEN_METEO_FORECAST_URL,
-  withOpenMeteoProviderSlot,
 } from "@/lib/forecast";
 import {
   fetchPressureForecastBatch,
@@ -92,6 +87,7 @@ function cacheAgeMs(entry: CachedSnapshot): number {
 
 function isCacheableSnapshot(snapshot: CloudSeaSnapshot): boolean {
   return (
+    snapshot.scoreVersion === CLOUD_SEA_SCORE_VERSION &&
     snapshot.providerValidationVersion === PROVIDER_VALIDATION_VERSION &&
     hasCompleteCloudSeaCoverage(snapshot.surface, CLOUD_SEA_SITES.length) &&
     hasCompleteCloudSeaCoverage(snapshot.pressure, CLOUD_SEA_SITES.length)
@@ -138,152 +134,7 @@ function withCacheFreshness(
   };
 }
 
-function validAlignedSeries(value: unknown, expectedLength: number): boolean {
-  return (
-    Array.isArray(value) &&
-    value.length === expectedLength &&
-    value.every(
-      (item) =>
-        item === null || (typeof item === "number" && Number.isFinite(item)),
-    ) &&
-    value.some((item) => typeof item === "number" && Number.isFinite(item))
-  );
-}
-
-function validCloudSeaHourly(hourly: Record<string, unknown>): boolean {
-  const times = hourly.time;
-  if (
-    !Array.isArray(times) ||
-    times.length === 0 ||
-    !times.every((time) => typeof time === "string")
-  ) {
-    return false;
-  }
-  // Keep this list exactly aligned with the fields that affect the current
-  // CloudSea condition index. temperature_2m/visibility/total-cloud are not
-  // score inputs anymore and therefore must not make an otherwise usable site fail.
-  const required = [
-    "cloud_cover_low",
-    "cloud_cover_mid",
-    "cloud_cover_high",
-    "relative_humidity_2m",
-    "precipitation",
-    "wind_speed_10m",
-  ];
-  return required.every((field) =>
-    validAlignedSeries(hourly[field], times.length),
-  );
-}
-
-async function fetchCloudSeaWeather(
-  date: string,
-  model: ForecastModel,
-  signal: AbortSignal,
-): Promise<Record<string, RawSiteHourly>> {
-  const lats = CLOUD_SEA_SITES.map((site) => site.latitude).join(",");
-  const lngs = CLOUD_SEA_SITES.map((site) => site.longitude).join(",");
-  const params = new URLSearchParams({
-    latitude: lats,
-    longitude: lngs,
-    hourly: [
-      "relative_humidity_2m",
-      "cloud_cover_low",
-      "cloud_cover_mid",
-      "cloud_cover_high",
-      "precipitation",
-      "wind_speed_10m",
-    ].join(","),
-    wind_speed_unit: "ms",
-    temperature_unit: "celsius",
-    precipitation_unit: "mm",
-    timezone: "Asia/Shanghai",
-    start_date: date,
-    end_date: date,
-  });
-
-  const providerModel = openMeteoModelParameter(model);
-  if (providerModel) params.set("models", providerModel);
-  applyOpenMeteoApiKey(params);
-  const url = `${OPEN_METEO_FORECAST_URL}?${params.toString()}`;
-
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const response = await withOpenMeteoProviderSlot(() => fetch(url, {
-        signal,
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      }));
-      if (!response.ok) {
-        if (response.status === 429) {
-          const body = await response.json().catch(() => null) as { reason?: string } | null;
-          throw noteOpenMeteoRateLimit(response.headers.get("Retry-After"), body?.reason ?? "");
-        }
-        throw new Error(`Open-Meteo HTTP ${response.status}`);
-      }
-
-      const rawData: unknown = await response.json();
-      const list = Array.isArray(rawData) ? rawData : [rawData];
-      if (list.length !== CLOUD_SEA_SITES.length) {
-        throw new Error(
-          `Open-Meteo surface 返回 ${list.length} 个地点，与请求的 ${CLOUD_SEA_SITES.length} 个地点不匹配`,
-        );
-      }
-
-      const sourceFetchedAt = new Date().toISOString();
-      const result: Record<string, RawSiteHourly> = {};
-      CLOUD_SEA_SITES.forEach((site, index) => {
-        const entry = list[index] as
-          | { latitude?: unknown; longitude?: unknown; timezone?: unknown; utc_offset_seconds?: unknown; hourly?: Record<string, unknown>; hourly_units?: unknown }
-          | undefined;
-        if (entry?.hourly && Number.isFinite(entry.latitude) && Number.isFinite(entry.longitude) &&
-          Math.abs(Number(entry.latitude)) <= 90 && Math.abs(Number(entry.longitude)) <= 180 &&
-          entry.timezone === "Asia/Shanghai" && entry.utc_offset_seconds === 28800 && validCloudSeaHourly(entry.hourly)) {
-          try {
-            validateProviderHourlyFields(entry.hourly, entry.hourly_units);
-          } catch {
-            // A malformed site cannot invalidate trustworthy peers in the batch.
-            return;
-          }
-          const hourly = entry.hourly as Record<
-            string,
-            Array<number | null> | string[]
-          >;
-          result[site.id] = {
-            sourceFetchedAt,
-            time: hourly.time as string[],
-            cloud_cover_low: hourly.cloud_cover_low as Array<number | null>,
-            cloud_cover_mid: hourly.cloud_cover_mid as Array<number | null>,
-            cloud_cover_high: hourly.cloud_cover_high as Array<number | null>,
-            relative_humidity_2m: hourly.relative_humidity_2m as Array<
-              number | null
-            >,
-            precipitation: hourly.precipitation as Array<number | null>,
-            wind_speed_10m: hourly.wind_speed_10m as Array<number | null>,
-          };
-        }
-      });
-
-      if (Object.keys(result).length > 0) return result;
-      lastError = new Error("Open-Meteo surface 未返回可用云海气象数据");
-    } catch (error) {
-      lastError = error;
-      if (signal.aborted) throw error;
-      if (error instanceof OpenMeteoRateLimitError || currentOpenMeteoRateLimit()) {
-        throw error;
-      }
-      if (attempt === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
-    }
-  }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new Error(`Open-Meteo 云海气象数据不可用：${date}`);
-}
-
-async function fetchCloudSeaPressure(
+async function fetchCloudSeaInputs(
   date: string,
   model: ForecastModel,
   signal: AbortSignal,
@@ -302,6 +153,8 @@ async function fetchCloudSeaPressure(
 
   const data: PressureForecastBatchResult["data"] = {};
   const errors: PressureForecastBatchResult["errors"] = {};
+  const surface: NonNullable<PressureForecastBatchResult["surface"]> = {};
+  let firstError: unknown;
   let cursor = 0;
   const worker = async () => {
     while (cursor < batches.length) {
@@ -315,17 +168,23 @@ async function fetchCloudSeaPressure(
           date,
           signal,
           model,
+          true,
         );
+        Object.assign(surface, result.surface);
         Object.assign(data, result.data);
         Object.assign(errors, result.errors);
       } catch (error) {
-        // Surface has already succeeded. Pressure timeout/abort is allowed to
-        // degrade vertical evidence, but must not turn real surface data into 502.
+        // Keep trustworthy peers from other combined batches; malformed
+        // pressure in a successful response can still retain its surface facts.
+        if (!firstError || (firstError instanceof OpenMeteoRateLimitError && !(error instanceof OpenMeteoRateLimitError))) {
+          firstError = error;
+        }
         const message =
           error instanceof Error ? error.message : "压力层剖面请求失败";
         batch.forEach((location) => {
           errors[location.id] = message;
         });
+        if (error instanceof OpenMeteoRateLimitError || currentOpenMeteoRateLimit()) return;
       }
     }
   };
@@ -335,7 +194,10 @@ async function fetchCloudSeaPressure(
       worker(),
     ),
   );
-  return { data, errors };
+  if (Object.keys(surface).length === 0) {
+    throw firstError instanceof Error ? firstError : new Error(Object.values(errors)[0] ?? "云海来源没有可用的地面天气");
+  }
+  return { data, errors, surface };
 }
 
 function isTimeoutError(error: unknown): boolean {
@@ -428,24 +290,13 @@ export async function GET(request: NextRequest) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
       try {
-        // Surface is mandatory. Only request the larger pressure payload after
-        // surface succeeds, so a surface outage cannot multiply upstream traffic.
-        const siteWeather = await fetchCloudSeaWeather(
-          date,
-          model,
-          controller.signal,
-        );
-        const pressure = await fetchCloudSeaPressure(
-          date,
-          model,
-          controller.signal,
-        );
+        const inputs = await fetchCloudSeaInputs(date, model, controller.signal);
         const snapshot = buildCloudSeaSnapshot(
           date,
           model,
-          { [date]: siteWeather },
-          pressure.data,
-          pressure.errors,
+          { [date]: inputs.surface ?? {} },
+          inputs.data,
+          inputs.errors,
         );
         return { ...snapshot, providerValidationVersion: PROVIDER_VALIDATION_VERSION };
       } finally {

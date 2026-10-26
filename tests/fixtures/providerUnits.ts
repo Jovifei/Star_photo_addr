@@ -7,7 +7,7 @@ export function providerUnits(time: "iso8601" | "unixtime" = "iso8601"): Record<
     cloud_cover: "%", cloud_cover_low: "%", cloud_cover_mid: "%", cloud_cover_high: "%",
     visibility: "m", wind_speed_10m: "m/s", wind_gusts_10m: "m/s", wind_direction_10m: "°",
   };
-  for (const level of [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500]) {
+  for (const level of [1000, 975, 950, 925, 900, 875, 850, 825, 800, 775, 750, 725, 700, 650, 600, 550, 500]) {
     units[`cloud_cover_${level}hPa`] = "%";
     units[`relative_humidity_${level}hPa`] = "%";
     units[`temperature_${level}hPa`] = "°C";

@@ -64,13 +64,24 @@ describe("public fixed GFS run / CloudSea date and provenance contract", () => {
     expect(result.coverage).toEqual({
       expectedHours: 4,
       surfaceValidHours: 4,
-      scoreableHours: 3,
+      scoreableHours: 0,
       pressureHours: 4,
     });
-    expect(result.score).toBe(8);
-    expect(result.peakScore).toBe(8);
-    expect(result.peakTime).toBe("05:00");
-    expect(result.conditionLabel).toBe("8/100");
+    // This old archive has default DEM elevation and sparse vertical evidence;
+    // it cannot attest a cloud layer at this summit under the current policy.
+    expect(pressure.nativeGridElevationM).toBeUndefined();
+    expect(result.score).toBeNull();
+    expect(result.peakScore).toBeNull();
+    expect(result.peakTime).toBeNull();
+    expect(result.conditionLabel).toBeNull();
+    // Keep a numerical date-isolation oracle even when pressure withholds all
+    // scores: the surface-only branch must still select the correct 08:00.
+    const surfaceOnly = evaluateCloudSeaWindow(site, hourly, [5, 6, 7, 8], undefined, "2026-10-22");
+    expect(surfaceOnly.coverage).toEqual({
+      expectedHours: 4, surfaceValidHours: 4, scoreableHours: 3, pressureHours: 0,
+    });
+    expect(surfaceOnly.score).toBe(8);
+    expect(surfaceOnly.peakTime).toBe("05:00");
     // The production snapshot builder must bind its actual date as well;
     // it cannot recompute the desired day from the first matching hour.
     const snapshot = buildCloudSeaSnapshot(
@@ -79,7 +90,7 @@ describe("public fixed GFS run / CloudSea date and provenance contract", () => {
       { "2026-10-22": { [site.id]: hourly } },
       { [site.id]: pressure },
     );
-    expect(snapshot.sites[site.id]?.morning.score).toBe(8);
+    expect(snapshot.sites[site.id]?.morning.score).toBeNull();
     expect(snapshot.sites[site.id]?.morning.coverage).toEqual(result.coverage);
     // This historical run has no original acquisition timestamp. Its numeric
     // replay is not fresh forecast evidence or an eligible recommendation.

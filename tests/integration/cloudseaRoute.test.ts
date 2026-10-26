@@ -40,9 +40,15 @@ const HEIGHTS: Record<number, number> = {
   950: 500,
   925: 750,
   900: 1000,
+  875: 1250,
   850: 1500,
+  825: 1750,
   800: 2000,
+  775: 2250,
+  750: 2500,
+  725: 2750,
   700: 3000,
+  650: 3600,
   600: 4200,
   500: 5600,
 };
@@ -54,7 +60,7 @@ function pressureEntry(date = "2026-09-06") {
     temperature_2m: times.map(() => 10),
   };
   for (const pressure of PRESSURE_LEVELS) {
-    const cloudy = [950, 925, 900].includes(pressure);
+    const cloudy = [950, 925].includes(pressure);
     const temperature =
       pressure === 950
         ? 8
@@ -81,6 +87,19 @@ function pressureEntry(date = "2026-09-06") {
   };
 }
 
+function combinedEntry(date = "2026-09-06") {
+  const pressure = pressureEntry(date);
+  return { ...pressure, hourly: { ...hourlyEntry(date).hourly, ...pressure.hourly } };
+}
+
+function missingPressureEntry(date = "2026-09-06") {
+  const entry = combinedEntry(date);
+  for (const level of PRESSURE_LEVELS) {
+    Object.assign(entry.hourly, { [`cloud_cover_${level}hPa`]: TIME.map(() => null) });
+  }
+  return entry;
+}
+
 function coordinateCount(url: URL): number {
   return (url.searchParams.get("latitude") ?? "")
     .split(",")
@@ -97,10 +116,7 @@ function successfulFetch(requested?: URL[]) {
     requested?.push(url);
     const count = coordinateCount(url);
     const date = url.searchParams.get("start_date") ?? "2026-09-06";
-    const hourly = url.searchParams.get("hourly") ?? "";
-    const payload = hourly.includes("geopotential_height_")
-      ? Array.from({ length: count }, () => pressureEntry(date))
-      : Array.from({ length: count }, () => hourlyEntry(date));
+    const payload = Array.from({ length: count }, () => combinedEntry(date));
     return new Response(JSON.stringify(payload), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -118,10 +134,33 @@ afterEach(() => {
 });
 
 describe("GET /api/cloudsea/snapshot", () => {
+  it("takes surface and pressure from the same native-grid response without a separate surface request", async () => {
+    const requested: URL[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      requested.push(url);
+      const count = coordinateCount(url);
+      const date = url.searchParams.get("start_date") ?? "2026-09-06";
+      return Response.json(Array.from({ length: count }, () => combinedEntry(date)));
+    }));
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const response = await GET(request("date=2026-09-06&model=icon"));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.surface.availableSites).toBe(CLOUD_SEA_SITES.length);
+    expect(body.pressure.availableSites).toBe(CLOUD_SEA_SITES.length);
+    expect(requested).toHaveLength(3);
+    for (const url of requested) {
+      expect(url.searchParams.get("elevation")).toBe(Array(coordinateCount(url)).fill("nan").join(","));
+      expect(url.searchParams.get("hourly")).toContain("relative_humidity_2m");
+      expect(url.searchParams.get("hourly")).toContain("geopotential_height_925hPa");
+    }
+  });
   it.each(["missing-unit", "wrong-unit", "range"])("does not publish provider surface data with %s", async fault => {
-    vi.stubGlobal("fetch", vi.fn(async () => {
-      const rows = CLOUD_SEA_SITES.map(() => {
-        const entry = hourlyEntry();
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      const rows = Array.from({ length: coordinateCount(url) }, () => {
+        const entry = combinedEntry(url.searchParams.get("start_date") ?? "2026-09-06");
         if (fault === "missing-unit") delete entry.hourly_units.wind_speed_10m;
         if (fault === "wrong-unit") entry.hourly_units.wind_speed_10m = "km/h";
         if (fault === "range") entry.hourly.cloud_cover_low = TIME.map(() => 999);
@@ -136,26 +175,29 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(body.sites).toBeUndefined();
   });
   it.each(["timezone", "offset", "coordinate"])("rejects an untrustworthy fixed-Beijing provider identity (%s)", async fault => {
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json(CLOUD_SEA_SITES.map(() => {
-      const entry = hourlyEntry();
-      if (fault === "timezone") entry.timezone = "UTC";
-      if (fault === "offset") entry.utc_offset_seconds = 0;
-      if (fault === "coordinate") entry.latitude = 91;
-      return entry;
-    }))));
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      return Response.json(Array.from({ length: coordinateCount(url) }, () => {
+        const entry = combinedEntry(url.searchParams.get("start_date") ?? "2026-09-06");
+        if (fault === "timezone") entry.timezone = "UTC";
+        if (fault === "offset") entry.utc_offset_seconds = 0;
+        if (fault === "coordinate") entry.latitude = 91;
+        return entry;
+      }));
+    }));
     const { GET } = await import("@/app/api/cloudsea/snapshot/route");
     expect((await GET(request("date=2026-09-21&model=icon"))).status).toBe(502);
   });
-  it("keeps valid surface weather but withholds false pressure availability from wrong-zone batches", async () => {
+  it("keeps valid surface weather when only pressure fields have invalid units", async () => {
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = new URL(String(input));
       const count = coordinateCount(url);
       const date = url.searchParams.get("start_date") ?? "2026-09-06";
-      const isPressure = (url.searchParams.get("hourly") ?? "").includes("geopotential_height_");
-      return Response.json(Array.from({ length: count }, () => isPressure
-        ? { ...pressureEntry(date), timezone: "UTC", utc_offset_seconds: 0 }
-        : hourlyEntry(date),
-      ));
+      return Response.json(Array.from({ length: count }, () => {
+        const entry = combinedEntry(date);
+        entry.hourly_units.geopotential_height_925hPa = "ft";
+        return entry;
+      }));
     }));
 
     const { GET } = await import("@/app/api/cloudsea/snapshot/route");
@@ -183,7 +225,7 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(body.providerValidationVersion).toBe(PROVIDER_VALIDATION_VERSION);
     expect(requested.length).toBeGreaterThan(0);
     expect(
-      requested.every((url) => url.searchParams.get("models") === "gfs_seamless"),
+      requested.every((url) => url.searchParams.get("models") === "ncep_gfs025"),
     ).toBe(true);
     expect(body.pressure.availableSites).toBe(CLOUD_SEA_SITES.length);
   });
@@ -198,21 +240,13 @@ describe("GET /api/cloudsea/snapshot", () => {
         const url = new URL(String(input));
         const count = coordinateCount(url);
         const date = url.searchParams.get("start_date") ?? "2026-09-06";
-        const hourly = url.searchParams.get("hourly") ?? "";
-        if (!hourly.includes("geopotential_height_")) {
-          return new Response(
-            JSON.stringify(Array.from({ length: count }, () => hourlyEntry(date))),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          );
-        }
-
         pressureRequests += 1;
         activePressureRequests += 1;
         maxPressureRequests = Math.max(maxPressureRequests, activePressureRequests);
         await new Promise((resolve) => setTimeout(resolve, 20));
         activePressureRequests -= 1;
         return new Response(
-          JSON.stringify(Array.from({ length: count }, () => pressureEntry(date))),
+          JSON.stringify(Array.from({ length: count }, () => combinedEntry(date))),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }),
@@ -228,7 +262,7 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(body.pressure.availableSites).toBe(CLOUD_SEA_SITES.length);
   });
 
-  it("uses real surface RH plus batched pressure profiles for AIFS", async () => {
+  it("keeps AIFS surface and profile facts but withholds scores without a proven native pressure grid", async () => {
     const requested: URL[] = [];
     vi.stubGlobal("fetch", successfulFetch(requested));
 
@@ -237,22 +271,15 @@ describe("GET /api/cloudsea/snapshot", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    const surfaceUrl = requested.find(
-      (url) =>
-        !(url.searchParams.get("hourly") ?? "").includes(
-          "geopotential_height_",
-        ),
-    );
     const pressureUrls = requested.filter((url) =>
       (url.searchParams.get("hourly") ?? "").includes("geopotential_height_"),
     );
-    expect(surfaceUrl).toBeDefined();
-    expect(surfaceUrl?.searchParams.get("models")).toBe(
+    expect(pressureUrls).toHaveLength(3);
+    expect(pressureUrls[0]?.searchParams.get("models")).toBe(
       "ecmwf_aifs025_single",
     );
-    const surfaceFields = (surfaceUrl?.searchParams.get("hourly") ?? "").split(",");
+    const surfaceFields = (pressureUrls[0]?.searchParams.get("hourly") ?? "").split(",");
     expect(surfaceFields).toContain("relative_humidity_2m");
-    expect(surfaceFields).not.toContain("temperature_2m");
     expect(surfaceFields).not.toContain("visibility");
     expect(surfaceFields).not.toContain("cloud_cover");
     expect(pressureUrls.length).toBeGreaterThan(0);
@@ -275,12 +302,30 @@ describe("GET /api/cloudsea/snapshot", () => {
         conditionLabel: string | null;
         cloudTopM: number | null;
         pressureStatus: string;
+        coverage: { scoreableHours: number; pressureHours: number };
       };
     };
     expect(first.morning.humidity).toBeGreaterThan(80);
-    expect(first.morning.conditionLabel).toMatch(/\/100$/);
-    expect(first.morning.cloudTopM).not.toBeNull();
+    expect(first.morning.conditionLabel).toBeNull();
+    expect(first.morning.cloudTopM).toBeNull();
     expect(first.morning.pressureStatus).toBe("available");
+    expect(first.morning.coverage).toEqual(expect.objectContaining({ scoreableHours: 0, pressureHours: 4 }));
+  });
+
+  it("does not reuse a snapshot with the old score version as fresh", async () => {
+    const fetchMock = successfulFetch();
+    vi.stubGlobal("fetch", fetchMock);
+    const cloudsea = await import("@/lib/cloudsea");
+    const build = cloudsea.buildCloudSeaSnapshot;
+    vi.spyOn(cloudsea, "buildCloudSeaSnapshot").mockImplementationOnce((...args) => ({ ...build(...args), scoreVersion: "legacy-score-v1" }));
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const first = await GET(request("date=2026-09-06&model=icon"));
+    expect(first.headers.get("X-Cloudsea-Cache")).toBe("degraded");
+    const firstCalls = fetchMock.mock.calls.length;
+    const second = await GET(request("date=2026-09-06&model=icon"));
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(firstCalls);
+    expect(second.headers.get("X-Cloudsea-Cache")).toBe("fresh");
+    expect((await second.json()).scoreVersion).toBe(cloudsea.CLOUD_SEA_SCORE_VERSION);
   });
 
   it("requests ground wind in the m/s units used by CloudSea scoring and UI", async () => {
@@ -291,28 +336,18 @@ describe("GET /api/cloudsea/snapshot", () => {
     const response = await GET(request("date=2026-09-06&model=icon"));
 
     expect(response.status).toBe(200);
-    const surfaceUrl = requested.find(
-      (url) => !(url.searchParams.get("hourly") ?? "").includes("geopotential_height_"),
-    );
-    expect(surfaceUrl?.searchParams.get("wind_speed_unit")).toBe("ms");
+    expect(requested).toHaveLength(3);
+    expect(requested.every(url => url.searchParams.get("wind_speed_unit") === "ms")).toBe(true);
   });
 
   it("does not cache a pressure-degraded snapshot as fresh for the next-day retry", async () => {
     let pressureAvailable = false;
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = new URL(String(input));
-      const hourly = url.searchParams.get("hourly") ?? "";
       const count = coordinateCount(url);
       const date = url.searchParams.get("start_date") ?? "2026-09-06";
-      if (hourly.includes("geopotential_height_")) {
-        if (!pressureAvailable) throw new Error("pressure temporarily unavailable");
-        return new Response(
-          JSON.stringify(Array.from({ length: count }, () => pressureEntry(date))),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
       return new Response(
-        JSON.stringify(Array.from({ length: count }, () => hourlyEntry(date))),
+        JSON.stringify(Array.from({ length: count }, () => pressureAvailable ? combinedEntry(date) : missingPressureEntry(date))),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     });
@@ -341,20 +376,8 @@ describe("GET /api/cloudsea/snapshot", () => {
       const url = new URL(String(input));
       const count = coordinateCount(url);
       const date = url.searchParams.get("start_date") ?? "2026-09-06";
-      const hourly = url.searchParams.get("hourly") ?? "";
-      if (hourly.includes("geopotential_height_")) {
-        return new Response(
-          JSON.stringify(Array.from({ length: count }, () => pressureEntry(date))),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }
-
-      const rows = Array.from({ length: count }, () => ({
-        latitude: 30, longitude: 120, timezone: "Asia/Shanghai", utc_offset_seconds: 28800,
-        hourly_units: providerUnits(),
-        hourly: { ...hourlyEntry(date).hourly },
-      }));
-      if (!surfaceRecovered && rows[0]) {
+      const rows = Array.from({ length: count }, () => combinedEntry(date));
+      if (!surfaceRecovered && rows[0] && url.searchParams.get("latitude")?.split(",")[0] === String(CLOUD_SEA_SITES[0].latitude)) {
         rows[0].hourly.wind_speed_10m = Array(TIME.length).fill(null);
       }
       return new Response(JSON.stringify(rows), {
@@ -430,14 +453,21 @@ describe("GET /api/cloudsea/snapshot", () => {
       for (const phase of ["morning", "evening"] as const) {
         const window = siteScore[phase];
         for (const field of numericFields) {
-          expect(window[field], `${site.id}.${phase}.${field}`).toEqual(
-            expect.any(Number),
-          );
+          expect(window, `${site.id}.${phase}.${field}`).toHaveProperty(field);
+          if (["lowCloud", "midCloud", "highCloud", "humidity", "windSpeed"].includes(field)) {
+            expect(window[field]).toEqual(expect.any(Number));
+          } else {
+            expect(window[field] === null || Number.isFinite(window[field]), `${site.id}.${phase}.${field}`).toBe(true);
+          }
         }
         for (const field of textFields) {
-          expect(window[field], `${site.id}.${phase}.${field}`).toEqual(
-            expect.any(String),
-          );
+          expect(window, `${site.id}.${phase}.${field}`).toHaveProperty(field);
+          expect(window[field] === null || typeof window[field] === "string", `${site.id}.${phase}.${field}`).toBe(true);
+        }
+        if (window.score === null) {
+          expect(window.conditionLabel).toBeNull();
+          expect(window.probabilityLabel).toBeNull();
+          expect(window.cloudPosition).toBe("unknown");
         }
         expect(window.inversion, `${site.id}.${phase}.inversion`).toEqual(
           expect.objectContaining({ status: expect.any(String) }),
@@ -458,11 +488,11 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(response.status).toBe(502);
     expect(body.sites).toBeUndefined();
     expect(String(body.error)).toContain("provider unavailable");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(6); // Three bounded batches, two attempts each.
   });
 
   it("does not retry a provider 429 and forwards its Retry-After cooldown", async () => {
-    const fetchMock = vi.fn(async () => Response.json(
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json(
       { reason: "Daily API request limit exceeded" },
       { status: 429, headers: { "Retry-After": "600" } },
     ));
@@ -473,7 +503,8 @@ describe("GET /api/cloudsea/snapshot", () => {
 
     expect(response.status).toBe(429);
     expect(response.headers.get("Retry-After")).toBe("600");
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledTimes(2); // Two in-flight workers, neither retries or starts a third batch.
+    expect(new Set(fetchMock.mock.calls.map(call => String(call[0]))).size).toBe(2);
   });
 
   it("preserves an active provider cooldown when a concurrent request fails with 502", async () => {
@@ -497,12 +528,8 @@ describe("GET /api/cloudsea/snapshot", () => {
       "fetch",
       vi.fn(async (input: string | URL | Request) => {
         const url = new URL(String(input));
-        const hourly = url.searchParams.get("hourly") ?? "";
-        if (hourly.includes("geopotential_height_")) {
-          throw new Error("pressure unavailable");
-        }
         return new Response(
-          JSON.stringify(CLOUD_SEA_SITES.map(() => hourlyEntry())),
+          JSON.stringify(Array.from({ length: coordinateCount(url) }, () => missingPressureEntry())),
           {
             status: 200,
             headers: { "Content-Type": "application/json" },

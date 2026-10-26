@@ -44,7 +44,8 @@ function snapshot(date: string, score: number) {
   return {
     date,
     model: "gfs",
-    generatedAt: `${date}T00:30:00.000Z`,
+    scoreVersion: "cloudsea-native-conservative-v3",
+        generatedAt: `${date}T00:30:00.000Z`,
     source: "E2E request ordering",
     stale: false,
     surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },

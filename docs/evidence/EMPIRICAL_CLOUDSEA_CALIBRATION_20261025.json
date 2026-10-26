@@ -1,0 +1,2456 @@
+{
+  "status": "CANDIDATE_REJECTED_INDEPENDENT_HOLDOUT_FAILED",
+  "generatedUtc": "2026-10-25T04:56:31.567105+00:00",
+  "sourceRevision": "ba73851c08e8566f756f8dbf6e6382e00fed3faf",
+  "sourceProductDiffEmpty": true,
+  "originalReportsPreserved": 59,
+  "cohort": {
+    "september": "2026-09-01..30 UTC",
+    "freshHoldout": "2026-10-01..10 UTC",
+    "leadHours": "24..47",
+    "model": "gfs_seamless",
+    "fixedRuns": 80,
+    "sameObservationHoursAcrossVariants": true,
+    "underCastEndpoint": "MWN human extensive below-summit cloud, not photographic beauty"
+  },
+  "freeze": {
+    "frozenAtUtc": "2026-10-25T04:50:48.892743+00:00",
+    "nativeSelectionSha256": "4f0ef0b535190b89b60b5d23ec6c1d03f74210a1fa9552a7b7e8d125bbd75755",
+    "candidate": "GFS fixedrun elevation=nan entire response plus existing unchanged scorer",
+    "rhGuard": null,
+    "whyNoRhGuard": "zero training true positives; no eligible training improvement",
+    "newHoldout": "2026-10-01..2026-10-10 UTC",
+    "nativeSeptemberLast10Days": "diagnostic_only_baseline_previously_seen",
+    "productionPromotion": "NOT_AUTHORIZED_BY_RESEARCH_RESULT",
+    "verticalCloudTopUnresolved": "reported, candidate remains unsafe until observed skill qualifies"
+  },
+  "independentFalseAlarmsChecked": 34,
+  "independentRawDifferences": 0,
+  "results": {
+    "september": {
+      "original": {
+        "planned": 2880,
+        "paired": 2875,
+        "MWN": {
+          "planned": 720,
+          "observationMatched": 717,
+          "scored": 448,
+          "positions": {
+            "clear": 357,
+            "unknown": 272,
+            "below": 91
+          },
+          "observedObstructed": 359,
+          "observedUnobstructed": 272,
+          "observedUndercast": 30,
+          "undercastPositiveDates": [
+            "2026-09-06",
+            "2026-09-18",
+            "2026-09-20",
+            "2026-09-21",
+            "2026-09-22",
+            "2026-09-30"
+          ],
+          "inCloudVsVisibilityObstruction": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 161,
+            "tn": 237,
+            "unknownLabel": 89,
+            "withheldPositive": 198,
+            "withheldNegative": 35,
+            "precision": null,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": null,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.5
+          },
+          "high60": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "high80": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "knownObstructedHigh60": 0,
+          "undercast60": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 15,
+            "tn": 223,
+            "unknownLabel": 257,
+            "withheldPositive": 15,
+            "withheldNegative": 210,
+            "precision": null,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": null,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.5
+          },
+          "undercast80": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 15,
+            "tn": 223,
+            "unknownLabel": 257,
+            "withheldPositive": 15,
+            "withheldNegative": 210,
+            "precision": null,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": null,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.5
+          },
+          "calibrated60": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 15,
+            "tn": 223,
+            "unknownLabel": 257,
+            "withheldPositive": 15,
+            "withheldNegative": 210,
+            "precision": null,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": null,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.5
+          },
+          "calibratedHigh60": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "precision95": {
+            "method": "2000_UTC_date_cluster_percentile_95pct",
+            "dates": 30,
+            "validReplicates": 0,
+            "low": null,
+            "high": null
+          },
+          "recall95": {
+            "method": "2000_UTC_date_cluster_percentile_95pct",
+            "dates": 30,
+            "validReplicates": 1994,
+            "low": 0.0,
+            "high": 0.0
+          }
+        },
+        "localWindows": {
+          "MWN_all_morning": {
+            "planned": 120,
+            "observedUndercast": 8,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 5,
+              "tn": 43,
+              "unknownLabel": 33,
+              "withheldPositive": 3,
+              "withheldNegative": 36,
+              "precision": null,
+              "recall": 0.0,
+              "missRate": 1.0,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": 0.0,
+              "recallIncludingWithheld": 0.0,
+              "balancedAccuracy": 0.5
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "MWN_all_evening": {
+            "planned": 90,
+            "observedUndercast": 4,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 3,
+              "tn": 25,
+              "unknownLabel": 38,
+              "withheldPositive": 1,
+              "withheldNegative": 23,
+              "precision": null,
+              "recall": 0.0,
+              "missRate": 1.0,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": 0.0,
+              "recallIncludingWithheld": 0.0,
+              "balancedAccuracy": 0.5
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "00722_all_morning": {
+            "planned": 120,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 120,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "00722_all_evening": {
+            "planned": 90,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 90,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "01358_all_morning": {
+            "planned": 120,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 120,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "01358_all_evening": {
+            "planned": 90,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 90,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "02290_all_morning": {
+            "planned": 120,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 120,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "02290_all_evening": {
+            "planned": 90,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 90,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          }
+        },
+        "stationCoverage": {
+          "MWN": 717,
+          "00722": 720,
+          "01358": 718,
+          "02290": 720
+        },
+        "stationHigh60": {
+          "MWN": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "00722": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "01358": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "02290": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          }
+        }
+      },
+      "native_candidate": {
+        "planned": 2880,
+        "paired": 2875,
+        "MWN": {
+          "planned": 720,
+          "observationMatched": 717,
+          "scored": 686,
+          "positions": {
+            "clear": 483,
+            "above": 108,
+            "in": 77,
+            "below": 18,
+            "unknown": 34
+          },
+          "observedObstructed": 359,
+          "observedUnobstructed": 272,
+          "observedUndercast": 30,
+          "undercastPositiveDates": [
+            "2026-09-06",
+            "2026-09-18",
+            "2026-09-20",
+            "2026-09-21",
+            "2026-09-22",
+            "2026-09-30"
+          ],
+          "inCloudVsVisibilityObstruction": {
+            "tp": 71,
+            "fp": 0,
+            "fn": 266,
+            "tn": 264,
+            "unknownLabel": 89,
+            "withheldPositive": 22,
+            "withheldNegative": 8,
+            "precision": 1.0,
+            "recall": 0.21068249258160238,
+            "missRate": 0.7893175074183977,
+            "falseAlarmRatio": 0.0,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.1977715877437326,
+            "balancedAccuracy": 0.6053412462908012
+          },
+          "high60": {
+            "issued": 104,
+            "knownHit": 8,
+            "knownFalse": 82,
+            "unknown": 14,
+            "knownLabelHitRate": 0.08888888888888889,
+            "hitFractionLowerBound": 0.07692307692307693,
+            "hitFractionUpperBound": 0.21153846153846154,
+            "obstructed": 79,
+            "unobstructed": 11
+          },
+          "high80": {
+            "issued": 58,
+            "knownHit": 4,
+            "knownFalse": 42,
+            "unknown": 12,
+            "knownLabelHitRate": 0.08695652173913043,
+            "hitFractionLowerBound": 0.06896551724137931,
+            "hitFractionUpperBound": 0.27586206896551724,
+            "obstructed": 41,
+            "unobstructed": 5
+          },
+          "knownObstructedHigh60": 79,
+          "undercast60": {
+            "tp": 8,
+            "fp": 82,
+            "fn": 21,
+            "tn": 324,
+            "unknownLabel": 257,
+            "withheldPositive": 1,
+            "withheldNegative": 27,
+            "precision": 0.08888888888888889,
+            "recall": 0.27586206896551724,
+            "missRate": 0.7241379310344828,
+            "falseAlarmRatio": 0.9111111111111111,
+            "falsePositiveRate": 0.2019704433497537,
+            "recallIncludingWithheld": 0.26666666666666666,
+            "balancedAccuracy": 0.5369458128078818
+          },
+          "undercast80": {
+            "tp": 4,
+            "fp": 42,
+            "fn": 25,
+            "tn": 364,
+            "unknownLabel": 257,
+            "withheldPositive": 1,
+            "withheldNegative": 27,
+            "precision": 0.08695652173913043,
+            "recall": 0.13793103448275862,
+            "missRate": 0.8620689655172413,
+            "falseAlarmRatio": 0.9130434782608695,
+            "falsePositiveRate": 0.10344827586206896,
+            "recallIncludingWithheld": 0.13333333333333333,
+            "balancedAccuracy": 0.5172413793103449
+          },
+          "calibrated60": {
+            "tp": 8,
+            "fp": 82,
+            "fn": 21,
+            "tn": 324,
+            "unknownLabel": 257,
+            "withheldPositive": 1,
+            "withheldNegative": 27,
+            "precision": 0.08888888888888889,
+            "recall": 0.27586206896551724,
+            "missRate": 0.7241379310344828,
+            "falseAlarmRatio": 0.9111111111111111,
+            "falsePositiveRate": 0.2019704433497537,
+            "recallIncludingWithheld": 0.26666666666666666,
+            "balancedAccuracy": 0.5369458128078818
+          },
+          "calibratedHigh60": {
+            "issued": 104,
+            "knownHit": 8,
+            "knownFalse": 82,
+            "unknown": 14,
+            "knownLabelHitRate": 0.08888888888888889,
+            "hitFractionLowerBound": 0.07692307692307693,
+            "hitFractionUpperBound": 0.21153846153846154,
+            "obstructed": 79,
+            "unobstructed": 11
+          },
+          "precision95": {
+            "method": "2000_UTC_date_cluster_percentile_95pct",
+            "dates": 30,
+            "validReplicates": 2000,
+            "low": 0.0,
+            "high": 0.2711864406779661
+          },
+          "recall95": {
+            "method": "2000_UTC_date_cluster_percentile_95pct",
+            "dates": 30,
+            "validReplicates": 1999,
+            "low": 0.0,
+            "high": 0.5
+          }
+        },
+        "localWindows": {
+          "MWN_all_morning": {
+            "planned": 120,
+            "observedUndercast": 8,
+            "undercast60": {
+              "tp": 0,
+              "fp": 17,
+              "fn": 8,
+              "tn": 57,
+              "unknownLabel": 33,
+              "withheldPositive": 0,
+              "withheldNegative": 5,
+              "precision": 0.0,
+              "recall": 0.0,
+              "missRate": 1.0,
+              "falseAlarmRatio": 1.0,
+              "falsePositiveRate": 0.22972972972972974,
+              "recallIncludingWithheld": 0.0,
+              "balancedAccuracy": 0.38513513513513514
+            },
+            "high60": {
+              "issued": 19,
+              "knownHit": 0,
+              "knownFalse": 17,
+              "unknown": 2,
+              "knownLabelHitRate": 0.0,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 0.10526315789473684,
+              "obstructed": 17,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 12,
+              "knownHit": 0,
+              "knownFalse": 10,
+              "unknown": 2,
+              "knownLabelHitRate": 0.0,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 0.16666666666666666,
+              "obstructed": 10,
+              "unobstructed": 0
+            }
+          },
+          "MWN_all_evening": {
+            "planned": 90,
+            "observedUndercast": 4,
+            "undercast60": {
+              "tp": 0,
+              "fp": 8,
+              "fn": 4,
+              "tn": 36,
+              "unknownLabel": 38,
+              "withheldPositive": 0,
+              "withheldNegative": 4,
+              "precision": 0.0,
+              "recall": 0.0,
+              "missRate": 1.0,
+              "falseAlarmRatio": 1.0,
+              "falsePositiveRate": 0.18181818181818182,
+              "recallIncludingWithheld": 0.0,
+              "balancedAccuracy": 0.4090909090909091
+            },
+            "high60": {
+              "issued": 10,
+              "knownHit": 0,
+              "knownFalse": 8,
+              "unknown": 2,
+              "knownLabelHitRate": 0.0,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 0.2,
+              "obstructed": 8,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 4,
+              "knownHit": 0,
+              "knownFalse": 3,
+              "unknown": 1,
+              "knownLabelHitRate": 0.0,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 0.25,
+              "obstructed": 3,
+              "unobstructed": 0
+            }
+          },
+          "00722_all_morning": {
+            "planned": 120,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 120,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 14,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 14,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 14,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 5,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 5,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 5,
+              "unobstructed": 0
+            }
+          },
+          "00722_all_evening": {
+            "planned": 90,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 90,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 1,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 1,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 1,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "01358_all_morning": {
+            "planned": 120,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 120,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 3,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 3,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 3,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 2,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 2,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 2,
+              "unobstructed": 0
+            }
+          },
+          "01358_all_evening": {
+            "planned": 90,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 90,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "02290_all_morning": {
+            "planned": 120,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 120,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 1,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 1,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 0,
+              "unobstructed": 1
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "02290_all_evening": {
+            "planned": 90,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 90,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 1,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 1,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          }
+        },
+        "stationCoverage": {
+          "MWN": 717,
+          "00722": 720,
+          "01358": 718,
+          "02290": 720
+        },
+        "stationHigh60": {
+          "MWN": {
+            "issued": 104,
+            "knownHit": 8,
+            "knownFalse": 82,
+            "unknown": 14,
+            "knownLabelHitRate": 0.08888888888888889,
+            "hitFractionLowerBound": 0.07692307692307693,
+            "hitFractionUpperBound": 0.21153846153846154,
+            "obstructed": 79,
+            "unobstructed": 11
+          },
+          "00722": {
+            "issued": 38,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 38,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 1.0,
+            "obstructed": 37,
+            "unobstructed": 0
+          },
+          "01358": {
+            "issued": 14,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 14,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 1.0,
+            "obstructed": 11,
+            "unobstructed": 3
+          },
+          "02290": {
+            "issued": 4,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 4,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 1.0,
+            "obstructed": 0,
+            "unobstructed": 2
+          }
+        }
+      }
+    },
+    "october_holdout": {
+      "original": {
+        "planned": 960,
+        "paired": 958,
+        "MWN": {
+          "planned": 240,
+          "observationMatched": 238,
+          "scored": 121,
+          "positions": {
+            "clear": 88,
+            "below": 33,
+            "unknown": 119
+          },
+          "observedObstructed": 132,
+          "observedUnobstructed": 85,
+          "observedUndercast": 5,
+          "undercastPositiveDates": [
+            "2026-10-03",
+            "2026-10-04",
+            "2026-10-05"
+          ],
+          "inCloudVsVisibilityObstruction": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 39,
+            "tn": 68,
+            "unknownLabel": 23,
+            "withheldPositive": 93,
+            "withheldNegative": 17,
+            "precision": null,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": null,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.5
+          },
+          "high60": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "high80": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "knownObstructedHigh60": 0,
+          "undercast60": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 4,
+            "tn": 68,
+            "unknownLabel": 66,
+            "withheldPositive": 1,
+            "withheldNegative": 101,
+            "precision": null,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": null,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.5
+          },
+          "undercast80": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 4,
+            "tn": 68,
+            "unknownLabel": 66,
+            "withheldPositive": 1,
+            "withheldNegative": 101,
+            "precision": null,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": null,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.5
+          },
+          "calibrated60": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 4,
+            "tn": 68,
+            "unknownLabel": 66,
+            "withheldPositive": 1,
+            "withheldNegative": 101,
+            "precision": null,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": null,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.5
+          },
+          "calibratedHigh60": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "precision95": {
+            "method": "2000_UTC_date_cluster_percentile_95pct",
+            "dates": 10,
+            "validReplicates": 0,
+            "low": null,
+            "high": null
+          },
+          "recall95": {
+            "method": "2000_UTC_date_cluster_percentile_95pct",
+            "dates": 10,
+            "validReplicates": 1788,
+            "low": 0.0,
+            "high": 0.0
+          }
+        },
+        "localWindows": {
+          "MWN_all_morning": {
+            "planned": 40,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 14,
+              "unknownLabel": 10,
+              "withheldPositive": 0,
+              "withheldNegative": 16,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": 0.0,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "MWN_all_evening": {
+            "planned": 30,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 4,
+              "unknownLabel": 16,
+              "withheldPositive": 0,
+              "withheldNegative": 10,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": 0.0,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "00722_all_morning": {
+            "planned": 40,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 40,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "00722_all_evening": {
+            "planned": 30,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 30,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "01358_all_morning": {
+            "planned": 40,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 40,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "01358_all_evening": {
+            "planned": 30,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 30,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "02290_all_morning": {
+            "planned": 40,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 40,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "02290_all_evening": {
+            "planned": 30,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 30,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          }
+        },
+        "stationCoverage": {
+          "MWN": 238,
+          "00722": 240,
+          "01358": 240,
+          "02290": 240
+        },
+        "stationHigh60": {
+          "MWN": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "00722": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "01358": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          },
+          "02290": {
+            "issued": 0,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 0,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": null,
+            "hitFractionUpperBound": null,
+            "obstructed": 0,
+            "unobstructed": 0
+          }
+        }
+      },
+      "native_candidate": {
+        "planned": 960,
+        "paired": 958,
+        "MWN": {
+          "planned": 240,
+          "observationMatched": 238,
+          "scored": 199,
+          "positions": {
+            "clear": 140,
+            "below": 12,
+            "in": 11,
+            "above": 36,
+            "unknown": 41
+          },
+          "observedObstructed": 132,
+          "observedUnobstructed": 85,
+          "observedUndercast": 5,
+          "undercastPositiveDates": [
+            "2026-10-03",
+            "2026-10-04",
+            "2026-10-05"
+          ],
+          "inCloudVsVisibilityObstruction": {
+            "tp": 11,
+            "fp": 0,
+            "fn": 90,
+            "tn": 81,
+            "unknownLabel": 23,
+            "withheldPositive": 31,
+            "withheldNegative": 4,
+            "precision": 1.0,
+            "recall": 0.10891089108910891,
+            "missRate": 0.8910891089108911,
+            "falseAlarmRatio": 0.0,
+            "falsePositiveRate": 0.0,
+            "recallIncludingWithheld": 0.08333333333333333,
+            "balancedAccuracy": 0.5544554455445545
+          },
+          "high60": {
+            "issued": 34,
+            "knownHit": 0,
+            "knownFalse": 34,
+            "unknown": 0,
+            "knownLabelHitRate": 0.0,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 0.0,
+            "obstructed": 34,
+            "unobstructed": 0
+          },
+          "high80": {
+            "issued": 21,
+            "knownHit": 0,
+            "knownFalse": 21,
+            "unknown": 0,
+            "knownLabelHitRate": 0.0,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 0.0,
+            "obstructed": 21,
+            "unobstructed": 0
+          },
+          "knownObstructedHigh60": 34,
+          "undercast60": {
+            "tp": 0,
+            "fp": 34,
+            "fn": 5,
+            "tn": 103,
+            "unknownLabel": 66,
+            "withheldPositive": 0,
+            "withheldNegative": 32,
+            "precision": 0.0,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": 1.0,
+            "falsePositiveRate": 0.24817518248175183,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.3759124087591241
+          },
+          "undercast80": {
+            "tp": 0,
+            "fp": 21,
+            "fn": 5,
+            "tn": 116,
+            "unknownLabel": 66,
+            "withheldPositive": 0,
+            "withheldNegative": 32,
+            "precision": 0.0,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": 1.0,
+            "falsePositiveRate": 0.15328467153284672,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.4233576642335766
+          },
+          "calibrated60": {
+            "tp": 0,
+            "fp": 34,
+            "fn": 5,
+            "tn": 103,
+            "unknownLabel": 66,
+            "withheldPositive": 0,
+            "withheldNegative": 32,
+            "precision": 0.0,
+            "recall": 0.0,
+            "missRate": 1.0,
+            "falseAlarmRatio": 1.0,
+            "falsePositiveRate": 0.24817518248175183,
+            "recallIncludingWithheld": 0.0,
+            "balancedAccuracy": 0.3759124087591241
+          },
+          "calibratedHigh60": {
+            "issued": 34,
+            "knownHit": 0,
+            "knownFalse": 34,
+            "unknown": 0,
+            "knownLabelHitRate": 0.0,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 0.0,
+            "obstructed": 34,
+            "unobstructed": 0
+          },
+          "precision95": {
+            "method": "2000_UTC_date_cluster_percentile_95pct",
+            "dates": 10,
+            "validReplicates": 2000,
+            "low": 0.0,
+            "high": 0.0
+          },
+          "recall95": {
+            "method": "2000_UTC_date_cluster_percentile_95pct",
+            "dates": 10,
+            "validReplicates": 1945,
+            "low": 0.0,
+            "high": 0.0
+          }
+        },
+        "localWindows": {
+          "MWN_all_morning": {
+            "planned": 40,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 9,
+              "fn": 0,
+              "tn": 19,
+              "unknownLabel": 10,
+              "withheldPositive": 0,
+              "withheldNegative": 2,
+              "precision": 0.0,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": 1.0,
+              "falsePositiveRate": 0.32142857142857145,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 9,
+              "knownHit": 0,
+              "knownFalse": 9,
+              "unknown": 0,
+              "knownLabelHitRate": 0.0,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 0.0,
+              "obstructed": 9,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 7,
+              "knownHit": 0,
+              "knownFalse": 7,
+              "unknown": 0,
+              "knownLabelHitRate": 0.0,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 0.0,
+              "obstructed": 7,
+              "unobstructed": 0
+            }
+          },
+          "MWN_all_evening": {
+            "planned": 30,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 2,
+              "fn": 0,
+              "tn": 9,
+              "unknownLabel": 16,
+              "withheldPositive": 0,
+              "withheldNegative": 3,
+              "precision": 0.0,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": 1.0,
+              "falsePositiveRate": 0.18181818181818182,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 2,
+              "knownHit": 0,
+              "knownFalse": 2,
+              "unknown": 0,
+              "knownLabelHitRate": 0.0,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 0.0,
+              "obstructed": 2,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "00722_all_morning": {
+            "planned": 40,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 40,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 7,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 7,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 6,
+              "unobstructed": 1
+            },
+            "high80": {
+              "issued": 6,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 6,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 5,
+              "unobstructed": 1
+            }
+          },
+          "00722_all_evening": {
+            "planned": 30,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 30,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 1,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 1,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 1,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 1,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 1,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 1,
+              "unobstructed": 0
+            }
+          },
+          "01358_all_morning": {
+            "planned": 40,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 40,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 3,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 3,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 2,
+              "unobstructed": 1
+            },
+            "high80": {
+              "issued": 3,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 3,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 2,
+              "unobstructed": 1
+            }
+          },
+          "01358_all_evening": {
+            "planned": 30,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 30,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 1,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 1,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 1,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "02290_all_morning": {
+            "planned": 40,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 40,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          },
+          "02290_all_evening": {
+            "planned": 30,
+            "observedUndercast": 0,
+            "undercast60": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 0,
+              "tn": 0,
+              "unknownLabel": 30,
+              "withheldPositive": 0,
+              "withheldNegative": 0,
+              "precision": null,
+              "recall": null,
+              "missRate": null,
+              "falseAlarmRatio": null,
+              "falsePositiveRate": null,
+              "recallIncludingWithheld": null,
+              "balancedAccuracy": null
+            },
+            "high60": {
+              "issued": 1,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 1,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": 0.0,
+              "hitFractionUpperBound": 1.0,
+              "obstructed": 1,
+              "unobstructed": 0
+            },
+            "high80": {
+              "issued": 0,
+              "knownHit": 0,
+              "knownFalse": 0,
+              "unknown": 0,
+              "knownLabelHitRate": null,
+              "hitFractionLowerBound": null,
+              "hitFractionUpperBound": null,
+              "obstructed": 0,
+              "unobstructed": 0
+            }
+          }
+        },
+        "stationCoverage": {
+          "MWN": 238,
+          "00722": 240,
+          "01358": 240,
+          "02290": 240
+        },
+        "stationHigh60": {
+          "MWN": {
+            "issued": 34,
+            "knownHit": 0,
+            "knownFalse": 34,
+            "unknown": 0,
+            "knownLabelHitRate": 0.0,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 0.0,
+            "obstructed": 34,
+            "unobstructed": 0
+          },
+          "00722": {
+            "issued": 12,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 12,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 1.0,
+            "obstructed": 9,
+            "unobstructed": 3
+          },
+          "01358": {
+            "issued": 9,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 9,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 1.0,
+            "obstructed": 8,
+            "unobstructed": 1
+          },
+          "02290": {
+            "issued": 6,
+            "knownHit": 0,
+            "knownFalse": 0,
+            "unknown": 6,
+            "knownLabelHitRate": null,
+            "hitFractionLowerBound": 0.0,
+            "hitFractionUpperBound": 1.0,
+            "obstructed": 5,
+            "unobstructed": 1
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "site": "MWN",
+      "epoch": 1791468000,
+      "time": "2026-10-08T14:00:00.000Z",
+      "date": "2026-10-08",
+      "runUtc": "2026-10-07T00:00:00Z",
+      "leadHours": 38,
+      "split": "test",
+      "score": 94,
+      "position": "above",
+      "cloudBaseM": 1400,
+      "cloudTopM": 1400,
+      "altitudeDiffM": 510,
+      "pressureStatus": "available",
+      "coverage": {
+        "expectedHours": 1,
+        "surfaceValidHours": 1,
+        "scoreableHours": 1,
+        "pressureHours": 1
+      },
+      "rh": 99,
+      "lowCloud": 100,
+      "precipitation": 0,
+      "wind": 5.73,
+      "responseElevation": 1306,
+      "stationElevation": 1910,
+      "latitude": 44.264328,
+      "longitude": -71.29551,
+      "completePressureLevels": [
+        1000,
+        925,
+        850,
+        700,
+        600,
+        500
+      ],
+      "nextClearLevelM": 2965,
+      "summitWithinUnresolvedCloudTop": true,
+      "undercast": false,
+      "obstructed": true,
+      "reason": "summit_obscured",
+      "visibilityM": 0.0,
+      "visibilitySM": 0.0,
+      "below": [],
+      "metar": "KMWN 081349Z 26043G46KT 0SM FG VV000 02/02 RMK SHRAB20E45",
+      "observationUtc": "2026-10-08T13:49:00+00:00",
+      "offsetSeconds": -660,
+      "quality": "IEM_as_is_little_QC",
+      "observationMatched": true
+    },
+    {
+      "site": "MWN",
+      "epoch": 1791032400,
+      "time": "2026-10-03T13:00:00.000Z",
+      "date": "2026-10-03",
+      "runUtc": "2026-10-02T00:00:00Z",
+      "leadHours": 37,
+      "split": "test",
+      "score": 8,
+      "position": "clear",
+      "cloudBaseM": null,
+      "cloudTopM": null,
+      "altitudeDiffM": null,
+      "pressureStatus": "available",
+      "coverage": {
+        "expectedHours": 1,
+        "surfaceValidHours": 1,
+        "scoreableHours": 1,
+        "pressureHours": 1
+      },
+      "rh": 77,
+      "lowCloud": 1,
+      "precipitation": 0,
+      "wind": 7.34,
+      "responseElevation": 1306,
+      "stationElevation": 1910,
+      "latitude": 44.264328,
+      "longitude": -71.29551,
+      "completePressureLevels": [
+        1000,
+        925,
+        850,
+        700,
+        600,
+        500
+      ],
+      "nextClearLevelM": null,
+      "summitWithinUnresolvedCloudTop": false,
+      "undercast": true,
+      "obstructed": false,
+      "reason": "extensive_below_summit",
+      "visibilityM": 160934.4,
+      "visibilitySM": 100.0,
+      "below": [
+        "BKN"
+      ],
+      "metar": "KMWN 031250Z 33032G36KT 100SM BKN/// FEW220 M01/M08 RMK TPS LWR BKN056",
+      "observationUtc": "2026-10-03T12:50:00+00:00",
+      "offsetSeconds": -600,
+      "quality": "IEM_as_is_little_QC",
+      "observationMatched": true
+    }
+  ],
+  "limitations": [
+    "MWN grid changes with elevation=nan; compare whole response pipelines, not single-factor causal mask effect",
+    "DWD recent QN1 formal-only QC; IEM little QC",
+    "Missing and ambiguous labels retained; no score/100 probability calibration",
+    "Few positive weather dates, region/season limited; not China-site acceptance",
+    "All high native candidate hours have unresolved cloud-top/summit interval",
+    "Original code still misses observed events; rejecting candidate does not qualify original algorithm"
+  ],
+  "sources": {
+    "forecastDocs": "https://open-meteo.com/en/docs/single-runs-api",
+    "elevationDocs": "https://open-meteo.com/en/docs?past_days=1",
+    "observationDecoder": "https://mountwashington.org/metar-the-secrets-of-weather-decoded/",
+    "mwnSeptember": {
+      "station": {
+        "id": "MWN",
+        "network": "NH_ASOS",
+        "latitude": 44.2708,
+        "longitude": -71.3035,
+        "elevationM": 1910,
+        "timezone": "America/New_York"
+      },
+      "periodUtc": {
+        "startInclusive": "2026-09-01T00:00:00Z",
+        "endExclusive": "2026-10-01T00:00:00Z"
+      },
+      "sources": [
+        {
+          "filename": "mwn-202609.csv",
+          "url": "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=MWN&data=all&year1=2026&month1=9&day1=1&year2=2026&month2=10&day2=1&tz=Etc%2FUTC&format=onlycomma&latlon=yes&elev=yes&missing=M&trace=T&direct=no&report_type=3&report_type=4",
+          "bytes": 164686,
+          "sha256": "b1b17d21d3e2b645b96df5ec9f007bc6e27152b46d07ea109f1e27e4e20ed8b1",
+          "verifiedAtUtc": "2026-10-24T05:23:59.929652+00:00"
+        },
+        {
+          "filename": "mwn-station-metadata.html",
+          "url": "https://mesonet.agron.iastate.edu/sites/site.php?network=NH_ASOS&station=MWN",
+          "bytes": 39293,
+          "sha256": "b3c6a7bed45b2f919da6a6bf543545464d980581207f2f8ed51f0602b7536e23",
+          "verifiedAtUtc": "2026-10-24T05:23:59.929897+00:00"
+        },
+        {
+          "filename": "iem-asos-documentation.html",
+          "url": "https://mesonet.agron.iastate.edu/request/download.phtml?network=NH_ASOS",
+          "bytes": 70298,
+          "sha256": "072b84427784e12fd7f0ab1ffee48172953930ed76b4d983d38b5791ef88f47a",
+          "verifiedAtUtc": "2026-10-24T05:24:01.706462+00:00"
+        }
+      ],
+      "decoder": {
+        "url": "https://mountwashington.org/metar-the-secrets-of-weather-decoded/",
+        "access": "WEB_TOOL_ACCESSIBLE_SHELL403"
+      },
+      "qualification": "PUBLIC_HUMAN_METAR_NOT_PHOTOGRAPHIC_BEAUTY_LABEL"
+    },
+    "mwnOctober": {
+      "station": {
+        "id": "MWN",
+        "network": "NH_ASOS",
+        "latitude": 44.2708,
+        "longitude": -71.3035,
+        "elevationM": 1910,
+        "timezone": "America/New_York"
+      },
+      "periodUtc": {
+        "startInclusive": "2026-10-01T00:00:00Z",
+        "endExclusive": "2026-10-11T00:00:00Z"
+      },
+      "sources": [
+        {
+          "filename": "mwn-202610.csv",
+          "url": "https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=MWN&data=all&year1=2026&month1=10&day1=1&year2=2026&month2=10&day2=11&tz=Etc%2FUTC&format=onlycomma&latlon=yes&elev=yes&missing=M&trace=T&direct=no&report_type=3&report_type=4",
+          "bytes": 55965,
+          "sha256": "66523d820fce3b3acda11c22c2b146b9a1aefeeb3ee154bff62609e2c8e531d3",
+          "verifiedAtUtc": "2026-10-25T04:48:24.293234+00:00"
+        }
+      ],
+      "qualification": "FRESH_FIXED_HOLDOUT_NO_TUNING"
+    },
+    "dwd": [
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-cloud_type-00722.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/cloud_type/recent/stundenwerte_CS_00722_akt.zip",
+        "sha256": "857ccab20b11c05a1c1cbb5b6fa5670608bf20ebd3deec8c34eb5d8cdfc479cd",
+        "bytes": 254169,
+        "retrieved_utc": "2026-10-24T05:24:41.073228+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 720,
+        "quality": {
+          "1": 720
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-cloud_type-01358.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/cloud_type/recent/stundenwerte_CS_01358_akt.zip",
+        "sha256": "c6fa3f7aff0ce6f81833e27d1a7d164c65204ce04fb28668eda0a045ac67cd10",
+        "bytes": 266287,
+        "retrieved_utc": "2026-10-24T05:24:41.107699+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 720,
+        "quality": {
+          "1": 720
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-cloud_type-02290.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/cloud_type/recent/stundenwerte_CS_02290_akt.zip",
+        "sha256": "13fff29de2bfa09bcb534f0122146c7fa15f96926f7f931652ceb966700d4bb9",
+        "bytes": 292277,
+        "retrieved_utc": "2026-10-24T05:24:41.142573+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 720,
+        "quality": {
+          "1": 720
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-cloudiness-00722.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/cloudiness/recent/stundenwerte_N_00722_akt.zip",
+        "sha256": "32e54a9a73b91a78149b8fc996bb8fb00774427e9589be774d5edc9f06f7f456",
+        "bytes": 45231,
+        "retrieved_utc": "2026-10-24T05:24:41.157969+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 720,
+        "quality": {
+          "1": 720
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-visibility-00722.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/visibility/recent/stundenwerte_VV_00722_akt.zip",
+        "sha256": "43adad342276e040eda08760a6ba8a36ec354df27598ab3a02651beaefb74b6d",
+        "bytes": 64794,
+        "retrieved_utc": "2026-10-24T05:24:41.174071+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 720,
+        "quality": {
+          "1": 720
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-visibility-01358.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/visibility/recent/stundenwerte_VV_01358_akt.zip",
+        "sha256": "dd0e013c862cd135940c9063dbee2d12079b914c25c9009df9933d7fec160fa7",
+        "bytes": 67221,
+        "retrieved_utc": "2026-10-24T05:24:41.190401+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 718,
+        "quality": {
+          "1": 718
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-visibility-02290.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/visibility/recent/stundenwerte_VV_02290_akt.zip",
+        "sha256": "8343b61e0d84a5d0ef2622d3a95a901ca613bcccbd5e60ed64caf0aa271d42d7",
+        "bytes": 71212,
+        "retrieved_utc": "2026-10-24T05:24:41.206721+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 720,
+        "quality": {
+          "1": 720
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-weather_phenomena-00722.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/weather_phenomena/recent/stundenwerte_WW_00722_akt.zip",
+        "sha256": "bb6f255b8397d5a0a01bbca2a08c93cabbdba6b210241136994d20a1eccbb878",
+        "bytes": 49523,
+        "retrieved_utc": "2026-10-24T05:24:41.226231+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 720,
+        "quality": {
+          "1": 720
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-weather_phenomena-01358.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/weather_phenomena/recent/stundenwerte_WW_01358_akt.zip",
+        "sha256": "56da93df50330a3ee0239faa8447c3c2a9bb8e2dedf31224d14c6e14b70bbc9d",
+        "bytes": 49650,
+        "retrieved_utc": "2026-10-24T05:24:41.245341+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 718,
+        "quality": {
+          "1": 718
+        },
+        "all_rows_qn1_formal_only": true
+      },
+      {
+        "file": "E:\\Claude_allow\\Download\\starphoto-empirical-20261024\\dwd-weather_phenomena-02290.zip",
+        "source_url": "https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/hourly/weather_phenomena/recent/stundenwerte_WW_02290_akt.zip",
+        "sha256": "92bf968f0b1a4fdec393fcac655cab0aa303eefbee49a13ffb641ce5844961ab",
+        "bytes": 48080,
+        "retrieved_utc": "2026-10-24T05:24:41.266373+00:00",
+        "subset": "2026-09-01T00:00Z through2026-09-30T23:00Z",
+        "september_rows": 720,
+        "quality": {
+          "1": 720
+        },
+        "all_rows_qn1_formal_only": true
+      }
+    ]
+  }
+}

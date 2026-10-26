@@ -15,13 +15,14 @@ import {
 import { CLOUD_SEA_SITES, type CloudSeaSite } from "@/lib/cloudseaSites";
 import {
   hasUsablePressureProfile,
-  isCompletePressureLevelSample,
+  isThermodynamicPressureLevelSample,
 } from "@/lib/pressureIntegrity";
 import { pressureProfileAt } from "@/lib/pressureIntegrity";
 import type { PressureForecastResponse, PressureLevelSample } from "@/lib/pressure";
 import type { CloudLayer, ForecastModel, PressureLevel } from "@/lib/types";
 
 export type CloudPosition = "above" | "in" | "below" | "clear" | "unknown";
+export const CLOUD_SEA_SCORE_VERSION = "cloudsea-native-conservative-v3";
 export type PressureEvidenceStatus = "available" | "partial" | "unavailable";
 
 export type CloudSeaConditionLevel =
@@ -57,6 +58,8 @@ export interface CloudSeaWindowScore {
   positionLabel: string;
   cloudBaseM: number | null;
   cloudTopM: number | null;
+  /** Highest cloudy sample is a lower bound; next clear sample bounds the top. */
+  cloudTopUpperM?: number | null;
   altitudeDiffM: number | null;
   lowCloud: number | null;
   midCloud: number | null;
@@ -121,6 +124,7 @@ export function hasCompleteCloudSeaCoverage(
 }
 
 export interface CloudSeaSnapshot {
+  scoreVersion?: string;
   providerValidationVersion?: string;
   date: string;
   model: ForecastModel;
@@ -155,6 +159,7 @@ export const CLOUD_SEA_EMPTY_WINDOW: CloudSeaWindowScore = {
   positionLabel: "数据不足",
   cloudBaseM: null,
   cloudTopM: null,
+  cloudTopUpperM: null,
   altitudeDiffM: null,
   lowCloud: null,
   midCloud: null,
@@ -168,6 +173,20 @@ export const CLOUD_SEA_EMPTY_WINDOW: CloudSeaWindowScore = {
   inversion: EMPTY_INVERSION,
   summary: "该时段无可用预报数据。",
 };
+
+/** Old responses remain inspectable facts, but cannot republish qualified scores. */
+export function qualifyCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSnapshot {
+  if (snapshot.scoreVersion === CLOUD_SEA_SCORE_VERSION) return snapshot;
+  const withhold = (window: CloudSeaWindowScore): CloudSeaWindowScore => ({
+    ...window, score: null, peakScore: null, peakTime: null,
+    summary: "旧版层位未验证，保留地面天气事实，暂不发布评分。",
+    ...(window.coverage ? { coverage: { ...window.coverage, scoreableHours: 0 } } : {}),
+    conditionLevel: null, conditionLabel: null, probabilityLevel: null, probabilityLabel: null,
+    cloudPosition: "unknown", positionLabel: "层位未验证", cloudBaseM: null, cloudTopM: null, cloudTopUpperM: null, altitudeDiffM: null,
+  });
+  return { ...snapshot, stale: true, refreshError: "评分版本已更新，旧分数暂不发布，请刷新天气来源。",
+    sites: Object.fromEntries(Object.entries(snapshot.sites).map(([id, windows]) => [id, { morning: withhold(windows.morning), evening: withhold(windows.evening) }])) };
+}
 
 export function positionLabel(pos: CloudPosition): string {
   switch (pos) {
@@ -221,6 +240,7 @@ function clamp(val: number, min = 0, max = 100): number {
 
 export interface RawSiteHourly {
   sourceFetchedAt?: string | null;
+  sourceGrid?: { providerModel: string; latitude: number; longitude: number; elevation: number };
   time: string[];
   cloud_cover?: Array<number | null>;
   cloud_cover_low?: Array<number | null>;
@@ -244,6 +264,8 @@ interface CloudSeaConditions {
 
 interface VerticalEvidence {
   profileAvailable: boolean;
+  resolution: "resolved" | "ambiguous" | "unavailable";
+  cloudTopUpperM?: number | null;
   layer: CloudLayer | null;
   inversion: TemperatureInversionEvidence;
 }
@@ -253,6 +275,7 @@ interface HourEvaluation {
   position: CloudPosition;
   baseM: number | null;
   topM: number | null;
+  topUpperM?: number | null;
   altitudeDiffM: number | null;
   pressureAvailable: boolean;
   pressureConfidence: CloudLayer["confidence"] | null;
@@ -280,18 +303,36 @@ export function deriveCloudSeaVerticalEvidence(
   samples: PressureLevelSample[] | null,
   modelElevation: number,
   siteElevation: number,
+  nativeLevels?: readonly number[],
 ): VerticalEvidence {
+  if (nativeLevels) samples = samples?.filter(sample => nativeLevels.includes(sample.pressure)) ?? null;
   if (!hasUsablePressureProfile(samples)) {
     return {
       profileAvailable: false,
+      resolution: "unavailable",
       layer: null,
       inversion: EMPTY_INVERSION,
     };
   }
 
-  const completeSamples = samples!.filter(isCompletePressureLevelSample);
+  const completeSamples = samples!.filter(sample => isThermodynamicPressureLevelSample(sample) && sample.heightMsl! >= modelElevation);
   const profile = completeSamples.map(pressureLevelFromSample);
   const layers = deriveCloudLayers(profile, modelElevation, siteElevation);
+  // A sampled cloudy level is only the lower bound of its cloud top. The next
+  // clear level supplies the upper bound; never interpolate an unobserved top.
+  const valid = completeSamples.filter(sample => sample.heightMsl! >= modelElevation - 50)
+    .sort((a, b) => a.heightMsl! - b.heightMsl!);
+  const cloudy = (sample: PressureLevelSample) => (sample.cloudCover ?? 0) >= 55 || sample.humidity! >= 90;
+  const clear = (sample: PressureLevelSample) => !cloudy(sample) && sample.humidity != null && sample.humidity <= 75;
+  const enclosing = layers.find(layer => layer.relation === "云中");
+  const transitionEnclosesSummit = layers.some(layer => {
+    const first = layer.levels[0].heightMsl!;
+    const last = layer.levels.at(-1)!.heightMsl!;
+    const below = valid.filter(sample => sample.heightMsl! < first && clear(sample)).at(-1);
+    const above = valid.find(sample => sample.heightMsl! > last && clear(sample));
+    return (siteElevation > last + 150 && (!above || siteElevation <= Math.ceil(above.heightMsl!) + 150)) ||
+      (siteElevation < first - 150 && (!below || siteElevation >= below.heightMsl! - 150));
+  });
   const lowerTroposphereLayers = layers
     .filter(
       (layer) =>
@@ -299,15 +340,24 @@ export function deriveCloudSeaVerticalEvidence(
         layer.baseAgl <= 3500,
     )
     .sort((left, right) => left.baseMsl - right.baseMsl);
+  const lowerAtSite = valid.filter(sample => sample.heightMsl! <= siteElevation).at(-1);
+  const upperAtSite = valid.find(sample => sample.heightMsl! >= siteElevation);
+  // Qualification policy, not an interpolated cloud boundary. Coarse archival
+  // profiles can have all six required fields yet leave >1km around the summit.
+  const localGapUnresolved = !lowerAtSite || !upperAtSite || upperAtSite.heightMsl! - lowerAtSite.heightMsl! > 750 || !clear(lowerAtSite) || !clear(upperAtSite);
   // A higher deck can envelop the summit even when a valley deck lies below it.
-  const layer = layers.find((candidate) => candidate.relation === "云中") ??
-    lowerTroposphereLayers[0] ?? null;
+  const candidate = enclosing ?? (transitionEnclosesSummit || localGapUnresolved ? null : lowerTroposphereLayers[0] ?? null);
+  const humidityOnly = candidate?.relation === "云上" && !candidate.levels.some(level => (level.cloudCover ?? 0) >= 55);
+  const layer = humidityOnly ? null : candidate;
+  const clearAbove = layer ? valid.find(sample => sample.heightMsl! > layer.levels.at(-1)!.heightMsl! && clear(sample)) : null;
+  const cloudTopUpperM = clearAbove ? Math.ceil(clearAbove.heightMsl!) : null;
+  const upperBoundNotCleared = layer?.relation === "云上" && (cloudTopUpperM == null || siteElevation <= cloudTopUpperM + 150);
   const inversion = detectTemperatureInversion(
     profile,
     modelElevation,
     Math.max(siteElevation + 1500, modelElevation + 2000),
   );
-  return { profileAvailable: true, layer, inversion };
+  return { profileAvailable: true, resolution: (transitionEnclosesSummit || localGapUnresolved || humidityOnly || upperBoundNotCleared) && !enclosing ? "ambiguous" : "resolved", cloudTopUpperM, layer: upperBoundNotCleared ? null : layer, inversion };
 }
 
 function relationToPosition(relation: CloudLayer["relation"]): CloudPosition {
@@ -330,11 +380,12 @@ function evaluateConditions(
   const samples = pressure?.stale ? null : pressureProfileAt(pressure, time);
   const vertical = deriveCloudSeaVerticalEvidence(
     samples,
-    pressure?.modelElevation ?? 0,
+    pressure?.nativeGridElevationM ?? pressure?.modelElevation ?? 0,
     site.altitude,
+    pressure?.qualifiedPressureLevels,
   );
 
-  if (conditions.lowCloud < 25 && vertical.layer?.relation !== "云中") {
+  if (conditions.lowCloud < 25 && !vertical.layer && vertical.resolution !== "ambiguous") {
     const score = clamp(Math.round(8 + conditions.lowCloud * 0.35), 5, 20);
     return {
       score,
@@ -347,6 +398,12 @@ function evaluateConditions(
       inversion: vertical.inversion,
       summary: `低云量仅 ${Math.round(conditions.lowCloud)}%，当前低层云体不足，暂未形成明显云海条件。`,
     };
+  }
+
+  if (pressure?.verticalReference !== "native-grid-v2" || !Number.isFinite(pressure.nativeGridElevationM)) {
+    return { score: null, position: "unknown", baseM: null, topM: null, altitudeDiffM: null,
+      pressureAvailable: vertical.profileAvailable, pressureConfidence: null, inversion: vertical.inversion,
+      summary: "压力来源未证明使用模式原生地形，不能将降尺度海拔当作地下层边界。" };
   }
 
   if (!vertical.profileAvailable) {
@@ -375,25 +432,23 @@ function evaluateConditions(
       pressureConfidence: null,
       inversion: vertical.inversion,
       summary:
-        "surface 低云条件存在，但压力层剖面未能定位连续低层云 deck；暂不推断云海层位。",
+        vertical.resolution === "ambiguous" ? "山顶位于未解析的云顶或云底高度区间，暂不判断云上条件。" : "压力层剖面未能定位连续低层云 deck；暂不推断云海层位。",
     };
   }
 
   const layer = vertical.layer;
   const position = relationToPosition(layer.relation);
-  const altitudeDiffM = site.altitude - layer.topMsl;
+  const altitudeDiffM = Math.floor(site.altitude - (position === "above" ? vertical.cloudTopUpperM! : layer.topMsl));
   let score = 0;
   let summary = "";
 
   if (position === "above") {
     let baseScore = 55;
-    if (conditions.lowCloud >= 75) baseScore += 18;
-    else if (conditions.lowCloud >= 50) baseScore += 12;
+    const deckCloud = Math.max(conditions.lowCloud, ...layer.levels.map(level => level.cloudCover ?? 0));
+    if (deckCloud >= 75) baseScore += 18;
+    else if (deckCloud >= 50) baseScore += 12;
     else baseScore += 5;
-
-    if (conditions.humidity >= 85) baseScore += 8;
-    else if (conditions.humidity >= 75) baseScore += 4;
-    else if (conditions.humidity < 60) baseScore -= 8;
+    // Grid-terrain RH is not summit RH; it cannot establish summit clearance.
 
     if (conditions.windSpeed < 2.0) baseScore += 10;
     else if (conditions.windSpeed < 3.5) baseScore += 5;
@@ -412,7 +467,7 @@ function evaluateConditions(
     // calibrated against observations; otherwise an unrelated inversion aloft
     // can incorrectly inflate the cloud-sea index.
     score = clamp(Math.round(baseScore), 25, 98);
-    summary = `数值模式压力剖面显示山顶高出低层云顶 ${Math.max(
+    summary = `数值模式压力剖面显示山顶至少高出低层云顶上界 ${Math.max(
       0,
       altitudeDiffM,
     )}m；低云 ${Math.round(conditions.lowCloud)}%，${
@@ -437,8 +492,9 @@ function evaluateConditions(
   return {
     score,
     position,
-    baseM: layer.baseMsl,
-    topM: layer.topMsl,
+    baseM: Math.floor(layer.levels[0].heightMsl! / 50) * 50,
+    topM: Math.floor(layer.levels.at(-1)!.heightMsl! / 50) * 50,
+    topUpperM: vertical.cloudTopUpperM,
     altitudeDiffM,
     pressureAvailable: true,
     pressureConfidence: layer.confidence,
@@ -584,6 +640,7 @@ export function evaluateCloudSeaWindow(
     positionLabel: positionLabel(peak.evaluation.position),
     cloudBaseM: peak.evaluation.baseM,
     cloudTopM: peak.evaluation.topM,
+    cloudTopUpperM: peak.evaluation.topUpperM ?? null,
     altitudeDiffM: peak.evaluation.altitudeDiffM,
     pressureConfidence: peak.evaluation.pressureConfidence,
     inversion: peak.evaluation.inversion,
@@ -604,7 +661,7 @@ export function evaluateCloudSeaWindow(
       ...emptyWindow,
       ...baseMetrics,
       ...peakMetrics,
-      summary: `窗口内仅 ${scoreable.length}/${coverage.expectedHours} 个目标时次具备可解释的云海条件；必须超过半数才发布窗口指数，且不使用启发式云底补齐。${peak ? ` 最佳已知小时 ${peak.time.slice(11, 16)} 的单小时证据：${peak.evaluation.summary}` : ""}`,
+      summary: `窗口内仅 ${scoreable.length}/${coverage.expectedHours} 个目标时次具备可解释的云海条件；必须超过半数才发布窗口指数，且不使用启发式云底补齐。${peak ? ` 最佳已知小时 ${peak.time.slice(11, 16)} 的单小时证据：${peak.evaluation.summary}` : [...new Set(hourlyEvaluations.map(item => item.evaluation.summary))].slice(0, 2).join(" ")}`,
     };
   }
 
@@ -695,6 +752,7 @@ export function buildCloudSeaSnapshot(
   );
 
   return {
+    scoreVersion: CLOUD_SEA_SCORE_VERSION,
     date,
     model,
     generatedAt: new Date().toISOString(),

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "./offline-test.js";
 import { expandMobileDataSheet } from "./mobile-data-sheet.js";
+import { CLOUD_SEA_SCORE_VERSION } from "../../src/lib/cloudsea";
 
 const onePixelPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -40,6 +41,7 @@ function cloudSeaWindow(score: number) {
     positionLabel: "山顶在云层上方",
     cloudBaseM: 900,
     cloudTopM: 1200,
+    cloudTopUpperM: 1250,
     altitudeDiffM: 300,
     lowCloud: 70,
     midCloud: 30,
@@ -129,6 +131,7 @@ test("云海分数滑块只保留达到门槛的排行地点", async ({ page }, 
         stale: false,
         surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
+        scoreVersion: CLOUD_SEA_SCORE_VERSION,
         sites: {
           "cs-taizijian": { morning: cloudSeaWindow(72), evening: cloudSeaWindow(40) },
           "cs-qianniugang": { morning: cloudSeaWindow(60), evening: cloudSeaWindow(40) },

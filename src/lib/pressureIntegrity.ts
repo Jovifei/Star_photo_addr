@@ -11,6 +11,15 @@ export function isCompletePressureLevelSample(sample: PressureLevelSample): bool
     isValidProviderValue(`geopotential_height_${sample.pressure}hPa`, sample.heightMsl);
 }
 
+/** Dense temperature/RH/height can bound clear air without making up cloud %. */
+export function isThermodynamicPressureLevelSample(sample: PressureLevelSample): boolean {
+  return (PRESSURE_LEVELS as readonly number[]).includes(sample.pressure) &&
+    (sample.cloudCover == null || isValidProviderValue(`cloud_cover_${sample.pressure}hPa`, sample.cloudCover)) &&
+    isValidProviderValue(`relative_humidity_${sample.pressure}hPa`, sample.humidity) &&
+    isValidProviderValue(`temperature_${sample.pressure}hPa`, sample.temperature) &&
+    isValidProviderValue(`geopotential_height_${sample.pressure}hPa`, sample.heightMsl);
+}
+
 export function usablePressureLevelCount(samples: PressureLevelSample[] | null | undefined): number {
   return new Set(samples?.filter(isCompletePressureLevelSample).map(sample => sample.pressure)).size;
 }
