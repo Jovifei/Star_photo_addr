@@ -1,4 +1,5 @@
 import { expect, test } from "./offline-test.js";
+import { CLOUD_SEA_SCORE_VERSION } from "../../src/lib/cloudsea";
 
 function todayKey(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -95,7 +96,7 @@ test("手机云海三日最优排行逐行标明最高指数日期", async ({ pa
     const date = new URL(route.request().url()).searchParams.get("date") ?? base;
     const window = cloudSeaWindow(date, scoreFor(date, dates));
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
-      date, model: "gfs", generatedAt: `${date}T00:30:00.000Z`, source: "mobile three-day ranking test", stale: false,
+      date, model: "gfs", scoreVersion: CLOUD_SEA_SCORE_VERSION, generatedAt: `${date}T00:30:00.000Z`, source: "mobile three-day ranking test", stale: false,
       surface: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
       pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
       sites: { "cs-taizijian": { morning: window, evening: window } },
