@@ -46,10 +46,17 @@ const HEIGHTS: Record<number, number> = {
   950: 500,
   925: 750,
   900: 1000,
+  875: 1250,
   850: 1500,
+  825: 1750,
   800: 2000,
+  775: 2250,
+  750: 2500,
+  725: 2750,
   700: 3000,
+  650: 3500,
   600: 4200,
+  550: 4900,
   500: 5600,
 };
 
@@ -102,6 +109,9 @@ function pressureFor(
   return {
     locationId: siteId,
     modelElevation,
+    nativeGridElevationM: modelElevation,
+    verticalReference: "native-grid-v2",
+    qualifiedPressureLevels: PRESSURE_LEVELS,
     timezone: "Asia/Shanghai",
     utcOffsetSeconds: 28800,
     fetchedAt: "2026-09-04T00:00:00.000Z",
@@ -187,7 +197,7 @@ describe("evaluateCloudSeaWindow", () => {
     const pressure = pressureFor(MOCK_HIGH_SITE.id, hourly.time);
     for (const samples of Object.values(pressure.profiles)) {
       for (const sample of samples) {
-        if (sample.pressure === 800 || sample.pressure === 700) {
+        if (sample.pressure <= 800 && sample.pressure >= 700) {
           sample.cloudCover = 90;
           sample.humidity = 95;
         }
@@ -216,8 +226,10 @@ describe("evaluateCloudSeaWindow", () => {
 
   it("keeps a brief excellent hour separate from the window mean", () => {
     const hourly = hourlyFixture({ cloud_cover_low: [90, 0, 0, 0] });
+    const pressure = pressureFor(MOCK_HIGH_SITE.id, hourly.time);
+    for (const time of hourly.time.slice(1)) pressure.profiles[time] = profileSamples().map(sample => ({...sample,cloudCover:0,humidity:55}));
     const result = evaluateCloudSeaWindow(
-      MOCK_HIGH_SITE, hourly, [5, 6, 7, 8], pressureFor(MOCK_HIGH_SITE.id, hourly.time),
+      MOCK_HIGH_SITE, hourly, [5, 6, 7, 8], pressure,
     );
     expect(result.score).toBeLessThan(40);
     expect(result.peakScore).toBeGreaterThan(90);
@@ -300,12 +312,13 @@ describe("evaluateCloudSeaWindow", () => {
     expect(result.probabilityLabel).toBe(result.conditionLabel);
     expect(result.cloudBaseM).toBe(500);
     expect(result.cloudTopM).toBe(1000);
-    expect(result.altitudeDiffM).toBe(2660);
+    expect(result.cloudTopUpperM).toBe(1250);
+    expect(result.altitudeDiffM).toBe(2410);
     expect(result.pressureStatus).toBe("available");
     expect(result.inversion.status).toBe("detected");
   });
 
-  it("identifies a low site below the same pressure-derived cloud deck", () => {
+  it("withholds a low site inside the unresolved cloud-base transition", () => {
     const hourly = hourlyFixture({
       cloud_cover_low: [80, 80, 85, 80],
       cloud_cover_mid: [50, 50, 60, 50],
@@ -320,9 +333,8 @@ describe("evaluateCloudSeaWindow", () => {
       [5, 6, 7, 8],
       pressureFor(MOCK_LOW_SITE.id, hourly.time, "low-deck", 50),
     );
-    expect(result.cloudPosition).toBe("below");
-    expect(result.positionLabel).toBe("山顶在云层下方");
-    expect(result.score).toBeLessThanOrEqual(35);
+    expect(result.cloudPosition).toBe("unknown");
+    expect(result.score).toBeNull();
   });
 
   it("fails closed instead of inventing cloud base/top when pressure is unavailable", () => {

@@ -11,7 +11,14 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL, date: "2026-10-04", tag: "候选天气失败恢复", current: true,
+    version: APP_VERSION_LABEL, date: "2026-10-26", tag: "云海来源与保守评分", current: true,
+    highlights: [
+      { icon: Mountain, title: "按原生地形核对云层", desc: "分开记录地面与压力网格海拔，检查山顶附近的有效压力层及云顶范围；层位不清楚时暂缓评分。" },
+      { icon: ShieldCheck, title: "收紧云上高分资格", desc: "湿润空气不再直接当作晴空上界，旧评分缓存失效；条件指数仍不代表经过实拍校准的发生概率。" },
+    ],
+  },
+  {
+    version: "v1.0.27", date: "2026-10-04", tag: "候选天气失败恢复", current: false,
     highlights: [{ icon: CloudSun, title: "冷却结束后恢复候选天气", desc: "临时失败后按冷却期限补一次普通请求，成功后清除错误；仍失败则停止自动重试，保留缺失和过期说明。" }],
   },
   {

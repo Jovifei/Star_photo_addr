@@ -109,6 +109,7 @@ test("云海日期控件显示日期，并实际请求后日与三日总览的�
       body: JSON.stringify({
         date,
         model: "gfs",
+        scoreVersion: "cloudsea-native-conservative-v3",
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E surface + pressure-level model profile",
         stale: false,

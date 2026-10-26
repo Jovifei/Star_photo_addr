@@ -161,19 +161,19 @@ describe("pressure forecast batch", () => {
   it("requires at least six fully aligned pressure-level series", () => {
     expect(() => parsePressureForecast(rawPressure(), "site-a", "icon")).not.toThrow();
     expect(() =>
-      parsePressureForecast(rawPressure({ brokenLevels: 5 }), "site-a", "icon"),
+      parsePressureForecast(rawPressure({ brokenLevels: PRESSURE_LEVELS.length - 5 }), "site-a", "icon"),
     ).toThrow(/5 个完整可用层/);
   });
 
-  it("requires provider model elevation instead of silently substituting sea level", () => {
+  it("requires provider elevation instead of silently substituting sea level", () => {
     expect(() =>
       parsePressureForecast(rawPressure({ omitElevation: true }), "site-a", "icon"),
-    ).toThrow(/模式地形高程 elevation/);
+    ).toThrow(/elevation.*缺失/);
   });
 
   it("tracks hourly profile completeness separately from aligned day-level arrays", () => {
     const parsed = parsePressureForecast(
-      rawPressure({ sparseSecondHourLevels: 5 }),
+      rawPressure({ sparseSecondHourLevels: PRESSURE_LEVELS.length - 5 }),
       "site-a",
       "icon",
     );
@@ -184,7 +184,7 @@ describe("pressure forecast batch", () => {
   it("rejects a response whose whole day has no hour with six complete levels", () => {
     expect(() =>
       parsePressureForecast(
-        rawPressure({ sparseSecondHourLevels: 10, brokenLevels: 0 }),
+        rawPressure({ sparseSecondHourLevels: PRESSURE_LEVELS.length, brokenLevels: 0 }),
         "site-a",
         "icon",
       ),

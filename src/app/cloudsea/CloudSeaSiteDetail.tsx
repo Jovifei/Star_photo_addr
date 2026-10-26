@@ -309,14 +309,14 @@ export default function CloudSeaSiteDetail({
             <span className="cs-pressure-evidence-label">压力层证据</span>
             <strong>
               {win.pressureStatus === "available"
-                ? "压力层证据完整"
+                ? "压力层时次齐备"
                 : win.pressureStatus === "partial"
                   ? "压力层时次部分可用"
                   : "压力层证据不足"}
             </strong>
             <small>
               {win.cloudPosition === "unknown"
-                ? "缺失 pressure 不推断垂直云层层位"
+                ? "山顶层位仍待解析，暂不发布推荐"
                 : win.pressureStatus === "partial"
                   ? "当前窗口仍可使用已有真实时次"
                   : "当前地点的 pressure 覆盖状态"}
@@ -362,7 +362,7 @@ export default function CloudSeaSiteDetail({
                       ▲ 压力层显示山顶在云层上方
                     </span>
                     <span className="cs-gap-meta">
-                      山顶高出模式云顶 {diff}m；最佳剖面时次 {pressureTimeLabel}
+                      山顶至少高出模式云顶上界 {diff}m；最佳剖面时次 {pressureTimeLabel}
                     </span>
                   </>
                 ) : isIn ? (
@@ -409,10 +409,10 @@ export default function CloudSeaSiteDetail({
               <div className="cs-cloud-top-edge">
                 <div className="cs-cloud-wave-label">
                   <Waves size={12} />
-                  <span>压力层云顶 (MSL)</span>
+                  <span>模式云顶范围 (MSL)</span>
                 </div>
                 <strong className="cs-cloud-alt">
-                  {win.cloudTopM != null ? `${win.cloudTopM} m` : "—"}
+                  {win.cloudTopM != null && win.cloudTopUpperM != null ? `${win.cloudTopM}–${Math.round(win.cloudTopUpperM)} m` : "—"}
                 </strong>
               </div>
 
@@ -420,7 +420,7 @@ export default function CloudSeaSiteDetail({
                 <div className="cs-cloud-mist-bg" />
                 <div className="cs-cloud-stats-inline">
                   <span>
-                    模式层厚: <b>{cloudThickness != null ? `${cloudThickness}m` : "—"}</b>
+                    已解析有云跨度: <b>{cloudThickness != null ? `${cloudThickness}m` : "—"}</b>
                   </span>
                   <span>
                     层位判断: <b>{win.positionLabel}</b>
@@ -434,7 +434,7 @@ export default function CloudSeaSiteDetail({
               <div className="cs-cloud-base-edge">
                 <div className="cs-cloud-base-label">
                   <span className="cs-base-dot" />
-                  <span>压力层云底 (MSL)</span>
+                  <span>最低有云采样层 (MSL)</span>
                 </div>
                 <span className="cs-cloud-base-alt">
                   {win.cloudBaseM != null ? `${win.cloudBaseM} m` : "—"}

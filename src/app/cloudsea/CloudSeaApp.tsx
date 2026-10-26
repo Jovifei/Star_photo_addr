@@ -41,6 +41,7 @@ import {
   hasCompleteCloudSeaCoverage,
   hasValidCloudSeaCoverageCounts,
   positionBadgeTone,
+  qualifyCloudSeaSnapshot,
   type CloudSeaConditionLevel,
   type CloudSeaSnapshot,
   type CloudSeaWindowScore,
@@ -196,13 +197,14 @@ export default function CloudSeaApp() {
                 signal: controller.signal,
               });
               providerCooldown = response.status === 429 || response.headers.has("Retry-After");
-              const payload = (await response.json().catch(() => null)) as
+              let payload = (await response.json().catch(() => null)) as
                 | (CloudSeaSnapshot & { error?: string })
                 | null;
               if (response.ok && payload?.sites) {
                 if (payload.date !== date || payload.model !== model) {
                   throw new Error("云海快照日期或模型与请求不一致");
                 }
+                payload = qualifyCloudSeaSnapshot(payload);
                 const pressureComplete = hasCompleteCloudSeaCoverage(
                   payload.pressure,
                   CLOUD_SEA_SITES.length,

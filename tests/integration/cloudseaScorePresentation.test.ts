@@ -13,6 +13,16 @@ function detail(overrides: Partial<CloudSeaWindowScore>) {
 }
 
 describe("cloud-sea window statistics disclosure", () => {
+  it("shows a cloud-top interval rather than an invented exact top",()=>{
+    const text=detail({cloudPosition:"above",cloudTopM:750,cloudTopUpperM:1000,altitudeDiffM:910,pressureStatus:"available"});
+    expect(text).toContain("750–1000 m");
+    expect(text).toContain("至少高出");
+  });
+  it("distinguishes available pressure data from unresolved summit geometry",()=>{
+    const text=detail({cloudPosition:"unknown",pressureStatus:"available"});
+    expect(text).toContain("山顶层位仍待解析");
+    expect(text).not.toContain("缺失 pressure");
+  });
   it("distinguishes the window mean from a short high-scoring hour", () => {
     const text = detail({ score: 31, conditionLabel: "31/100", peakTime: "05:00", peakScore: 98,
       coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 4, pressureHours: 4 } });
