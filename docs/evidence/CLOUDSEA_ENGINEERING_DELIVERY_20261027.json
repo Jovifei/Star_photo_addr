@@ -1,0 +1,85 @@
+{
+  "acceptedUtc": "2026-10-26T16:42:56.777471+00:00",
+  "version": "1.0.28",
+  "runtimeSource": "870e2d9cd16d79d31e0bbb02d8bc88851755040a",
+  "mergedMain": "3ae02cd3bd14463835721d92de6dd3c74e07a279",
+  "sourceTreeMatchesMergedMain": true,
+  "pullRequest": "https://github.com/Jovifei/Star_photo_addr/pull/58",
+  "ci": "https://github.com/Jovifei/Star_photo_addr/actions/runs/40353648020",
+  "appWorkerImage": "sha256:f25f21ccbab200cacc7aadd6a1321036f8fae7ea97856a47effd44a3dca233c9",
+  "servicesHealthy": true,
+  "restartCounts": [
+    0,
+    0
+  ],
+  "snapshotBackupBytes": 61187444,
+  "snapshotBackupSha256": "0f7572c97e23de41eb86b4f0659008a5a7717f43675dcdcc00bb298602d0fe0c",
+  "rollback": "star-photo-addr:rollback-before-870e2d9cd16d",
+  "originalVolumeRetained": true,
+  "sourceCoverage": {
+    "surface": {
+      "status": "available",
+      "availableSites": 54,
+      "totalSites": 54,
+      "failedSites": 0
+    },
+    "pressure": {
+      "status": "partial",
+      "availableSites": 35,
+      "totalSites": 54,
+      "failedSites": 19
+    }
+  },
+  "actualSupplierReplay": {
+    "qualification": "SAME_SOURCE_PRODUCTION_REPLAY_NOT_EMPIRICAL_FORECAST_ACCURACY",
+    "date": "2026-10-27",
+    "scoreVersion": "cloudsea-native-conservative-v3",
+    "requests": 6,
+    "surfaceSites": 54,
+    "pressureSites": 35,
+    "pressureRejected": 19,
+    "rejectedReasons": [
+      "Open-Meteo relative_humidity_775hPa \u6570\u503c\u8303\u56f4\u6216\u65f6\u95f4\u8f74\u65e0\u6548",
+      "Open-Meteo cloud_cover_775hPa \u6570\u503c\u8303\u56f4\u6216\u65f6\u95f4\u8f74\u65e0\u6548",
+      "Open-Meteo cloud_cover_725hPa \u6570\u503c\u8303\u56f4\u6216\u65f6\u95f4\u8f74\u65e0\u6548",
+      "Open-Meteo relative_humidity_725hPa \u6570\u503c\u8303\u56f4\u6216\u65f6\u95f4\u8f74\u65e0\u6548"
+    ],
+    "windows": 108,
+    "comparedFields": 15,
+    "differences": [],
+    "passed": true
+  },
+  "testSummary": {
+    "source": "870e2d9cd16d79d31e0bbb02d8bc88851755040a",
+    "check": {
+      "status": "PASS",
+      "testFiles": 110,
+      "tests": 685,
+      "lint": true,
+      "types": true,
+      "build": true
+    },
+    "chromium": {
+      "pass": 290,
+      "existingDeviceApplicabilitySkips": 134,
+      "fail": 0
+    },
+    "crossBrowser": {
+      "pass": 12,
+      "fail": 0
+    },
+    "research": {
+      "pass": 52,
+      "fail": 0
+    },
+    "productionDependencyVulnerabilities": 0,
+    "protectedOriginalReports": 59,
+    "retainedFailureLogs": true,
+    "science": "NOT_CALIBRATED"
+  },
+  "screenshots": [
+    "E:/Claude_allow/Download/starphoto-cloudsea-release-20261026/production-cloudsea-20261027.jpg",
+    "E:/Claude_allow/Download/starphoto-cloudsea-release-20261026/production-cloudsea-mobile-20261027.jpg"
+  ],
+  "science": "NOT_CALIBRATED"
+}

@@ -1520,7 +1520,8 @@ Review：docs/audits/CLOUDSEA_CONSERVATIVE_HOLDOUT_20261026.md及camera-holdout-
 
 ### 2026-10-26 工程修复部署（最新授权）
 - [x] Jovi在知悉独立留出未通过后，明确授权工程改动/测试完成即可部署。历史科学门槛和负结果原样保留。
-- [ ] 完成精确发布版本、真实来源核对、源码审核和工程门禁。
-- [ ] 提交GitHub、旁路镜像预检、一致备份和可回滚切换。
-- [ ] 正式网页、原始云海数据及计算验证，交付运行SHA及收据。
+- [x] v1.0.28；修复真实上游可选temperature全null误拒绝；685测试、完整Chromium290PASS/134适用SKIP、跨浏览器12PASS、audit0及源码审查通过。
+- [x] PR58合并3ae02cd，运行870e2d9精确CI五项成功；旁路预检、一致备份、原卷/回滚保留，双服务同镜像healthy。
+- [x] 正式四入口HTTPS200、三HTML哈希匹配；真实54地点108窗口回算0差异，桌面/375px手机UI均分13/峰值15一致；压力35/54及异常降级如实显示。
 计划：tasks/plans/2026-10-26-cloudsea-conservative-deployment.md。
+交付：docs/CLOUDSEA_ENGINEERING_DELIVERY_20261027.md；科学命中率仍未通过，未改写历史结论。真机/读屏器未验收。Hub连接拒绝，待发记录保留，不自动重试。
