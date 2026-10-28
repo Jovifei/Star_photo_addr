@@ -264,12 +264,20 @@ test("fireglow date and phase switch real data and stale snapshot forces refresh
     for (const [id, [evening, morning]] of Object.entries(scores)) {
       sites[id] = { evening: glowWindow(evening), morning: glowWindow(morning) };
     }
+    const sourceFetchedAt = new Date().toISOString();
+    const ids = Object.keys(sites);
     return {
       date,
       model: "icon",
       generatedAt: "2026-08-30T10:00:00.000Z",
       source: "e2e-mock",
       stale,
+      provenance: { version: 1, sourcesBySite: Object.fromEntries(ids.map((id) => [id, [{
+        provider: "Open-Meteo", dataset: "surface", model: "icon", sourceFetchedAt, providerRunAt: null, observedAt: null,
+      }]])) },
+      sourceQuality: { version: 1, staleScope: stale ? "site" : "none", bySite: Object.fromEntries(ids.map((id) => [id, {
+        status: stale ? "stale" : "available", model: "icon",
+      }])) },
       sites,
     };
   }
@@ -309,6 +317,7 @@ test("fireglow date and phase switch real data and stale snapshot forces refresh
   await expect(list.locator("li").first()).toContainText("阿里暗夜公园", {
     timeout: 20000,
   });
+  await expect(page.locator(".fireglow-map-status")).toHaveCount(0);
 
   await page.getByRole("button", { name: "明日" }).click();
   await expect(list.locator("li").first()).toContainText("那曲暗夜公园", {
