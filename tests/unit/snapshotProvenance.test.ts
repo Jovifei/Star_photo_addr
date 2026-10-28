@@ -35,3 +35,13 @@ it("an empty regenerated snapshot has no supplier clock and stays stale", () => 
   expect(snapshotSourceAgeMs(snapshot.provenance)).toBe(Infinity);
   expect(snapshot.stale).toBe(true);
 });
+it("marks an impossible source calendar date stale during snapshot construction", () => {
+  vi.useFakeTimers(); vi.setSystemTime("2026-03-02T12:00:00Z");
+  try {
+    const snapshot = buildFireGlowSnapshot("2026-03-02", "icon", { "2026-03-02": {
+      point: { status: "available", hourly: null, model: "icon", fetchedAt: "2026-02-30T12:00:00Z" },
+    } });
+    expect(snapshot.stale).toBe(true);
+    expect(snapshot.sourceQuality?.staleScope).toBe("site");
+  } finally { vi.useRealTimers(); }
+});

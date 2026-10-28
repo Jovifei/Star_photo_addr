@@ -26,7 +26,7 @@ function hasValidSourceGroups(provenance: SnapshotProvenance | undefined): boole
 }
 
 /** Date.parse normalizes impossible dates such as February 30; never trust them as acquisition times. */
-function fireGlowSourceTimeAgeMs(timestamp: unknown, now: number): number {
+export function fireGlowSourceTimeAgeMs(timestamp: unknown, now = Date.now()): number {
   if (typeof timestamp !== "string") return Infinity;
   const parts = /^(\d{4})-(\d{2})-(\d{2})T/i.exec(timestamp);
   if (!parts) return Infinity;

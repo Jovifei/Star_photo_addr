@@ -1,4 +1,4 @@
-import { dataAgeMs } from "./forecastIntegrity";
+import { fireGlowSourceTimeAgeMs } from "./fireglowQuality";
 import { snapshotSourceTime, type SnapshotProvenance } from "./snapshotProvenance";
 import { isValidProviderValue } from "./providerWeatherIntegrity";
 // Fire-glow (火烧云 / 朝晚霞) scoring for the curated site library.
@@ -458,7 +458,7 @@ export function buildFireGlowSnapshot(
     sites[site.id] = scoreFireGlowSite(site, dayRecords[site.id], date);
   }
   const records = Object.values(dayRecords);
-  const stale = !records.length || records.some((record) => record.status === "stale" || record.status === "error" || !Number.isFinite(dataAgeMs(record.provenance?.sourceFetchedAt ?? record.fetchedAt)));
+  const stale = !records.length || records.some((record) => record.status === "stale" || record.status === "error" || !Number.isFinite(fireGlowSourceTimeAgeMs(record.provenance?.sourceFetchedAt ?? record.fetchedAt)));
   return {
     date,
     model,
