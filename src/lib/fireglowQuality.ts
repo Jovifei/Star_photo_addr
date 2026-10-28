@@ -1,5 +1,5 @@
 import { dataAgeMs } from "./forecastIntegrity";
-import { snapshotSourceAgeMs, type SnapshotProvenance } from "./snapshotProvenance";
+import type { SnapshotProvenance } from "./snapshotProvenance";
 import type { FireGlowSnapshot } from "./fireglow";
 import type { FinderWeatherStatus } from "./stargazingFinderTypes";
 import type { ForecastModel } from "./types";
@@ -25,9 +25,26 @@ function hasValidSourceGroups(provenance: SnapshotProvenance | undefined): boole
     Object.values(groups).every((group) => Array.isArray(group) && group.every((source) => source && typeof source === "object")));
 }
 
+/** Date.parse normalizes impossible dates such as February 30; never trust them as acquisition times. */
+function fireGlowSourceTimeAgeMs(timestamp: unknown, now: number): number {
+  if (typeof timestamp !== "string") return Infinity;
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T/i.exec(timestamp);
+  if (!parts) return Infinity;
+  const year = Number(parts[1]);
+  const month = Number(parts[2]);
+  const day = Number(parts[3]);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month < 1 || month > 12 || day < 1 || day > days[month - 1]) return Infinity;
+  // Preserve dataAgeMs's absolute-zone and five-minute future-clock rules.
+  return dataAgeMs(timestamp, now);
+}
+
 /** Invalid persisted JSON is unknown, never fresh. The shared clock rules remain unchanged. */
 export function fireGlowSourceAgeMs(provenance: SnapshotProvenance | undefined, now = Date.now()): number {
-  return hasValidSourceGroups(provenance) ? snapshotSourceAgeMs(provenance, now) : Infinity;
+  if (!hasValidSourceGroups(provenance)) return Infinity;
+  const sources = Object.values(provenance!.sourcesBySite).flat();
+  return sources.length ? Math.max(...sources.map((source) => fireGlowSourceTimeAgeMs(source.sourceFetchedAt, now))) : Infinity;
 }
 
 /** Only the causes used by buildFireGlowSnapshot and snapshotJson explain site-scoped stale. */
@@ -36,7 +53,7 @@ function hasSiteStaleCause(snapshot: FireGlowSnapshot, now: number): boolean {
   const statuses = Object.values(snapshot.sourceQuality?.bySite ?? {});
   if (statuses.some((item) => item?.status === "stale" || item?.status === "error")) return true;
   const sources = Object.values(snapshot.provenance?.sourcesBySite ?? {}).flat();
-  return sources.some((source) => dataAgeMs(source?.sourceFetchedAt, now) > FIRE_GLOW_FRESH_MS);
+  return sources.some((source) => fireGlowSourceTimeAgeMs(source?.sourceFetchedAt, now) > FIRE_GLOW_FRESH_MS);
 }
 
 export function fireGlowBatchDegraded(snapshot: FireGlowSnapshot, now: number): boolean {
@@ -71,8 +88,7 @@ export function fireGlowSiteQuality(
     return { state: "unknown", notice: "数据已降级：所选地点的来源或模型无法核验。" };
   }
   if (!hasValidSourceGroups(snapshot.provenance)) return { state: "unknown", notice: "数据已降级：快照来源结构异常，无法核验。" };
-  // dataAgeMs intentionally shares snapshotProvenance's five-minute future-clock tolerance.
-  const age = dataAgeMs(sources[0].sourceFetchedAt, now);
+  const age = fireGlowSourceTimeAgeMs(sources[0].sourceFetchedAt, now);
   if (!Number.isFinite(age)) return { state: "unknown", notice: "数据已降级：所选地点原始采集时间缺失或异常。" };
   if (age > FIRE_GLOW_FRESH_MS) return { state: "expired", notice: "数据已降级：所选地点原始天气已超过 30 分钟，不作新鲜推荐。" };
   if (snapshot.stale && (quality?.staleScope !== "site" || !hasSiteStaleCause(snapshot, now))) {

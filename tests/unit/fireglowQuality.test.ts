@@ -75,6 +75,16 @@ describe("fireglow site quality", () => {
     expect(assess(s, "fresh", "evening", NOW + 1).state).toBe("expired");
   });
 
+  it("rejects impossible calendar dates that Date.parse would normalize", () => {
+    const s = snapshot();
+    const normalizedDate = Date.parse("2026-03-02T12:00:00Z");
+    s.provenance!.sourcesBySite.fresh[0].sourceFetchedAt = "2026-02-30T12:00:00Z";
+    s.provenance!.sourcesBySite.other[0].sourceFetchedAt = "2026-03-02T12:00:00Z";
+    expect(fireGlowBatchDegraded(s, normalizedDate)).toBe(true);
+    expect(assess(s, "fresh", "evening", normalizedDate).state).toBe("unknown");
+    expect(assess(s, "other", "evening", normalizedDate).state).toBe("fresh");
+  });
+
   it("does not trust missing provenance, a legacy contract, or mismatched models", () => {
     const s = snapshot();
     s.provenance!.sourcesBySite.fresh = [];

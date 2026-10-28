@@ -171,4 +171,18 @@ describe("GET /api/fireglow/snapshot", () => {
     expect(response.status).toBe(200);
     expect((await response.json()).stale).toBe(true);
   });
+
+  it("does not mark an impossible calendar source fresh after date normalization", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-02T12:00:00Z"));
+    try {
+      state.mode = "valid";
+      state.sourceFetchedAt = "2026-02-30T12:00:00Z";
+      const { GET } = await import("@/app/api/fireglow/snapshot/route");
+      const response = await GET(request("date=2026-03-02&model=icon"));
+      expect((await response.json()).stale).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
