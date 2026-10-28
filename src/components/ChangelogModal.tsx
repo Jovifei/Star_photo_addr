@@ -11,7 +11,13 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL, date: "2026-10-26", tag: "云海来源与保守评分", current: true,
+    version: APP_VERSION_LABEL, date: "2026-10-28", tag: "火烧云逐点来源状态", current: true,
+    highlights: [
+      { icon: ShieldCheck, title: "按地点核对数据状态", desc: "火烧云详情按日期、地点与晨晚窗口显示来源状态；批次降级和三日覆盖不足仍会提醒。" },
+    ],
+  },
+  {
+    version: "v1.0.28", date: "2026-10-26", tag: "云海来源与保守评分", current: false,
     highlights: [
       { icon: Mountain, title: "按原生地形核对云层", desc: "分开记录地面与压力网格海拔，检查山顶附近的有效压力层及云顶范围；层位不清楚时暂缓评分。" },
       { icon: ShieldCheck, title: "收紧云上高分资格", desc: "湿润空气不再直接当作晴空上界，旧评分缓存失效；条件指数仍不代表经过实拍校准的发生概率。" },

@@ -30,6 +30,14 @@ function shiftDate(date: string, days: number): string {
   return value.toISOString().slice(0, 10);
 }
 
+function sourceEvidence(sourceFetchedAt = new Date().toISOString(), staleScope: "none" | "site" | "snapshot" = "none") {
+  const id = "finder-001-location";
+  return {
+    provenance: { version: 1, sourcesBySite: { [id]: [{ provider: "Open-Meteo", model: "icon", dataset: "surface", sourceFetchedAt, providerRunAt: null, observedAt: null }] } },
+    sourceQuality: { version: 1, bySite: { [id]: { status: "available", model: "icon" } }, staleScope },
+  };
+}
+
 test("failed refresh preserves the same labelled snapshot in map, list and detail, then recovers", async ({ page }, testInfo) => {
   const mobile = testInfo.project.name === "mobile";
   let fail = false;
@@ -38,6 +46,7 @@ test("failed refresh preserves the same labelled snapshot in map, list and detai
     const date = new URL(route.request().url()).searchParams.get("date");
     await route.fulfill({status: fail ? 503 : 200, contentType: "application/json", body: JSON.stringify(fail ? {error:"provider temporarily unavailable"} : {
       date, model:"icon", generatedAt:new Date().toISOString(), source:"recovery test", stale:false,
+      ...sourceEvidence(),
       sites:{"finder-001-location":{morning:windowScore(score),evening:windowScore(score)}},
     })});
   });
@@ -52,7 +61,7 @@ test("failed refresh preserves the same labelled snapshot in map, list and detai
   fail = true;
   await page.getByRole('button',{name:'强制刷新火烧云快照'}).click();
   if (mobile) {
-    await expect(page.locator('.mobile-data-sheet-copy strong')).toHaveText('旧数据 · 不作推荐');
+    await expect(page.locator('.mobile-data-sheet-copy strong')).toHaveText('部分数据已降级');
     await expect(page.locator('.mobile-data-sheet-status')).toContainText('provider temporarily unavailable');
   } else {
     await expect(page.locator('.fireglow-map-status')).toContainText('数据已降级');
@@ -61,6 +70,7 @@ test("failed refresh preserves the same labelled snapshot in map, list and detai
   await expect(scoreLabel).toHaveText('72/100');
   await (mobile ? page.locator('.mobile-sheet-ranking button').first() : page.locator('.fireglow-list button').first()).click();
   if (mobile) await expandMobileDataSheet(page);
+  if (mobile) await expect(page.locator('.mobile-data-sheet-copy strong')).toHaveText('刷新失败 · 不作推荐');
   await expect(page.locator('.fg-detail-data-status')).toContainText('数据已降级');
   await page.getByRole('button',{name:'关闭火烧云详情舱'}).click();
   fail = false; score = 81;
@@ -93,6 +103,7 @@ test("does not render an HTTP 200 empty fireglow snapshot as a successful zero-p
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E fireglow empty/valid transition",
         stale: false,
+        ...sourceEvidence(),
         sites: {
           "finder-001-location": { evening: windowScore(score), morning: windowScore(score) },
         },
@@ -125,6 +136,7 @@ test("stale fireglow state is explicit on map, ranking and detail", async ({ pag
         source: "E2E stale consistency",
         stale: true,
         refreshError: "上游限流，保留最近成功快照",
+        ...sourceEvidence(new Date().toISOString(), "snapshot"),
         sites: {
           "finder-001-location": { evening: scoreWindow, morning: scoreWindow },
         },
@@ -159,6 +171,7 @@ test("three-day view labels a cold failed date as incomplete across map, ranking
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E partial three-day coverage",
         stale: false,
+        ...sourceEvidence(),
         sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(72) } },
       }),
     });
@@ -174,7 +187,7 @@ test("three-day view labels a cold failed date as incomplete across map, ranking
   await expect(page.locator(".fireglow-panel-head")).toContainText("数据已降级");
   await expect(page.locator(".fireglow-error:not(.fireglow-phase-unavailable)")).toContainText("fixture HTTP 503");
   await page.locator(".fireglow-list button").first().click();
-  await expect(page.locator(".fg-detail-data-status")).toContainText("数据已降级");
+  await expect(page.locator(".fg-detail-data-status")).toContainText("三日比较不完整");
 });
 
 test("reports when the selected fireglow phase has no scores even if the other phase does", async ({ page }, testInfo) => {
@@ -190,6 +203,7 @@ test("reports when the selected fireglow phase has no scores even if the other p
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E single-phase coverage",
         stale: false,
+        ...sourceEvidence(),
         sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(null) } },
       }),
     });
@@ -226,6 +240,7 @@ test("retains the selected-phase warning when another date in the range fails", 
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E partial phase and date coverage",
         stale: false,
+        ...sourceEvidence(),
         sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(null) } },
       }),
     });
@@ -251,7 +266,7 @@ test("HTTP200 retained snapshot with Retry-After stays visible and stops later d
     await route.fulfill({ status: 200, headers: { "Retry-After": "600" }, json: {
       date, model: "icon", generatedAt: new Date().toISOString(), source: "retained fixture", stale: true,
       refreshError: "provider cooldown; retained original snapshot",
-      provenance: { version: 1, sourcesBySite: { "finder-001-location": [{ provider: "Open-Meteo", model: "icon", dataset: "surface", sourceFetchedAt, providerRunAt: null, observedAt: null }] } },
+      ...sourceEvidence(sourceFetchedAt, "snapshot"),
       sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(72) } },
     } });
   });
@@ -265,10 +280,11 @@ test("HTTP200 retained snapshot with Retry-After stays visible and stops later d
   await expect.poll(() => requestedDates.length).toBe(2);
   await expect(scoreLabel).toHaveText(mobile ? /^\d+月\d+日 周. · 72\/100$/ : "72/100");
   expect(new Set(requestedDates).size).toBe(1);
-  if (mobile) await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("旧数据 · 不作推荐");
+  if (mobile) await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("部分数据已降级");
   else await expect(page.locator(".fireglow-map-status")).toContainText("数据已降级");
   await (mobile ? page.locator(".mobile-sheet-ranking button").first() : page.locator(".fireglow-list button").first()).click();
   if (mobile) await expandMobileDataSheet(page);
+  if (mobile) await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("刷新失败 · 不作推荐");
   await expect(page.locator(".fg-detail-data-status")).toContainText("数据已降级");
   await expect(page.locator(".fg-hero-score-number")).toHaveText("72/100");
   const source = page.getByTestId("snapshot-source-times");

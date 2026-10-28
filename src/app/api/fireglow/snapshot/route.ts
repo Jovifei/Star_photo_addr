@@ -1,10 +1,11 @@
-import { snapshotSourceAgeMs, snapshotTransport } from "@/lib/snapshotProvenance";
+import { snapshotTransport } from "@/lib/snapshotProvenance";
 import { currentOpenMeteoRateLimit, openMeteoRateLimitHeaders } from "@/lib/forecast";
 import fs from "node:fs";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { buildFireGlowSnapshot, FIRE_GLOW_SCORE_VERSION } from "@/lib/fireglow";
+import { FIRE_GLOW_FRESH_MS, fireGlowSourceAgeMs } from "@/lib/fireglowQuality";
 import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
 import type { FireGlowSnapshot } from "@/lib/fireglow";
 import {
@@ -16,11 +17,19 @@ import type { ForecastModel } from "@/lib/types";
 export const dynamic = "force-dynamic";
 function snapshotJson(value: unknown, init?: ResponseInit) {
   if (value && typeof value === "object" && "sites" in value && "generatedAt" in value) {
-    const snapshot = value as { generatedAt: string; stale?: boolean; provenance?: import("@/lib/snapshotProvenance").SnapshotProvenance };
-    const sourceAgeMs = snapshotSourceAgeMs(snapshot.provenance);
+    const snapshot = value as FireGlowSnapshot;
+    const sourceAgeMs = fireGlowSourceAgeMs(snapshot.provenance);
+    const sourceExpired = !Number.isFinite(sourceAgeMs) || sourceAgeMs > TTL_MS;
+    const stale = Boolean(snapshot.stale) || sourceExpired;
+    const quality = snapshot.sourceQuality;
+    // Fallbacks are snapshot-wide. A pre-existing, unexplained stale flag must
+    // never become site-scoped merely because a source also happens to be old.
+    const staleScope = snapshot.refreshError || quality?.staleScope === "snapshot" || (snapshot.stale && quality?.staleScope !== "site")
+      ? "snapshot" : sourceExpired ? "site" : quality?.staleScope;
     return NextResponse.json(snapshotTransport({
       ...snapshot,
-      stale: Boolean(snapshot.stale) || !Number.isFinite(sourceAgeMs) || sourceAgeMs > TTL_MS,
+      stale,
+      ...(quality?.version === 1 ? { sourceQuality: { ...quality, staleScope: staleScope ?? "snapshot" } } : {}),
     }), init);
   }
   return NextResponse.json(value, init);
@@ -28,7 +37,7 @@ function snapshotJson(value: unknown, init?: ResponseInit) {
 
 
 const VALID_MODELS = new Set<ForecastModel>(["best_match", "icon", "gfs", "aifs"]);
-const TTL_MS = 30 * 60_000;
+const TTL_MS = FIRE_GLOW_FRESH_MS;
 const TIMEOUT_MS = 120_000;
 /** Forced refreshes per date|model are throttled so page retries and the
  * worker cannot stampede the upstream quota. */
@@ -106,7 +115,7 @@ function readFireglowFromDisk(date: string, model: string): FireGlowSnapshot | n
 export function fireglowSnapshotAgeMs(snapshot: FireGlowSnapshot): number {
   const generatedAt = Date.parse(snapshot.generatedAt);
   if (!Number.isFinite(generatedAt)) return Number.POSITIVE_INFINITY;
-  return Math.max(0, Date.now() - generatedAt, snapshotSourceAgeMs(snapshot.provenance));
+  return Math.max(0, Date.now() - generatedAt, fireGlowSourceAgeMs(snapshot.provenance));
 }
 
 function readUsableFireglowDiskSnapshot(date: string, model: string): FireGlowSnapshot | null {
@@ -166,7 +175,7 @@ export async function GET(request: NextRequest) {
   if (params.get("cache_only") === "1") {
     const retained = cache.get(key)?.snapshot ?? diskCached;
     if (!retained) return snapshotJson({ error: "cache-only-miss" }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": "60", "X-Fireglow-Cache": "cache-only-miss" } });
-    return snapshotJson({ ...retained, stale: Boolean(retained.stale) || snapshotSourceAgeMs(retained.provenance) > TTL_MS }, { headers: { "Cache-Control": "no-store", "X-Fireglow-Cache": "cache-only" } });
+    return snapshotJson(retained, { headers: { "Cache-Control": "no-store", "X-Fireglow-Cache": "cache-only" } });
   }
   if (forceRefresh) {
     const last = lastForceAt.get(key) ?? 0;

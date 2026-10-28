@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildFireGlowSnapshot, isHighFireGlowLevel, probabilityRangeFor, scoreFireGlowSite } from "@/lib/fireglow";
 import type { FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
+import { OBSERVING_SITES } from "@/lib/observingSites";
+import { fireGlowSiteQuality } from "@/lib/fireglowQuality";
 
 function recordWithHours(
   hours: Array<{
@@ -186,6 +188,29 @@ describe("scoreFireGlowSite", () => {
     expect(snapshot.date).toBe("2026-08-22");
     expect(snapshot.model).toBe("icon");
     expect(Object.keys(snapshot.sites).length).toBeGreaterThan(100);
+  });
+
+  it("preserves 192 fresh and 90 stale site records through real snapshot scoring", () => {
+    const date = "2026-10-27";
+    const now = Date.now();
+    const record = recordWithHours(Array.from({ length: 24 }, (_, hour) => ({
+      time: `${date}T${String(hour).padStart(2, "0")}:00`, low: 5, mid: 40, high: 55,
+    })));
+    record.model = "icon";
+    record.fetchedAt = new Date(now).toISOString();
+    expect(OBSERVING_SITES).toHaveLength(282);
+    const records = Object.fromEntries(OBSERVING_SITES.map((site, index) => [site.id, {
+      ...record, status: index < 192 ? "available" as const : "stale" as const,
+    }]));
+    const snapshot = buildFireGlowSnapshot(date, "icon", { [date]: records });
+    expect(snapshot.stale).toBe(true);
+    expect(Object.values(snapshot.sourceQuality!.bySite).filter((site) => site.status === "available")).toHaveLength(192);
+    expect(Object.values(snapshot.sourceQuality!.bySite).filter((site) => site.status === "stale")).toHaveLength(90);
+    for (const [start, end, expected] of [[0, 192, "fresh"], [192, 282, "stale"]] as const) {
+      const site = OBSERVING_SITES.slice(start, end).find((item) => snapshot.sites[item.id].evening.score !== null);
+      expect(site).toBeDefined();
+      expect(fireGlowSiteQuality(snapshot, date, site!.id, "evening", "icon", undefined, now).state).toBe(expected);
+    }
   });
 
   it("prefers high cloud over the same low-cloud coverage (weighted canvas)", () => {

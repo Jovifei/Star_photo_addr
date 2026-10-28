@@ -5,6 +5,8 @@ const state = vi.hoisted(() => ({
   mode: "empty" as "empty" | "valid",
   fetchCalls: 0,
   sourceFetchedAt: null as string | null,
+  buildStale: false,
+  malformed: false,
 }));
 
 vi.mock("@/lib/stargazingFinderWeather", () => ({
@@ -24,7 +26,7 @@ vi.mock("@/lib/fireglow", () => ({
     provenance: {
       version: 1,
       sourcesBySite: {
-        "test-site": [{
+        "test-site": state.malformed ? [null] : [{
           provider: "Open-Meteo",
           dataset: "surface",
           model,
@@ -35,7 +37,8 @@ vi.mock("@/lib/fireglow", () => ({
       },
     },
     source: "test",
-    stale: false,
+    stale: state.buildStale,
+    sourceQuality: { version: 1, bySite: { "test-site": { status: "available", model } }, staleScope: "none" },
     sites: {
       "test-site": {
         evening: {
@@ -92,6 +95,8 @@ beforeEach(() => {
   state.mode = "empty";
   state.fetchCalls = 0;
   state.sourceFetchedAt = null;
+  state.buildStale = false;
+  state.malformed = false;
 });
 
 describe("GET /api/fireglow/snapshot", () => {
@@ -122,6 +127,7 @@ describe("GET /api/fireglow/snapshot", () => {
     expect(degraded.status).toBe(200);
     expect(body.stale).toBe(true);
     expect(body.refreshError).toContain("未返回有效火烧云评分");
+    expect(body.sourceQuality.staleScope).toBe("snapshot");
     expect(body.sites["test-site"].evening.score).toBe(72);
   });
 
@@ -136,5 +142,33 @@ describe("GET /api/fireglow/snapshot", () => {
     expect(response.status).toBe(200);
     expect(Date.now() - Date.parse(body.generatedAt)).toBeLessThan(60_000);
     expect(body.stale).toBe(true);
+    expect(body.sourceQuality.staleScope).toBe("site");
+  });
+
+  it("keeps unexplained stale snapshot-wide even when a source is also old", async () => {
+    state.mode = "valid";
+    state.buildStale = true;
+    state.sourceFetchedAt = new Date(Date.now() - 45 * 60_000).toISOString();
+    const { GET } = await import("@/app/api/fireglow/snapshot/route");
+    const response = await GET(request("date=2026-09-23&model=icon"));
+    expect((await response.json()).sourceQuality.staleScope).toBe("snapshot");
+  });
+
+  it("preserves site attribution in a cache-only aged response", async () => {
+    state.mode = "valid";
+    state.sourceFetchedAt = new Date(Date.now() - 45 * 60_000).toISOString();
+    const { GET } = await import("@/app/api/fireglow/snapshot/route");
+    await GET(request("date=2026-09-24&model=icon"));
+    const response = await GET(request("date=2026-09-24&model=icon&cache_only=1"));
+    expect(await response.json()).toMatchObject({ stale: true, sourceQuality: { staleScope: "site" } });
+  });
+
+  it("returns malformed source entries as stale rather than crashing", async () => {
+    state.mode = "valid";
+    state.malformed = true;
+    const { GET } = await import("@/app/api/fireglow/snapshot/route");
+    const response = await GET(request("date=2026-09-25&model=icon"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).stale).toBe(true);
   });
 });

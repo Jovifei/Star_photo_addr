@@ -4,7 +4,7 @@ import { buildFireGlowSnapshot } from "@/lib/fireglow";
 it("retains source acquisition time across later snapshot generation and cache transport", () => {
   vi.useFakeTimers(); vi.setSystemTime("2026-10-07T12:00:00Z");
   try {
-    const record = { status: "stale" as const, hourly: null, fetchedAt: "2026-10-07T07:00:00Z" };
+    const record = { status: "stale" as const, hourly: null, model: "icon" as const, fetchedAt: "2026-10-07T07:00:00Z" };
     const snapshot = buildFireGlowSnapshot("2026-10-07", "icon", { "2026-10-07": { point: record } });
     expect(snapshot.provenance?.sourcesBySite.point[0].sourceFetchedAt).toBe(record.fetchedAt);
     expect(snapshot.provenance?.sourcesBySite.point[0].providerRunAt).toBeNull();
@@ -14,6 +14,17 @@ it("retains source acquisition time across later snapshot generation and cache t
     expect(transported.provenance).toEqual(snapshot.provenance);
     expect(snapshotSourceAgeMs(snapshot.provenance)).toBe(5 * 3600000);
   } finally { vi.useRealTimers(); }
+});
+it("retains actual per-site status and does not invent a missing source model", () => {
+  const snapshot = buildFireGlowSnapshot("2026-10-07", "icon", { "2026-10-07": {
+    fresh: { status: "available", hourly: null, model: "icon", fetchedAt: new Date().toISOString() },
+    failed: { status: "error", hourly: null },
+  } });
+  expect(snapshot.sourceQuality).toMatchObject({ version: 1, staleScope: "site", bySite: {
+    fresh: { status: "available", model: "icon" }, failed: { status: "error", model: null },
+  } });
+  expect(snapshot.provenance?.sourcesBySite.failed).toEqual([]);
+  expect(snapshot.stale).toBe(true);
 });
 it("keeps unknown supplier clocks unknown and cannot mark them fresh", () => {
   expect(snapshotSourceTime("pressure", "gfs").sourceFetchedAt).toBeNull();

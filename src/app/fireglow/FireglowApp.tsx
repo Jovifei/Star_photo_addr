@@ -28,6 +28,7 @@ import {
 import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { FireGlowProbabilityLevel, FireGlowSnapshot, FireGlowWindowScore } from "@/lib/fireglow";
 import { fireGlowBandLabel, FIRE_GLOW_INDEX_BANDS } from "@/lib/fireglow";
+import { FIRE_GLOW_FRESH_MS, fireGlowBatchDegraded, fireGlowSiteQuality } from "@/lib/fireglowQuality";
 import { buildProbabilityOverlay } from "@/lib/fireglowOverlay";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { filterByScoreThreshold } from "@/lib/scoreThreshold";
@@ -147,6 +148,7 @@ export default function FireglowApp() {
   const [pickedPoint, setPickedPoint] = useState<Coordinate | null>(topicContext.incoming.identity && !topicContext.transfer?.site ? { latitude: topicContext.incoming.identity.latitude, longitude: topicContext.incoming.identity.longitude } : null);
   const mobile = useMobilePanelViewport();
   const [scoreThreshold, setScoreThreshold] = useState(0);
+  const [qualityNow, setQualityNow] = useState<number | null>(null);
   const loadTokenRef = useRef(0);
   const controllerRef = useRef<AbortController | null>(null);
 
@@ -231,7 +233,7 @@ export default function FireglowApp() {
             setError(results.flatMap((result, index) => {
               const message = result.status === "rejected"
                 ? (result.reason instanceof Error ? result.reason.message : "快照请求失败")
-                : result.value.refreshError ?? (result.value.stale ? "正在使用较早快照" : "");
+                : result.value.refreshError ?? (result.value.stale ? "部分来源或快照状态已降级" : "");
               return message ? [`${dateLabel(dates[index])}：${message}`] : [];
             }).join(" "));
           })
@@ -250,6 +252,26 @@ export default function FireglowApp() {
     const cleanup = load(activeDates);
     return cleanup;
   }, [activeDates, load]);
+
+  // Re-evaluate at the first source expiry, including while a tab stays open.
+  // Periodic and visibility checks also handle browser suspension/clock changes.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      clearTimeout(timer);
+      const now = Date.now();
+      setQualityNow(now);
+      const expiries = activeDates.flatMap((date) =>
+        Object.values(snapshots[date]?.provenance?.sourcesBySite ?? {}).flatMap((group) => Array.isArray(group) ? group : [])
+          .map((source) => Date.parse(source?.sourceFetchedAt ?? "") + FIRE_GLOW_FRESH_MS + 1)
+          .filter((expiry) => Number.isFinite(expiry) && expiry > now),
+      );
+      timer = setTimeout(tick, Math.min(60_000, ...(expiries.map((expiry) => expiry - now))));
+    };
+    timer = setTimeout(tick, 0);
+    document.addEventListener("visibilitychange", tick);
+    return () => { clearTimeout(timer); document.removeEventListener("visibilitychange", tick); };
+  }, [activeDates, snapshots]);
 
   const ranked = useMemo<RankedSite[]>(() => {
     if (!activeDates.some((date) => snapshots[date])) return [];
@@ -305,18 +327,28 @@ export default function FireglowApp() {
       (date) => snapshots[date]?.sites[selectedSite.id]?.[phase] === selectedSite.window,
     ) ?? activeDates[0] ?? baseDate;
   }, [activeDates, baseDate, phase, selectedSite, snapshots]);
+  const visibleStatus = requestKey === activeDates.join("|") ? status : "loading";
+  const visibleError = requestKey === activeDates.join("|") ? error : "";
+  const now = qualityNow ?? 0;
   const activeSnapshotsHaveUsableScores = activeDates.some((date) => {
     const snapshot = snapshots[date];
     return snapshot ? hasUsableFireGlowScores(snapshot) : false;
   });
   const activeDataDegraded = activeSnapshotsHaveUsableScores && (
     activeDates.some(
-      (date) => Boolean(snapshots[date]?.stale || snapshots[date]?.refreshError),
+      (date) => snapshots[date] ? fireGlowBatchDegraded(snapshots[date]!, now) : false,
     ) || activeDates.some((date) => Boolean(dateErrors[date]))
   );
   const dataQualityNotice = activeDataDegraded
-    ? "数据已降级：地图、排行与详情仅供参考，禁止作为新鲜推荐"
+    ? "数据已降级：部分地点或日期的来源或快照状态异常；地图与排行仅供参考，禁止作为新鲜推荐"
     : "";
+  const selectedQuality = selectedSite
+    ? fireGlowSiteQuality(snapshots[selectedDateKey], selectedDateKey, selectedSite.id, phase, model, dateErrors[selectedDateKey], now)
+    : null;
+  const comparisonNotice = rangeMode === 3 && selectedSite && visibleStatus !== "loading" && activeDates.some((date) =>
+    date !== selectedDateKey && fireGlowSiteQuality(snapshots[date], date, selectedSite.id, phase, model, dateErrors[date], now).state !== "fresh",
+  ) ? "三日比较不完整：该地点部分日期的数据不可用或已降级。" : "";
+  const selectedNotice = [selectedQuality?.notice, comparisonNotice].filter(Boolean).join(" ");
 
   const focusSite = useCallback((site: RankedSite) => {
     setPickedPoint(null);
@@ -324,8 +356,6 @@ export default function FireglowApp() {
     map?.flyTo([site.latitude, site.longitude], Math.max(6, map.getZoom()), { duration: 0.6 });
   }, [map]);
 
-  const visibleStatus = requestKey === activeDates.join("|") ? status : "loading";
-  const visibleError = requestKey === activeDates.join("|") ? error : "";
   const hasUsableData = ranked.some((site) => site.window.score != null);
   const hasUsablePhaseData = activeDates.some((date) =>
     Object.values(snapshots[date]?.sites ?? {}).some(
@@ -342,17 +372,18 @@ export default function FireglowApp() {
       ? "正在读取所选日期的火烧云数据…"
       : visibleStatus === "error" && !hasUsableData
         ? "数据不可用 · 请刷新重试"
-        : dataQualityNotice
-          ? "旧数据 · 不作推荐"
-          : phaseUnavailableNotice
+        : phaseUnavailableNotice
             ? `当前${phase === "evening" ? "晚霞" : "朝霞"}数据不足`
             : selectedSite
-              ? (selectedSite.window.probabilityLabel
-                ? `条件指数 ${selectedSite.window.probabilityLabel}`
-                : "条件数据不足")
+              ? selectedQuality?.state === "expired" ? "旧数据 · 不作推荐"
+                : selectedQuality?.state === "stale" ? "来源已降级 · 不作推荐"
+                : selectedQuality?.state === "refresh-failed" ? "刷新失败 · 不作推荐"
+                  : selectedQuality?.state === "unknown" ? "来源待核验 · 不作推荐"
+                    : selectedQuality?.state === "insufficient" ? "条件数据不足"
+                      : selectedSite.window.probabilityLabel ? `条件指数 ${selectedSite.window.probabilityLabel}` : "条件数据不足"
               : pickedPoint
                 ? "查看附近目录点位"
-                : "点地图查看点位";
+                : dataQualityNotice ? "部分数据已降级" : "点地图查看点位";
   const mobileRankingEmptyMessage =
     visibleStatus === "loading"
       ? "正在读取所选日期的数据…"
@@ -603,7 +634,7 @@ export default function FireglowApp() {
           title={selectedSite?.name ?? (pickedPoint ? `所点坐标 ${pickedPoint.latitude.toFixed(3)}, ${pickedPoint.longitude.toFixed(3)}` : "火烧云 · 选择点位")}
           conclusion={mobileConclusion}
           bestTime={selectedSite?.window.peakTime ? `最佳 ${selectedSite.window.peakTime} · ${dateLabel(selectedDateKey)}` : `${phase === "evening" ? "晚霞" : "朝霞"} · ${rangeMode === 3 ? "三日" : dateLabel(activeDates[0])}`}
-          status={visibleError || dataQualityNotice || phaseUnavailableNotice || (visibleStatus === "loading" ? "正在读取所选日期的火烧云数据…" : "")}
+          status={[selectedNotice, visibleError, dataQualityNotice, phaseUnavailableNotice, visibleStatus === "loading" ? "正在读取所选日期的火烧云数据…" : ""].filter(Boolean).join(" ")}
           selectionKey={selectedId ?? (pickedPoint ? `${pickedPoint.latitude.toFixed(4)},${pickedPoint.longitude.toFixed(4)}` : null)}
         >{(level) => <>
           {pickedPoint ? <section className="mobile-nearby-sites" aria-label="附近火烧云目录点位">
@@ -621,7 +652,7 @@ export default function FireglowApp() {
             <span>低云遮挡 <strong>{selectedSite.window.lowCloud != null ? `${selectedSite.window.lowCloud}%` : "—"}</strong></span>
             <span>中高云 <strong>{selectedSite.window.midCloud != null && selectedSite.window.highCloud != null ? `${selectedSite.window.midCloud}% / ${selectedSite.window.highCloud}%` : "—"}</strong></span>
           </div> : null}
-          {level === "full" && selectedSite ? <FireglowSiteDetail site={selectedSite} phase={phase} dateKey={selectedDateKey} dataQualityNotice={dataQualityNotice} onClose={() => setSelectedId(null)} /> : null}
+          {level === "full" && selectedSite ? <FireglowSiteDetail site={selectedSite} phase={phase} dateKey={selectedDateKey} dataQualityNotice={selectedNotice} onClose={() => setSelectedId(null)} /> : null}
           {level === "full" ? <details className="mobile-sheet-explainer">
             <summary>数据口径与地图色阶</summary>
             <p>条件指数由云层结构、能见度与太阳高度启发式映射；地图色面为目录点位指数的 IDW 插值，不是卫星或雷达像素，也不是实拍校准概率。</p>
@@ -649,7 +680,7 @@ export default function FireglowApp() {
               site={selectedSite}
               phase={phase}
               dateKey={selectedDateKey}
-              dataQualityNotice={dataQualityNotice}
+              dataQualityNotice={selectedNotice}
               onClose={() => setSelectedId(null)}
             />
           </ResponsiveTopicDetail>

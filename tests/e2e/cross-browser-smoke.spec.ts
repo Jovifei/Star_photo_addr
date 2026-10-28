@@ -33,6 +33,39 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
+test("fireglow keeps mixed site quality separate and expires an open selection", async ({ page }, info) => {
+  const mobile = info.project.name === "webkit-mobile";
+  const at = new Date("2026-10-28T12:00:00.000Z");
+  await page.clock.install({ time: at });
+  await page.route("**/api/fireglow/snapshot**", async (route) => {
+    const date = new URL(route.request().url()).searchParams.get("date");
+    const ids = ["finder-001-location", "finder-002-location"];
+    const window = (score: number) => ({ score, band: "medium", bandLabel: "中烧", probabilityLevel: "p60",
+      probabilityLabel: `${score}/100`, vividness: 0.72, momentLabel: "云隙", peakTime: "18:30",
+      deckCloud: 35, lowCloud: 20, midCloud: 35, highCloud: 40, visibilityKm: 18, sunAltitude: -2,
+      goldenTime: "18:20", blueTime: "18:50", astroTime: "19:10", reason: "cross-browser fixture" });
+    const source = { provider: "Open-Meteo", dataset: "surface", model: "icon", sourceFetchedAt: at.toISOString(), providerRunAt: null, observedAt: null };
+    await route.fulfill({ json: { date, model: "icon", generatedAt: at.toISOString(), source: "fixture", stale: true,
+      provenance: { version: 1, sourcesBySite: { [ids[0]]: [source], [ids[1]]: [source] } },
+      sourceQuality: { version: 1, staleScope: "site", bySite: { [ids[0]]: { status: "available", model: "icon" }, [ids[1]]: { status: "stale", model: "icon" } } },
+      sites: { [ids[0]]: { morning: window(90), evening: window(90) }, [ids[1]]: { morning: window(60), evening: window(60) } },
+    } });
+  });
+  await page.goto("/fireglow");
+  if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
+  const ranking = mobile ? page.locator(".mobile-sheet-ranking") : page.locator(".fireglow-list");
+  await ranking.getByRole("button", { name: /阿里暗夜公园/ }).click();
+  if (mobile) {
+    await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 90/100");
+    await expandMobileDataSheet(page);
+  }
+  await expect(page.locator(".fireglow-map-status")).toContainText("数据已降级");
+  await expect(page.locator(".fg-detail-data-status")).toHaveCount(0);
+  await page.clock.fastForward(30 * 60_000 + 1_000);
+  await expect(page.locator(".fg-detail-data-status")).toContainText("超过 30 分钟");
+  if (mobile) await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("旧数据 · 不作推荐");
+});
+
 for (const timezoneId of ["UTC", "America/Los_Angeles", "Asia/Shanghai"]) {
   test.describe(`forecast update timezone ${timezoneId}`, () => {
     test.use({ timezoneId });

@@ -17,6 +17,7 @@ import * as Astronomy from "astronomy-engine";
 import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { ForecastModel } from "@/lib/types";
 import type { FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
+import type { FireGlowSourceQuality } from "@/lib/fireglowQuality";
 
 export type FireGlowBand = "strong" | "medium" | "light" | "faint" | "none" | "unknown";
 export const FIRE_GLOW_SCORE_VERSION = "fireglow-v3-solar-index";
@@ -86,6 +87,8 @@ export interface FireGlowSnapshot {
   model: ForecastModel;
   generatedAt: string;
   provenance?: SnapshotProvenance;
+  /** The original weather-record status and the scope of the stale flag. */
+  sourceQuality?: FireGlowSourceQuality;
   transport?: { servedAt: string };
   source: string;
   stale: boolean;
@@ -455,14 +458,20 @@ export function buildFireGlowSnapshot(
     sites[site.id] = scoreFireGlowSite(site, dayRecords[site.id], date);
   }
   const records = Object.values(dayRecords);
+  const stale = !records.length || records.some((record) => record.status === "stale" || record.status === "error" || !Number.isFinite(dataAgeMs(record.provenance?.sourceFetchedAt ?? record.fetchedAt)));
   return {
     date,
     model,
     scoreModelVersion: FIRE_GLOW_SCORE_VERSION,
     generatedAt: new Date().toISOString(),
-    provenance: { version: 1, sourcesBySite: Object.fromEntries(Object.entries(dayRecords).map(([id, record]) => [id, [snapshotSourceTime("surface", record.model ?? model, record.provenance?.sourceFetchedAt ?? record.fetchedAt, record.provenance?.providerRunAt)]])) },
+    provenance: { version: 1, sourcesBySite: Object.fromEntries(Object.entries(dayRecords).map(([id, record]) => [id, record.model ? [snapshotSourceTime("surface", record.model, record.provenance?.sourceFetchedAt ?? record.fetchedAt, record.provenance?.providerRunAt)] : []])) },
+    sourceQuality: {
+      version: 1,
+      bySite: Object.fromEntries(Object.entries(dayRecords).map(([id, record]) => [id, { status: record.status, model: record.model ?? null }])),
+      staleScope: stale ? (records.length ? "site" : "snapshot") : "none",
+    },
     source: "Open-Meteo Forecast API（云层/降水/能见度）+ astronomy-engine 太阳高度角",
-    stale: !records.length || records.some((record) => record.status === "stale" || record.status === "error" || !Number.isFinite(dataAgeMs(record.provenance?.sourceFetchedAt ?? record.fetchedAt))),
+    stale,
     sites,
   };
 }
