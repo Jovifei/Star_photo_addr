@@ -34,7 +34,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("fireglow keeps mixed site quality separate and expires an open selection", async ({ page }, info) => {
-  const mobile = info.project.name === "webkit-mobile";
+  const mobile = info.project.name === "webkit-mobile" || info.project.name === "mobile";
   const at = new Date("2026-10-28T12:00:00.000Z");
   await page.clock.install({ time: at });
   await page.route("**/api/fireglow/snapshot**", async (route) => {
