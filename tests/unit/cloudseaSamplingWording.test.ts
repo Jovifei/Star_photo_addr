@@ -30,7 +30,9 @@ function evaluate(altitude: number, profile = singleLayer, windowHours = [17]) {
     locationId: site.id, modelElevation: 100, nativeGridElevationM: 100,
     verticalReference: "native-grid-v2", qualifiedPressureLevels: PRESSURE_LEVELS,
     timezone: "UTC", utcOffsetSeconds: 0, fetchedAt: "2026-10-30T00:00:00Z",
-    source: "Open-Meteo", model: "gfs", stale: false, hourly: [{ time, temperature: 10 }],
+    source: "Open-Meteo", model: "gfs", stale: false,
+    qualitySchema: "pressure-provider-issues-v1", qualityValidatorVersion: "pressure-validator-v1",
+    qualityValidatedAt: "2026-10-30T00:00:00Z", hourly: [{ time, temperature: 10 }],
     profiles: { [time]: profile },
   } as PressureForecastResponse;
   return evaluateCloudSeaWindow({ ...site, altitude }, {
@@ -120,5 +122,26 @@ describe("cloud-sea sampling wording", () => {
       sites: { [site.id]: { morning: { ...current, summary: "旧版断言：山顶处于云层内" }, evening: current } } };
     expect(presentCloudSeaSnapshot(snapshot).sites[site.id].morning.summary).toContain("150m余量");
     expect(presentCloudSeaSnapshot(snapshot).sites[site.id].morning.summary).not.toContain("处于云层内");
+  });
+
+  it("keeps a fail-closed pressure-quality reason when repairing legacy in-cloud wording", () => {
+    const current = evaluate(1489);
+    const legacy: CloudSeaWindowScore = {
+      ...current,
+      cloudPosition: "in",
+      score: null,
+      peakScore: null,
+      positionLabel: "山顶处于云层内",
+      summary: "压力层质量 schema 缺失或版本未验证，保留地面事实但暂不评分。 窗口 1/1 个目标时次参与平均条件指数。",
+    };
+    const snapshot: CloudSeaSnapshot = { scoreVersion: CLOUD_SEA_SCORE_VERSION, date: "2026-10-30", model: "gfs",
+      generatedAt: "2026-10-30T00:00:00Z", source: "fixture", stale: false,
+      sites: { [site.id]: { morning: legacy, evening: CLOUD_SEA_EMPTY_WINDOW } } };
+
+    const presentedWindow = presentCloudSeaSnapshot(snapshot).sites[site.id]!.morning;
+
+    expect(presentedWindow.summary).toContain("压力层质量 schema 缺失");
+    expect(presentedWindow.summary).not.toContain("150m余量");
+    expect(presentedWindow.positionLabel).toBe("山顶接近或可能处于云层");
   });
 });

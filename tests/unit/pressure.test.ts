@@ -29,10 +29,12 @@ function rawPressure(
       70 - index,
       secondHourMissing ? null : 72 - index,
     ];
-    hourly[`relative_humidity_${level}hPa`] =
-      index < brokenLevels
-        ? [88]
-        : [88 - index, secondHourMissing ? null : 87 - index];
+    if (index >= brokenLevels) {
+      hourly[`relative_humidity_${level}hPa`] = [
+        88 - index,
+        secondHourMissing ? null : 87 - index,
+      ];
+    }
     hourly[`temperature_${level}hPa`] = [
       9 - index * 1.5,
       secondHourMissing ? null : 10 - index * 1.5,

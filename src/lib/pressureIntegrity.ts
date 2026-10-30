@@ -5,6 +5,7 @@ import { isValidProviderValue } from "./providerWeatherIntegrity";
 /** Pure validation shared by scoring in the browser and server ingestion. */
 export function isCompletePressureLevelSample(sample: PressureLevelSample): boolean {
   return (PRESSURE_LEVELS as readonly number[]).includes(sample.pressure) &&
+    !sample.providerIssues?.length &&
     isValidProviderValue(`cloud_cover_${sample.pressure}hPa`, sample.cloudCover) &&
     isValidProviderValue(`relative_humidity_${sample.pressure}hPa`, sample.humidity) &&
     isValidProviderValue(`temperature_${sample.pressure}hPa`, sample.temperature) &&
@@ -14,6 +15,7 @@ export function isCompletePressureLevelSample(sample: PressureLevelSample): bool
 /** Dense temperature/RH/height can bound clear air without making up cloud %. */
 export function isThermodynamicPressureLevelSample(sample: PressureLevelSample): boolean {
   return (PRESSURE_LEVELS as readonly number[]).includes(sample.pressure) &&
+    !sample.providerIssues?.length &&
     (sample.cloudCover == null || isValidProviderValue(`cloud_cover_${sample.pressure}hPa`, sample.cloudCover)) &&
     isValidProviderValue(`relative_humidity_${sample.pressure}hPa`, sample.humidity) &&
     isValidProviderValue(`temperature_${sample.pressure}hPa`, sample.temperature) &&
@@ -25,6 +27,7 @@ export function usablePressureLevelCount(samples: PressureLevelSample[] | null |
 }
 
 export function hasUsablePressureProfile(samples: PressureLevelSample[] | null | undefined, minimumLevels = 6): boolean {
+  if (samples?.some(sample => Boolean(sample.providerIssues?.length))) return false;
   return usablePressureLevelCount(samples) >= minimumLevels;
 }
 

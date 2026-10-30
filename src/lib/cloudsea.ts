@@ -19,6 +19,10 @@ import {
 } from "@/lib/pressureIntegrity";
 import { pressureProfileAt } from "@/lib/pressureIntegrity";
 import type { PressureForecastResponse, PressureLevelSample } from "@/lib/pressure";
+import {
+  PRESSURE_PROVIDER_QUALITY_SCHEMA,
+  PRESSURE_PROVIDER_VALIDATOR_VERSION,
+} from "@/lib/pressureProviderIntegrity";
 import type { CloudLayer, ForecastModel, PressureLevel } from "@/lib/types";
 
 export type CloudPosition = "above" | "in" | "below" | "clear" | "unknown";
@@ -81,7 +85,10 @@ export interface CloudSeaSiteScore {
 
 export interface CloudSeaPressureSummary {
   status: PressureEvidenceStatus;
+  /** Current-model responses received, including partial responses. */
+  receivedSites?: number;
   availableSites: number;
+  partialSites?: number;
   totalSites: number;
   failedSites: number;
 }
@@ -97,7 +104,7 @@ export function hasValidCloudSeaCoverageCounts(
   summary: CloudSeaSurfaceSummary | CloudSeaPressureSummary | null | undefined,
   expectedSiteCount: number,
 ): boolean {
-  return Boolean(
+  const countsValid = Boolean(
     summary &&
     Number.isInteger(expectedSiteCount) &&
     expectedSiteCount >= 0 &&
@@ -108,6 +115,18 @@ export function hasValidCloudSeaCoverageCounts(
     summary.availableSites >= 0 &&
     summary.availableSites <= summary.totalSites &&
     summary.failedSites === summary.totalSites - summary.availableSites,
+  );
+  if (!countsValid || !summary || !("receivedSites" in summary)) {
+    return countsValid;
+  }
+  const pressure = summary as CloudSeaPressureSummary;
+  return Boolean(
+    Number.isInteger(pressure.receivedSites) &&
+    Number.isInteger(pressure.partialSites) &&
+    pressure.receivedSites! >= pressure.availableSites &&
+    pressure.receivedSites! <= pressure.totalSites &&
+    pressure.partialSites! >= 0 &&
+    pressure.partialSites! === pressure.receivedSites! - pressure.availableSites,
   );
 }
 
@@ -126,6 +145,8 @@ export function hasCompleteCloudSeaCoverage(
 export interface CloudSeaSnapshot {
   scoreVersion?: string;
   providerValidationVersion?: string;
+  pressureQualitySchema?: typeof PRESSURE_PROVIDER_QUALITY_SCHEMA;
+  pressureQualityValidatorVersion?: typeof PRESSURE_PROVIDER_VALIDATOR_VERSION;
   date: string;
   model: ForecastModel;
   generatedAt: string;
@@ -176,10 +197,15 @@ export const CLOUD_SEA_EMPTY_WINDOW: CloudSeaWindowScore = {
 
 const IN_CLOUD_SUMMARY = "数值模式压力剖面显示山顶接近或可能处于有云采样层，存在云雾风险；层位判断使用上下各150m余量，采样高度并非云体的实测边界。";
 const LEGACY_IN_CLOUD_SUMMARY = /数值模式压力剖面显示山顶海拔（[^）]*）落在低层云 deck（[^）]*）内，存在云雾包裹风险。/g;
+/** A withheld window keeps its reason; wording repair never turns it into a cloud-risk claim. */
+const FAIL_CLOSED_SUMMARY = /压力层质量|质量 schema|质量.*schema|非法来源值|压力层存在非法|暂不发布推荐|暂不评分|数据不足|证据不足/;
 
 /** Correct precomputed wording without changing scores or the retained snapshot. */
 export function presentCloudSeaWindow(window: CloudSeaWindowScore): CloudSeaWindowScore {
   if (window.cloudPosition !== "in") return window;
+  if (FAIL_CLOSED_SUMMARY.test(window.summary)) {
+    return { ...window, positionLabel: positionLabel("in") };
+  }
   const replaced = window.summary.replace(LEGACY_IN_CLOUD_SUMMARY, IN_CLOUD_SUMMARY);
   return {
     ...window,
@@ -190,13 +216,47 @@ export function presentCloudSeaWindow(window: CloudSeaWindowScore): CloudSeaWind
 }
 
 export function presentCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSnapshot {
+  const sites = Object.fromEntries(Object.entries(snapshot.sites).map(([id, windows]) => [id, {
+    ...windows,
+    morning: presentCloudSeaWindow(windows.morning),
+    evening: presentCloudSeaWindow(windows.evening),
+  }]));
+  const totalSites = snapshot.pressure?.totalSites ??
+    (snapshot.surface?.totalSites || CLOUD_SEA_SITES.length);
+  // Missing pressureStatus is absence of evidence, never has-pressure.
+  const hasPressureEvidence = (window: CloudSeaWindowScore): boolean =>
+    (window.pressureStatus === "available" || window.pressureStatus === "partial") &&
+    (window.coverage?.pressureHours ?? 0) > 0;
+  const sitesWithPressureEvidence = Object.values(sites).filter(windows =>
+    [windows.morning, windows.evening].some(hasPressureEvidence)
+  ).length;
+  const completeSites = Object.values(sites).filter(windows =>
+    [windows.morning, windows.evening].every(window =>
+      window.coverage !== undefined &&
+      window.coverage.expectedHours > 0 &&
+      window.coverage.pressureHours === window.coverage.expectedHours
+    )
+  ).length;
+  const receivedSites = Math.max(
+    completeSites,
+    Math.min(totalSites, snapshot.pressure?.receivedSites ?? sitesWithPressureEvidence),
+  );
+  const availableSites = Math.min(receivedSites, completeSites);
+  const pressure = snapshot.pressure
+    ? {
+        ...snapshot.pressure,
+        status: pressureStatusFor(availableSites, totalSites),
+        receivedSites,
+        availableSites,
+        partialSites: receivedSites - availableSites,
+        totalSites,
+        failedSites: totalSites - availableSites,
+      }
+    : snapshot.pressure;
   return {
     ...snapshot,
-    sites: Object.fromEntries(Object.entries(snapshot.sites).map(([id, windows]) => [id, {
-      ...windows,
-      morning: presentCloudSeaWindow(windows.morning),
-      evening: presentCloudSeaWindow(windows.evening),
-    }])),
+    ...(pressure ? { pressure } : {}),
+    sites,
   };
 }
 
@@ -404,6 +464,39 @@ function evaluateConditions(
   time: string,
 ): HourEvaluation {
   const samples = pressure?.stale ? null : pressureProfileAt(pressure, time);
+  const qualityValidated = Boolean(
+    pressure &&
+    pressure.qualitySchema === PRESSURE_PROVIDER_QUALITY_SCHEMA &&
+    pressure.qualityValidatorVersion === PRESSURE_PROVIDER_VALIDATOR_VERSION &&
+    typeof pressure.qualityValidatedAt === "string" &&
+    Number.isFinite(Date.parse(pressure.qualityValidatedAt)),
+  );
+  if (pressure && !qualityValidated) {
+    return {
+      score: null,
+      position: "unknown",
+      baseM: null,
+      topM: null,
+      altitudeDiffM: null,
+      pressureAvailable: false,
+      pressureConfidence: null,
+      inversion: EMPTY_INVERSION,
+      summary: "压力层质量 schema 或校验来源缺失、版本未验证，保留地面事实但暂不评分。",
+    };
+  }
+  if (samples?.some(sample => Boolean(sample.providerIssues?.length))) {
+    return {
+      score: null,
+      position: "unknown",
+      baseM: null,
+      topM: null,
+      altitudeDiffM: null,
+      pressureAvailable: false,
+      pressureConfidence: null,
+      inversion: EMPTY_INVERSION,
+      summary: "压力层存在非法来源值，污染整小时；不把未知层当作晴空或云体边界。",
+    };
+  }
   const vertical = deriveCloudSeaVerticalEvidence(
     samples,
     pressure?.nativeGridElevationM ?? pressure?.modelElevation ?? 0,
@@ -769,9 +862,31 @@ export function buildCloudSeaSnapshot(
   }).length;
   const surfaceFailedSites = totalSites - surfaceAvailableSites;
 
-  const availableSites = CLOUD_SEA_SITES.filter(
-    (site) => pressureBySite[site.id] && !pressureBySite[site.id].stale && pressureBySite[site.id].model === model,
+  const receivedSites = CLOUD_SEA_SITES.filter(
+    (site) => pressureBySite[site.id] &&
+      !pressureBySite[site.id].stale &&
+      pressureBySite[site.id].model === model,
   ).length;
+  const availableSites = CLOUD_SEA_SITES.filter((site) => {
+    const windows = sitesRecord[site.id];
+    return Boolean(
+      windows &&
+      [windows.morning, windows.evening].every(window =>
+        window.coverage !== undefined &&
+        window.coverage.expectedHours > 0 &&
+        window.coverage.pressureHours === window.coverage.expectedHours
+      )
+    );
+  }).length;
+  const receivedResponses = CLOUD_SEA_SITES
+    .map(site => pressureBySite[site.id])
+    .filter((response): response is PressureForecastResponse =>
+      Boolean(response && !response.stale && response.model === model));
+  const pressureQualityQualified = receivedResponses.length > 0 && receivedResponses.every(response =>
+    response.qualitySchema === PRESSURE_PROVIDER_QUALITY_SCHEMA &&
+    response.qualityValidatorVersion === PRESSURE_PROVIDER_VALIDATOR_VERSION &&
+    typeof response.qualityValidatedAt === "string" &&
+    Number.isFinite(Date.parse(response.qualityValidatedAt)));
   const failedSites = Math.max(
     totalSites - availableSites,
     Object.keys(pressureErrors).length,
@@ -779,6 +894,10 @@ export function buildCloudSeaSnapshot(
 
   return {
     scoreVersion: CLOUD_SEA_SCORE_VERSION,
+    ...(pressureQualityQualified ? {
+      pressureQualitySchema: PRESSURE_PROVIDER_QUALITY_SCHEMA,
+      pressureQualityValidatorVersion: PRESSURE_PROVIDER_VALIDATOR_VERSION,
+    } : {}),
     date,
     model,
     generatedAt: new Date().toISOString(),
@@ -809,7 +928,9 @@ export function buildCloudSeaSnapshot(
     },
     pressure: {
       status: pressureStatusFor(availableSites, totalSites),
+      receivedSites,
       availableSites,
+      partialSites: receivedSites - availableSites,
       totalSites,
       failedSites: Math.min(totalSites, failedSites),
     },

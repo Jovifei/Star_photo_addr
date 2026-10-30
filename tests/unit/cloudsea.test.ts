@@ -118,6 +118,9 @@ function pressureFor(
     source: "Open-Meteo",
     model: "icon",
     stale: false,
+    qualitySchema: "pressure-provider-issues-v1",
+    qualityValidatorVersion: "pressure-validator-v1",
+    qualityValidatedAt: "2026-09-04T00:00:00.000Z",
     hourly: times.map((time) => ({ time, temperature: 10 })),
     profiles: Object.fromEntries(
       times.map((time) => [time, profileSamples(mode, inversion)]),

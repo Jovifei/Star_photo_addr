@@ -361,6 +361,35 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(fetchMock).toHaveBeenCalledTimes(calls);
   });
 
+  it("does not cache a complete-looking legacy pressure snapshot without quality provenance", async () => {
+    vi.stubGlobal("fetch", successfulFetch());
+    const cloudsea = await import("@/lib/cloudsea");
+    const build = cloudsea.buildCloudSeaSnapshot;
+    vi.spyOn(cloudsea, "buildCloudSeaSnapshot").mockImplementationOnce((...args) => {
+      const legacy = { ...build(...args) };
+      delete legacy.pressureQualitySchema;
+      delete legacy.pressureQualityValidatorVersion;
+      legacy.pressure = {
+        status: "available",
+        receivedSites: CLOUD_SEA_SITES.length,
+        availableSites: CLOUD_SEA_SITES.length,
+        partialSites: 0,
+        totalSites: CLOUD_SEA_SITES.length,
+        failedSites: 0,
+      };
+      return legacy;
+    });
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+
+    const fresh = await GET(request("date=2026-09-06&model=gfs"));
+    expect(fresh.headers.get("X-Cloudsea-Cache")).toBe("degraded");
+    expect((await fresh.json()).refreshError).toMatch(/压力层|质量/);
+
+    const cacheOnly = await GET(request("date=2026-09-06&model=gfs&cache_only=1"));
+    expect(cacheOnly.status).toBe(429);
+    expect(cacheOnly.headers.get("X-Cloudsea-Cache")).toBe("cache-only-miss");
+  });
+
   it("requests ground wind in the m/s units used by CloudSea scoring and UI", async () => {
     const requested: URL[] = [];
     vi.stubGlobal("fetch", successfulFetch(requested));
@@ -450,6 +479,8 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(body.pressure).toEqual({
       status: "available",
       availableSites: CLOUD_SEA_SITES.length,
+      receivedSites: CLOUD_SEA_SITES.length,
+      partialSites: 0,
       totalSites: CLOUD_SEA_SITES.length,
       failedSites: 0,
     });

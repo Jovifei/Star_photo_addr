@@ -21,6 +21,10 @@ import {
   type PressureForecastBatchResult,
   type PressureForecastLocation,
 } from "@/lib/pressure";
+import {
+  PRESSURE_PROVIDER_QUALITY_SCHEMA,
+  PRESSURE_PROVIDER_VALIDATOR_VERSION,
+} from "@/lib/pressureProviderIntegrity";
 import type { ForecastModel } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +94,10 @@ function isCacheableSnapshot(snapshot: CloudSeaSnapshot): boolean {
   return (
     snapshot.scoreVersion === CLOUD_SEA_SCORE_VERSION &&
     snapshot.providerValidationVersion === PROVIDER_VALIDATION_VERSION &&
+    snapshot.pressureQualitySchema === PRESSURE_PROVIDER_QUALITY_SCHEMA &&
+    snapshot.pressureQualityValidatorVersion === PRESSURE_PROVIDER_VALIDATOR_VERSION &&
+    Number.isInteger(snapshot.pressure?.receivedSites) &&
+    Number.isInteger(snapshot.pressure?.partialSites) &&
     hasCompleteCloudSeaCoverage(snapshot.surface, CLOUD_SEA_SITES.length) &&
     hasCompleteCloudSeaCoverage(snapshot.pressure, CLOUD_SEA_SITES.length)
   );
@@ -106,10 +114,18 @@ function degradationMessage(snapshot: CloudSeaSnapshot): string {
     );
   }
   const pressure = snapshot.pressure;
+  if (
+    !snapshot.pressureQualitySchema ||
+    snapshot.pressureQualitySchema !== PRESSURE_PROVIDER_QUALITY_SCHEMA ||
+    !snapshot.pressureQualityValidatorVersion ||
+    snapshot.pressureQualityValidatorVersion !== PRESSURE_PROVIDER_VALIDATOR_VERSION
+  ) {
+    issues.push("压力层质量校验来源缺失，快照不进入完整缓存");
+  }
   if (!hasCompleteCloudSeaCoverage(pressure, CLOUD_SEA_SITES.length)) {
     issues.push(
       hasValidCloudSeaCoverageCounts(pressure, CLOUD_SEA_SITES.length)
-        ? `压力层仅 ${pressure!.availableSites}/${pressure!.totalSites} 地点可用`
+        ? `压力层 ${pressure!.availableSites}/${pressure!.totalSites} 地点完整，收到 ${pressure!.receivedSites ?? pressure!.availableSites} 个，其中 ${pressure!.partialSites ?? 0} 个为部分覆盖`
         : `压力层覆盖摘要不完整（期望 ${CLOUD_SEA_SITES.length} 地点）`,
     );
   }
