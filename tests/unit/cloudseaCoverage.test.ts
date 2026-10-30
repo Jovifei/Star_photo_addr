@@ -1,6 +1,54 @@
 import { describe, expect, it } from "vitest";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
 import { buildCloudSeaSnapshot, hasCompleteCloudSeaCoverage } from "@/lib/cloudsea";
+import {
+  PRESSURE_LEVELS,
+  type PressureForecastResponse,
+  type PressureLevelSample,
+} from "@/lib/pressure";
+
+const windowTimes = [5, 6, 7, 8, 17, 18, 19].map(hour =>
+  `2026-10-22T${String(hour).padStart(2, "0")}:00`,
+);
+
+function pressureSample(
+  pressure: number,
+  index: number,
+): PressureLevelSample {
+  return {
+    pressure,
+    cloudCover: pressure === 950 || pressure === 925 ? 82 : 8,
+    humidity: pressure === 950 || pressure === 925 ? 96 : 55,
+    temperature: 10 - index,
+    heightMsl: 120 + index * 500,
+  };
+}
+
+const cleanProfile = PRESSURE_LEVELS.map(pressureSample);
+
+function pressureFor(locationId: string): PressureForecastResponse {
+  return {
+    locationId,
+    modelElevation: 980,
+    nativeGridElevationM: 980,
+    verticalReference: "native-grid-v2",
+    qualifiedPressureLevels: PRESSURE_LEVELS,
+    timezone: "Asia/Shanghai",
+    utcOffsetSeconds: 28800,
+    fetchedAt: "2026-10-22T00:00:00Z",
+    source: "Open-Meteo",
+    model: "gfs",
+    stale: false,
+    qualitySchema: "pressure-provider-issues-v1",
+    qualityValidatorVersion: "pressure-validator-v1",
+    qualityValidatedAt: "2026-10-22T00:00:00Z",
+    hourly: windowTimes.map(time => ({ time, temperature: 10 })),
+    profiles: Object.fromEntries(windowTimes.map(time => [
+      time,
+      cleanProfile.map(sample => ({ ...sample })),
+    ])),
+  };
+}
 
 describe("CloudSea source coverage cache gate", () => {
   const siteCount = CLOUD_SEA_SITES.length;
@@ -61,5 +109,51 @@ describe("CloudSea source coverage cache gate", () => {
     });
     expect(hasCompleteCloudSeaCoverage(snapshot.surface, siteCount)).toBe(true);
     expect(snapshot.pressure?.status).toBe("unavailable");
+  });
+
+  it("distinguishes received, partial, and complete pressure sites", () => {
+    const hourly = {
+      time: windowTimes,
+      cloud_cover_low: windowTimes.map(() => 90),
+      cloud_cover_mid: windowTimes.map(() => 5),
+      cloud_cover_high: windowTimes.map(() => 5),
+      relative_humidity_2m: windowTimes.map(() => 95),
+      wind_speed_10m: windowTimes.map(() => 2),
+      precipitation: windowTimes.map(() => 0),
+    };
+    const pressure = Object.fromEntries(
+      CLOUD_SEA_SITES.map(site => [site.id, pressureFor(site.id)]),
+    );
+    const pollutedSite = CLOUD_SEA_SITES[0]!;
+    pressure[pollutedSite.id]!.profiles[windowTimes[0]!] =
+      cleanProfile.map(sample => sample.pressure === 850
+        ? {
+            ...sample,
+            cloudCover: null,
+            providerIssues: [{
+              field: "cloud_cover_850hPa",
+              rawValue: 101,
+              reason: "out-of-range" as const,
+            }],
+          }
+        : sample);
+
+    const snapshot = buildCloudSeaSnapshot(
+      "2026-10-22",
+      "gfs",
+      { "2026-10-22": Object.fromEntries(CLOUD_SEA_SITES.map(site => [site.id, hourly])) },
+      pressure,
+    );
+
+    expect(snapshot.pressure).toMatchObject({
+      status: "partial",
+      receivedSites: siteCount,
+      availableSites: siteCount - 1,
+      partialSites: 1,
+      totalSites: siteCount,
+      failedSites: 1,
+    });
+    expect(snapshot.sites[pollutedSite.id]!.morning.pressureStatus).toBe("partial");
+    expect(hasCompleteCloudSeaCoverage(snapshot.pressure, siteCount)).toBe(false);
   });
 });

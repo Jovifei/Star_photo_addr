@@ -23,6 +23,19 @@ describe("cloud-sea window statistics disclosure", () => {
     expect(text).toContain("山顶层位仍待解析");
     expect(text).not.toContain("缺失 pressure");
   });
+  it("corrects legacy in-cloud wording throughout the detail", () => {
+    const text = detail({ cloudPosition: "in", cloudBaseM: 1550, cloudTopM: 1550,
+      cloudTopUpperM: 2070, altitudeDiffM: -61, score: 22, pressureStatus: "available",
+      positionLabel: "山顶处于云层内",
+      summary: "数值模式压力剖面显示山顶海拔（1489m）落在低层云 deck（1550–1550m）内，存在云雾包裹风险。" });
+    expect(text).toContain("山顶接近或可能处于云层");
+    expect(text).toContain("上下各150m余量");
+    expect(text).toContain("采样高度并非云体的实测边界");
+    expect(text).toContain("有云采样高度跨度");
+    expect(text).not.toContain("山顶处于云层内");
+    expect(text).not.toContain("落在低层云 deck");
+    expect(text).not.toContain("峰顶-云顶");
+  });
   it("distinguishes the window mean from a short high-scoring hour", () => {
     const text = detail({ score: 31, conditionLabel: "31/100", peakTime: "05:00", peakScore: 98,
       coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 4, pressureHours: 4 } });
