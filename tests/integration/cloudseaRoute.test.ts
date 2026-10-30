@@ -328,6 +328,39 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect((await second.json()).scoreVersion).toBe(cloudsea.CLOUD_SEA_SCORE_VERSION);
   });
 
+  it("repairs a retained current-version legacy snapshot on the API and cache-only path", async () => {
+    const fetchMock = successfulFetch();
+    vi.stubGlobal("fetch", fetchMock);
+    const cloudsea = await import("@/lib/cloudsea");
+    const build = cloudsea.buildCloudSeaSnapshot;
+    let retained: ReturnType<typeof build> | undefined;
+    vi.spyOn(cloudsea, "buildCloudSeaSnapshot").mockImplementationOnce((...args) => {
+      const snapshot = build(...args);
+      const site = snapshot.sites["cs-damingshan"];
+      const legacy = { ...site.evening, cloudPosition: "in" as const, positionLabel: "山顶处于云层内",
+        cloudBaseM: 1550, cloudTopM: 1550, cloudTopUpperM: 2070, score: 22, peakScore: 22,
+        summary: "数值模式压力剖面显示山顶海拔（1489m）落在低层云 deck（1550–1550m）内，存在云雾包裹风险。 窗口 3/3 个目标时次参与平均条件指数。" };
+      retained = { ...snapshot, sites: { ...snapshot.sites, "cs-damingshan": { ...site, evening: legacy } } };
+      return retained;
+    });
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const fresh = await GET(request("date=2026-09-06&model=gfs"));
+    expect(fresh.headers.get("X-Cloudsea-Cache")).toBe("fresh");
+    const freshWindow = (await fresh.json()).sites["cs-damingshan"].evening;
+    const calls = fetchMock.mock.calls.length;
+    const cached = await GET(request("date=2026-09-06&model=gfs&cache_only=1"));
+    expect(cached.headers.get("X-Cloudsea-Cache")).toBe("cache-only");
+    const cachedWindow = (await cached.json()).sites["cs-damingshan"].evening;
+    expect(cachedWindow).toEqual(freshWindow);
+    expect(cachedWindow).toMatchObject({ cloudPosition: "in", score: 22, peakScore: 22,
+      cloudBaseM: 1550, cloudTopM: 1550, cloudTopUpperM: 2070, positionLabel: "山顶接近或可能处于云层" });
+    expect(cachedWindow.summary).toContain("上下各150m余量");
+    expect(cachedWindow.summary).toContain("窗口 3/3");
+    expect(cachedWindow.summary).not.toContain("落在低层云 deck");
+    expect(retained!.sites["cs-damingshan"].evening.summary).toContain("落在低层云 deck");
+    expect(fetchMock).toHaveBeenCalledTimes(calls);
+  });
+
   it("requests ground wind in the m/s units used by CloudSea scoring and UI", async () => {
     const requested: URL[] = [];
     vi.stubGlobal("fetch", successfulFetch(requested));
