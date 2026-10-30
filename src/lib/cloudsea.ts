@@ -174,9 +174,35 @@ export const CLOUD_SEA_EMPTY_WINDOW: CloudSeaWindowScore = {
   summary: "该时段无可用预报数据。",
 };
 
+const IN_CLOUD_SUMMARY = "数值模式压力剖面显示山顶接近或可能处于有云采样层，存在云雾风险；层位判断使用上下各150m余量，采样高度并非云体的实测边界。";
+const LEGACY_IN_CLOUD_SUMMARY = /数值模式压力剖面显示山顶海拔（[^）]*）落在低层云 deck（[^）]*）内，存在云雾包裹风险。/g;
+
+/** Correct precomputed wording without changing scores or the retained snapshot. */
+export function presentCloudSeaWindow(window: CloudSeaWindowScore): CloudSeaWindowScore {
+  if (window.cloudPosition !== "in") return window;
+  const replaced = window.summary.replace(LEGACY_IN_CLOUD_SUMMARY, IN_CLOUD_SUMMARY);
+  return {
+    ...window,
+    positionLabel: positionLabel("in"),
+    // Do not pass an unrecognized historical assertion through as a fact.
+    summary: replaced.includes(IN_CLOUD_SUMMARY) ? replaced : IN_CLOUD_SUMMARY,
+  };
+}
+
+export function presentCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSnapshot {
+  return {
+    ...snapshot,
+    sites: Object.fromEntries(Object.entries(snapshot.sites).map(([id, windows]) => [id, {
+      ...windows,
+      morning: presentCloudSeaWindow(windows.morning),
+      evening: presentCloudSeaWindow(windows.evening),
+    }])),
+  };
+}
+
 /** Old responses remain inspectable facts, but cannot republish qualified scores. */
 export function qualifyCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSnapshot {
-  if (snapshot.scoreVersion === CLOUD_SEA_SCORE_VERSION) return snapshot;
+  if (snapshot.scoreVersion === CLOUD_SEA_SCORE_VERSION) return presentCloudSeaSnapshot(snapshot);
   const withhold = (window: CloudSeaWindowScore): CloudSeaWindowScore => ({
     ...window, score: null, peakScore: null, peakTime: null,
     summary: "旧版层位未验证，保留地面天气事实，暂不发布评分。",
@@ -193,7 +219,7 @@ export function positionLabel(pos: CloudPosition): string {
     case "above":
       return "山顶在云层上方";
     case "in":
-      return "山顶处于云层内";
+      return "山顶接近或可能处于云层";
     case "below":
       return "山顶在云层下方";
     case "clear":
@@ -483,7 +509,7 @@ function evaluateConditions(
       8,
       35,
     );
-    summary = `数值模式压力剖面显示山顶海拔（${site.altitude}m）落在低层云 deck（${layer.baseMsl}–${layer.topMsl}m）内，存在云雾包裹风险。`;
+    summary = IN_CLOUD_SUMMARY;
   } else {
     score = clamp(Math.round(12 + conditions.lowCloud * 0.1), 5, 25);
     summary = `数值模式压力剖面显示山顶海拔（${site.altitude}m）低于低层云 deck（${layer.baseMsl}–${layer.topMsl}m），不利于从峰顶俯瞰云海。`;

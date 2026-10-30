@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import type { CloudSeaSite } from "@/lib/cloudseaSites";
 import type { CloudSeaWindowScore } from "@/lib/cloudsea";
-import { positionBadgeTone } from "@/lib/cloudsea";
+import { positionBadgeTone, presentCloudSeaWindow } from "@/lib/cloudsea";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
 import { ResponsiveTopicDetailModalContext } from "@/components/ResponsiveTopicDetail";
@@ -95,11 +95,12 @@ function inversionStrengthLabel(
 
 export default function CloudSeaSiteDetail({
   site,
-  window: win,
+  window: rawWindow,
   phase,
   dateKey,
   onClose,
 }: CloudSeaSiteDetailProps) {
+  const win = presentCloudSeaWindow(rawWindow);
   const isModal = useContext(ResponsiveTopicDetailModalContext);
   const pLevel = markerLevelFor(win.score, win.conditionLevel);
   const badgeTone = positionBadgeTone(win.cloudPosition);
@@ -165,7 +166,7 @@ export default function CloudSeaSiteDetail({
   const positionHint = isAbove
     ? "压力层证据：山顶在低层云 deck 上方"
     : isIn
-      ? "压力层证据：山顶落在低层云 deck 内"
+      ? "压力层证据：山顶接近或可能处于有云采样层"
       : isBelow
         ? "压力层证据：山顶位于低层云 deck 下方"
         : isClear
@@ -330,7 +331,7 @@ export default function CloudSeaSiteDetail({
               <Layers size={14} className="cs-card-icon" />
               <span>数值模式垂直云层证据</span>
             </div>
-            {diff != null && (
+            {diff != null && !isIn && (
               <span
                 className={`cs-diff-tag ${isAbove ? "is-above" : "is-below"}`}
               >
@@ -368,10 +369,10 @@ export default function CloudSeaSiteDetail({
                 ) : isIn ? (
                   <>
                     <span className="cs-gap-indicator cs-gap-orange">
-                      ● 压力层显示山顶处于云层内
+                      ● 山顶接近或可能处于有云采样层
                     </span>
                     <span className="cs-gap-meta">
-                      存在云雾包裹风险，实际能见度仍需临近复核
+                      判断含上下各150m余量；存在云雾风险，实际能见度仍需临近复核
                     </span>
                   </>
                 ) : isBelow ? (
@@ -420,7 +421,7 @@ export default function CloudSeaSiteDetail({
                 <div className="cs-cloud-mist-bg" />
                 <div className="cs-cloud-stats-inline">
                   <span>
-                    已解析有云跨度: <b>{cloudThickness != null ? `${cloudThickness}m` : "—"}</b>
+                    有云采样高度跨度: <b>{cloudThickness != null ? `${cloudThickness}m` : "—"}</b>
                   </span>
                   <span>
                     层位判断: <b>{win.positionLabel}</b>
