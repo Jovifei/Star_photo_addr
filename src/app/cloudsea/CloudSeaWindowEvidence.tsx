@@ -13,6 +13,7 @@ export default function CloudSeaWindowEvidence({ window: win }: { window: CloudS
       {win.peakTime && win.peakScore != null && Number.isFinite(win.peakScore)
         ? ` · 最佳 ${win.peakTime} · ${win.peakScore}/100`
         : null}
+      {win.cloudPosition === "clear" ? " · 网格可能遗漏局地谷雾" : null}
     </span>
   );
 }

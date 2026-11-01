@@ -352,7 +352,7 @@ describe("evaluateCloudSeaWindow", () => {
     expect(result.summary).toContain("不使用启发式云底补齐");
   });
 
-  it("can safely return a low clear-sky score without pressure when low cloud is minimal", () => {
+  it("labels a low-cloud model result as uncertain about local valley fog", () => {
     const hourly = hourlyFixture({
       cloud_cover_low: [5, 5, 5, 5],
       cloud_cover_mid: [0, 0, 0, 0],
@@ -363,8 +363,9 @@ describe("evaluateCloudSeaWindow", () => {
     });
     const result = evaluateCloudSeaWindow(MOCK_HIGH_SITE, hourly, [5, 6, 7, 8]);
     expect(result.cloudPosition).toBe("clear");
-    expect(result.positionLabel).toBe("低云条件不足");
-    expect(result.score).toBeLessThanOrEqual(20);
+    expect(result.positionLabel).toBe("模式低云偏少");
+    expect(result.score).toBe(10);
+    expect(result.summary).toContain("网格预报可能漏掉局地谷雾");
     expect(result.cloudBaseM).toBeNull();
     expect(result.cloudTopM).toBeNull();
     expect(result.pressureStatus).toBe("unavailable");

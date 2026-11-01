@@ -202,6 +202,13 @@ const FAIL_CLOSED_SUMMARY = /压力层质量|质量 schema|质量.*schema|非法
 
 /** Correct precomputed wording without changing scores or the retained snapshot. */
 export function presentCloudSeaWindow(window: CloudSeaWindowScore): CloudSeaWindowScore {
+  if (window.cloudPosition === "clear") {
+    return { ...window, positionLabel: positionLabel("clear"),
+      summary: typeof window.summary === "string" ? window.summary.replace(
+        /低云量仅 (\d+)%，当前低层云体不足，暂未形成明显云海条件。/g,
+        "模式低云量 $1%，网格预报可能漏掉局地谷雾，请结合实况。",
+      ) : window.summary };
+  }
   if (window.cloudPosition !== "in") return window;
   if (FAIL_CLOSED_SUMMARY.test(window.summary)) {
     return { ...window, positionLabel: positionLabel("in") };
@@ -288,7 +295,7 @@ export function positionLabel(pos: CloudPosition): string {
     case "below":
       return "山顶在云层下方";
     case "clear":
-      return "低云条件不足";
+      return "模式低云偏少";
     default:
       return "数据不足";
   }
@@ -520,7 +527,7 @@ function evaluateConditions(
       pressureAvailable: vertical.profileAvailable,
       pressureConfidence: null,
       inversion: vertical.inversion,
-      summary: `低云量仅 ${Math.round(conditions.lowCloud)}%，当前低层云体不足，暂未形成明显云海条件。`,
+      summary: `模式低云量 ${Math.round(conditions.lowCloud)}%，网格预报可能漏掉局地谷雾，请结合实况。`,
     };
   }
 
