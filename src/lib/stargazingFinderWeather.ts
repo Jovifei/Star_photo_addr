@@ -357,7 +357,8 @@ async function requestBatch(
   const today = getShanghaiDate();
   const start = [...dates, today].sort()[0]!;
   const horizonNight = addFinderDays(today, maxForecastDaysForModel(model) - 2);
-  const standardEnd = [addFinderDays(today, 3), horizonNight].sort()[0]!;
+  // Finder needs the next morning; a two-day lookahead shares FireGlow's four-day raw batch.
+  const standardEnd = [addFinderDays(today, window === "observing-night" ? 2 : 3), horizonNight].sort()[0]!;
   const end = [...dates, standardEnd].sort().at(-1)!;
   const coverageDates: string[] = [];
   for (let date = start; date <= end; date = addFinderDays(date, 1)) coverageDates.push(date);

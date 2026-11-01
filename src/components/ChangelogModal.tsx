@@ -14,6 +14,7 @@ const VERSIONS = [
     version: APP_VERSION_LABEL, date: "2026-11-01", tag: "云海机位修正", current: true,
     highlights: [
       { icon: Mountain, title: "修正六个山峰坐标", desc: "天气与云海指数按山峰位置重新获取，旧坐标的数据不再用于当前机位。" },
+      { icon: ShieldCheck, title: "减少重复天气请求", desc: "共用覆盖范围一致的天气数据；压力层部分不可用时仍提示并支持手动更新。" },
     ],
   },
   {

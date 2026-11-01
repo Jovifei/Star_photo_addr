@@ -232,7 +232,13 @@ export default function CloudSeaApp() {
                   : !hasValidCloudSeaCoverageCounts(payload.pressure, CLOUD_SEA_SITES.length)
                     ? "压力层覆盖摘要不完整，快照完整性无法验证"
                     : `压力层仅 ${payload.pressure!.availableSites}/${payload.pressure!.totalSites} 地点可用`;
-                if (attempt === 1) {
+                const receivedPartialPressure = !payload.stale && surfaceComplete &&
+                  hasValidCloudSeaCoverageCounts(payload.pressure, CLOUD_SEA_SITES.length) &&
+                  payload.pressure?.receivedSites === CLOUD_SEA_SITES.length &&
+                  payload.pressure.availableSites > 0 &&
+                  payload.pressure.availableSites < payload.pressure.totalSites;
+                // Avoid an immediate full-batch retry when every pressure site responded.
+                if (attempt === 1 || receivedPartialPressure) {
                   results.push({ date, snapshot: payload, error: lastError });
                   lastError = "";
                   break;
