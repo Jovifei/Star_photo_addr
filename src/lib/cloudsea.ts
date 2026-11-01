@@ -230,13 +230,18 @@ export function presentCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSna
   const sitesWithPressureEvidence = Object.values(sites).filter(windows =>
     [windows.morning, windows.evening].some(hasPressureEvidence)
   ).length;
-  const completeSites = Object.values(sites).filter(windows =>
+  const pressureQualityQualified =
+    snapshot.pressureQualitySchema === PRESSURE_PROVIDER_QUALITY_SCHEMA &&
+    snapshot.pressureQualityValidatorVersion === PRESSURE_PROVIDER_VALIDATOR_VERSION;
+  const completeSites = pressureQualityQualified ? Object.values(sites).filter(windows =>
     [windows.morning, windows.evening].every(window =>
+      window.pressureStatus === "available" &&
       window.coverage !== undefined &&
+      Number.isInteger(window.coverage.expectedHours) &&
       window.coverage.expectedHours > 0 &&
       window.coverage.pressureHours === window.coverage.expectedHours
     )
-  ).length;
+  ).length : 0;
   const receivedSites = Math.max(
     completeSites,
     Math.min(totalSites, snapshot.pressure?.receivedSites ?? sitesWithPressureEvidence),

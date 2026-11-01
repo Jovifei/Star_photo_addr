@@ -390,6 +390,32 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(cacheOnly.headers.get("X-Cloudsea-Cache")).toBe("cache-only-miss");
   });
 
+  it("does not cache complete-looking counts when window pressure status is missing", async () => {
+    vi.stubGlobal("fetch", successfulFetch());
+    const cloudsea = await import("@/lib/cloudsea");
+    const build = cloudsea.buildCloudSeaSnapshot;
+    vi.spyOn(cloudsea, "buildCloudSeaSnapshot").mockImplementationOnce((...args) => {
+      const snapshot = build(...args);
+      const site = snapshot.sites["cs-damingshan"];
+      const morning = { ...site.morning };
+      const evening = { ...site.evening };
+      delete (morning as Partial<typeof morning>).pressureStatus;
+      delete (evening as Partial<typeof evening>).pressureStatus;
+      return { ...snapshot, sites: { ...snapshot.sites, "cs-damingshan": { morning, evening } } };
+    });
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+
+    const response = await GET(request("date=2026-09-06&model=gfs"));
+    const body = await response.json();
+    expect(response.headers.get("X-Cloudsea-Cache")).toBe("degraded");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.pressure).toMatchObject({ receivedSites: CLOUD_SEA_SITES.length, availableSites: CLOUD_SEA_SITES.length - 1, partialSites: 1 });
+    expect(body.refreshError).toContain("压力层");
+    const cacheOnly = await GET(request("date=2026-09-06&model=gfs&cache_only=1"));
+    expect(cacheOnly.status).toBe(429);
+    expect(cacheOnly.headers.get("X-Cloudsea-Cache")).toBe("cache-only-miss");
+  });
+
   it("requests ground wind in the m/s units used by CloudSea scoring and UI", async () => {
     const requested: URL[] = [];
     vi.stubGlobal("fetch", successfulFetch(requested));

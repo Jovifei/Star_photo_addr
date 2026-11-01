@@ -27,7 +27,76 @@ function window(
 }
 
 describe("legacy cloud-sea pressure coverage presentation", () => {
-  it("derives complete sites from retained windows instead of trusting legacy received counts", () => {
+  it.each([false, true])("does not count complete hours without a pressure status (qualified: %s)", qualified => {
+    const morning = window(3, 3);
+    const evening = window(3, 3);
+    delete (morning as Partial<CloudSeaWindowScore>).pressureStatus;
+    delete (evening as Partial<CloudSeaWindowScore>).pressureStatus;
+    const snapshot: CloudSeaSnapshot = {
+      scoreVersion: CLOUD_SEA_SCORE_VERSION,
+      date: "2026-11-01",
+      model: "gfs",
+      generatedAt: "2026-11-01T00:00:00Z",
+      source: "fixture",
+      stale: false,
+      ...(qualified ? {
+        pressureQualitySchema: "pressure-provider-issues-v1" as const,
+        pressureQualityValidatorVersion: "pressure-validator-v1" as const,
+      } : {}),
+      pressure: { status: "available", availableSites: 1, totalSites: 1, failedSites: 0 },
+      sites: { summit: { morning, evening } },
+    };
+    const original = structuredClone(snapshot);
+
+    const presented = presentCloudSeaSnapshot(snapshot);
+
+    expect(presented.pressure).toMatchObject({ receivedSites: 0, availableSites: 0, partialSites: 0, failedSites: 1 });
+    expect(presented.pressure?.status).not.toBe("available");
+    expect(presented.sites.summit.morning.score).toBe(50);
+    expect(snapshot).toEqual(original);
+  });
+
+  it.each(["partial", "unavailable"] as const)("does not count %s windows as complete even when hours match", status => {
+    const morning = { ...window(3, 3), pressureStatus: status };
+    const evening = { ...window(3, 3), pressureStatus: status };
+    const snapshot: CloudSeaSnapshot = {
+      scoreVersion: CLOUD_SEA_SCORE_VERSION,
+      date: "2026-11-01", model: "gfs", generatedAt: "2026-11-01T00:00:00Z", source: "fixture", stale: false,
+      pressureQualitySchema: "pressure-provider-issues-v1", pressureQualityValidatorVersion: "pressure-validator-v1",
+      pressure: { status: "available", availableSites: 1, totalSites: 1, failedSites: 0 },
+      sites: { summit: { morning, evening } },
+    };
+
+    const presented = presentCloudSeaSnapshot(snapshot);
+
+    expect(presented.pressure?.availableSites).toBe(0);
+    expect(presented.pressure?.status).not.toBe("available");
+  });
+
+  it.each([
+    ["both markers", {}],
+    ["schema", { pressureQualityValidatorVersion: "pressure-validator-v1" as const }],
+    ["validator", { pressureQualitySchema: "pressure-provider-issues-v1" as const }],
+    ["matching validator", { pressureQualitySchema: "pressure-provider-issues-v1" as const, pressureQualityValidatorVersion: "wrong" as "pressure-validator-v1" }],
+  ])("does not promote legacy windows without %s", (_missing, quality) => {
+    const snapshot: CloudSeaSnapshot = {
+      scoreVersion: CLOUD_SEA_SCORE_VERSION,
+      date: "2026-11-01", model: "gfs", generatedAt: "2026-11-01T00:00:00Z", source: "fixture", stale: false,
+      ...quality,
+      pressure: { status: "available", availableSites: 1, totalSites: 1, failedSites: 0 },
+      sites: { summit: { morning: window(3, 3), evening: window(3, 3) } },
+    };
+
+    const presented = presentCloudSeaSnapshot(snapshot);
+
+    expect(presented.pressure).toMatchObject({ receivedSites: 1, availableSites: 0, partialSites: 1, failedSites: 1 });
+    expect(presented.pressure?.status).not.toBe("available");
+    expect(presented.sites.summit.morning.score).toBe(50);
+    expect(presented.pressureQualitySchema).toBe(snapshot.pressureQualitySchema);
+    expect(presented.pressureQualityValidatorVersion).toBe(snapshot.pressureQualityValidatorVersion);
+  });
+
+  it("retains legacy scores without promoting unqualified windows to complete", () => {
     const sites = Object.fromEntries(CLOUD_SEA_SITES.map((site, index) => [
       site.id,
       index === 0
@@ -53,12 +122,12 @@ describe("legacy cloud-sea pressure coverage presentation", () => {
     const presented = presentCloudSeaSnapshot(snapshot);
 
     expect(presented.pressure).toMatchObject({
-      status: "partial",
+      status: "unavailable",
       receivedSites: CLOUD_SEA_SITES.length,
-      availableSites: CLOUD_SEA_SITES.length - 1,
-      partialSites: 1,
+      availableSites: 0,
+      partialSites: CLOUD_SEA_SITES.length,
       totalSites: CLOUD_SEA_SITES.length,
-      failedSites: 1,
+      failedSites: CLOUD_SEA_SITES.length,
     });
     expect(presented.sites[CLOUD_SEA_SITES[0]!.id]!.morning).toMatchObject({
       score: 50,
@@ -99,6 +168,8 @@ describe("legacy cloud-sea pressure coverage presentation", () => {
       generatedAt: "2026-10-31T00:00:00Z",
       source: "legacy fixture",
       stale: false,
+      pressureQualitySchema: "pressure-provider-issues-v1",
+      pressureQualityValidatorVersion: "pressure-validator-v1",
       pressure: {
         status: "available",
         availableSites: total,
@@ -118,7 +189,7 @@ describe("legacy cloud-sea pressure coverage presentation", () => {
       totalSites: total,
       failedSites: 1,
     });
-    expect(presented.pressureQualitySchema).toBeUndefined();
+    expect(presented.pressureQualitySchema).toBe("pressure-provider-issues-v1");
   });
 
   it("keeps qualified pressure evidence intact without downgrading", () => {

@@ -99,7 +99,8 @@ function isCacheableSnapshot(snapshot: CloudSeaSnapshot): boolean {
     Number.isInteger(snapshot.pressure?.receivedSites) &&
     Number.isInteger(snapshot.pressure?.partialSites) &&
     hasCompleteCloudSeaCoverage(snapshot.surface, CLOUD_SEA_SITES.length) &&
-    hasCompleteCloudSeaCoverage(snapshot.pressure, CLOUD_SEA_SITES.length)
+    hasCompleteCloudSeaCoverage(snapshot.pressure, CLOUD_SEA_SITES.length) &&
+    hasCompleteCloudSeaCoverage(presentCloudSeaSnapshot(snapshot).pressure, CLOUD_SEA_SITES.length)
   );
 }
 
@@ -113,7 +114,7 @@ function degradationMessage(snapshot: CloudSeaSnapshot): string {
         : `地面天气覆盖摘要不完整（期望 ${CLOUD_SEA_SITES.length} 地点）`,
     );
   }
-  const pressure = snapshot.pressure;
+  const pressure = presentCloudSeaSnapshot(snapshot).pressure;
   if (
     !snapshot.pressureQualitySchema ||
     snapshot.pressureQualitySchema !== PRESSURE_PROVIDER_QUALITY_SCHEMA ||
