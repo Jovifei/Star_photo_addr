@@ -100,6 +100,14 @@ beforeEach(() => {
 });
 
 describe("GET /api/fireglow/snapshot", () => {
+  it("uses Best Match when no model is specified", async () => {
+    state.mode = "valid";
+    const { GET } = await import("@/app/api/fireglow/snapshot/route");
+    const response = await GET(request("date=2026-09-20"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).model).toBe("best_match");
+  });
+
   it("does not return or cache an empty first snapshot as HTTP 200", async () => {
     const { GET } = await import("@/app/api/fireglow/snapshot/route");
 

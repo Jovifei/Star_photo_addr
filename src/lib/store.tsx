@@ -441,7 +441,7 @@ function reducer(state: AppState, action: Action): AppState {
 
 async function fetchForecastFor(
   location: Location,
-  model: CloudState["model"] = "icon",
+  model: CloudState["model"] = DEFAULT_CLOUD_STATE.model,
   forceRefresh = false,
 ): Promise<LocationForecast | null> {
   const result = await requestForecastResponse(
@@ -983,6 +983,7 @@ export function StoreProvider({
     dispatch({ type: "SET_BORTLE", enabled: !state.bortleEnabled });
   }, [state.bortleEnabled]);
   const setCloud = useCallback((partial: Partial<CloudState>, source: "auto" | "explicit" = "explicit") => {
+    if (partial.model) pendingModelRef.current = partial.model;
     dispatch({ type: "SET_CLOUD", partial, source });
   }, []);
   const selectCatalogCandidate = useCallback(async (candidate: CityCandidate) => {

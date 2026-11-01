@@ -11,9 +11,11 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL, date: "2026-10-28", tag: "火烧云逐点来源状态", current: true,
+    version: APP_VERSION_LABEL, date: "2026-10-28", tag: "天气来源与云海质量", current: true,
     highlights: [
       { icon: ShieldCheck, title: "按地点核对数据状态", desc: "火烧云详情按日期、地点与晨晚窗口显示来源状态；批次降级和三日覆盖不足仍会提醒。" },
+      { icon: CloudSun, title: "默认使用最佳匹配天气", desc: "新会话使用 Best Match；仍可选择 ICON，评分字段不足时继续暂缓评分。" },
+      { icon: Mountain, title: "逐时核对云海压力层", desc: "异常压力层只影响对应时次；数据不足时保留真实天气并说明覆盖情况。" },
     ],
   },
   {

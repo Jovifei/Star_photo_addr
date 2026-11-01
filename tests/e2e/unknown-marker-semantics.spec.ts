@@ -92,7 +92,7 @@ test("Fireglow empty snapshots show an unavailable state instead of a fake zero-
   });
   await mockMapTiles(page);
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect(page.locator(".fireglow-error")).toContainText("未返回有效火烧云评分");
   await expect(page.locator(".fireglow-list li")).toHaveCount(1);
   await expect(page.locator(".fireglow-empty")).toContainText("暂无有效火烧云数据");

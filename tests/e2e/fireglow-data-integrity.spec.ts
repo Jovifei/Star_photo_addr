@@ -50,7 +50,7 @@ test("failed refresh preserves the same labelled snapshot in map, list and detai
       sites:{"finder-001-location":{morning:windowScore(score),evening:windowScore(score)}},
     })});
   });
-  await page.goto('/fireglow');
+  await page.goto('/fireglow?model=icon');
   if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
   const scoreLabel = mobile
     ? page.locator(".mobile-sheet-ranking button").first().locator("strong")
@@ -111,7 +111,7 @@ test("does not render an HTTP 200 empty fireglow snapshot as a successful zero-p
     });
   });
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect(page.locator(".fireglow-error")).toContainText("未返回有效火烧云评分");
   await expect(page.locator(".fireglow-empty")).toContainText("暂无有效火烧云数据");
 
@@ -144,7 +144,7 @@ test("stale fireglow state is explicit on map, ranking and detail", async ({ pag
     });
   });
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect(page.locator(".fireglow-map-status")).toContainText("数据已降级");
   await expect(page.locator(".fireglow-panel-head")).toContainText("数据已降级");
   await page.locator(".fireglow-list li button").first().click();
@@ -177,7 +177,7 @@ test("three-day view labels a cold failed date as incomplete across map, ranking
     });
   });
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect(page.locator(".fireglow-score b").first()).toHaveText("72/100");
   const baseDate = [...requestedDates][0]!;
   missingDate = shiftDate(baseDate, 2);
@@ -209,7 +209,7 @@ test("reports when the selected fireglow phase has no scores even if the other p
     });
   });
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect(page.locator(".fireglow-phase-unavailable")).toContainText("晚霞");
   await expect(page.locator(".fireglow-panel-head")).toContainText("数据不足");
   await expect(page.locator(".fireglow-empty")).toContainText("当前晚霞时段暂无有效评分");
@@ -246,7 +246,7 @@ test("retains the selected-phase warning when another date in the range fails", 
     });
   });
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect.poll(() => requestedDates.size).toBeGreaterThan(0);
   const baseDate = [...requestedDates][0]!;
   missingDate = shiftDate(baseDate, 2);
@@ -270,7 +270,7 @@ test("HTTP200 retained snapshot with Retry-After stays visible and stops later d
       sites: { "finder-001-location": { morning: windowScore(72), evening: windowScore(72) } },
     } });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
   const scoreLabel = mobile ? page.locator(".mobile-sheet-ranking button").first().locator("strong") : page.locator(".fireglow-score b").first();
   await expect(scoreLabel).toHaveText("72/100");

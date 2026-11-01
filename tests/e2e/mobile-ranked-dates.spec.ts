@@ -76,7 +76,7 @@ test("手机火烧云三日最佳排行逐行标明高分所属日期", async ({
     }) });
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await page.locator('.fireglow-controls .segmented[data-mode="range"] button').nth(3).click();
   await page.getByRole("button", { name: "展开数据面板" }).click();
   const sheet = page.getByTestId("mobile-data-sheet");

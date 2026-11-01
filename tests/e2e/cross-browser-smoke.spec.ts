@@ -51,7 +51,7 @@ test("fireglow keeps mixed site quality separate and expires an open selection",
       sites: { [ids[0]]: { morning: window(90), evening: window(90) }, [ids[1]]: { morning: window(60), evening: window(60) } },
     } });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
   const ranking = mobile ? page.locator(".mobile-sheet-ranking") : page.locator(".fireglow-list");
   await ranking.getByRole("button", { name: /阿里暗夜公园/ }).click();

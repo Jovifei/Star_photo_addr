@@ -223,7 +223,7 @@ export interface ForecastMapFrame {
   precipitation: number | null;
   windSpeed: number | null;
   windDirection: number | null;
-  model: Exclude<ForecastModel, "best_match">;
+  model: ForecastModel;
   source: "Open-Meteo";
   isForecast: true;
   units: Record<string, string>;
@@ -381,7 +381,7 @@ export interface CloudState {
   /** Master switch (controls the entire cloud feature). */
   enabled: boolean;
   /** Forecast model. */
-  model: Exclude<ForecastModel, "best_match">;
+  model: ForecastModel;
   /** Canonical local ISO time selected by the matrix/timeline. */
   activeForecastTime?: string | null;
   activeForecastEpoch?: number | null;

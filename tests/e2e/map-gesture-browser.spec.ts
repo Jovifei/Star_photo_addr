@@ -249,7 +249,7 @@ test("FireGlow dawn UI labels the selected calendar day and each date in the thr
     });
   });
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   const phase = page.locator('.segmented[data-mode="phase"]');
   await phase.locator("button").nth(1).click();
   await expect(phase.locator("button").nth(1)).toHaveAttribute("aria-pressed", "true");

@@ -172,7 +172,7 @@ test.describe("responsive layout contract", () => {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          date, model: "icon", generatedAt: `${date}T00:30:00.000Z`, source: "E2E ICON fixture", stale: false,
+          date, model: "best_match", generatedAt: `${date}T00:30:00.000Z`, source: "E2E Best Match fixture", stale: false,
           sites: { "test-site": { morning: { score: 72, reason: "fixture" }, evening: { score: 68, reason: "fixture" } } },
         }),
       });
@@ -388,7 +388,7 @@ test.describe("responsive layout contract", () => {
     });
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/fireglow");
+    await page.goto("/fireglow?model=icon");
     const mobile = testInfo.project.name === "mobile";
     if (mobile) await expandMobileDataSheet(page);
     const card = page.locator(mobile ? ".mobile-sheet-ranking button" : ".fireglow-list button").first();

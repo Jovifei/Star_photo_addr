@@ -1,4 +1,4 @@
-import { snapshotHealth, retryAfterDelay, observingContext } from "./observing-snapshot-worker-utils.mjs";
+import { snapshotHealth, retryAfterDelay, observingContext, resolveSnapshotModel } from "./observing-snapshot-worker-utils.mjs";
 
 const baseUrl = (
   process.env.SNAPSHOT_BASE_URL || "http://127.0.0.1:3000"
@@ -24,9 +24,7 @@ const requestTimeoutMs = boundedNumber(
 );
 const daysValue = Number(process.env.SNAPSHOT_DAYS);
 const days = [1, 3, 5, 7].includes(daysValue) ? daysValue : 1;
-const supportedModels = new Set(["best_match", "icon", "gfs", "aifs"]);
-const requestedModel = process.env.SNAPSHOT_MODEL || "icon";
-const model = supportedModels.has(requestedModel) ? requestedModel : "icon";
+const model = resolveSnapshotModel(process.env.SNAPSHOT_MODEL);
 
 let stopped = false;
 let timer = null;

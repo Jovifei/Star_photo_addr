@@ -68,7 +68,7 @@ services:
       SNAPSHOT_INTERVAL_MS: ${SNAPSHOT_INTERVAL_MS:-10800000}
       SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS: ${SNAPSHOT_WORKER_REQUEST_TIMEOUT_MS:-150000}
       SNAPSHOT_DAYS: ${SNAPSHOT_DAYS:-1}
-      SNAPSHOT_MODEL: ${SNAPSHOT_MODEL:-icon}
+      SNAPSHOT_MODEL: ${SNAPSHOT_MODEL:-best_match}
       NODE_OPTIONS: ${WORKER_NODE_OPTIONS:---max-old-space-size=512}
     volumes:
       - observing-snapshots:/app/data/snapshots

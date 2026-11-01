@@ -179,6 +179,44 @@ test("CloudSea desktop reduces map/card chrome and discloses detail evidence pro
   await expect(detail.locator(".cs-gear-grid")).toBeVisible();
 });
 
+test("legacy cached summit-cloud wording is corrected in the ranking and detail", async ({ page }, info) => {
+  const date = shanghaiDateKey();
+  const body = snapshot(date, { score: 22, cloudPosition: "in", peakScore: 22,
+    coverage: { expectedHours: 3, surfaceValidHours: 3, scoreableHours: 3, pressureHours: 3 } });
+  const oldWindow = { ...body.sites["cs-taizijian"].evening, cloudBaseM: 1550, cloudTopM: 1550,
+    cloudTopUpperM: 2070, altitudeDiffM: -61, pressureConfidence: "低",
+    summary: "数值模式压力剖面显示山顶海拔（1489m）落在低层云 deck（1550–1550m）内，存在云雾包裹风险。 窗口 3/3 个目标时次参与平均条件指数。" };
+  await mockSnapshot(page, { ...body, sites: { "cs-damingshan": { morning: oldWindow, evening: oldWindow } } });
+  await page.goto("/cloudsea");
+  if (info.project.name === "desktop") {
+    const card = page.locator(".cloudsea-card").filter({ hasText: "临安大明山" });
+    await expect(card).toContainText("山顶接近或可能处于云层");
+    await expect(card).toContainText("22/100");
+    await card.click();
+    await page.locator('.leaflet-overlay-pane path[stroke="#ffffff"]').click();
+    await expect(page.locator(".cloudsea-popup")).toContainText("最高有云采样层: 1550m");
+    await expect(page.locator(".cloudsea-popup")).toContainText("山顶接近或可能处于云层");
+    await card.click();
+  } else {
+    const search = page.getByRole("searchbox", { name: "搜索目录摄影点位" });
+    await search.fill("临安大明山");
+    await page.getByRole("option", { name: "临安大明山" }).click();
+    await expect(page.locator(".mobile-key-metrics")).toContainText("山顶接近或可能处于云层");
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+  }
+  const detail = page.locator(".cloudsea-site-detail");
+  await expect(detail).toContainText("上下各150m余量");
+  await expect(detail).toContainText("采样高度并非云体的实测边界");
+  await expect(detail).not.toContainText("山顶处于云层内");
+  await expect(detail).not.toContainText("落在低层云 deck");
+  if (info.project.name === "mobile") {
+    for (const width of [320, 375, 430, 768]) {
+      await page.setViewportSize({ width, height: 844 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+    }
+  }
+});
+
 test("CloudSea pressure unavailable preserves surface facts and vertical unknown on mobile", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile", "移动 pressure-unavailable contract 在 mobile Chromium 验证一次");
   const date = shanghaiDateKey();

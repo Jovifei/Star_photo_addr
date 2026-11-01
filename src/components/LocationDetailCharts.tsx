@@ -6,6 +6,7 @@ import type { HourEvaluation, Location } from "@/lib/types";
 import { hasUsablePressureProfile, pressureProfileAt } from "@/lib/pressureIntegrity";
 import type { PressureForecastResponse } from "@/lib/pressure";
 import { deriveCloudLayers } from "@/lib/cloudLayers";
+import { DEFAULT_FORECAST_MODEL } from "@/lib/forecastPolicy";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
 
@@ -228,7 +229,7 @@ export default function LocationDetailCharts({
   activeHour,
   activeEpoch,
   onSelectHour,
-  model = "icon",
+  model = DEFAULT_FORECAST_MODEL,
 }: LocationDetailChartsProps) {
   const hours = useMemo(() => evaluation?.hours ?? [], [evaluation?.hours]);
   const siteElevation = location?.elevation == null ? null : Math.round(location.elevation);

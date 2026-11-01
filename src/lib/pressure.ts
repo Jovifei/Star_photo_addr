@@ -1,6 +1,12 @@
 import { OpenMeteoRateLimitError, withOpenMeteoProviderSlot, noteOpenMeteoRateLimit, currentOpenMeteoRateLimit } from "./forecast";
 import { hasUsablePressureProfile } from "./pressureIntegrity";
-export { pressureProfileAt, hasUsablePressureProfile, isCompletePressureLevelSample, usablePressureLevelCount } from "./pressureIntegrity";
+export {
+  pressureProfileAt,
+  hasUsablePressureProfile,
+  isCompletePressureLevelSample,
+  isThermodynamicPressureLevelSample,
+  usablePressureLevelCount,
+} from "./pressureIntegrity";
 import {
   applyOpenMeteoApiKey,
   buildForecastUrl,
@@ -10,6 +16,12 @@ import {
 } from "./forecast";
 import { normalizeEpochHours } from "./absoluteForecastTime";
 import { validateProviderHourlyFields } from "./providerWeatherIntegrity";
+import {
+  classifyPressureProviderFields,
+  PRESSURE_PROVIDER_QUALITY_SCHEMA,
+  PRESSURE_PROVIDER_VALIDATOR_VERSION,
+  type PressureLevelProviderIssue,
+} from "./pressureProviderIntegrity";
 import { validProductDate } from "./productRoutes";
 import { PRESSURE_LEVELS } from "./pressureLevels";
 import type { ForecastModel } from "./types";
@@ -23,6 +35,7 @@ export interface PressureLevelSample {
   humidity: number | null;
   temperature: number | null;
   heightMsl: number | null;
+  providerIssues?: PressureLevelProviderIssue[];
 }
 
 export interface PressureForecastResponse {
@@ -45,6 +58,9 @@ export interface PressureForecastResponse {
   source: "Open-Meteo";
   model: ForecastModel;
   stale?: boolean;
+  qualitySchema?: typeof PRESSURE_PROVIDER_QUALITY_SCHEMA;
+  qualityValidatorVersion?: typeof PRESSURE_PROVIDER_VALIDATOR_VERSION;
+  qualityValidatedAt?: string;
   timeAxisVersion?: "epoch-v1";
   profilesByEpoch?: Record<string, PressureLevelSample[]>;
   hourly: Array<{ time: string; epochSeconds?: number; utcOffsetSeconds?: number; temperature: number | null }>;
@@ -300,13 +316,14 @@ export function parsePressureForecast(
   }
 
   const times = clocks.map(clock => clock.time);
+  const classified = classifyPressureProviderFields(hourly, raw.hourly_units);
   const availableLevels = PRESSURE_LEVELS.filter((level) =>
     [
       `cloud_cover_${level}hPa`,
       `relative_humidity_${level}hPa`,
       `temperature_${level}hPa`,
       `geopotential_height_${level}hPa`,
-    ].every((key) => isAlignedNumericSeries(hourly[key], times.length)),
+    ].every((key) => isAlignedNumericSeries(classified.fields[key], times.length)),
   );
   if (availableLevels.length < MIN_USABLE_PRESSURE_LEVELS) {
     throw new Error(
@@ -315,29 +332,40 @@ export function parsePressureForecast(
   }
   // GFS025 may return unsupported 2m temperature as all-null with unit
   // "undefined". It is optional chart context, not pressure-profile evidence.
-  const usedFields = Object.fromEntries(Object.entries(hourly).filter(([key, values]) =>
-    key === "time" || (key === "temperature_2m" && (!Array.isArray(values) || values.some(value => value !== null))) || availableLevels.some(level => key.endsWith(`_${level}hPa`)),
-  ));
-  validateProviderHourlyFields(usedFields, raw.hourly_units);
+  const usedFields = { ...hourly, ...classified.fields };
+  const optionalSurfaceFields = Object.fromEntries(
+    Object.entries(hourly).filter(([key, values]) =>
+      key === "time" ||
+      (key === "temperature_2m" &&
+        (!Array.isArray(values) || values.some(value => value !== null)))
+    ),
+  );
+  validateProviderHourlyFields(optionalSurfaceFields, raw.hourly_units);
 
   const profiles: PressureForecastResponse["profiles"] = {};
   const profilesByEpoch: Record<string, PressureLevelSample[]> = {};
+  const fetchedAt = new Date().toISOString();
   times.forEach((time, index) => {
-    const profile = PRESSURE_LEVELS.map((pressure) => ({
-      pressure,
-      cloudCover: numberOrNull(
-        valueAt(usedFields, `cloud_cover_${pressure}hPa`, index),
-      ),
-      humidity: numberOrNull(
-        valueAt(usedFields, `relative_humidity_${pressure}hPa`, index),
-      ),
-      temperature: numberOrNull(
-        valueAt(usedFields, `temperature_${pressure}hPa`, index),
-      ),
-      heightMsl: numberOrNull(
-        valueAt(usedFields, `geopotential_height_${pressure}hPa`, index),
-      ),
-    }));
+    const profile = PRESSURE_LEVELS.map((pressure) => {
+      const providerIssues = classified.issuesByIndex.get(index)
+        ?.filter(issue => issue.field.endsWith(`_${pressure}hPa`));
+      return {
+        pressure,
+        cloudCover: numberOrNull(
+          valueAt(usedFields, `cloud_cover_${pressure}hPa`, index),
+        ),
+        humidity: numberOrNull(
+          valueAt(usedFields, `relative_humidity_${pressure}hPa`, index),
+        ),
+        temperature: numberOrNull(
+          valueAt(usedFields, `temperature_${pressure}hPa`, index),
+        ),
+        heightMsl: numberOrNull(
+          valueAt(usedFields, `geopotential_height_${pressure}hPa`, index),
+        ),
+        ...(providerIssues?.length ? { providerIssues } : {}),
+      };
+    });
     // Legacy wall-clock lookup deterministically chooses the earlier occurrence.
     if (!profiles[time]) profiles[time] = profile;
     if (absolute) profilesByEpoch[String(clocks[index].epochSeconds)] = profile;
@@ -356,10 +384,13 @@ export function parsePressureForecast(
     modelLongitude: numberOrNull(raw.longitude),
     timezone: typeof raw.timezone === "string" ? raw.timezone : "Asia/Shanghai",
     utcOffsetSeconds: numberOrNull(raw.utc_offset_seconds) ?? 0,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt,
     source: "Open-Meteo",
     model,
     stale: !absolute,
+    qualitySchema: PRESSURE_PROVIDER_QUALITY_SCHEMA,
+    qualityValidatorVersion: PRESSURE_PROVIDER_VALIDATOR_VERSION,
+    qualityValidatedAt: fetchedAt,
     ...(absolute ? { timeAxisVersion: "epoch-v1" as const, profilesByEpoch } : {}),
     hourly: clocks.map((clock, index) => ({
       ...clock,

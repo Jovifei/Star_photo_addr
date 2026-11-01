@@ -9,7 +9,8 @@ const sample = (pressure: number, heightMsl: number, cloudy: boolean): PressureL
 const sparse = [sample(1000,100,false),sample(925,800,false),sample(850,1400,true),sample(700,2965,false),sample(600,4200,false),sample(500,5500,false)];
 const dense = [sample(1000,100,false),sample(975,300,false),sample(950,500,true),sample(925,750,true),sample(900,1000,false),sample(850,1500,false),sample(800,2000,false),sample(700,3000,false),sample(600,4200,false),sample(500,5500,false)];
 function score(profile: PressureLevelSample[], lowCloud = 90, native = true, nativeLevels: readonly number[] = PRESSURE_LEVELS) {
-  const pressure = Object.assign({ locationId: site.id, modelElevation: 100, timezone: "UTC", utcOffsetSeconds: 0, fetchedAt: new Date().toISOString(), source: "Open-Meteo", model: "gfs", stale: false, hourly: [{time,temperature:10}], profiles: {[time]:profile} } as PressureForecastResponse,
+  const fetchedAt = new Date().toISOString();
+  const pressure = Object.assign({ locationId: site.id, modelElevation: 100, timezone: "UTC", utcOffsetSeconds: 0, fetchedAt, source: "Open-Meteo", model: "gfs", stale: false, qualitySchema: "pressure-provider-issues-v1", qualityValidatorVersion: "pressure-validator-v1", qualityValidatedAt: fetchedAt, hourly: [{time,temperature:10}], profiles: {[time]:profile} } as PressureForecastResponse,
     native ? { nativeGridElevationM: 100, verticalReference: "native-grid-v2", qualifiedPressureLevels: nativeLevels } : {});
   return evaluateCloudSeaWindow(site,{time:[time],cloud_cover_low:[lowCloud],cloud_cover_mid:[5],cloud_cover_high:[5],relative_humidity_2m:[98],wind_speed_10m:[2],precipitation:[0]},[14],pressure,"2026-10-08");
 }
@@ -100,7 +101,7 @@ describe("CloudSea actual cloud-top resolution",()=>{
       {...sample(650,3722,false),cloudCover:0.3,humidity:44.9},
     ];
     expect(deriveCloudSeaVerticalEvidence(profile,1945.6,3106)).toMatchObject({profileAvailable:true,resolution:"ambiguous",layer:null});
-    const pressure=Object.assign({locationId:site.id,modelElevation:1945.6,timezone:"UTC",utcOffsetSeconds:0,fetchedAt:new Date().toISOString(),source:"Open-Meteo",model:"gfs",stale:false,hourly:[{time,temperature:10}],profiles:{[time]:profile}} as PressureForecastResponse,{
+    const pressure=Object.assign({locationId:site.id,modelElevation:1945.6,timezone:"UTC",utcOffsetSeconds:0,fetchedAt:new Date().toISOString(),source:"Open-Meteo",model:"gfs",stale:false,qualitySchema:"pressure-provider-issues-v1",qualityValidatorVersion:"pressure-validator-v1",qualityValidatedAt:new Date().toISOString(),hourly:[{time,temperature:10}],profiles:{[time]:profile}} as PressureForecastResponse,{
       nativeGridElevationM:1945.6,verticalReference:"native-grid-v2",qualifiedPressureLevels:PRESSURE_LEVELS,
     });
     const result=evaluateCloudSeaWindow({...site,altitude:3106},{time:[time],cloud_cover_low:[100],cloud_cover_mid:[5],cloud_cover_high:[5],relative_humidity_2m:[90],wind_speed_10m:[2.8],precipitation:[0]},[14],pressure,"2026-10-08");

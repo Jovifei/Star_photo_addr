@@ -1,5 +1,6 @@
 /** Default for new observing sessions only. Explicit model choices are preserved. */
-export const DEFAULT_HEALTH_MODEL = "icon" as const;
+export const DEFAULT_FORECAST_MODEL = "best_match" as const;
+export const DEFAULT_HEALTH_MODEL = DEFAULT_FORECAST_MODEL;
 export const FORECAST_MODELS = ["best_match", "icon", "gfs", "aifs"] as const;
 export type SupportedForecastModel = (typeof FORECAST_MODELS)[number];
 

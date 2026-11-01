@@ -670,7 +670,7 @@ export default function CloudSeaApp() {
                         <div className="cloudsea-popup-unavailable">数据不足</div>
                       ) : null}
                       <div style={{ fontSize: "11px", color: "#666" }}>
-                        模式云顶: {windowScore.cloudTopM != null ? `${windowScore.cloudTopM}m` : "—"} · 模式云底:{" "}
+                        {windowScore.cloudPosition === "in" ? "最高有云采样层" : "模式云顶"}: {windowScore.cloudTopM != null ? `${windowScore.cloudTopM}m` : "—"} · {windowScore.cloudPosition === "in" ? "最低有云采样层" : "模式云底"}:{" "}
                         {windowScore.cloudBaseM != null
                           ? `${windowScore.cloudBaseM}m`
                           : "—"}

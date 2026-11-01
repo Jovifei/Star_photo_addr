@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { ForecastModel } from "./types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -11,7 +12,7 @@ export interface PlannerLinkTarget {
   name?: string;
   elevation?: number;
   night?: string;
-  model?: "icon" | "gfs" | "aifs";
+  model?: ForecastModel;
   forecastTime?: string | null;
   observationTime?: string | null;
   overlayMode?: "satellite-cloud" | "forecast-cloud" | "night-lights";

@@ -1,5 +1,6 @@
 import { snapshotTransport } from "@/lib/snapshotProvenance";
 import { currentOpenMeteoRateLimit, openMeteoRateLimitHeaders } from "@/lib/forecast";
+import { DEFAULT_FORECAST_MODEL } from "@/lib/forecastPolicy";
 import fs from "node:fs";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
@@ -154,7 +155,7 @@ function rememberSnapshot(key: string, date: string, model: string, snapshot: Fi
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const date = params.get("date") ?? getShanghaiDate();
-  const model = (params.get("model") ?? "icon") as ForecastModel;
+  const model = (params.get("model") ?? DEFAULT_FORECAST_MODEL) as ForecastModel;
   const forceRefresh = params.get("refresh") === "1";
 
   if (!isFinderDateAllowed(date) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {

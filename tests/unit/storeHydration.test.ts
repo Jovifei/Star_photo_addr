@@ -20,7 +20,7 @@ function laForecast(): LocationForecast {
     timezone: "America/Los_Angeles",
     utcOffsetSeconds: -25_200,
     fetchedAt,
-    metadata: { source: "Open-Meteo", model: "icon", fetchedAt, sourceFetchedAt: fetchedAt, stale: false, units: {} },
+    metadata: { source: "Open-Meteo", model: "best_match", fetchedAt, sourceFetchedAt: fetchedAt, stale: false, units: {} },
     hourly: [{ time: "2026-10-06T22:00" }],
   };
 }
@@ -42,7 +42,7 @@ function ClockProbe() {
   };
   return createElement(Fragment, null,
     createElement("output", { "data-testid": "clock" }, JSON.stringify(clock)),
-    createElement("button", { onClick: () => void selectLocation(LA_LOCATION, "icon") }, "select la"),
+    createElement("button", { onClick: () => void selectLocation(LA_LOCATION, "best_match") }, "select la"),
     createElement("button", { onClick: () => {
       selectNight("2026-10-08");
       setCloud({ activeForecastTime: "2026-10-08T20:00" });
@@ -51,9 +51,17 @@ function ClockProbe() {
     createElement("button", { onClick: () => void refreshData() }, "refresh point"),
     createElement("button", { onClick: () => {
       const candidate = { ...LA_LOCATION, adcode: 1, province: "CA", city: "LA", bortle: 3, kind: "city", note: "test" };
-      void (store.selectCatalogCandidate ? store.selectCatalogCandidate(candidate) : selectLocation(LA_LOCATION, "icon"));
+      void (store.selectCatalogCandidate ? store.selectCatalogCandidate(candidate) : selectLocation(LA_LOCATION, "best_match"));
     } }, "open catalog candidate"),
   );
+}
+function ModelProbe() {
+  const { state, selectLocation, setCloud } = useStore();
+  return createElement(Fragment, null,
+    createElement("output", { "data-testid": "model-state" }, `${state.cloudState.model}|${state.loading}|${state.forecast?.metadata?.model ?? "none"}`),
+    createElement("button", { onClick: () => void selectLocation(LA_LOCATION) }, "select default"),
+    createElement("button", { onClick: () => setCloud({ model: "icon" }) }, "switch to icon"),
+    createElement("button", { onClick: () => setCloud({ model: "best_match" }) }, "switch back"));
 }
 afterEach(() => { cleanup(); localStorage.clear(); requestForecastResponse.mockReset(); vi.useRealTimers(); });
 describe("persisted selected weather hydration", () => {
@@ -65,7 +73,7 @@ describe("persisted selected weather hydration", () => {
     await waitFor(() => expect(screen.getByTestId("state").textContent).toBe("true|none"));
     expect(requestForecastResponse).toHaveBeenCalledTimes(1);
     const fetchedAt = new Date().toISOString();
-    const forecast = { locationId: "persisted", fetchedAt, metadata: { model: "icon", fetchedAt, sourceFetchedAt: fetchedAt, stale: false }, hourly: [] } as unknown as LocationForecast;
+    const forecast = { locationId: "persisted", fetchedAt, metadata: { model: "best_match", fetchedAt, sourceFetchedAt: fetchedAt, stale: false }, hourly: [] } as unknown as LocationForecast;
     await act(async () => { resolve({ data: { locations: [forecast] }, stale: false }); });
     await waitFor(() => expect(screen.getByTestId("state").textContent).toBe("false|persisted"));
     expect(requestForecastResponse).toHaveBeenCalledTimes(1);
@@ -75,6 +83,46 @@ describe("persisted selected weather hydration", () => {
 
 describe("selected point timezone clock", () => {
   const NOW = "2026-10-07T05:58:59.788Z";
+
+  it("loads the newly selected model after a completed default-model request", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(NOW));
+    requestForecastResponse.mockImplementation(async (_locations, model: "best_match" | "icon") => {
+      const forecast = laForecast();
+      forecast.metadata = { ...forecast.metadata!, model };
+      return { data: { locations: [forecast], metadata: forecast.metadata }, stale: false };
+    });
+    render(createElement(StoreProvider, { initialNow: NOW, children: createElement(ModelProbe) }));
+    fireEvent.click(screen.getByRole("button", { name: "select default" }));
+    await waitFor(() => expect(screen.getByTestId("model-state").textContent).toBe("best_match|false|best_match"));
+    fireEvent.click(screen.getByRole("button", { name: "switch to icon" }));
+    await waitFor(() => expect(screen.getByTestId("model-state").textContent).toBe("icon|false|icon"));
+    fireEvent.click(screen.getByRole("button", { name: "switch back" }));
+    await waitFor(() => expect(screen.getByTestId("model-state").textContent).toBe("best_match|false|best_match"));
+  });
+
+  it("does not apply a late ICON response after switching back to Best Match", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(NOW));
+    let resolveIcon!: (value: unknown) => void;
+    requestForecastResponse.mockImplementation(async (_locations, model: "best_match" | "icon") => {
+      const forecast = laForecast();
+      forecast.metadata = { ...forecast.metadata!, model };
+      const response = { data: { locations: [forecast], metadata: forecast.metadata }, stale: false };
+      return model === "icon" ? new Promise(resolve => { resolveIcon = resolve; }) : response;
+    });
+    render(createElement(StoreProvider, { initialNow: NOW, children: createElement(ModelProbe) }));
+    fireEvent.click(screen.getByRole("button", { name: "select default" }));
+    await waitFor(() => expect(screen.getByTestId("model-state").textContent).toBe("best_match|false|best_match"));
+    fireEvent.click(screen.getByRole("button", { name: "switch to icon" }));
+    await waitFor(() => expect(resolveIcon).toBeTypeOf("function"));
+    fireEvent.click(screen.getByRole("button", { name: "switch back" }));
+    await waitFor(() => expect(screen.getByTestId("model-state").textContent).toBe("best_match|false|best_match"));
+    const icon = laForecast();
+    icon.metadata = { ...icon.metadata!, model: "icon" };
+    await act(async () => resolveIcon({ data: { locations: [icon], metadata: icon.metadata }, stale: false }));
+    expect(screen.getByTestId("model-state").textContent).toBe("best_match|false|best_match");
+  });
 
   it("uses the selected forecast timezone while leaving the China catalog clock unchanged", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
