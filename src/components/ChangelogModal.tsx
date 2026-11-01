@@ -11,7 +11,13 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL, date: "2026-10-28", tag: "天气来源与云海质量", current: true,
+    version: APP_VERSION_LABEL, date: "2026-11-01", tag: "火烧云来源刷新", current: true,
+    highlights: [
+      { icon: CloudSun, title: "及时刷新火烧云来源", desc: "来源超过有效时限时重新获取；刷新失败仍提示旧数据，不发布不可靠评分。" },
+    ],
+  },
+  {
+    version: "v1.0.29", date: "2026-10-28", tag: "天气来源与云海质量", current: false,
     highlights: [
       { icon: ShieldCheck, title: "按地点核对数据状态", desc: "火烧云详情按日期、地点与晨晚窗口显示来源状态；批次降级和三日覆盖不足仍会提醒。" },
       { icon: CloudSun, title: "默认使用最佳匹配天气", desc: "新会话使用 Best Match；仍可选择 ICON，评分字段不足时继续暂缓评分。" },

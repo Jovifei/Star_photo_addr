@@ -4,6 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { createHash } from "node:crypto";
 import { dataAgeMs } from "./forecastIntegrity";
+import { FIRE_GLOW_FRESH_MS, fireGlowSourceTimeAgeMs } from "./fireglowQuality";
 import {
   addFinderDays,
   FINDER_LOCATIONS,
@@ -277,7 +278,8 @@ function validRawCache(
 ): value is RawBatchCache {
   try {
     const candidate = value as RawBatchCache;
-    if (!candidate || dataAgeMs(candidate.fetchedAt) >= maxAgeMs || !Array.isArray(candidate.forecasts) || candidate.forecasts.length !== locations.length) return false;
+    const age = window === "calendar-day" ? fireGlowSourceTimeAgeMs(candidate?.fetchedAt) : dataAgeMs(candidate?.fetchedAt);
+    if (!candidate || age >= maxAgeMs || !Array.isArray(candidate.forecasts) || candidate.forecasts.length !== locations.length) return false;
     candidate.forecasts.forEach((forecast, index) => {
       validateFinderRawForecast(forecast);
       if (distanceKm(locations[index]!.latitude, locations[index]!.longitude, Number(forecast.latitude), Number(forecast.longitude)) > 50) throw new Error("coordinate mismatch");
@@ -294,14 +296,15 @@ async function cachedRawBatch(
   window: FinderForecastWindow,
 ): Promise<RawBatchCache> {
   const key = createHash("sha256").update(url).digest("hex");
+  const freshMs = window === "calendar-day" ? FIRE_GLOW_FRESH_MS : RAW_TTL_MS;
   const memory = rawBatchCache.get(key);
-  if (validRawCache(memory, locations, dates, window)) return memory;
+  if (validRawCache(memory, locations, dates, window, freshMs)) return memory;
   let fallback: RawBatchCache | null = validRawCache(memory, locations, dates, window, 6 * 60 * 60_000) ? memory : null;
   const diskEnabled = process.env.NODE_ENV !== "test" || process.env.FINDER_ENABLE_DISK_CACHE === "1";
   if (diskEnabled) {
     try {
       const disk: unknown = JSON.parse(fs.readFileSync(path.join(rawCacheDirectory, `${key}.json`), "utf8"));
-      if (validRawCache(disk, locations, dates, window)) { rawBatchCache.set(key, disk); return disk; }
+      if (validRawCache(disk, locations, dates, window, freshMs)) { rawBatchCache.set(key, disk); return disk; }
       if (validRawCache(disk, locations, dates, window, 6 * 60 * 60_000)) fallback = disk;
     } catch { /* Optional persistence never supplies invalid data. */ }
   }
@@ -485,7 +488,8 @@ export async function fetchFinderWeatherRange(
     if (
       !forceRefresh &&
       cached &&
-      Date.now() - cached.savedAt < CACHE_TTL_MS
+      Date.now() - cached.savedAt < CACHE_TTL_MS &&
+      (window !== "calendar-day" || fireGlowSourceTimeAgeMs(cached.response.sourceFetchedAt) < FIRE_GLOW_FRESH_MS)
     ) {
       responses[date] = cached.response;
     } else {

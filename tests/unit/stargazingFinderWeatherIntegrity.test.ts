@@ -32,6 +32,19 @@ function rawForecast(latitude: number, longitude: number, date: string, omitFiel
   return { latitude, longitude, elevation: 1402, timezone: "Asia/Shanghai", utc_offset_seconds: 28_800, hourly_units: providerUnits(), hourly };
 }
 
+function fullForecastBatch(url: string, date: string) {
+  const params = new URL(url).searchParams;
+  const latitudes = params.get("latitude")!.split(",").map(Number);
+  const longitudes = params.get("longitude")!.split(",").map(Number);
+  const count = Math.round((Date.parse(params.get("end_date")!) - Date.parse(params.get("start_date")!)) / 86_400_000) + 1;
+  return latitudes.map((latitude, index) => {
+    const result = rawForecast(latitude, longitudes[index]!, date);
+    const hours = Array.from({ length: count * 24 }, (_, hour) => `${addFinderDays(date, Math.floor(hour / 24))}T${String(hour % 24).padStart(2, "0")}:00`);
+    result.hourly = Object.fromEntries(Object.entries(result.hourly).map(([key, values]) => [key, key === "time" ? hours : hours.map(() => (values as number[])[0])]));
+    return result;
+  });
+}
+
 let rawTestDirectory: string | undefined;
 
 afterEach(() => {
@@ -44,6 +57,56 @@ afterEach(() => {
 });
 
 describe("finder weather batch integrity", () => {
+  it("refreshes fireglow raw sources at the 30-minute scoring boundary and marks failed refreshes stale", async () => {
+    vi.resetModules();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-01T00:00:00.000Z"));
+    const date = getShanghaiDate();
+    const fetchMock = vi.fn(async (url: string) => Response.json(fullForecastBatch(url, date)));
+    vi.stubGlobal("fetch", fetchMock);
+    const { fetchFireGlowWeather } = await import("@/lib/stargazingFinderWeather");
+    const first = await fetchFireGlowWeather(date, new AbortController().signal, false, "best_match");
+    const calls = fetchMock.mock.calls.length;
+    expect(calls).toBe(Math.ceil(FINDER_LOCATIONS.length / 24));
+    await vi.advanceTimersByTimeAsync(29 * 60_000);
+    const reused = await fetchFireGlowWeather(date, new AbortController().signal, true, "best_match");
+    expect(reused.sourceFetchedAt).toBe(first.sourceFetchedAt);
+    expect(fetchMock).toHaveBeenCalledTimes(calls);
+    await vi.advanceTimersByTimeAsync(60_001);
+    const refreshed = await fetchFireGlowWeather(date, new AbortController().signal, false, "best_match");
+    expect(fetchMock).toHaveBeenCalledTimes(calls * 2);
+    expect(refreshed.sourceFetchedAt).not.toBe(first.sourceFetchedAt);
+    expect(refreshed.stale).toBe(false);
+    await vi.advanceTimersByTimeAsync(31 * 60_000);
+    fetchMock.mockImplementation(async () => Response.json({ reason: "provider unavailable" }, { status: 503 }));
+    const failed = await fetchFireGlowWeather(date, new AbortController().signal, false, "best_match");
+    expect(failed.stale).toBe(true);
+    expect(failed.sourceFetchedAt).toBe(refreshed.sourceFetchedAt);
+    expect(Object.values(failed.data).every((record) => record.status === "stale")).toBe(true);
+  });
+
+  it("refreshes expired fireglow raw batches restored from disk after a restart", async () => {
+    vi.resetModules();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-01T00:00:00.000Z"));
+    rawTestDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fireglow-raw-test-"));
+    vi.stubEnv("OBSERVING_SNAPSHOT_DIR", rawTestDirectory);
+    vi.stubEnv("FINDER_ENABLE_DISK_CACHE", "1");
+    const date = getShanghaiDate();
+    const fetchMock = vi.fn(async (url: string) => Response.json(fullForecastBatch(url, date)));
+    vi.stubGlobal("fetch", fetchMock);
+    const initial = await import("@/lib/stargazingFinderWeather");
+    const first = await initial.fetchFireGlowWeather(date, new AbortController().signal, false, "best_match");
+    const calls = fetchMock.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(31 * 60_000);
+    vi.resetModules();
+    const restarted = await import("@/lib/stargazingFinderWeather");
+    const refreshed = await restarted.fetchFireGlowWeather(date, new AbortController().signal, false, "best_match");
+    expect(fetchMock).toHaveBeenCalledTimes(calls * 2);
+    expect(refreshed.sourceFetchedAt).not.toBe(first.sourceFetchedAt);
+    expect(refreshed.stale).toBe(false);
+  });
+
   it("reuses covered raw batches across dates, persists fetch time over restart, and rejects expired disk data", async () => {
     vi.resetModules();
     vi.useFakeTimers();
