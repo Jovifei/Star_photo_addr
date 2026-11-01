@@ -5,6 +5,7 @@ import {
   CLOUD_SEA_SCORE_VERSION,
   evaluateCloudSeaWindow,
   presentCloudSeaSnapshot,
+  presentCloudSeaWindow,
   qualifyCloudSeaSnapshot,
   type CloudSeaSnapshot,
   type CloudSeaWindowScore,
@@ -49,6 +50,28 @@ function oldWindow(current: CloudSeaWindowScore): CloudSeaWindowScore {
 }
 
 describe("cloud-sea sampling wording", () => {
+  it("repairs a cached low-cloud claim without changing the score or withheld reason", () => {
+    const legacy = { ...CLOUD_SEA_EMPTY_WINDOW, cloudPosition: "clear" as const, score: null,
+      peakScore: 10, positionLabel: "低云条件不足",
+      summary: "窗口覆盖不足，暂不评分。 最佳已知小时：低云量仅 5%，当前低层云体不足，暂未形成明显云海条件。" };
+    const original = structuredClone(legacy);
+    const result = presentCloudSeaWindow(legacy);
+    expect(result.positionLabel).toBe("模式低云偏少");
+    expect(result.summary).toContain("窗口覆盖不足，暂不评分");
+    expect(result.summary).toContain("网格预报可能漏掉局地谷雾");
+    expect(result.summary).not.toContain("暂未形成明显云海条件");
+    expect(result.score).toBeNull();
+    expect(result.peakScore).toBe(10);
+    expect(legacy).toEqual(original);
+    expect(presentCloudSeaWindow(result)).toEqual(result);
+  });
+
+  it("does not crash while displaying an old clear window without a summary", () => {
+    const legacy = { ...CLOUD_SEA_EMPTY_WINDOW, cloudPosition: "clear" as const,
+      summary: undefined as unknown as string };
+    expect(presentCloudSeaWindow(legacy).summary).toBeUndefined();
+  });
+
   it.each([1489, 1400, 1700])("describes summit %im near a 1550m sample without asserting containment", altitude => {
     const result = evaluate(altitude);
     expect(result).toMatchObject({ cloudPosition: "in", cloudBaseM: 1550, cloudTopM: 1550,

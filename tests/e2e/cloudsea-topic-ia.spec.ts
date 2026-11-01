@@ -243,6 +243,32 @@ test("CloudSea pressure unavailable preserves surface facts and vertical unknown
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
 });
 
+test("low-cloud model result warns about locally missed valley fog", async ({ page }, info) => {
+  const date = shanghaiDateKey();
+  const body = snapshot(date, { score: 10, cloudPosition: "clear", pressureStatus: "unavailable", peakScore: 10,
+    coverage: { expectedHours: 3, surfaceValidHours: 3, scoreableHours: 3, pressureHours: 0 } });
+  const legacy = { ...body.sites["cs-taizijian"].morning, lowCloud: 5,
+    summary: "低云量仅 5%，当前低层云体不足，暂未形成明显云海条件。 窗口 3/3 个目标时次参与平均条件指数。" };
+  await mockSnapshot(page, { ...body, sites: { "cs-taizijian": { morning: legacy, evening: legacy } } });
+  await page.goto("/cloudsea");
+  if (info.project.name === "desktop") {
+    const card = page.locator(".cloudsea-card").filter({ hasText: "临安太子尖" });
+    await expect(card).toContainText("模式低云偏少");
+    await expect(card).toContainText("可能遗漏局地谷雾");
+    await card.click();
+  } else {
+    await selectTaizijian(page);
+    await expect(page.getByTestId("cloudsea-window-evidence").first()).toContainText("可能遗漏局地谷雾");
+    await page.getByRole("button", { name: "展开数据面板" }).click();
+  }
+  const detail = page.locator(".cloudsea-site-detail");
+  await expect(detail).toContainText("网格预报可能漏掉局地谷雾");
+  await expect(detail).not.toContainText("暂未形成明显云海条件");
+  if (info.project.name === "mobile") {
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  }
+});
+
 test("CloudSea pressure partial keeps a selected numeric score above global coverage notice", async ({ page }, info) => {
   test.skip(info.project.name !== "mobile", "移动 partial pressure contract 在 mobile Chromium 验证一次");
   const date = shanghaiDateKey();

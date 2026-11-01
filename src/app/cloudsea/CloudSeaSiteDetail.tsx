@@ -170,7 +170,7 @@ export default function CloudSeaSiteDetail({
       : isBelow
         ? "压力层证据：山顶位于低层云 deck 下方"
         : isClear
-          ? "surface 低云偏少 · 暂无明显云海条件"
+          ? "模式低云偏少 · 可能遗漏局地谷雾"
           : pressureUnavailable
             ? "压力剖面不足 · 不推断垂直层位"
             : "压力层未定位连续低云 deck · 暂不推断";
@@ -387,10 +387,10 @@ export default function CloudSeaSiteDetail({
                 ) : isClear ? (
                   <>
                     <span className="cs-gap-indicator cs-gap-gray">
-                      ○ surface 低云条件不足
+                      ○ 模式低云偏少
                     </span>
                     <span className="cs-gap-meta">
-                      低云偏少，因此不显示没有实际意义的云底/云顶
+                      模式低云偏少，不推算云底/云顶；局地谷雾仍可能发生
                     </span>
                   </>
                 ) : (
