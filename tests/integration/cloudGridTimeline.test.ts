@@ -27,7 +27,7 @@ function setup(selectedPoint: boolean, stale = false, halfHourFirst = false) {
       forecastWindowStart: "2026-10-09T20:00", selectedNight: "2026-10-09", mapWorkspace: "tonight",
       selectedLocation: selectedPoint ? { id: "point", latitude: 31, longitude: 121, timezone: "Asia/Shanghai" } : null,
       forecast: null, cloudGrid: { model: "icon", forecasts, stale, sourceFetchedAt: "2026-10-09T10:00:00Z" },
-      cloudState: { ...DEFAULT_CLOUD_STATE, activeForecastTime: "2026-10-09T20:00", activeForecastEpoch: epoch },
+      cloudState: { ...DEFAULT_CLOUD_STATE, model: "icon", activeForecastTime: "2026-10-09T20:00", activeForecastEpoch: epoch },
       satelliteFrames: [], cloudGridLoading: false,
     },
     setCloud: vi.fn(), selectNight: vi.fn(),

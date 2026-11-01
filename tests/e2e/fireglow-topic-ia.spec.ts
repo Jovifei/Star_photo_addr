@@ -1,4 +1,5 @@
 import { expect, test } from "./offline-test.js";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 
 function windowScore(score: number | null) {
   return {
@@ -23,6 +24,25 @@ function windowScore(score: number | null) {
   };
 }
 
+test("Fireglow defaults to Best Match for a new session", async ({ page }, info) => {
+  const requestedModels: string[] = [];
+  await page.route("**/api/fireglow/snapshot**", async route => {
+    const url = new URL(route.request().url());
+    requestedModels.push(url.searchParams.get("model") ?? "");
+    await route.fulfill({ json: {
+      date: url.searchParams.get("date"), model: "best_match", generatedAt: new Date().toISOString(),
+      source: "default model fixture", stale: false,
+      sites: { "finder-001-location": { evening: windowScore(72), morning: windowScore(72) } },
+    } });
+  });
+  await page.goto("/fireglow");
+  await expect.poll(() => requestedModels).toContain("best_match");
+  const mobile = info.project.name === "mobile";
+  if (mobile) await expandMobileDataSheet(page);
+  const ranking = mobile ? page.locator(".mobile-sheet-ranking") : page.locator(".fireglow-list");
+  await expect(ranking.locator("button").first()).toContainText("72");
+});
+
 test("Fireglow HTTP 200 空快照在专题 IA 中明确不可用", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "空快照 IA 在桌面验证一次");
   await page.route("**/api/fireglow/snapshot**", async (route) => {
@@ -40,7 +60,7 @@ test("Fireglow HTTP 200 空快照在专题 IA 中明确不可用", async ({ page
       }),
     });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect(page.locator(".fireglow-error")).toContainText("未返回有效火烧云评分");
   await expect(page.locator(".fireglow-empty")).toContainText("暂无有效火烧云数据");
   await expect(page.getByTestId("fireglow-reference-details")).not.toHaveAttribute("open");
@@ -65,7 +85,7 @@ test("Fireglow 低频色阶与口径进入排行详情披露", async ({ page }, 
       }),
     });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   const references = page.getByTestId("fireglow-reference-details");
   await expect(references).toBeVisible();
   await expect(references).not.toHaveAttribute("open");
@@ -101,7 +121,7 @@ test("Fireglow 当前日期完全失败时不继承旧日期的降级提示", as
       }),
     });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect(page.locator(".fireglow-score b").first()).toHaveText("72/100");
   await page.locator('.segmented[data-mode="range"] button').nth(1).click();
   await expect(page.locator(".fireglow-panel-head")).toContainText("数据不可用");
@@ -127,7 +147,7 @@ test("Fireglow HTTP 200 空快照在移动 peek 中明确不可用", async ({ pa
       }),
     });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await expect(page.locator(".mobile-data-sheet")).toBeVisible();
   await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("数据不可用 · 请刷新重试");
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toContainText("点地图查看点位");

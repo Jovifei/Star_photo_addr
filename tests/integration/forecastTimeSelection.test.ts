@@ -22,7 +22,7 @@ function Harness({ start = "2026-10-05T12:00", night = "2026-10-05", omit = "", 
     selectedNight: night,
     selectedLocation: null,
     mapWorkspace: "tonight",
-    cloudState: { ...DEFAULT_CLOUD_STATE, range: 7, activeForecastTime: start } as CloudState,
+    cloudState: { ...DEFAULT_CLOUD_STATE, model: "icon", range: 7, activeForecastTime: start } as CloudState,
     forecast: {
       hourly: forecastTimeWindow(sourceStart, 240).filter(time => time !== omit).map(time => ({ time, ...(time === "2026-10-05T20:00" ? { cloudCover: 25 } : {}) })),
       metadata: { model: "icon", stale: false },

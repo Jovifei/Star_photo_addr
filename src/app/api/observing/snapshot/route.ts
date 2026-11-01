@@ -1,4 +1,5 @@
 import { currentOpenMeteoRateLimit, openMeteoRateLimitHeaders } from "@/lib/forecast";
+import { DEFAULT_FORECAST_MODEL } from "@/lib/forecastPolicy";
 import { NextRequest, NextResponse } from "next/server";
 import {
   addFinderDays,
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const date = params.get("date") ?? getShanghaiDate();
   const daysValue = Number(params.get("days") ?? "1");
-  const model = (params.get("model") ?? "icon") as ForecastModel;
+  const model = (params.get("model") ?? DEFAULT_FORECAST_MODEL) as ForecastModel;
 
   if (!isFinderDateAllowed(date) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return jsonError("date 必须是当前观测日附近的合法日期", 400);

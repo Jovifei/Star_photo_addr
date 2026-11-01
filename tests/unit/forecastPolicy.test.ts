@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { SCORING_REQUIRED_SERIES, missingScoringSeries } from "@/lib/forecastPolicy";
+import { DEFAULT_HEALTH_MODEL, SCORING_REQUIRED_SERIES, missingScoringSeries } from "@/lib/forecastPolicy";
+import { DEFAULT_CLOUD_STATE } from "@/lib/constants";
 
 const complete = (): Record<string, unknown> => ({ time: ["2026-10-02T20:00", "2026-10-02T21:00"], ...Object.fromEntries(SCORING_REQUIRED_SERIES.map(([key]) => [key, [0, 0]])) });
 describe("scoring probe capability", () => {
+  it("uses Best Match for new-session weather and the default health probe", () => {
+    expect(DEFAULT_CLOUD_STATE.model).toBe("best_match");
+    expect(DEFAULT_HEALTH_MODEL).toBe("best_match");
+  });
   it("requires one complete aligned hour instead of disjoint available series", () => {
     const payload = complete();
     payload.visibility = [0, null];

@@ -37,7 +37,7 @@ test("mixed batch keeps global warning while fresh and stale selections differ",
     const date = new URL(route.request().url()).searchParams.get("date")!;
     await route.fulfill({ json: snapshot(date, fetched, true) });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
   const ranking = mobile ? page.locator(".mobile-sheet-ranking") : page.locator(".fireglow-list");
   await expect(ranking.getByRole("button", { name: /阿里暗夜公园/ })).toBeVisible();
@@ -69,7 +69,7 @@ test("selection follows the chosen date and phase, including a null phase score"
     firstDate ||= date;
     await route.fulfill({ json: snapshot(date, fetched, date === firstDate, date === firstDate ? null : 70) });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
   const ranking = mobile ? page.locator(".mobile-sheet-ranking") : page.locator(".fireglow-list");
   await ranking.getByRole("button", { name: /阿里暗夜公园/ }).click();
@@ -105,7 +105,7 @@ test("an open page changes its selected quality when the 30-minute source thresh
     const date = new URL(route.request().url()).searchParams.get("date")!;
     await route.fulfill({ json: snapshot(date, at.toISOString(), false) });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   if (mobile) await page.getByRole("button", { name: "展开数据面板" }).click();
   const ranking = mobile ? page.locator(".mobile-sheet-ranking") : page.locator(".fireglow-list");
   await ranking.getByRole("button", { name: /阿里暗夜公园/ }).click();

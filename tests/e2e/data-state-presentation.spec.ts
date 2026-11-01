@@ -22,6 +22,51 @@ test.beforeEach(async ({ page }) => {
   await installNextApiMock(page, fixture);
 });
 
+test("new sessions use Best Match while explicit ICON still withholds incomplete scores", async ({ page }, info) => {
+  const models: string[] = [];
+  await page.route("**/api/forecast?**", async route => {
+    const url = new URL(route.request().url());
+    const latitudes = (url.searchParams.get("latitude") ?? "").split(",").filter(Boolean);
+    const longitudes = (url.searchParams.get("longitude") ?? "").split(",").filter(Boolean);
+    const model = url.searchParams.get("model") ?? "best_match";
+    if (latitudes.length === 1 && latitudes[0] === "30.4694") models.push(model);
+    const locations = buildNormalizedForecasts(fixture, latitudes, longitudes, 14, model);
+    for (const location of locations) {
+      location.hourly = location.hourly.map((hour: HourWeather) => ({
+        ...hour, visibility: model === "icon" ? null : 20_000,
+      }));
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ locations, metadata: locations[0]?.metadata }) });
+  });
+
+  await page.goto("/?lat=30.4694&lng=119.5978&name=default-model");
+  await expect(page.getByTestId("home-context-strip")).toHaveAttribute("data-model", "BEST_MATCH");
+  await expect.poll(() => models).toContain("best_match");
+  if (info.project.name === "mobile") await expandMobileDataSheet(page);
+  await expect(page.getByTestId("selected-data-state")).toContainText("当前数据完整");
+
+  if (info.project.name === "desktop") {
+    await page.getByRole("tab", { name: "图层与偏好" }).click();
+    await page.getByRole("button", { name: "ICON", exact: true }).click();
+    await expect(page.getByRole("button", { name: "ICON", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("home-context-strip")).toHaveAttribute("data-model", "ICON");
+    await page.getByRole("tab", { name: "地点详情" }).click();
+    await expect(page.getByTestId("observation-reason-card")).toContainText("缺能见度");
+    await page.getByRole("tab", { name: "图层与偏好" }).click();
+    await page.getByRole("button", { name: "最佳匹配", exact: true }).click();
+    await expect(page.getByRole("button", { name: "最佳匹配", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByTestId("home-context-strip")).toHaveAttribute("data-model", "BEST_MATCH");
+    await page.getByRole("tab", { name: "地点详情" }).click();
+    await expect(page.getByTestId("selected-data-state")).toContainText("当前数据完整");
+  }
+
+  await page.goto(selectedUrl);
+  await expect(page.getByTestId("home-context-strip")).toHaveAttribute("data-model", "ICON");
+  if (info.project.name === "mobile") await expandMobileDataSheet(page);
+  await expect(page.getByTestId("observation-reason-card")).toContainText("缺能见度");
+  await expect(page.getByTestId("recommendation-eligibility")).toContainText("不发布推荐");
+});
+
 for (const project of ["mobile", "desktop"] as const) {
   test(`${project}: normal selected data and recommendation axes are explicit`, async ({ page }, info) => {
     test.skip(info.project.name !== project, `${project} data-state contract runs in its project`);

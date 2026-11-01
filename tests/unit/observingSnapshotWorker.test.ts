@@ -9,10 +9,11 @@ const helperSource = readFileSync(
   new URL("../../scripts/observing-snapshot-worker-utils.mjs", import.meta.url),
   "utf8",
 );
-const { snapshotHealth, retryAfterDelay, observingContext } = (await import("../../scripts/observing-snapshot-worker-utils.mjs")) as {
+const { snapshotHealth, retryAfterDelay, observingContext, resolveSnapshotModel } = (await import("../../scripts/observing-snapshot-worker-utils.mjs")) as {
   observingContext: (now: Date) => { date: string; calendarDate: string; time: string };
   retryAfterDelay: (value: string | null, now?: number) => number;
   snapshotHealth: (payload: unknown, model?: string, date?: string) => { stale: boolean; logLabel: string; shouldPrewarm: boolean };
+  resolveSnapshotModel: (model?: string) => string;
 };
 
 describe("observing snapshot worker stale contract", () => {
@@ -49,6 +50,11 @@ describe("observing snapshot worker stale contract", () => {
 
 
 describe("worker observing identity", () => {
+  it("prewarms Best Match by default while preserving explicit ICON", () => {
+    expect(resolveSnapshotModel()).toBe("best_match");
+    expect(resolveSnapshotModel("invalid")).toBe("best_match");
+    expect(resolveSnapshotModel("icon")).toBe("icon");
+  });
   it("keeps midnight through 05:00 on the previous night", () => {
     expect(observingContext(new Date("2026-10-01T16:00:00Z"))).toEqual({ date: "2026-10-01", calendarDate: "2026-10-02", time: "2026-10-02T00:00" });
     expect(observingContext(new Date("2026-10-01T21:00:00Z")).date).toBe("2026-10-01");

@@ -179,7 +179,7 @@ test("火烧云选中点详情进入独立证据列", async ({ page }, testInfo)
       }),
     });
   });
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   await page.locator(".fireglow-list button").first().click();
   const inspector = page.locator(".fireglow-site-detail").first();
   await expect(inspector).toBeVisible();

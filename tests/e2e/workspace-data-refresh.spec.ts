@@ -311,7 +311,7 @@ test("fireglow date and phase switch real data and stale snapshot forces refresh
     });
   });
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   const list = page.locator(".fireglow-list");
   await expect(list).toBeVisible({ timeout: 20000 });
   await expect(list.locator("li").first()).toContainText("阿里暗夜公园", {

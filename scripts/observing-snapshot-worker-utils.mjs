@@ -1,3 +1,7 @@
+export function resolveSnapshotModel(model) {
+  return ["best_match", "icon", "gfs", "aifs"].includes(model) ? model : "best_match";
+}
+
 export function snapshotHealth(payload, expectedModel, expectedDate) {
   const hasSourceFetchedAt =
     typeof payload?.sourceFetchedAt === "string" &&

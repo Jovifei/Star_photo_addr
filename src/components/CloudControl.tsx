@@ -24,9 +24,10 @@ import {
   type DataSourceProbe,
 } from "@/lib/dataSourceStatus";
 import { presentProviderHealth } from "@/lib/dataPresentation";
-import type { CloudDisplayMode } from "@/lib/types";
+import type { CloudDisplayMode, ForecastModel } from "@/lib/types";
 
-const MODELS: { id: "icon" | "gfs" | "aifs"; label: string }[] = [
+const MODELS: { id: ForecastModel; label: string }[] = [
+  { id: "best_match", label: "最佳匹配" },
   { id: "icon", label: "ICON" },
   { id: "gfs", label: "GFS" },
   { id: "aifs", label: "AIFS" },
@@ -346,6 +347,7 @@ export default function CloudControl() {
                   key={model.id}
                   type="button"
                   className={cloudState.model === model.id ? "active" : ""}
+                  aria-pressed={cloudState.model === model.id}
                   onClick={() => setCloud({ model: model.id })}
                 >
                   {model.label}

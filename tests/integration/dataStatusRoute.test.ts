@@ -26,7 +26,7 @@ function response(
 ): DataSourceHealthResponse {
   return {
     status: "ok",
-    model: "icon", cloudAvailable: true, scoringAvailable: true,
+    model: "best_match", cloudAvailable: true, scoringAvailable: true,
     missingCloudFields: [], missingScoringFields: [],
     checkedAt: "2026-08-20T00:00:00.000Z",
     cached: false,
@@ -65,7 +65,8 @@ describe("GET /api/data-status", () => {
     expect(result.status).toBe(200);
     expect(result.headers.get("x-data-source-cache")).toBe("memory");
     expect(result.headers.get("cache-control")).toContain("s-maxage=300");
-    expect(getDataSourceHealth).toHaveBeenCalledWith(false, "icon");
+    expect(getDataSourceHealth).toHaveBeenCalledWith(false, "best_match");
+    expect(result.headers.get("x-weather-probe-model")).toBe("best_match");
   });
 
   it("marks a coalesced provider probe", async () => {
@@ -93,12 +94,21 @@ describe("GET /api/data-status", () => {
     );
     expect(result.headers.get("x-refresh-suppressed")).toBe("true");
     expect(result.headers.get("x-next-refresh-at")).toBe(nextRefreshAt);
-    expect(getDataSourceHealth).toHaveBeenCalledWith(true, "icon");
+    expect(getDataSourceHealth).toHaveBeenCalledWith(true, "best_match");
   });
 });
 
 
 describe("model-aware diagnostic routing", () => {
+  it("keeps explicit ICON degraded when visibility is missing", async () => {
+    getDataSourceHealth.mockResolvedValue(response({ status: "degraded", model: "icon", scoringAvailable: false, missingScoringFields: ["能见度"] }));
+    const { GET } = await loadRoute();
+    const result = await GET(request("?model=icon"));
+    expect(getDataSourceHealth).toHaveBeenCalledWith(false, "icon");
+    expect(result.headers.get("x-weather-probe-model")).toBe("icon");
+    expect(result.headers.get("cache-control")).toContain("no-store");
+    expect((await result.json()).missingScoringFields).toContain("能见度");
+  });
   it("keeps an explicit model and does not cache degraded capability", async () => {
     getDataSourceHealth.mockResolvedValue(response({ status: "degraded", model: "gfs", scoringAvailable: false }));
     const { GET } = await loadRoute();

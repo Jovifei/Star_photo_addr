@@ -6,6 +6,7 @@ import { useStore } from "@/lib/store";
 import type { CloudOverlayMode, MapViewMode } from "@/lib/types";
 import { addDays, initialForecastTime } from "@/lib/nighttime";
 import { validProductDate } from "@/lib/productRoutes";
+import { isForecastModel } from "@/lib/forecastPolicy";
 import { toSimplifiedChinese } from "@/lib/chineseText";
 
 /**
@@ -135,10 +136,7 @@ export default function ProductStateBridge() {
     if (night && (state.nightKeys.includes(night) || (versionedContext && validProductDate(night)))) {
       selectNight(night);
     }
-    const selectedModel =
-      model === "icon" || model === "gfs" || model === "aifs"
-        ? model
-        : undefined;
+    const selectedModel = isForecastModel(model) ? model : undefined;
     if (selectedModel) setCloud({ model: selectedModel });
     if (
       overlay === "satellite-cloud" ||

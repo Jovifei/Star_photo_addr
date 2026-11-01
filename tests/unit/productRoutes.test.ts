@@ -163,5 +163,7 @@ it("retains valid selected dates outside forecast coverage but rejects normalize
 
 it("retains allowlisted selected model in parsed cross-product context", () => {
   expect(readProductLinkContext(new URLSearchParams("model=gfs")).model).toBe("gfs");
+  expect(readProductLinkContext(new URLSearchParams("model=best_match")).model).toBe("best_match");
+  expect(readProductLinkContext(new URLSearchParams("model=icon")).model).toBe("icon");
   expect(readProductLinkContext(new URLSearchParams("model=borrowed")).model).toBeNull();
 });

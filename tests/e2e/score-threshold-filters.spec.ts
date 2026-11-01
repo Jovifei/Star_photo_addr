@@ -92,7 +92,7 @@ test("火烧云分数滑块只保留达到门槛的排行地点", async ({ page 
     });
   });
 
-  await page.goto("/fireglow");
+  await page.goto("/fireglow?model=icon");
   const mobile = testInfo.project.name === "mobile";
   if (mobile) await expandMobileDataSheet(page);
   const control = page.locator(mobile ? '.mobile-sheet-ranking [data-testid="fireglow-score-threshold"]' : '[data-testid="fireglow-score-threshold"]');

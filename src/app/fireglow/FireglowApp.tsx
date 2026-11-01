@@ -1,5 +1,6 @@
 "use client";
 import { settleTopicDates, TopicCooldownError } from "@/lib/topicRequestPolicy";
+import { DEFAULT_FORECAST_MODEL } from "@/lib/forecastPolicy";
 import { useTopicContext, usePublishTopicContext } from "@/hooks/useTopicContext";
 import SnapshotSourceDisclosure from "@/components/SnapshotSourceDisclosure";
 import type { ReactNode } from "react";
@@ -135,7 +136,7 @@ interface RankedSite {
 export default function FireglowApp() {
   const contextBaseDate = todayKey();
   const topicContext = useTopicContext(OBSERVING_SITES, "observing", contextBaseDate);
-  const model = topicContext.incoming.model ?? "icon";
+  const model = topicContext.incoming.model ?? DEFAULT_FORECAST_MODEL;
   const [rangeMode, setRangeMode] = useState<RangeMode>(topicContext.initialRange);
   const [phase, setPhase] = useState<Phase>(topicContext.incoming.phase ?? "evening");
   const [snapshots, setSnapshots] = useState<Record<string, FireGlowSnapshot | null>>({});
