@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "./offline-test.js";
 import { CLOUD_SEA_SITES } from "../../src/lib/cloudseaSites";
-import { conditionLevelFor } from "../../src/lib/cloudsea";
+import { CLOUD_SEA_SCORE_VERSION, conditionLevelFor } from "../../src/lib/cloudsea";
 
 const taizijian = CLOUD_SEA_SITES.find(site => site.id === "cs-taizijian")!;
 const selectedTaizijianHref = `/cloudsea?${new URLSearchParams({
@@ -103,7 +103,7 @@ function snapshot(
   return {
     date,
     model: "gfs",
-    scoreVersion: "cloudsea-native-conservative-v3",
+    scoreVersion: CLOUD_SEA_SCORE_VERSION,
         generatedAt: `${date}T00:30:00.000Z`,
     source: "P5-B CloudSea topic IA fixture",
     stale: options.stale ?? false,
@@ -193,6 +193,7 @@ test("legacy cached summit-cloud wording is corrected in the ranking and detail"
     await expect(card).toContainText("山顶接近或可能处于云层");
     await expect(card).toContainText("22/100");
     await card.click();
+    // The corrected nearby Qianniugang marker overlaps at this zoom level.
     await page.locator('.leaflet-overlay-pane path[stroke="#ffffff"]').click();
     await expect(page.locator(".cloudsea-popup")).toContainText("最高有云采样层: 1550m");
     await expect(page.locator(".cloudsea-popup")).toContainText("山顶接近或可能处于云层");
@@ -267,6 +268,25 @@ test("low-cloud model result warns about locally missed valley fog", async ({ pa
   if (info.project.name === "mobile") {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
   }
+});
+
+test("old-coordinate snapshots do not display their score or weather for a corrected site", async ({ page }, info) => {
+  const date = shanghaiDateKey();
+  const body = snapshot(date, { score: 94, cloudPosition: "above", peakScore: 94,
+    coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 4, pressureHours: 4 } });
+  await mockSnapshot(page, { ...body, scoreVersion: "cloudsea-native-conservative-v3" });
+  await page.goto(selectedTaizijianHref);
+  if (info.project.name === "mobile") {
+    const sheet = page.getByTestId("mobile-data-sheet");
+    for (let i = 0; i < 2 && await sheet.getAttribute("data-level") !== "full"; i += 1) {
+      await page.getByRole("button", { name: "展开数据面板" }).click();
+    }
+    await expect(sheet).toHaveAttribute("data-level", "full");
+  }
+  const detail = page.locator(".cloudsea-site-detail");
+  await expect(detail.locator(".cs-detail-summary")).toContainText("旧快照使用旧坐标");
+  await expect(detail.locator(".cs-hero-score-number")).toHaveText("—");
+  await expect(detail.locator(".cs-hero-metrics-strip")).not.toContainText("90%");
 });
 
 test("CloudSea pressure partial keeps a selected numeric score above global coverage notice", async ({ page }, info) => {

@@ -25,7 +25,7 @@ import {
   TileLayer,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import type { Map as LeafletMap } from "leaflet";
+import type { CircleMarker as LeafletCircleMarker, Map as LeafletMap } from "leaflet";
 import ChineseLabelLayer from "@/components/ChineseLabelLayer";
 import BoundaryLayers from "@/components/BoundaryLayers";
 import ProductHeader from "@/components/ProductHeader";
@@ -155,6 +155,7 @@ export default function CloudSeaApp() {
   const mobile = useMobilePanelViewport();
   const [scoreThreshold, setScoreThreshold] = useState(0);
   const mapRef = useRef<LeafletMap | null>(null);
+  const markerRefs = useRef(new Map<string, LeafletCircleMarker>());
   const snapshotRequestIdRef = useRef(0);
   const snapshotControllerRef = useRef<AbortController | null>(null);
 
@@ -370,6 +371,10 @@ export default function CloudSeaApp() {
     );
     return list;
   }, [activeDates, snapshots, phase, primaryDate]);
+
+  useEffect(() => {
+    if (selectedSiteId) markerRefs.current.get(selectedSiteId)?.bringToFront();
+  }, [rankedSites, selectedSiteId]);
 
   const filteredRankedSites = useMemo(
     () => filterByScoreThreshold(rankedSites, scoreThreshold, (ranked) => ranked.window.score),
@@ -612,6 +617,10 @@ export default function CloudSeaApp() {
               return (
                 <CircleMarker
                   key={site.id}
+                  ref={(marker) => {
+                    if (marker) markerRefs.current.set(site.id, marker);
+                    else markerRefs.current.delete(site.id);
+                  }}
                   center={[site.latitude, site.longitude]}
                   radius={isSelected ? 10 : isUnknown ? 6 : 7}
                   pathOptions={{

@@ -1,4 +1,5 @@
 import { expect, test } from "./offline-test.js";
+import { CLOUD_SEA_SCORE_VERSION } from "../../src/lib/cloudsea";
 
 function shanghaiDateKey(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -44,7 +45,7 @@ function snapshot(date: string, score: number) {
   return {
     date,
     model: "gfs",
-    scoreVersion: "cloudsea-native-conservative-v3",
+    scoreVersion: CLOUD_SEA_SCORE_VERSION,
         generatedAt: `${date}T00:30:00.000Z`,
     source: "E2E request ordering",
     stale: false,

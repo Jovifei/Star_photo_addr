@@ -150,6 +150,14 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(body.surface.availableSites).toBe(CLOUD_SEA_SITES.length);
     expect(body.pressure.availableSites).toBe(CLOUD_SEA_SITES.length);
     expect(requested).toHaveLength(3);
+    for (const id of ["cs-taizijian", "cs-qianniugang", "cs-longwangshan", "cs-guniujiang", "cs-lushan", "cs-donglingshan"]) {
+      const site = CLOUD_SEA_SITES.find(item => item.id === id)!;
+      expect(requested.some(url => {
+        const latitudes = url.searchParams.get("latitude")?.split(",") ?? [];
+        const longitudes = url.searchParams.get("longitude")?.split(",") ?? [];
+        return latitudes.some((latitude, index) => latitude === String(site.latitude) && longitudes[index] === String(site.longitude));
+      })).toBe(true);
+    }
     for (const url of requested) {
       expect(url.searchParams.get("elevation")).toBe(Array(coordinateCount(url)).fill("nan").join(","));
       expect(url.searchParams.get("hourly")).toContain("relative_humidity_2m");
@@ -312,15 +320,21 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(first.morning.coverage).toEqual(expect.objectContaining({ scoreableHours: 0, pressureHours: 4 }));
   });
 
-  it("does not reuse a snapshot with the old score version as fresh", async () => {
+  it("withholds an old-coordinate snapshot at the API and does not reuse it as fresh", async () => {
     const fetchMock = successfulFetch();
     vi.stubGlobal("fetch", fetchMock);
     const cloudsea = await import("@/lib/cloudsea");
     const build = cloudsea.buildCloudSeaSnapshot;
-    vi.spyOn(cloudsea, "buildCloudSeaSnapshot").mockImplementationOnce((...args) => ({ ...build(...args), scoreVersion: "legacy-score-v1" }));
+    vi.spyOn(cloudsea, "buildCloudSeaSnapshot").mockImplementationOnce((...args) => {
+      const snapshot = build(...args);
+      const site = snapshot.sites["cs-taizijian"];
+      return { ...snapshot, scoreVersion: "cloudsea-native-conservative-v3", sites: { ...snapshot.sites,
+        "cs-taizijian": { ...site, morning: { ...site.morning, score: 94, peakScore: 94, lowCloud: 85 } } } };
+    });
     const { GET } = await import("@/app/api/cloudsea/snapshot/route");
     const first = await GET(request("date=2026-09-06&model=icon"));
     expect(first.headers.get("X-Cloudsea-Cache")).toBe("degraded");
+    expect((await first.json()).sites["cs-taizijian"].morning).toMatchObject({ score: null, peakScore: null, lowCloud: null });
     const firstCalls = fetchMock.mock.calls.length;
     const second = await GET(request("date=2026-09-06&model=icon"));
     expect(fetchMock.mock.calls.length).toBeGreaterThan(firstCalls);

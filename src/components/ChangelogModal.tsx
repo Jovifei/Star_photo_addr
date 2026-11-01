@@ -11,7 +11,13 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL, date: "2026-11-01", tag: "云海预报提示", current: true,
+    version: APP_VERSION_LABEL, date: "2026-11-01", tag: "云海机位修正", current: true,
+    highlights: [
+      { icon: Mountain, title: "修正六个山峰坐标", desc: "天气与云海指数按山峰位置重新获取，旧坐标的数据不再用于当前机位。" },
+    ],
+  },
+  {
+    version: "v1.0.31", date: "2026-11-01", tag: "云海预报提示", current: false,
     highlights: [
       { icon: Mountain, title: "说明局地谷雾可能被遗漏", desc: "模式低云偏少时提示结合实况；云海条件指数仍不是发生概率。" },
     ],
