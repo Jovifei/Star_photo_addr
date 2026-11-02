@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "./offline-test.js";
+import { CLOUD_SEA_SCORE_VERSION } from "../../src/lib/cloudsea";
 
 const onePixelPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -109,7 +110,7 @@ test("云海日期控件显示日期，并实际请求后日与三日总览的�
       body: JSON.stringify({
         date,
         model: "gfs",
-        scoreVersion: "cloudsea-native-conservative-v3",
+        scoreVersion: CLOUD_SEA_SCORE_VERSION,
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E surface + pressure-level model profile",
         stale: false,

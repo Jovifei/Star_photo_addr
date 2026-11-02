@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "./offline-test.js";
 import { CLOUD_SEA_SITES } from "../../src/lib/cloudseaSites";
-import { conditionLevelFor } from "../../src/lib/cloudsea";
+import { CLOUD_SEA_SCORE_VERSION, conditionLevelFor } from "../../src/lib/cloudsea";
 
 const taizijian = CLOUD_SEA_SITES.find(site => site.id === "cs-taizijian")!;
 const selectedTaizijianHref = `/cloudsea?${new URLSearchParams({
@@ -103,7 +103,7 @@ function snapshot(
   return {
     date,
     model: "gfs",
-    scoreVersion: "cloudsea-native-conservative-v3",
+    scoreVersion: CLOUD_SEA_SCORE_VERSION,
         generatedAt: `${date}T00:30:00.000Z`,
     source: "P5-B CloudSea topic IA fixture",
     stale: options.stale ?? false,
@@ -127,6 +127,22 @@ function snapshot(
       },
     },
   };
+}
+
+function partialPressureSnapshot(date: string, received = 54, surfaceAvailable = 54) {
+  const body = snapshot(date, { score: 22, cloudPosition: "in", peakScore: 22,
+    coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 4, pressureHours: 4 } });
+  const complete = body.sites["cs-taizijian"].morning;
+  const partial = { ...complete, pressureStatus: "partial" as const,
+    coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 3, pressureHours: 3 } };
+  const sites = Object.fromEntries(CLOUD_SEA_SITES.map((site, index) => {
+    const window = index < 32 ? complete : partial;
+    return [site.id, { morning: window, evening: window }];
+  }));
+  return { ...body, pressureQualitySchema: "pressure-provider-issues-v1",
+    pressureQualityValidatorVersion: "pressure-validator-v1",
+    surface: { status: surfaceAvailable === 54 ? "available" : "partial", availableSites: surfaceAvailable, totalSites: 54, failedSites: 54 - surfaceAvailable },
+    pressure: { status: "partial", receivedSites: received, availableSites: 32, partialSites: received - 32, totalSites: 54, failedSites: 22 }, sites };
 }
 
 async function mockMapTiles(page: Page) {
@@ -193,6 +209,7 @@ test("legacy cached summit-cloud wording is corrected in the ranking and detail"
     await expect(card).toContainText("山顶接近或可能处于云层");
     await expect(card).toContainText("22/100");
     await card.click();
+    // The corrected nearby Qianniugang marker overlaps at this zoom level.
     await page.locator('.leaflet-overlay-pane path[stroke="#ffffff"]').click();
     await expect(page.locator(".cloudsea-popup")).toContainText("最高有云采样层: 1550m");
     await expect(page.locator(".cloudsea-popup")).toContainText("山顶接近或可能处于云层");
@@ -267,6 +284,77 @@ test("low-cloud model result warns about locally missed valley fog", async ({ pa
   if (info.project.name === "mobile") {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
   }
+});
+
+test("old-coordinate snapshots do not display their score or weather for a corrected site", async ({ page }, info) => {
+  const date = shanghaiDateKey();
+  const body = snapshot(date, { score: 94, cloudPosition: "above", peakScore: 94,
+    coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 4, pressureHours: 4 } });
+  await mockSnapshot(page, { ...body, scoreVersion: "cloudsea-native-conservative-v3" });
+  await page.goto(selectedTaizijianHref);
+  if (info.project.name === "mobile") {
+    const sheet = page.getByTestId("mobile-data-sheet");
+    for (let i = 0; i < 2 && await sheet.getAttribute("data-level") !== "full"; i += 1) {
+      await page.getByRole("button", { name: "展开数据面板" }).click();
+    }
+    await expect(sheet).toHaveAttribute("data-level", "full");
+  }
+  const detail = page.locator(".cloudsea-site-detail");
+  await expect(detail.locator(".cs-detail-summary")).toContainText("旧快照使用旧坐标");
+  await expect(detail.locator(".cs-hero-score-number")).toHaveText("—");
+  await expect(detail.locator(".cs-hero-metrics-strip")).not.toContainText("90%");
+});
+
+test("fully received partial pressure does not trigger a duplicate request before manual refresh", async ({ page }) => {
+  const date = shanghaiDateKey();
+  const response = partialPressureSnapshot(date);
+  let requests = 0;
+  await page.route("**/api/cloudsea/snapshot**", route => {
+    requests += 1;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(response) });
+  });
+  await mockMapTiles(page);
+  await page.goto("/cloudsea");
+  await expect(page.locator(".cloudsea-card").first()).toBeAttached();
+  await expect(page.locator(".cloudsea-card").first()).toContainText("22/100");
+  expect(requests).toBe(1);
+  await page.getByRole("button", { name: "更新数据" }).click();
+  await expect(page.getByRole("button", { name: "更新数据" })).toBeEnabled();
+  expect(requests).toBe(2);
+});
+
+for (const [label, received, surfaceAvailable] of [
+  ["a missing pressure site", 53, 54],
+  ["partial surface coverage", 54, 53],
+ ] as const) {
+  test(`${label} still receives the existing retry`, async ({ page }) => {
+    const response = partialPressureSnapshot(shanghaiDateKey(), received, surfaceAvailable);
+    let requests = 0;
+    await page.route("**/api/cloudsea/snapshot**", route => {
+      requests += 1;
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(response) });
+    });
+    await mockMapTiles(page);
+    await page.goto("/cloudsea");
+    await expect(page.locator(".cloudsea-card").first()).toBeAttached();
+    expect(requests).toBe(2);
+  });
+}
+
+test("a transient cloudsea request failure still receives its existing retry", async ({ page }) => {
+  const date = shanghaiDateKey();
+  const body = snapshot(date, { score: 22 });
+  let requests = 0;
+  await page.route("**/api/cloudsea/snapshot**", route => {
+    requests += 1;
+    return route.fulfill(requests === 1
+      ? { status: 502, contentType: "application/json", body: JSON.stringify({ error: "temporary" }) }
+      : { status: 200, contentType: "application/json", body: JSON.stringify(body) });
+  });
+  await mockMapTiles(page);
+  await page.goto("/cloudsea");
+  await expect(page.locator(".cloudsea-card").first()).toBeAttached();
+  expect(requests).toBe(2);
 });
 
 test("CloudSea pressure partial keeps a selected numeric score above global coverage notice", async ({ page }, info) => {

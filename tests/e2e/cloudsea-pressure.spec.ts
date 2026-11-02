@@ -1,4 +1,5 @@
 import { expect, test } from "./offline-test.js";
+import { CLOUD_SEA_SCORE_VERSION } from "../../src/lib/cloudsea";
 
 const onePixelPng = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -54,7 +55,7 @@ test("cloudsea renders pressure-derived evidence and opens the evidence inspecto
       body: JSON.stringify({
         date,
         model: "gfs",
-        scoreVersion: "cloudsea-native-conservative-v3",
+        scoreVersion: CLOUD_SEA_SCORE_VERSION,
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E surface + pressure-level model profile",
         stale: false,
@@ -124,7 +125,7 @@ test("cloudsea labels partial ground-weather coverage as degraded", async ({ pag
       body: JSON.stringify({
         date,
         model: "gfs",
-        scoreVersion: "cloudsea-native-conservative-v3",
+        scoreVersion: CLOUD_SEA_SCORE_VERSION,
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E partial surface coverage",
         stale: false,
@@ -154,7 +155,7 @@ test("cloudsea fails closed when a snapshot has no surface coverage summary", as
       body: JSON.stringify({
         date,
         model: "gfs",
-        scoreVersion: "cloudsea-native-conservative-v3",
+        scoreVersion: CLOUD_SEA_SCORE_VERSION,
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E legacy snapshot without surface coverage",
         stale: false,
@@ -183,7 +184,7 @@ test("cloudsea fails closed when an available surface summary omits coverage cou
       body: JSON.stringify({
         date,
         model: "gfs",
-        scoreVersion: "cloudsea-native-conservative-v3",
+        scoreVersion: CLOUD_SEA_SCORE_VERSION,
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E malformed surface summary",
         stale: false,

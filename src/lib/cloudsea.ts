@@ -1,4 +1,5 @@
 import { dataAgeMs } from "./forecastIntegrity";
+import { isValidProviderValue } from "./providerWeatherIntegrity";
 import { snapshotSourceTime, type SnapshotProvenance } from "./snapshotProvenance";
 // Cloud-sea (云海条件指数) scoring for mountain observing sites.
 //
@@ -26,7 +27,8 @@ import {
 import type { CloudLayer, ForecastModel, PressureLevel } from "@/lib/types";
 
 export type CloudPosition = "above" | "in" | "below" | "clear" | "unknown";
-export const CLOUD_SEA_SCORE_VERSION = "cloudsea-native-conservative-v3";
+// v4 separates snapshots made before six site-coordinate corrections.
+export const CLOUD_SEA_SCORE_VERSION = "cloudsea-native-conservative-v4";
 export type PressureEvidenceStatus = "available" | "partial" | "unavailable";
 
 export type CloudSeaConditionLevel =
@@ -272,6 +274,22 @@ export function presentCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSna
   };
 }
 
+function hasSurfaceWindow(window: CloudSeaWindowScore): boolean {
+  return window.coverage !== undefined &&
+    Number.isInteger(window.coverage.expectedHours) &&
+    window.coverage.expectedHours > 0 &&
+    window.coverage.surfaceValidHours === window.coverage.expectedHours &&
+    isValidProviderValue("cloud_cover_low", window.lowCloud) &&
+    isValidProviderValue("cloud_cover_mid", window.midCloud) &&
+    isValidProviderValue("cloud_cover_high", window.highCloud) &&
+    isValidProviderValue("relative_humidity_2m", window.humidity) &&
+    isValidProviderValue("wind_speed_10m", window.windSpeed);
+}
+
+const RELOCATED_CLOUD_SEA_SITE_IDS = new Set([
+  "cs-taizijian", "cs-qianniugang", "cs-longwangshan", "cs-guniujiang", "cs-lushan", "cs-donglingshan",
+]);
+
 /** Old responses remain inspectable facts, but cannot republish qualified scores. */
 export function qualifyCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSnapshot {
   if (snapshot.scoreVersion === CLOUD_SEA_SCORE_VERSION) return presentCloudSeaSnapshot(snapshot);
@@ -282,8 +300,32 @@ export function qualifyCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSna
     conditionLevel: null, conditionLabel: null, probabilityLevel: null, probabilityLabel: null,
     cloudPosition: "unknown", positionLabel: "层位未验证", cloudBaseM: null, cloudTopM: null, cloudTopUpperM: null, altitudeDiffM: null,
   });
-  return { ...snapshot, stale: true, refreshError: "评分版本已更新，旧分数暂不发布，请刷新天气来源。",
-    sites: Object.fromEntries(Object.entries(snapshot.sites).map(([id, windows]) => [id, { morning: withhold(windows.morning), evening: withhold(windows.evening) }])) };
+  const clearOldSite = (window: CloudSeaWindowScore): CloudSeaWindowScore => ({
+    ...CLOUD_SEA_EMPTY_WINDOW,
+    coverage: window.coverage ? { ...window.coverage, surfaceValidHours: 0, scoreableHours: 0, pressureHours: 0 } : CLOUD_SEA_EMPTY_WINDOW.coverage,
+    summary: "旧快照使用旧坐标，当前机位天气与评分待刷新。",
+  });
+  const sites = Object.fromEntries(Object.entries(snapshot.sites).map(([id, windows]) => [id, {
+    morning: RELOCATED_CLOUD_SEA_SITE_IDS.has(id) ? clearOldSite(windows.morning) : withhold(windows.morning),
+    evening: RELOCATED_CLOUD_SEA_SITE_IDS.has(id) ? clearOldSite(windows.evening) : withhold(windows.evening),
+  }]));
+  const surface = snapshot.surface;
+  const surfaceAvailable = CLOUD_SEA_SITES.filter(site => {
+    const windows = sites[site.id];
+    return windows && hasSurfaceWindow(windows.morning) && hasSurfaceWindow(windows.evening);
+  }).length;
+  const qualified = { ...snapshot, stale: true, refreshError: "评分版本已更新，旧分数暂不发布，请刷新天气来源。",
+    ...(snapshot.provenance ? { provenance: { ...snapshot.provenance, sourcesBySite: Object.fromEntries(
+      Object.entries(snapshot.provenance.sourcesBySite ?? {}).map(([id, sources]) => [id, RELOCATED_CLOUD_SEA_SITE_IDS.has(id) ? [] : sources]),
+    ) } } : {}),
+    ...(surface && hasValidCloudSeaCoverageCounts(surface, surface.totalSites) ? { surface: {
+      ...surface, availableSites: Math.min(surfaceAvailable, surface.totalSites),
+      failedSites: Math.max(0, surface.totalSites - surfaceAvailable),
+      status: pressureStatusFor(surfaceAvailable, surface.totalSites),
+    } } : {}),
+    ...(snapshot.pressure ? { pressure: { ...snapshot.pressure, receivedSites: undefined } } : {}),
+    sites };
+  return presentCloudSeaSnapshot(qualified);
 }
 
 export function positionLabel(pos: CloudPosition): string {
@@ -854,15 +896,6 @@ export function buildCloudSeaSnapshot(
     };
   }
 
-  const hasSurfaceWindow = (window: CloudSeaWindowScore) =>
-    window.coverage !== undefined &&
-    window.coverage.expectedHours > 0 &&
-    window.coverage.surfaceValidHours === window.coverage.expectedHours &&
-    window.lowCloud !== null &&
-    window.midCloud !== null &&
-    window.highCloud !== null &&
-    window.humidity !== null &&
-    window.windSpeed !== null;
   const totalSites = CLOUD_SEA_SITES.length;
   const surfaceAvailableSites = CLOUD_SEA_SITES.filter((site) => {
     const windows = sitesRecord[site.id];
