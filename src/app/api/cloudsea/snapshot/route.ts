@@ -50,6 +50,10 @@ const TIMEOUT_MS = 60_000;
 const FORCE_REFRESH_COOLDOWN_MS = 60_000;
 const CACHE_MAX_ENTRIES = 32;
 const FORCE_TRACK_MAX_ENTRIES = 128;
+// A partial snapshot is never "fresh", but re-fanning-out to the provider on
+// every page load is what turns one throttled upstream into a sustained 429
+// storm. Short bounded reuse keeps the same disclosed partial result instead.
+const DEGRADED_REUSE_MS = 30_000;
 const PRESSURE_BATCH_SIZE = 18;
 // The client serializes dates. Keep a small amount of concurrency within one
 // date so the third pressure batch finishes before the route-wide timeout,
@@ -62,18 +66,19 @@ interface CachedSnapshot {
 }
 
 const cache = new Map<string, CachedSnapshot>();
+const degradedCache = new Map<string, CachedSnapshot>();
 const inFlight = new Map<string, Promise<CloudSeaSnapshot>>();
 const lastForceAt = new Map<string, number>();
 
-function rememberSnapshot(key: string, snapshot: CloudSeaSnapshot) {
+function rememberSnapshot(store: Map<string, CachedSnapshot>, key: string, snapshot: CloudSeaSnapshot) {
   // Refresh insertion order so the cap behaves as an LRU-like bound instead of
   // evicting a recently refreshed key merely because it was first inserted long ago.
-  cache.delete(key);
-  cache.set(key, { snapshot, at: Date.now() });
-  while (cache.size > CACHE_MAX_ENTRIES) {
-    const oldest = cache.keys().next().value as string | undefined;
+  store.delete(key);
+  store.set(key, { snapshot, at: Date.now() });
+  while (store.size > CACHE_MAX_ENTRIES) {
+    const oldest = store.keys().next().value as string | undefined;
     if (oldest === undefined) break;
-    cache.delete(oldest);
+    store.delete(oldest);
   }
 }
 
@@ -102,6 +107,13 @@ function isCacheableSnapshot(snapshot: CloudSeaSnapshot): boolean {
     hasCompleteCloudSeaCoverage(snapshot.surface, CLOUD_SEA_SITES.length) &&
     hasCompleteCloudSeaCoverage(snapshot.pressure, CLOUD_SEA_SITES.length) &&
     hasCompleteCloudSeaCoverage(presentCloudSeaSnapshot(snapshot).pressure, CLOUD_SEA_SITES.length)
+  );
+}
+
+function isCoverageDegraded(snapshot: CloudSeaSnapshot): boolean {
+  return (
+    !hasCompleteCloudSeaCoverage(snapshot.surface, CLOUD_SEA_SITES.length) ||
+    !hasCompleteCloudSeaCoverage(presentCloudSeaSnapshot(snapshot).pressure, CLOUD_SEA_SITES.length)
   );
 }
 
@@ -303,6 +315,28 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  if (!forceRefresh) {
+    const degraded = degradedCache.get(key);
+    if (degraded && Date.now() - degraded.at < DEGRADED_REUSE_MS) {
+      const retryAfter = Math.ceil((DEGRADED_REUSE_MS - (Date.now() - degraded.at)) / 1000);
+      return snapshotJson(
+        {
+          ...degraded.snapshot,
+          stale: true,
+          refreshError: `${degradationMessage(degraded.snapshot)}；${retryAfter} 秒内沿用上次部分结果，未重复请求上游`,
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store",
+            ...openMeteoRateLimitHeaders(),
+            "X-Cloudsea-Cache": "degraded-reuse",
+            "Retry-After": String(retryAfter),
+          },
+        },
+      );
+    }
+  }
+
   let activeTask = inFlight.get(key) ?? null;
   if (!activeTask) {
     activeTask = (async () => {
@@ -334,10 +368,12 @@ export async function GET(request: NextRequest) {
   try {
     const snapshot = await activeTask;
     // Partial surface or pressure coverage remains useful only as an explicit
-    // degraded result and must not block a retry for the normal TTL.
+    // degraded result: it is never promoted to the normal TTL, only reused for
+    // the short DEGRADED_REUSE_MS window above.
     const cacheable = isCacheableSnapshot(snapshot);
-    if (cacheable) rememberSnapshot(key, snapshot);
+    if (cacheable) rememberSnapshot(cache, key, snapshot);
     if (!cacheable) {
+      if (isCoverageDegraded(snapshot)) rememberSnapshot(degradedCache, key, snapshot);
       const reason = degradationMessage(snapshot);
       const fallback = usableStaleCache(key);
       if (fallback) {

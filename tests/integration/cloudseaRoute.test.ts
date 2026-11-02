@@ -131,6 +131,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("GET /api/cloudsea/snapshot", () => {
@@ -442,7 +443,7 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(requested.every(url => url.searchParams.get("wind_speed_unit") === "ms")).toBe(true);
   });
 
-  it("does not cache a pressure-degraded snapshot as fresh for the next-day retry", async () => {
+  it("never promotes a pressure-degraded snapshot, reuses it briefly, then recovers", async () => {
     let pressureAvailable = false;
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
       const url = new URL(String(input));
@@ -454,22 +455,32 @@ describe("GET /api/cloudsea/snapshot", () => {
       );
     });
     vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers({ toFake: ["Date"] });
 
     const { GET } = await import("@/app/api/cloudsea/snapshot/route");
     const first = await GET(request("date=2026-09-21&model=icon"));
     const firstBody = await first.json();
     expect(first.status).toBe(200);
     expect(firstBody.pressure.status).toBe("unavailable");
+    expect(first.headers.get("X-Cloudsea-Cache")).toBe("degraded");
 
     pressureAvailable = true;
     const callsAfterDegradedResponse = fetchMock.mock.calls.length;
     const second = await GET(request("date=2026-09-21&model=icon"));
     const secondBody = await second.json();
+    expect(second.headers.get("X-Cloudsea-Cache")).toBe("degraded-reuse");
+    expect(secondBody.stale).toBe(true);
+    expect(secondBody.pressure.status).toBe("unavailable");
+    expect(secondBody.refreshError).toContain("未重复请求上游");
+    expect(fetchMock.mock.calls.length).toBe(callsAfterDegradedResponse);
 
+    vi.advanceTimersByTime(31_000);
+    const third = await GET(request("date=2026-09-21&model=icon"));
+    const thirdBody = await third.json();
     expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterDegradedResponse);
-    expect(second.status).toBe(200);
-    expect(secondBody.pressure.status).toBe("available");
-    expect(secondBody.pressure.availableSites).toBe(CLOUD_SEA_SITES.length);
+    expect(third.headers.get("X-Cloudsea-Cache")).toBe("fresh");
+    expect(thirdBody.pressure.status).toBe("available");
+    expect(thirdBody.pressure.availableSites).toBe(CLOUD_SEA_SITES.length);
   });
 
   it("marks partial surface coverage degraded and does not cache it as fresh", async () => {
@@ -488,6 +499,7 @@ describe("GET /api/cloudsea/snapshot", () => {
       });
     });
     vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers({ toFake: ["Date"] });
 
     const { GET } = await import("@/app/api/cloudsea/snapshot/route");
     const first = await GET(request("date=2026-09-21&model=icon"));
@@ -503,10 +515,17 @@ describe("GET /api/cloudsea/snapshot", () => {
     surfaceRecovered = true;
     const second = await GET(request("date=2026-09-21&model=icon"));
     const secondBody = await second.json();
+    expect(second.headers.get("X-Cloudsea-Cache")).toBe("degraded-reuse");
+    expect(secondBody.surface.status).toBe("partial");
+    expect(fetchMock.mock.calls.length).toBe(callsAfterPartial);
+
+    vi.advanceTimersByTime(31_000);
+    const third = await GET(request("date=2026-09-21&model=icon"));
+    const thirdBody = await third.json();
     expect(fetchMock.mock.calls.length).toBeGreaterThan(callsAfterPartial);
-    expect(secondBody.surface.status).toBe("available");
-    expect(secondBody.surface.availableSites).toBe(CLOUD_SEA_SITES.length);
-    expect(second.headers.get("X-Cloudsea-Cache")).toBe("fresh");
+    expect(thirdBody.surface.status).toBe("available");
+    expect(thirdBody.surface.availableSites).toBe(CLOUD_SEA_SITES.length);
+    expect(third.headers.get("X-Cloudsea-Cache")).toBe("fresh");
   });
 
   it("returns every declared cloudsea field for both windows at every catalog site", async () => {

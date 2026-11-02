@@ -11,7 +11,13 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL, date: "2026-11-01", tag: "云海机位修正", current: true,
+    version: APP_VERSION_LABEL, date: "2026-11-03", tag: "云海降级请求保护", current: true,
+    highlights: [
+      { icon: ShieldCheck, title: "部分数据不再反复重取", desc: "覆盖不全时 30 秒内沿用同一结果并标注较早数据，避免每次打开都重新请求整批天气；手动刷新不受影响。" },
+    ],
+  },
+  {
+    version: "v1.0.32", date: "2026-11-01", tag: "云海机位修正", current: false,
     highlights: [
       { icon: Mountain, title: "修正六个山峰坐标", desc: "天气与云海指数按山峰位置重新获取，旧坐标的数据不再用于当前机位。" },
       { icon: ShieldCheck, title: "减少重复天气请求", desc: "共用覆盖范围一致的天气数据；压力层部分不可用时仍提示并支持手动更新。" },
