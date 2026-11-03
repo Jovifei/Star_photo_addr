@@ -91,6 +91,10 @@ for (const width of [1440, 500]) {
         } else {
           await expect(detail.locator(".fg-cloud-percent")).toHaveText(["—", "—", "—"]);
         }
+        if (mode === "solar") {
+          await expect(detail.locator(".fg-horizon-channel")).toContainText("所选时段无晨昏窗口");
+          await expect(detail.locator(".fg-horizon-channel")).not.toContainText("关键云层数据不足");
+        }
         if (mode === "legacy-rain") await expect(detail.getByTestId("fireglow-excluded-weather")).toContainText("旧快照未保存");
         expect(requests.length).toBeGreaterThan(0);
         expect(requests.every((url) => new URL(url).searchParams.get("refresh") !== "1")).toBe(true);
