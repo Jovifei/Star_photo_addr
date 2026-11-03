@@ -44,8 +44,12 @@ export function fireGlowWindowLabel(window: FireGlowWindowScore | null | undefin
 }
 
 export function fireGlowWindowReason(window: FireGlowWindowScore | null | undefined): string {
-  if (fireGlowWindowStatus(window) === "rain-excluded" && window?.reason === LEGACY_RAIN_REASON) {
+  const status = fireGlowWindowStatus(window);
+  if (status === "rain-excluded" && window?.reason === LEGACY_RAIN_REASON) {
     return "窗口内降水明显，按现有降水规则排除，不计算条件指数；这不表示天气数据缺失。";
+  }
+  if (status === "insufficient") {
+    return `所选晨晚窗口没有有效评分。${window?.reason || "所选晨昏窗口缺少可用数据。"}`;
   }
   return window?.reason || "所选晨昏窗口缺少可用数据。";
 }
