@@ -4,6 +4,9 @@ import type { FireGlowWindowScore } from "../../src/lib/fireglow";
 
 const SITE_ID = "finder-001-location";
 const SITE_NAME = "阿里暗夜公园";
+// Catalog coordinates for the fixture site (directory handoff needs lat/lng).
+const SITE_LAT = 32.356;
+const SITE_LNG = 80.105;
 const NOW = "2026-11-03T01:45:00.000Z";
 const pixel = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
 type Mode = "rain" | "missing" | "solar" | "legacy-rain";
@@ -64,10 +67,17 @@ for (const width of [1440, 500]) {
             } },
           } });
         });
-        await page.goto("/fireglow?model=icon");
+        // Desktop hides the map search bar, and the ranked list only carries scored sites, so an
+        // unscored site is opened through the same directory handoff the entries already support.
+        await page.goto(width >= 1200
+          ? `/fireglow?model=icon&lat=${SITE_LAT}&lng=${SITE_LNG}` +
+              `&sourceScope=observing&sourceId=${SITE_ID}&name=${encodeURIComponent(SITE_NAME)}`
+          : "/fireglow?model=icon");
         await expect(page.getByRole("button", { name: "强制刷新火烧云快照" })).toBeEnabled();
-        await page.getByRole("searchbox", { name: "搜索目录摄影点位" }).fill(SITE_NAME);
-        await page.getByRole("option", { name: SITE_NAME, exact: true }).click();
+        if (width < 1200) {
+          await page.getByRole("searchbox", { name: "搜索目录摄影点位" }).fill(SITE_NAME);
+          await page.getByRole("option", { name: SITE_NAME, exact: true }).click();
+        }
         const state = mode === "rain" || mode === "legacy-rain" ? "rain-excluded" : mode === "solar" ? "no-solar-window" : "insufficient";
         const label = state === "rain-excluded" ? "降水条件排除" : state === "no-solar-window" ? "无晨昏窗口" : "数据不足";
         if (width === 500) {
