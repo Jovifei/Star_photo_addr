@@ -18,6 +18,7 @@ import { OBSERVING_SITES } from "@/lib/observingSites";
 import type { ForecastModel } from "@/lib/types";
 import type { FinderWeatherRecord } from "@/lib/stargazingFinderTypes";
 import type { FireGlowSourceQuality } from "@/lib/fireglowQuality";
+import type { FireGlowWindowStatus } from "./fireglowWindowStatus";
 
 export type FireGlowBand = "strong" | "medium" | "light" | "faint" | "none" | "unknown";
 export const FIRE_GLOW_SCORE_VERSION = "fireglow-v3-solar-index";
@@ -51,6 +52,11 @@ export function isHighFireGlowLevel(
 }
 
 export interface FireGlowWindowScore {
+  /** Optional for retained snapshots written before explicit outcome semantics. */
+  status?: FireGlowWindowStatus;
+  /** Weather evidence time, not a recommended/best photography time. */
+  referenceTime?: string | null;
+  precipitationMm?: number | null;
   score: number | null;
   band: FireGlowBand;
   bandLabel: string;
@@ -98,6 +104,9 @@ export interface FireGlowSnapshot {
 }
 
 const EMPTY_WINDOW: FireGlowWindowScore = {
+  status: "insufficient",
+  referenceTime: null,
+  precipitationMm: null,
   score: null,
   band: "unknown",
   bandLabel: "数据不足",
@@ -119,9 +128,12 @@ const EMPTY_WINDOW: FireGlowWindowScore = {
 };
 
 const NONE_WINDOW: FireGlowWindowScore = {
+  status: "no-solar-window",
+  referenceTime: null,
+  precipitationMm: null,
   score: null,
   band: "none",
-  bandLabel: "数据不足",
+  bandLabel: "无晨昏窗口",
   probabilityLabel: null,
   probabilityLevel: null,
   vividness: null,
@@ -389,7 +401,33 @@ function scoreWindow(
   }
   const candidates = hours.filter((hour) => hour.precip <= 0.3);
   if (!candidates.length) {
-    return { ...NONE_WINDOW, reason: "窗口内降水明显，云层无法被落日点燃。" };
+    if (incomplete) return {
+      ...EMPTY_WINDOW,
+      reason: "晨昏窗口关键云量或降水数据不完整，无法计算火烧云条件指数。",
+    };
+    // Keep one real, same-hour weather sample nearest the horizon. This is
+    // evidence only: never label it as peakTime or fabricate a zero score.
+    const reference = hours.reduce((nearest, hour) =>
+      Math.abs(hour.sunAltitude) < Math.abs(nearest.sunAltitude) ? hour : nearest,
+    );
+    const direction = phase === "evening" ? "setting" : "rising";
+    return {
+      ...NONE_WINDOW,
+      status: "rain-excluded",
+      bandLabel: "降水条件排除",
+      referenceTime: reference.time,
+      precipitationMm: reference.precip,
+      deckCloud: Math.round(clamp(reference.cloudMid + reference.cloudHigh, 0, 100)),
+      lowCloud: Math.round(reference.cloudLow),
+      midCloud: Math.round(reference.cloudMid),
+      highCloud: Math.round(reference.cloudHigh),
+      visibilityKm: reference.visibility == null ? null : Math.round(reference.visibility / 100) / 10,
+      sunAltitude: Math.round(reference.sunAltitude * 10) / 10,
+      goldenTime: twilightCrossing(sunSeries, -4, direction),
+      blueTime: twilightCrossing(sunSeries, -6, direction),
+      astroTime: twilightCrossing(sunSeries, -18, direction),
+      reason: "窗口内降水明显，符合太阳高度条件的有效时次降水均大于 0.3 mm，按现有规则不计算火烧云条件指数。",
+    };
   }
   let best = candidates[0];
   let bestScore = -1;
@@ -409,6 +447,9 @@ function scoreWindow(
   const momentLabel = momentLabelFor(best.sunAltitude);
   const direction = phase === "evening" ? "setting" : "rising";
   return {
+    status: "scored",
+    referenceTime: best.time,
+    precipitationMm: best.precip,
     score,
     band,
     bandLabel: BAND_LABELS[band],
@@ -441,6 +482,7 @@ export function scoreFireGlowSite(
     return { evening: { ...EMPTY_WINDOW }, morning: { ...EMPTY_WINDOW } };
   }
   const sunSeries = daySunAltitudeSeries(record.hourly.time, site, dateKey);
+  if (!sunSeries.length) return { evening: { ...EMPTY_WINDOW }, morning: { ...EMPTY_WINDOW } };
   return {
     evening: scoreWindow(collectGlowHours(record, "evening", dateKey, sunSeries), sunSeries, "evening"),
     morning: scoreWindow(collectGlowHours(record, "morning", dateKey, sunSeries), sunSeries, "morning"),
