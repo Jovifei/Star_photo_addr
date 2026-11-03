@@ -1,4 +1,5 @@
 import { dataAgeMs } from "./forecastIntegrity";
+import { fireGlowWindowReason, fireGlowWindowStatus } from "./fireglowWindowStatus";
 import type { SnapshotProvenance } from "./snapshotProvenance";
 import type { FireGlowSnapshot } from "./fireglow";
 import type { FinderWeatherStatus } from "./stargazingFinderTypes";
@@ -15,7 +16,7 @@ export interface FireGlowSourceQuality {
 }
 
 export type FireGlowQuality = {
-  state: "fresh" | "stale" | "expired" | "unknown" | "insufficient" | "refresh-failed";
+  state: "fresh" | "stale" | "expired" | "unknown" | "insufficient" | "refresh-failed" | "excluded" | "no-window";
   notice: string;
 };
 
@@ -73,9 +74,10 @@ export function fireGlowSiteQuality(
 ): FireGlowQuality {
   if (dateError || snapshot?.refreshError) return { state: "refresh-failed", notice: "数据已降级：所选日期刷新失败，保留的结果不作新鲜推荐。" };
   if (!snapshot || snapshot.date !== date || snapshot.model !== model) return { state: "unknown", notice: "数据已降级：所选日期或模型无法核验。" };
-  const score = snapshot.sites?.[siteId]?.[phase]?.score;
-  if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 100) {
-    return { state: "insufficient", notice: "数据不足：所选晨晚窗口没有有效评分。" };
+  const window = snapshot.sites?.[siteId]?.[phase];
+  const outcome = fireGlowWindowStatus(window);
+  if (outcome === "insufficient") {
+    return { state: "insufficient", notice: `数据不足：${fireGlowWindowReason(window)}` };
   }
   const quality = snapshot.sourceQuality;
   const site = quality?.version === 1 ? quality.bySite?.[siteId] : undefined;
@@ -94,5 +96,7 @@ export function fireGlowSiteQuality(
   if (snapshot.stale && (quality?.staleScope !== "site" || !hasSiteStaleCause(snapshot, now))) {
     return { state: "unknown", notice: "数据已降级：快照整体状态无法归因到其他地点。" };
   }
+  if (outcome === "rain-excluded") return { state: "excluded", notice: fireGlowWindowReason(window) };
+  if (outcome === "no-solar-window") return { state: "no-window", notice: fireGlowWindowReason(window) };
   return { state: "fresh", notice: "" };
 }
