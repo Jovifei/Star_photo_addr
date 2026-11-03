@@ -6,6 +6,7 @@ import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import { getShanghaiDate } from "@/data/observingSites/catalog";
 import { buildFireGlowSnapshot, FIRE_GLOW_SCORE_VERSION } from "@/lib/fireglow";
+import { countFireGlowDataSites } from "@/lib/fireglowWindowStatus";
 import { FIRE_GLOW_FRESH_MS, fireGlowSourceAgeMs } from "@/lib/fireglowQuality";
 import { PROVIDER_VALIDATION_VERSION } from "@/lib/providerWeatherIntegrity";
 import type { FireGlowSnapshot } from "@/lib/fireglow";
@@ -57,24 +58,13 @@ function fireglowDiskPath(date: string, model: string): string {
   return path.join(SNAPSHOT_DIRECTORY, `fireglow-source-v2-${date}-${model}.json`);
 }
 
-function countValidScores(snapshot: FireGlowSnapshot | null | undefined): number {
-  if (!snapshot?.sites) return 0;
-  let count = 0;
-  for (const s of Object.values(snapshot.sites)) {
-    if ([s?.evening?.score, s?.morning?.score].some((score) => typeof score === "number" && Number.isFinite(score) && score >= 0 && score <= 100)) {
-      count++;
-    }
-  }
-  return count;
-}
-
 function saveFireglowToDisk(date: string, model: string, snapshot: FireGlowSnapshot) {
   if (process.env.NODE_ENV === "test") return;
   try {
-    const newCount = countValidScores(snapshot);
+    const newCount = countFireGlowDataSites(snapshot);
     if (newCount === 0) return;
     const existing = readFireglowFromDisk(date, model);
-    const existingCount = countValidScores(existing);
+    const existingCount = countFireGlowDataSites(existing);
 
     // Snapshot armor: never overwrite valid disk snapshot with degraded/empty 429 results
     if (existingCount > 0 && newCount < existingCount * 0.7) {
@@ -121,7 +111,7 @@ export function fireglowSnapshotAgeMs(snapshot: FireGlowSnapshot): number {
 
 function readUsableFireglowDiskSnapshot(date: string, model: string): FireGlowSnapshot | null {
   const snapshot = readFireglowFromDisk(date, model);
-  return snapshot && countValidScores(snapshot) > 0 && Number.isFinite(Date.parse(snapshot.generatedAt)) && Math.max(0, Date.now() - Date.parse(snapshot.generatedAt)) <= DISK_STALE_TTL_MS
+  return snapshot && countFireGlowDataSites(snapshot) > 0 && Number.isFinite(Date.parse(snapshot.generatedAt)) && Math.max(0, Date.now() - Date.parse(snapshot.generatedAt)) <= DISK_STALE_TTL_MS
     ? snapshot
     : null;
 }
@@ -132,10 +122,10 @@ const lastForceAt = new Map<string, number>();
 const CACHE_MAX_ENTRIES = 32;
 
 function rememberSnapshot(key: string, date: string, model: string, snapshot: FireGlowSnapshot) {
-  const newCount = countValidScores(snapshot);
+  const newCount = countFireGlowDataSites(snapshot);
   if (newCount === 0) return;
   const existingMemory = cache.get(key)?.snapshot;
-  const existingCount = countValidScores(existingMemory);
+  const existingCount = countFireGlowDataSites(existingMemory);
 
   // Keep existing memory snapshot if new one is mostly empty
   if (existingCount > 0 && newCount < existingCount * 0.7) {
@@ -249,7 +239,7 @@ export async function GET(request: NextRequest) {
           scoreModelVersion: FIRE_GLOW_SCORE_VERSION,
           providerValidationVersion: PROVIDER_VALIDATION_VERSION,
         };
-        if (countValidScores(snapshot) === 0) {
+        if (countFireGlowDataSites(snapshot) === 0) {
           const providerError = Object.values(weather.data)
             .map((record) => record.error)
             .find((message): message is string => Boolean(message));
@@ -268,14 +258,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const snapshot = await activeTask;
-    const newCount = countValidScores(snapshot);
+    const newCount = countFireGlowDataSites(snapshot);
     const memoryFallback = cache.get(key)?.snapshot;
     const latestDisk = readUsableFireglowDiskSnapshot(date, model);
     const diskFallback =
-      memoryFallback && countValidScores(memoryFallback) > 0
+      memoryFallback && countFireGlowDataSites(memoryFallback) > 0
         ? memoryFallback
         : diskCached ?? latestDisk;
-    const diskCount = countValidScores(diskFallback);
+    const diskCount = countFireGlowDataSites(diskFallback);
 
     if (newCount === 0) {
       if (diskCount > 0) {
