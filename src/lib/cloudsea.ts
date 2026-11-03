@@ -492,8 +492,11 @@ export function deriveCloudSeaVerticalEvidence(
   const clearAbove = layer ? valid.find(sample => sample.heightMsl! > layer.levels.at(-1)!.heightMsl! && clear(sample)) : null;
   const cloudTopUpperM = clearAbove ? Math.ceil(clearAbove.heightMsl!) : null;
   const upperBoundNotCleared = layer?.relation === "云上" && (cloudTopUpperM == null || siteElevation <= cloudTopUpperM + 150);
+  const inversionSamples = samples!.filter(
+    (sample) => isThermodynamicPressureLevelSample(sample) && sample.heightMsl! >= modelElevation - 50,
+  );
   const inversion = detectTemperatureInversion(
-    profile,
+    inversionSamples.map(pressureLevelFromSample),
     modelElevation,
     Math.max(siteElevation + 1500, modelElevation + 2000),
   );
@@ -559,6 +562,58 @@ function evaluateConditions(
   );
 
   if (conditions.lowCloud < 25 && !vertical.layer && vertical.resolution !== "ambiguous") {
+    const modelElevation = pressure?.nativeGridElevationM ?? pressure?.modelElevation ?? 0;
+    const isNativeGrid = pressure?.verticalReference === "native-grid-v2" && Number.isFinite(pressure.nativeGridElevationM);
+    const valleyReliefM = site.altitude - modelElevation;
+    const clearAloft = Math.max(conditions.midCloud, conditions.highCloud) <= 25;
+    const calmWind = conditions.windSpeed <= 2.2;
+    const moistBoundary = conditions.humidity >= 75;
+    const noPrecip = conditions.precip < 0.2;
+    const inversionBelowSummit =
+      vertical.inversion.status === "detected" &&
+      vertical.inversion.upperMsl !== null &&
+      vertical.inversion.upperMsl <= site.altitude + 150 &&
+      vertical.inversion.upperMsl >= modelElevation + 50;
+    const valleyLevels = samples?.filter(sample =>
+      sample.heightMsl !== null &&
+      sample.heightMsl >= modelElevation &&
+      sample.heightMsl <= (vertical.inversion.upperMsl ?? site.altitude)
+    ) ?? [];
+    const valleyAirMoist = valleyLevels.length > 0 && valleyLevels.some(l => (l.humidity ?? 0) >= 70);
+
+    if (
+      isNativeGrid &&
+      clearAloft &&
+      calmWind &&
+      moistBoundary &&
+      valleyAirMoist &&
+      noPrecip &&
+      inversionBelowSummit &&
+      valleyReliefM >= 300
+    ) {
+      const topM = Math.floor(vertical.inversion.upperMsl! / 50) * 50;
+      const baseM = Math.floor(modelElevation / 50) * 50;
+      const altitudeDiffM = site.altitude - topM;
+      let baseScore = 62;
+      if (conditions.humidity >= 85) baseScore += 6;
+      if (conditions.windSpeed <= 1.5) baseScore += 4;
+      if (vertical.inversion.strength === "strong") baseScore += 6;
+      else if (vertical.inversion.strength === "moderate") baseScore += 3;
+      const score = clamp(Math.round(baseScore), 55, 82);
+      return {
+        score,
+        position: "above",
+        baseM,
+        topM,
+        topUpperM: topM + 100,
+        altitudeDiffM,
+        pressureAvailable: vertical.profileAvailable,
+        pressureConfidence: "中",
+        inversion: vertical.inversion,
+        summary: `局地辐射谷雾条件显著：高空晴朗（中云 ${Math.round(conditions.midCloud)}%，高云 ${Math.round(conditions.highCloud)}%）、近地微风（${conditions.windSpeed}m/s）配合湿度 ${Math.round(conditions.humidity)}% 与约 ${vertical.inversion.deltaTempC}°C 低层逆温，利于山谷聚集成片云海。`,
+      };
+    }
+
     const score = clamp(Math.round(8 + conditions.lowCloud * 0.35), 5, 20);
     return {
       score,
