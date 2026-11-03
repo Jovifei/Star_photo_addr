@@ -327,8 +327,8 @@ export default function FireglowSiteDetail({
               <>
                 <AlertCircle size={14} className="fg-channel-icon text-warn" />
                 <div className="fg-channel-copy">
-                  <strong>关键云层数据不足</strong>
-                  <span>不把缺失云量当作 0；请等待真实时次恢复后再判断地平透光通道</span>
+                  <strong>{windowState === "no-solar-window" ? "所选时段无晨昏窗口" : "关键云层数据不足"}</strong>
+                  <span>{windowState === "no-solar-window" ? "没有满足太阳高度筛选的可用时次，不据此推断云量缺失或降水排除。" : "不把缺失云量当作 0；请等待真实时次恢复后再判断地平透光通道"}</span>
                 </div>
               </>
             ) : isChannelClear ? (
