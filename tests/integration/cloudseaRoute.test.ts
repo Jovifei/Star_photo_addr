@@ -528,6 +528,32 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(third.headers.get("X-Cloudsea-Cache")).toBe("fresh");
   });
 
+  it("falls back to the retained partial snapshot when the provider later fails", async () => {
+    let fail = false;
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (fail) throw new Error("上游限流");
+      const count = coordinateCount(url);
+      const date = url.searchParams.get("start_date") ?? "2026-09-06";
+      return Response.json(Array.from({ length: count }, () => missingPressureEntry(date)));
+    }));
+    vi.useFakeTimers({ toFake: ["Date"] });
+
+    const { GET } = await import("@/app/api/cloudsea/snapshot/route");
+    const first = await GET(request("date=2026-09-23&model=gfs"));
+    expect(first.headers.get("X-Cloudsea-Cache")).toBe("degraded");
+
+    fail = true;
+    vi.advanceTimersByTime(31_000);
+    const response = await GET(request("date=2026-09-23&model=gfs"));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Cloudsea-Cache")).toBe("degraded-stale-on-error");
+    expect(body.stale).toBe(true);
+    expect(body.refreshError).toContain("沿用");
+    expect(Object.keys(body.sites)).toHaveLength(CLOUD_SEA_SITES.length);
+  });
+
   it("returns every declared cloudsea field for both windows at every catalog site", async () => {
     vi.stubGlobal("fetch", successfulFetch());
     const { GET } = await import("@/app/api/cloudsea/snapshot/route");

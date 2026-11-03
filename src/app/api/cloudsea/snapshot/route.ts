@@ -418,6 +418,27 @@ export async function GET(request: NextRequest) {
         },
       });
     }
+    // Without a complete snapshot, the most recent partial one is still real
+    // weather: show it as stale instead of an empty "数据不可用" page.
+    const degraded = degradedCache.get(key);
+    if (degraded && Date.now() - degraded.at <= STALE_TTL_MS) {
+      return snapshotJson(
+        {
+          ...degraded.snapshot,
+          stale: true,
+          refreshError: `上游暂时不可用（${message}），沿用 ${Math.round(
+            (Date.now() - degraded.at) / 1000,
+          )} 秒前的部分真实数据`,
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store",
+            ...openMeteoRateLimitHeaders(),
+            "X-Cloudsea-Cache": "degraded-stale-on-error",
+          },
+        },
+      );
+    }
     const timedOut = isTimeoutError(error);
     return snapshotJson(
       { error: timedOut ? "云海 surface 数据请求超时" : message },

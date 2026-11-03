@@ -14,6 +14,7 @@ const VERSIONS = [
     version: APP_VERSION_LABEL, date: "2026-11-03", tag: "云海降级请求保护", current: true,
     highlights: [
       { icon: ShieldCheck, title: "部分数据不再反复重取", desc: "覆盖不全时 30 秒内沿用同一结果并标注较早数据，避免每次打开都重新请求整批天气；手动刷新不受影响。" },
+      { icon: CloudSun, title: "限流时仍保留真实数据", desc: "上游完全失败时改用最近一次部分真实数据并标注较早，不再整页显示无数据。" },
     ],
   },
   {
