@@ -13,6 +13,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { FireGlowWindowScore } from "@/lib/fireglow";
+import { fireGlowWindowLabel, fireGlowWindowReason, fireGlowWindowStatus } from "@/lib/fireglowWindowStatus";
 import { calculateSiteSunEvents } from "@/lib/astroSunUtils";
 import { markerLevelFor } from "@/lib/markerStatus";
 import { ResponsiveTopicDetailModalContext } from "@/components/ResponsiveTopicDetail";
@@ -68,6 +69,8 @@ export default function FireglowSiteDetail({
 }: FireglowSiteDetailProps) {
   const isModal = useContext(ResponsiveTopicDetailModalContext);
   const win = site.window;
+  const windowState = fireGlowWindowStatus(win);
+  const rainExcluded = windowState === "rain-excluded";
   const pLevel = markerLevelFor(win.score, win.probabilityLevel);
 
   const sunEvents = useMemo(() => {
@@ -112,6 +115,7 @@ export default function FireglowSiteDetail({
   return (
     <aside
       className="fireglow-site-detail"
+      data-window-state={windowState}
       role="dialog"
       aria-modal={isModal ? true : undefined}
       aria-label={`${site.name}火烧云摄影详情`}
@@ -158,7 +162,7 @@ export default function FireglowSiteDetail({
             </div>
             <div className="fg-hero-badge-block">
               <span className="fg-band-pill" data-level={pLevel}>
-                {win.bandLabel}
+                {fireGlowWindowLabel(win)}
               </span>
               {win.momentLabel && (
                 <span className="fg-moment-pill">
@@ -167,6 +171,7 @@ export default function FireglowSiteDetail({
               )}
             </div>
           </div>
+          <p className="small muted" data-testid="fireglow-window-reason">{fireGlowWindowReason(win)}</p>
 
           <div className="fg-vivid-strip">
             <div className="fg-vivid-head">
@@ -259,6 +264,11 @@ export default function FireglowSiteDetail({
               <span>大气三层云量画布与透光通道</span>
             </div>
           </div>
+          {rainExcluded ? <p className="small muted" data-testid="fireglow-excluded-weather">
+            {win.referenceTime
+              ? `原始天气参考时次 ${win.referenceTime.replace("T", " ")}（非最佳拍摄时刻）；降水 ${win.precipitationMm ?? "—"} mm。`
+              : "该旧快照未保存排除时次的原始天气值；缺失值不会补零，等待正常数据更新。"}
+          </p> : null}
 
           <div className="fg-cloud-bars-list">
             <div className="fg-cloud-row">
@@ -305,7 +315,15 @@ export default function FireglowSiteDetail({
           </div>
 
           <div className={`fg-horizon-channel ${channelClass}`}>
-            {!hasCloudData ? (
+            {rainExcluded ? (
+              <>
+                <AlertCircle size={14} className="fg-channel-icon text-warn" />
+                <div className="fg-channel-copy">
+                  <strong>降水条件排除，不发布拍摄推荐</strong>
+                  <span>保留的云量仅为所标时次的天气证据，不能据此忽略降水规则。</span>
+                </div>
+              </>
+            ) : !hasCloudData ? (
               <>
                 <AlertCircle size={14} className="fg-channel-icon text-warn" />
                 <div className="fg-channel-copy">
