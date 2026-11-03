@@ -11,7 +11,13 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL, date: "2026-11-03", tag: "云海降级请求保护", current: true,
+    version: APP_VERSION_LABEL, date: "2026-11-04", tag: "云海辐射谷雾定标", current: true,
+    highlights: [
+      { icon: Mountain, title: "识别局地辐射谷雾云海", desc: "模式低云量低但高空晴朗、微风、近地高湿且低层逆温在山顶下方时，准确识别谷底云海并给出推荐，避免低分漏报。" },
+    ],
+  },
+  {
+    version: "v1.0.33", date: "2026-11-03", tag: "云海降级与火烧云状态", current: false,
     highlights: [
       { icon: ShieldCheck, title: "部分数据不再反复重取", desc: "覆盖不全时 30 秒内沿用同一结果并标注较早数据，避免每次打开都重新请求整批天气；手动刷新不受影响。" },
       { icon: CloudSun, title: "限流时仍保留真实数据", desc: "上游完全失败时改用最近一次部分真实数据并标注较早，不再整页显示无数据。" },
