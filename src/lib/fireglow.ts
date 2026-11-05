@@ -65,7 +65,7 @@ export interface FireGlowWindowScore {
   probabilityLevel: FireGlowProbabilityLevel | null;
   /** 鲜艳度 0–1（sunsetbot 口径），如 0.42。 */
   vividness: number | null;
-  /** 分相最佳时刻：高云爆发 / 中云爆发 / 低云时刻 / 过渡。 */
+  /** 分相最佳时刻：高云爆发 / 中云爆发 / 低云时刻 / 过渡；无云可烧时诚实标注。 */
   momentLabel: string | null;
   peakTime: string | null;
   deckCloud: number | null;
@@ -328,10 +328,14 @@ function weightedCanvas(hour: GlowHour): number {
 }
 
 /** 分相最佳时刻（开源口径）：-6~-4° 烧高云，-2~+2° 烧中云，+2~+5° 烧低云。 */
-function momentLabelFor(sunAltitude: number): string {
-  if (sunAltitude >= -6 && sunAltitude < -4) return "高云爆发";
-  if (sunAltitude >= -2 && sunAltitude <= 2) return "中云爆发";
-  if (sunAltitude > 2 && sunAltitude <= 5) return "低云时刻";
+function momentLabelFor(hour: GlowHour): string {
+  // 无画布可烧时不得声称任何云层“爆发”：加权画布低于 scoreHour 的无画布
+  // 阈值（15）时，该时次只是太阳高度意义上的参考点（三层云量均为 0 时
+  // 曾错误显示“中云爆发”）。分相命名的云层在该时次不存在时同理回退。
+  if (weightedCanvas(hour) < 15) return "无云可烧";
+  if (hour.sunAltitude >= -6 && hour.sunAltitude < -4) return hour.cloudHigh > 0 ? "高云爆发" : "过渡时段";
+  if (hour.sunAltitude >= -2 && hour.sunAltitude <= 2) return hour.cloudMid > 0 ? "中云爆发" : "过渡时段";
+  if (hour.sunAltitude > 2 && hour.sunAltitude <= 5) return hour.cloudLow > 0 ? "低云时刻" : "过渡时段";
   return "过渡时段";
 }
 
@@ -444,7 +448,7 @@ function scoreWindow(
   const band = bandFor(score);
   const indexBand = probabilityRangeFor(score);
   const canvas = weightedCanvas(best);
-  const momentLabel = momentLabelFor(best.sunAltitude);
+  const momentLabel = momentLabelFor(best);
   const direction = phase === "evening" ? "setting" : "rising";
   return {
     status: "scored",

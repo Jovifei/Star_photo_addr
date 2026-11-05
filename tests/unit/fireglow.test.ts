@@ -254,6 +254,27 @@ describe("condition index presentation bands", () => {
     }
   });
 
+  it("never claims a cloud eruption moment when every cloud layer is zero", () => {
+    const date = "2026-08-22";
+    const record = recordWithHours(Array.from({ length: 24 }, (_, hour) => ({
+      time: `${date}T${String(hour).padStart(2, "0")}:00`, low: 0, mid: 0, high: 0,
+    })));
+    const result = scoreFireGlowSite(SITE, record, date);
+    expect(result.evening.status).toBe("scored");
+    expect(result.evening.momentLabel).toBe("无云可烧");
+    expect(result.evening.reason).not.toContain("爆发");
+  });
+
+  it("keeps the phase eruption label when a real cloud canvas exists", () => {
+    const date = "2026-08-22";
+    const record = recordWithHours(Array.from({ length: 24 }, (_, hour) => ({
+      time: `${date}T${String(hour).padStart(2, "0")}:00`, low: 5, mid: 40, high: 55,
+    })));
+    const result = scoreFireGlowSite(SITE, record, date);
+    expect(result.evening.momentLabel).not.toBe("无云可烧");
+    expect(["高云爆发", "中云爆发", "低云时刻", "过渡时段"]).toContain(result.evening.momentLabel);
+  });
+
   it("does not give invalid scores a display range", () => {
     for (const score of [NaN, Infinity, -1, 101]) {
       expect(probabilityRangeFor(score)).toBeNull();
