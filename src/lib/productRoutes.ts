@@ -161,7 +161,15 @@ export function readProductLinkContext(params: Pick<URLSearchParams, "get">): Pr
   const identity = readLocationIdentity(params);
   const phase = params.get("phase");
   const model = params.get("model");
-  return { model: isForecastModel(model) ? model : null, identity, location: identity ? { ...identity, elevation: null } : null,
+  // Elevation travels as its own parameter alongside the identity (the
+  // identity itself is coordinates + name + scope). Dropping it here made
+  // cross-workspace jumps (e.g. cloudsea → home) lose the catalogue altitude
+  // and fall back to sea-level geometry; parse it exactly like the home
+  // bridge does: missing/blank/non-numeric means unknown, never zero.
+  const elevationRaw = params.get("elevation");
+  const elevationParsed = elevationRaw === null || elevationRaw.trim() === "" ? null : Number(elevationRaw);
+  const elevation = elevationParsed !== null && Number.isFinite(elevationParsed) ? elevationParsed : null;
+  return { model: isForecastModel(model) ? model : null, identity, location: identity ? { ...identity, elevation } : null,
     contextVersion: params.get("contextVersion") === "2" ? 2 : undefined,
     night: params.get("night"), forecastTime: params.get("forecastTime"),
     forecastEpoch: params.get("forecastEpoch") && Number.isSafeInteger(Number(params.get("forecastEpoch"))) ? Number(params.get("forecastEpoch")) : null,

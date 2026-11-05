@@ -167,3 +167,26 @@ it("retains allowlisted selected model in parsed cross-product context", () => {
   expect(readProductLinkContext(new URLSearchParams("model=icon")).model).toBe("icon");
   expect(readProductLinkContext(new URLSearchParams("model=borrowed")).model).toBeNull();
 });
+
+it("carries the catalogue elevation through parsed cross-product context (cloudsea → home)", () => {
+  const params = new URLSearchParams(
+    "lat=30.944&lng=102.903&name=" +
+      encodeURIComponent("巴朗山垭口") +
+      "&sourceScope=cloudsea&sourceId=cs-balangshan&elevation=4480",
+  );
+  const context = readProductLinkContext(params);
+  expect(context.location?.elevation).toBe(4480);
+  // Round-trip: a home href built from the parsed context keeps the elevation,
+  // so home geometry does not silently fall back to sea level.
+  const home = new URL(buildProductHref("/", context), "https://example.test");
+  expect(home.searchParams.get("elevation")).toBe("4480");
+  expect(home.searchParams.get("lat")).toBe("30.944");
+  expect(home.searchParams.get("lng")).toBe("102.903");
+});
+
+it("treats a missing or invalid elevation as unknown, never as zero", () => {
+  const base = "lat=30.944&lng=102.903&sourceScope=cloudsea&sourceId=cs-balangshan";
+  expect(readProductLinkContext(new URLSearchParams(base)).location?.elevation).toBeNull();
+  expect(readProductLinkContext(new URLSearchParams(base + "&elevation=")).location?.elevation).toBeNull();
+  expect(readProductLinkContext(new URLSearchParams(base + "&elevation=abc")).location?.elevation).toBeNull();
+});
