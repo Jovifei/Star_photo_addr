@@ -580,6 +580,15 @@ function evaluateConditions(
       sample.heightMsl <= (vertical.inversion.upperMsl ?? site.altitude)
     ) ?? [];
     const valleyAirMoist = valleyLevels.length > 0 && valleyLevels.some(l => (l.humidity ?? 0) >= 70);
+    // Conservative clearance is measured against the fog-top UPPER bound
+    // (topM + 100), the same reference the pressure-profile path uses.
+    // Measuring against topM overstated the clearance by the 100 m bound
+    // width, and the entry gate alone (inversion top up to 150 m above the
+    // summit) could label a summit 云上 while it sat below that bound.
+    const fogTopM = vertical.inversion.upperMsl !== null
+      ? Math.floor(vertical.inversion.upperMsl / 50) * 50 : null;
+    const fogTopUpperM = fogTopM !== null ? fogTopM + 100 : null;
+    const summitClearsFogTop = fogTopUpperM !== null && site.altitude > fogTopUpperM;
 
     if (
       isNativeGrid &&
@@ -589,11 +598,12 @@ function evaluateConditions(
       valleyAirMoist &&
       noPrecip &&
       inversionBelowSummit &&
+      summitClearsFogTop &&
       valleyReliefM >= 300
     ) {
-      const topM = Math.floor(vertical.inversion.upperMsl! / 50) * 50;
+      const topM = fogTopM!;
       const baseM = Math.floor(modelElevation / 50) * 50;
-      const altitudeDiffM = site.altitude - topM;
+      const altitudeDiffM = site.altitude - fogTopUpperM!;
       let baseScore = 62;
       if (conditions.humidity >= 85) baseScore += 6;
       if (conditions.windSpeed <= 1.5) baseScore += 4;
@@ -605,7 +615,7 @@ function evaluateConditions(
         position: "above",
         baseM,
         topM,
-        topUpperM: topM + 100,
+        topUpperM: fogTopUpperM,
         altitudeDiffM,
         pressureAvailable: vertical.profileAvailable,
         pressureConfidence: "中",
