@@ -263,6 +263,9 @@ describe("condition index presentation bands", () => {
     expect(result.evening.status).toBe("scored");
     expect(result.evening.momentLabel).toBe("无云可烧");
     expect(result.evening.reason).not.toContain("爆发");
+    // No canvas to burn also means there is no peak moment to advertise:
+    // peakTime feeds the UI's 最佳爆发 / 最佳时刻 labels and must stay null.
+    expect(result.evening.peakTime).toBeNull();
   });
 
   it("keeps the phase eruption label when a real cloud canvas exists", () => {
@@ -273,6 +276,7 @@ describe("condition index presentation bands", () => {
     const result = scoreFireGlowSite(SITE, record, date);
     expect(result.evening.momentLabel).not.toBe("无云可烧");
     expect(["高云爆发", "中云爆发", "低云时刻", "过渡时段"]).toContain(result.evening.momentLabel);
+    expect(result.evening.peakTime).toMatch(/^\d{2}:\d{2}$/);
   });
 
   it("does not give invalid scores a display range", () => {

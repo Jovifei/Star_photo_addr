@@ -169,3 +169,45 @@ describe("CloudSea radiation valley fog calibration", () => {
     expect(dry.score ?? 0).toBeLessThan(25);
   });
 });
+
+// Regression (2026-11-07 review): the radiation-fog branch published
+// topUpperM = topM + 100 but computed altitudeDiffM against topM, overstating
+// the clearance by exactly the 100 m bound width; and its entry gate allowed
+// an inversion top up to 150 m ABOVE the summit, so a summit below the
+// branch's own cloud-top upper bound could still be labelled 云上.
+describe("CloudSea radiation fog clearance consistency", () => {
+  it("measures clearance against the cloud-top upper bound, not the nominal top", () => {
+    const result = evaluateWindow(radiationFogProfile(), {
+      lowCloud: 0, midCloud: 5, highCloud: 10, rh: 85, wind: 1.2, precip: 0,
+    });
+    expect(result.cloudPosition).toBe("above");
+    expect(result.cloudTopUpperM).toBe((result.cloudTopM ?? 0) + 100);
+    expect(result.altitudeDiffM).toBe(site.altitude - (result.cloudTopUpperM ?? 0));
+  });
+
+  it("does not claim 云上 when the summit is below the fog-top upper bound", () => {
+    // A gradual inversion: temperature bottoms at 1000 m (13°) and only
+    // warms decisively by 1450 m (15.2°), so the detected inversion top —
+    // and thus the fog top — sits at ≈1450 m with an upper bound of
+    // ≈1550 m: above the 1500 m summit, which therefore sits inside the
+    // uncertainty band and must not be labelled above the cloud.
+    const highInversion: PressureLevelSample[] = [
+      { pressure: 1000, heightMsl: 100, cloudCover: 5, humidity: 88, temperature: 18 },
+      { pressure: 975, heightMsl: 300, cloudCover: 5, humidity: 85, temperature: 17 },
+      { pressure: 950, heightMsl: 500, cloudCover: 5, humidity: 82, temperature: 15.5 },
+      { pressure: 925, heightMsl: 750, cloudCover: 5, humidity: 80, temperature: 14 },
+      { pressure: 900, heightMsl: 1000, cloudCover: 8, humidity: 78, temperature: 13 },
+      { pressure: 875, heightMsl: 1200, cloudCover: 5, humidity: 76, temperature: 13.9 },
+      { pressure: 850, heightMsl: 1450, cloudCover: 0, humidity: 74, temperature: 15.2 },
+      { pressure: 825, heightMsl: 1700, cloudCover: 0, humidity: 55, temperature: 10 },
+      { pressure: 800, heightMsl: 2000, cloudCover: 0, humidity: 40, temperature: 8 },
+      { pressure: 700, heightMsl: 3000, cloudCover: 0, humidity: 30, temperature: 2 },
+      { pressure: 600, heightMsl: 4200, cloudCover: 0, humidity: 20, temperature: -6 },
+      { pressure: 500, heightMsl: 5600, cloudCover: 0, humidity: 15, temperature: -14 },
+    ];
+    const result = evaluateWindow(highInversion, {
+      lowCloud: 0, midCloud: 5, highCloud: 10, rh: 85, wind: 1.2, precip: 0,
+    });
+    expect(result.cloudPosition).not.toBe("above");
+  });
+});

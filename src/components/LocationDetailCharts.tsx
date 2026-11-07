@@ -123,6 +123,23 @@ function buildWeatherChart(hours: HourEvaluation[]) {
   };
 }
 
+/**
+ * Y-axis floor for the astro chart. Sun/moon/galactic altitudes routinely
+ * reach −70° at night; the previous fixed −40° floor clipped those line
+ * segments invisibly while tooltips still reported the true values. Extend
+ * the floor in 10° steps to cover the lowest plotted point — never above
+ * the historical −40° default, never below −90°.
+ */
+export function astroChartYMin(hours: HourEvaluation[]): number {
+  let lowest = -40;
+  for (const h of hours) {
+    for (const v of [h.sunAltitude, h.moonAltitude, h.galacticAltitude]) {
+      if (typeof v === "number" && Number.isFinite(v)) lowest = Math.min(lowest, Math.floor(v / 10) * 10);
+    }
+  }
+  return Math.max(-90, lowest);
+}
+
 function buildAstroChart(hours: HourEvaluation[]) {
   const base = baseChartStyle();
   return {
@@ -142,7 +159,7 @@ function buildAstroChart(hours: HourEvaluation[]) {
     },
     yAxis: {
       type: "value",
-      min: -40,
+      min: astroChartYMin(hours),
       max: 90,
       axisLabel: { color: "#7a939d", fontSize: 9, formatter: "{value}°" },
       splitLine: { lineStyle: { color: "rgba(255, 255, 255, 0.05)" } },

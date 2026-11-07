@@ -16,6 +16,12 @@ export function useTopicContext<T extends IdentityPoint>(catalogue: readonly T[]
     dateNotice: outsideRange && !dateChosen
       ? "所选日期超出本入口三日预报范围；当前显示今日；跨入口保留原日期，选择本入口日期后才替换。" : null };
 }
+/** Catalogue entries carry the point height as `altitude` (cloudsea/observing). */
+function catalogueElevation(site: IdentityPoint): number | null {
+  const raw = (site as { altitude?: unknown }).altitude ?? (site as { elevation?: unknown }).elevation;
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+}
+
 export function usePublishTopicContext<T extends IdentityPoint>(
   path: "/fireglow" | "/cloudsea", catalogue: readonly T[], scope: LocationSourceScope,
   selectedId: string | null, point: { latitude: number; longitude: number } | null,
@@ -28,8 +34,21 @@ export function usePublishTopicContext<T extends IdentityPoint>(
     const identity = site ? locationIdentity(site, scope)
       : sameIncomingPoint ? incoming.identity
       : point ? locationIdentity({ ...point, name: "所选坐标" }, "coordinate") : null;
+    // Elevation travels outside the identity (coordinates + name + scope), so
+    // it must be re-attached explicitly or the published URL drops ?elevation=
+    // and cross-workspace jumps home fall back to sea-level geometry (the
+    // reading side was fixed in PR #68; this is the writing side). Prefer the
+    // catalogue altitude of the selected site; an unchanged coordinate point
+    // keeps the elevation it arrived with. Unknown stays unknown, never zero.
+    const pointElevation = point && incoming.location
+      && point.latitude === incoming.location.latitude && point.longitude === incoming.location.longitude
+      ? incoming.location.elevation ?? null : null;
+    const elevation = (site ? catalogueElevation(site) : null) ?? pointElevation;
+    const location = identity
+      ? { latitude: identity.latitude, longitude: identity.longitude, name: identity.name, elevation }
+      : null;
     const contextDate = preservedDate ?? date;
-    const href = buildProductHref(path, { identity, model: model ?? incoming.model, night: contextDate, phase, contextVersion: 2,
+    const href = buildProductHref(path, { identity, location, model: model ?? incoming.model, night: contextDate, phase, contextVersion: 2,
       forecastTime: contextDate + (phase === "morning" ? "T05:00" : "T20:00") });
     if (window.location.pathname + window.location.search !== href) window.history.replaceState(null, "", href);
   }, [path, catalogue, scope, selectedId, point, date, phase, incoming, preservedDate, model]);
