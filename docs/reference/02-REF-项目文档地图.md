@@ -1,4 +1,4 @@
-> ⚠️ **历史文档**：本文件是 2026-09 的旧版文档地图，保留作历史参考。当前有效入口是 [../README.md](../../README.md) 与 [../ENGINEERING_PLAYBOOK.md](../ENGINEERING_PLAYBOOK.md)；下列路径已按 2026-11-04 归类更新。
+> ⚠️ **历史文档**：本文件是 2026-09 的旧版文档地图，保留作历史参考。当前有效入口是 [../README.md](../README.md) 与 [../ENGINEERING_PLAYBOOK.md](../ENGINEERING_PLAYBOOK.md)；下列路径已按 2026-11-04 归类更新。
 
 # 逐星项目文档地图
 
@@ -53,7 +53,7 @@
 | [`testing/TEST_PLAN_V1.md`](../testing/TEST_PLAN_V1.md) | 测试范围、P0/P1/P2、门禁和建议目录 | 验收标准或测试分层变化 |
 | [`testing/TEST_STATUS.md`](../testing/TEST_STATUS.md) | 实际执行结果、通过数量和未覆盖项目 | 每轮门禁结束 |
 | [`project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md) | MANUAL、BLOCKED、DEFERRED 测试执行卡 | 测试依赖或状态变化 |
-| [`CHANGELOG.md`](../CHANGELOG.md) / [`../CHANGELOG.md`](../CHANGELOG.md) | 文档目录与根目录版本变更记录 | 每次版本发布 |
+| [`CHANGELOG.md`](../CHANGELOG.md) / [`根 CHANGELOG.md`](../../CHANGELOG.md) | 文档目录与根目录版本变更记录 | 每次版本发布 |
 
 ### 项目跟踪与接力
 

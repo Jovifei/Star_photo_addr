@@ -26,9 +26,9 @@
    - 流程冲突声明：`scripts/deploy-remote.ps1` 是早期"服务器端 `up -d --build`"旧入口，在低内存 ECS 上会 OOM（E-002），**禁止再用它发布**；`docs/deployment/ALIYUN_DEPLOYMENT.md` 中的同类命令仅适用于其他环境。
    - Compose 服务名：`star-weather`（容器 `star-photo-star-weather-1`）与 `star-weather-worker`（容器 `star-photo-star-weather-worker-1`）；compose 文件为 `docker-compose.yml -f docker-compose.aliyun.yml`。
    - 隔离组装：下载 runtime 包 → 校验 SHA256 → 在不挂生产卷的临时容器中组装镜像 → `check-release-frontend`（三页 HTML 与包体逐字节一致）+ `check-data-sources` 全绿。
-   - 切换：`docker stop --time 30 star-photo-star-weather-worker-1 star-photo-star-weather-1` → 轮询确认零写入者（15 次 × 2s，防 Docker 状态延迟假阳性）→ `tar` 备份生产卷并 `sha256sum` 校验 → 原子替换 `.env` → 起服务 → 数据门禁 → 公网 healthz 断言新版本。
-   - 执行脚本位置：每次发布的 `assemble.py`、`switch-*-env.py`、`publish*.sh` 保存在服务器 `/opt/star-photo/.deploy-<版本>-<sha>-<日期>/` 阶段目录；切换前必须先在 `.env` 的合成副本上演练 apply/restore。若该目录脚本缺失，按本清单人工逐步执行并保留 phase 日志，不得凭记忆跳步。
-   - 每一步写入 `switch-receipt*/phase.txt`，任一步失败自动回滚到旧镜像并验证旧服务健康；回滚不等于修复，失败原因必须排查后才能重试。
+   - 切换：`docker stop --time 30 star-photo-star-weather-worker-1 star-photo-star-weather-1` → 轮询确认零写入者（15 次 × 2s，防 Docker 状态延迟假阳性）→ `tar` 备份生产卷并 `sha256sum` 校验 → 原子替换 `.env` → 起 app → 数据门禁 → 起 worker → 公网 healthz 断言新版本。
+   - 执行脚本位置：每次发布的 `assemble.py`、`switch-*-env.py`、`publish*.sh` 保存在服务器 `/opt/star-photo/.deploy-<版本>-<sha>-<日期>/` 阶段目录；切换前必须先在 `.env` 的合成副本上演练 apply/restore。阶段脚本缺失、版本无法确认，或演练未通过时，发布保持 BLOCKED，不得进入停服务、改配置阶段；人工发布必须另有完整、经过复核的操作与回滚步骤。
+   - 每一步写入 `switch-receipt*/phase.txt`，已验证具备该机制的脚本执行路径上任一步失败会自动回滚到旧镜像并验证旧服务健康；人工路径不承诺自动回滚。回滚不等于修复，失败原因必须排查后才能重试。
 6. **部署后核验**
    - `/healthz` 返回新版本；四入口 200；生产 `check-data-sources` 通过；关键页面 DOM/截图抽查（每阶段 2–3 张截图预算）；api 与页面数值交叉核对。
 
@@ -71,13 +71,14 @@
 - 根因：0.25° 网格平均化；`lowCloud<25 且无压力层云` 分支硬编码晴空 8 分。
 - 解决：新增辐射谷雾判据（高空晴朗 + 风≤2.2m/s + 地面/谷底湿层 + 逆温层顶在山顶下方 + 峰谷落差≥300m + 原生地形）→ 62–80 分推荐。
 - 证据边界：精确率 100% 仅来自 GRPK 特定开发样本（58 时次、正例捕获 12/20），不是全站预报准确率；无独立人工裁决。
+- 预防：云层提取与逆温检测分离——云层绝不取地下层，逆温允许贴地层 50m 容差；单元测试 `tests/unit/cloudseaRadiationFog.test.ts` 固定行为。
 
 ### E-007 山顶被浓雾包裹却评 94 分（多层云误报）
 - 症状：Sonnblick 2026-10-20 暴风雪白化，旧算法只取最低云 deck 判"云上"并给 94/86/82 分。
 - 根因：缺少第二层包裹检测与云顶上界校验。
 - 解决：保守规则收紧——上层未清/层距>750m/过渡包络一律 `score: null` 暂缓。
 - 证据边界：Sonnblick 独立留出集内高分推荐归零，精确率不可估计；"没有高分预测"不等于"成功校准"，召回仍未达门槛。
-- 预防：云层提取与逆温检测分离——云层绝不取地下层，逆温允许贴地层 50m 容差；单元测试 `tests/unit/cloudseaRadiationFog.test.ts` 固定行为。
+- 预防：新增垂直判据必须同时给出"正例召回"与"浓雾负例"双回归。
 
 ### E-008 停写检查假阳性触发自动回滚
 - 症状：v1.0.34 首次切换在"零写入者"断言处回滚，但容器实际已停止。
