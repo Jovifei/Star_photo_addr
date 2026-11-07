@@ -36,7 +36,7 @@
 - 当前记录镜像：`star-photo-addr:deploy-4e867ecf2aa0`；回滚：`star-photo-addr:rollback-before-4e867ecf2aa0`。
 - Compose：`docker-compose.yml` 和 `docker-compose.aliyun.yml`。
 - 服务器约 1.8GiB 内存。历史服务器端编译曾导致 OOM；只读审核不可重跑生产构建或触发部署。
-- 本地私有运维说明：`docs/deployment/REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md`。仅在已有权限下读取，不能把环境值、私钥、Token 或完整配置抄进报告。
+- 本地私有运维说明：`docs-private/REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md（本地保留，不入库）`。仅在已有权限下读取，不能把环境值、私钥、Token 或完整配置抄进报告。
 
 **本文件包含运维地址，采用 PRIVATE 文件名，保持本地交接；不自动提交公开仓库或镜像到知识库。它不包含凭据，也不授予新的账户访问权限。无现有访问权限时，请列出阻碍，禁止索取或引入凭据。**
 

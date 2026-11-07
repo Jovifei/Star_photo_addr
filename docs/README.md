@@ -59,7 +59,6 @@ docs/
 | [deployment/TESTING.md](./deployment/TESTING.md) | 测试分层与门禁 |
 | [deployment/OFFLINE_E2E.md](./deployment/OFFLINE_E2E.md) | 离线 E2E 运行方式 |
 | [deployment/DARK_SKY_DATA_SETUP.md](./deployment/DARK_SKY_DATA_SETUP.md) | 本地 Bortle/SQM 资产安装 |
-| [deployment/REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md](./deployment/REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md) | 私有运维说明（含敏感边界，不入知识库镜像） |
 
 ### 数据与视觉规范
 

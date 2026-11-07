@@ -4,6 +4,8 @@
 
 ## 一、提交/发布前必须执行的步骤（每次必做）
 
+> **流程冲突说明（2026-11-07 远端审查）**：仓库中的 `scripts/deploy-remote.ps1` 是早期"服务器端 `docker compose up -d --build`"旧入口，在低内存 ECS 上会触发 OOM（见 E-002），**不要再用它发布**。当前唯一有效流程是本节第 5 步的"本地构建运行时包 → 服务器隔离组装 → 停写备份 → 原子切换"。后续应删除或重写该旧脚本以消除歧义。
+
 1. **确认基线与工作树**
    - `git -C E:\project\Star_photo_addr status --porcelain`：区分自己的改动与 Owner 本地未跟踪文件，不得覆盖。
    - `git fetch origin && git rev-parse HEAD origin/main`：确认本地与远端 main 一致。
