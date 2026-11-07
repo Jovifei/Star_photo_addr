@@ -109,7 +109,7 @@ npm run test:live
 2. docs/reference/PRODUCT_TECH_PLAN.md
 3. docs/reference/PERSEIDS_REFERENCE_AUDIT.md
 4. docs/reference/LIGHT_POLLUTION_DATA_DECISION.md
-5. docs/CODEX_HANDOFF_MAP_PHASE2.md
+5. docs/handoff-docs/CODEX_HANDOFF_MAP_PHASE2.md
 6. docs/reference/UI_UX_PRO_MAX_AUDIT.md
 7. design-system/star-photo-planner/MASTER.md
 

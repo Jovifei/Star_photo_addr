@@ -41,7 +41,7 @@
 | --- | --- | --- |
 | [`ALIYUN_DEPLOYMENT.md`](../deployment/ALIYUN_DEPLOYMENT.md) | Linux/ECS、Docker Compose、Nginx、HTTPS、健康检查 | 服务器、域名或 Compose 变化 |
 | [`DEPLOYMENT.md`](../deployment/DEPLOYMENT.md) | 通用 VPS 部署和日常升级 | 通用部署方式变化 |
-| [`REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md`](../../docs-private/REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md) | 维护者私有部署操作说明；包含敏感环境边界，不应直接镜像到知识库 | 运维流程或权限变化 |
+| REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md | 维护者私有部署操作说明；包含敏感环境边界，不应直接镜像到知识库 | 运维流程或权限变化 |
 | [`ALIYUN_DATA_REFRESH_CHECKLIST.md`](../deployment/ALIYUN_DATA_REFRESH_CHECKLIST.md) | TTL、强刷冷却、响应头和数据源刷新验收 | 缓存、刷新或 Provider 变化 |
 | [`OPERATIONS.md`](../deployment/OPERATIONS.md) | 配额、缓存、stale、故障和常见排障 | 运维故障或运行参数变化 |
 
@@ -49,7 +49,7 @@
 
 | 文档 | 说明 | 更新时机 |
 | --- | --- | --- |
-| [`TESTING.md`](../deployment/TESTING.md) | 测试怎么写、如何分层、已知 Bug 与改进路线 | 测试策略或工具变化 |
+| [`TESTING.md`](../testing/TESTING.md) | 测试怎么写、如何分层、已知 Bug 与改进路线 | 测试策略或工具变化 |
 | [`testing/TEST_PLAN_V1.md`](../testing/TEST_PLAN_V1.md) | 测试范围、P0/P1/P2、门禁和建议目录 | 验收标准或测试分层变化 |
 | [`testing/TEST_STATUS.md`](../testing/TEST_STATUS.md) | 实际执行结果、通过数量和未覆盖项目 | 每轮门禁结束 |
 | [`project-tracking/TEST_BACKLOG.md`](../project-tracking/TEST_BACKLOG.md) | MANUAL、BLOCKED、DEFERRED 测试执行卡 | 测试依赖或状态变化 |

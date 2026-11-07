@@ -68,3 +68,8 @@ docs/*private*
 docs/*PRIVATE*
 
 docs/deployment/REMOTE_DEPLOYMENT_PRIVATE_GUIDE.md
+
+# Nested private docs: keep local only, never commit (covers moved locations)
+/docs-private/
+docs/**/*PRIVATE*
+docs/**/*private*

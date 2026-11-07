@@ -11,7 +11,7 @@
 - 已合并 PR #64（v1.0.32 六大山峰机位坐标修正与预热优化）：`d2e42ede`
 - 已合并 PR #65（云海降级 30s 沿用与全失败部分数据回退）：`e287d02`
 - 已合并 PR #66（火烧云降水排除/无窗口与数据不足语义分离）：`af3d946`
-- 云海校准接力方案：`docs/audits/CLOUDSEA_CALIBRATION_HANDOFF_20261103.md`
+- 云海校准接力方案：`docs/handoff-docs/CLOUDSEA_CALIBRATION_HANDOFF_20261103.md`
 
 ## 现网验证结果（v1.0.33）
 
@@ -26,7 +26,7 @@
 
 ## 下一阶段接力：云海命中率独立真值校准
 
-详见 `docs/audits/CLOUDSEA_CALIBRATION_HANDOFF_20261103.md`。
+详见 `docs/handoff-docs/CLOUDSEA_CALIBRATION_HANDOFF_20261103.md`。
 远端长任务聚焦：
 1. Phase 2 谷底 8–15 km 周边地形多点采样与落差水汽特征计算；
 2. 借鉴 FogPy / Satpy 双通道红外亮温差分与 MetPy LCL 补充物理边界；

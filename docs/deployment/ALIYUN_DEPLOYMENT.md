@@ -120,6 +120,8 @@ export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.aliyun.yml \
+> ⚠️ **低内存 ECS 不适用**：当前 1.8GiB 内存的生产服务器禁止在服务器上执行`up -d --build`（会触发 OOM，见 docs/ENGINEERING_PLAYBOOK.md E-002）。唯一有效流程：本地构建运行时包 → 服务器隔离组装镜像 → 停写备份 → 原子切换。以下命令仅适用于有充足内存的其他环境。
+
   up -d --build
 ```
 
@@ -299,6 +301,8 @@ export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.aliyun.yml \
+> ⚠️ **低内存 ECS 不适用**：当前 1.8GiB 内存的生产服务器禁止在服务器上执行`up -d --build`（会触发 OOM，见 docs/ENGINEERING_PLAYBOOK.md E-002）。唯一有效流程：本地构建运行时包 → 服务器隔离组装镜像 → 停写备份 → 原子切换。以下命令仅适用于有充足内存的其他环境。
+
   up -d --build
 curl -fsS http://127.0.0.1:3100/healthz
 npm run check:data-sources -- http://127.0.0.1:3100
@@ -312,6 +316,8 @@ export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.aliyun.yml \
+> ⚠️ **低内存 ECS 不适用**：当前 1.8GiB 内存的生产服务器禁止在服务器上执行`up -d --build`（会触发 OOM，见 docs/ENGINEERING_PLAYBOOK.md E-002）。唯一有效流程：本地构建运行时包 → 服务器隔离组装镜像 → 停写备份 → 原子切换。以下命令仅适用于有充足内存的其他环境。
+
   up -d --build
 ```
 

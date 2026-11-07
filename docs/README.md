@@ -20,7 +20,7 @@ docs/
 ├── handoff-docs/             # 跨会话交接与远端授权文档
 ├── engineering-change-log/   # 每次变更的目的、根因、验证（持续追加）
 ├── project-tracking/         # 项目状态、变更台账、测试积压
-├── testing/                  # 测试分层方案与执行状态
+├── testing/                  # 测试分层方案、执行状态与离线 E2E
 ├── evidence/                 # 验收原始数据（JSON 矩阵、截图）
 ├── product/                  # 工作区架构
 ├── handoff/                  # 功能级交接记录
@@ -45,8 +45,9 @@ docs/
 | [ENGINEERING_PLAYBOOK.md](./ENGINEERING_PLAYBOOK.md) | 提交/发布必做步骤、错误记录、排障 | 每次新故障后必追加 |
 | [reference/01-ARC-项目制造与交付流程.md](./reference/01-ARC-项目制造与交付流程.md) | 从需求到发布的制造闭环 | 架构或部署经验变化 |
 | [reference/02-REF-项目文档地图.md](./reference/02-REF-项目文档地图.md) | 按问题查找文档（旧版地图，路径以本文件为准） | 大类调整时 |
-| [project-tracking/PROJECT_STATUS.md](./project-tracking/PROJECT_STATUS.md) | 当前主线、完成项、阻断项 | 每个工作包结束 |
-| [project-tracking/CHANGE_LEDGER.md](./project-tracking/CHANGE_LEDGER.md) | 合并后的主线 SHA 与证据 | 每次合并 |
+| [project-tracking/PROJECT_STATUS.md](./project-tracking/PROJECT_STATUS.md) | 主线状态（⚠️ 正文为 2026-10 历史快照，最新状态以 root LOCAL_CODEX_HANDOFF.md 与 /healthz 为准） | 阶段结束更新 |
+| [project-tracking/CHANGE_LEDGER.md](./project-tracking/CHANGE_LEDGER.md) | 合并台账（⚠️ 2026-10 历史快照） | 每次合并 |
+| [CHANGELOG.md](./CHANGELOG.md) / 根 [CHANGELOG.md](../CHANGELOG.md) | 文档目录与产品版本变更记录 | 每次版本发布 |
 
 ### 部署与运维
 
@@ -56,8 +57,10 @@ docs/
 | [deployment/DEPLOYMENT.md](./deployment/DEPLOYMENT.md) | 通用 VPS 部署与升级 |
 | [deployment/OPERATIONS.md](./deployment/OPERATIONS.md) | 配额、缓存、stale、排障 |
 | [deployment/ALIYUN_DATA_REFRESH_CHECKLIST.md](./deployment/ALIYUN_DATA_REFRESH_CHECKLIST.md) | TTL、强刷冷却、数据源刷新验收 |
-| [deployment/TESTING.md](./deployment/TESTING.md) | 测试分层与门禁 |
-| [deployment/OFFLINE_E2E.md](./deployment/OFFLINE_E2E.md) | 离线 E2E 运行方式 |
+| [testing/TESTING.md](./testing/TESTING.md) | 测试分层与门禁 |
+| [testing/OFFLINE_E2E.md](./testing/OFFLINE_E2E.md) | 离线 E2E 运行方式 |
+| [testing/TEST_STATUS.md](./testing/TEST_STATUS.md) | 已实施测试与精确结果（含 2026-10 历史快照区） |
+| [evidence/](./evidence/) | 验收原始数据（JSON 矩阵、日志、截图），按版本归档 |
 | [deployment/DARK_SKY_DATA_SETUP.md](./deployment/DARK_SKY_DATA_SETUP.md) | 本地 Bortle/SQM 资产安装 |
 
 ### 数据与视觉规范
@@ -76,7 +79,7 @@ docs/
 
 | 文档 | 内容 |
 | --- | --- |
-| [audits/CLOUDSEA_CALIBRATION_HANDOFF_20261103.md](./audits/CLOUDSEA_CALIBRATION_HANDOFF_20261103.md) | 命中率校准接力与辐射谷雾定标判据 |
+| [audits/CLOUDSEA_CALIBRATION_HANDOFF_20261103.md](./handoff-docs/CLOUDSEA_CALIBRATION_HANDOFF_20261103.md) | 命中率校准接力与辐射谷雾定标判据 |
 | [audits/CLOUDSEA_CONSERVATIVE_HOLDOUT_20261026.md](./audits/CLOUDSEA_CONSERVATIVE_HOLDOUT_20261026.md) | 保守候选独立留出验证 |
 | [audits/CLOUDSEA_CALIBRATION_AUDIT_20261023.md](./audits/CLOUDSEA_CALIBRATION_AUDIT_20261023.md) | 评分反例复现与数据能力实测 |
 | [audits/ICON_CLOUDSEA_SOURCE_DIAGNOSIS_20261029.md](./audits/ICON_CLOUDSEA_SOURCE_DIAGNOSIS_20261029.md) | ICON 能见度缺失与压力层诊断 |
@@ -100,7 +103,6 @@ docs/
 | [handoff-docs/HANDOFF_SCORING_FULL_STAGE_20261024.md](./handoff-docs/HANDOFF_SCORING_FULL_STAGE_20261024.md) | 评分加固阶段授权 |
 | [handoff-docs/HANDOFF_REMOTE_FULL_STAGE_20261008.md](./handoff-docs/HANDOFF_REMOTE_FULL_STAGE_20261008.md) | 远端阶段授权 |
 | [handoff-docs/NEXT_SESSION_PROMPT_20261008.md](./handoff-docs/NEXT_SESSION_PROMPT_20261008.md) | 会话接力提示（历史） |
-| [handoff-docs/INDEPENDENT_AGENT_AUDIT_REQUEST_PRIVATE_20261004.md](./handoff-docs/INDEPENDENT_AGENT_AUDIT_REQUEST_PRIVATE_20261004.md) | 独立审计请求（私有） |
 | [handoff/](./handoff/) | 功能级交接（观测完整性、移动内容流） |
 
 ## 文档维护规则

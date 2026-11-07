@@ -155,7 +155,7 @@ audit/module-data-aliyun-readiness-20260820 → 无独有提交，已被 main �
 | --- | --- | --- | --- | --- |
 | SCI-SQM-001 | Bortle/SQM 科学真值 | BLOCKED | P0（仅针对科学声明） | 授权栅格、SQM 仪器、现场样本、校准方案 |
 
-详细步骤、验收标准和证据见 [`TEST_BACKLOG.md`](./TEST_BACKLOG.md)；本轮暗夜资产安装步骤见 [`../DARK_SKY_DATA_SETUP.md`](../DARK_SKY_DATA_SETUP.md)。
+详细步骤、验收标准和证据见 [`TEST_BACKLOG.md`](./TEST_BACKLOG.md)；本轮暗夜资产安装步骤见 [`../DARK_SKY_DATA_SETUP.md`](../deployment/DARK_SKY_DATA_SETUP.md)。
 
 ## 6. 本轮本地验收顺序
 

@@ -332,7 +332,7 @@ Star_photo_addr/
 - [参考站审计](docs/reference/PERSEIDS_REFERENCE_AUDIT.md)
 - [阿里云部署手册](docs/deployment/ALIYUN_DEPLOYMENT.md)
 - [统一视觉系统](docs/reference/UNIFIED_VISUAL_SYSTEM.md)
-- [测试说明](docs/deployment/TESTING.md)
+- [测试说明](docs/testing/TESTING.md)
 - [工程修改跟踪](docs/engineering-change-log/)
 
 较大功能、Bug 修复或部署变更继续按：

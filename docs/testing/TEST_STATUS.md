@@ -217,7 +217,7 @@ Playwright 基础配置和覆盖配置曾拼接项目数组，使 Firefox/WebKit
 | A11Y-COLOR-001 | 高对比和色觉模式 | MANUAL | 状态不得只依赖颜色 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#5-a11y-color-001高对比与色觉模式) |
 | DEP-ECS-001 | 阿里云大陆 ECS 出口 | BLOCKED | 需要真实 ECS 的 DNS/TCP/TLS/TTFB | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#6-dep-ecs-001阿里云大陆-ecs-海外出口) |
 | DEP-TLS-001 | 正式域名 TLS | BLOCKED | 需要域名、证书链、跳转与续期 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#7-dep-tls-001正式域名-tls) |
-| DATA-DARKSKY-001 | Bortle/SQM 与本地边界资产安装 | BLOCKED | 需要有许可数据文件、令牌或服务器构建权限 | [`DARK_SKY_DATA_SETUP`](../DARK_SKY_DATA_SETUP.md) |
+| DATA-DARKSKY-001 | Bortle/SQM 与本地边界资产安装 | BLOCKED | 需要有许可数据文件、令牌或服务器构建权限 | [`DARK_SKY_DATA_SETUP`](../deployment/DARK_SKY_DATA_SETUP.md) |
 | PERF-K6-050/100 | k6 50/100 用户压力 | DEFERRED | 后续独立性能阶段，需隔离预发布环境 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#8-perf-k6-050--perf-k6-100压力测试) |
 | PERF-SOAK-030 | 30 分钟 soak | DEFERRED | 需要长期资源指标和预发布环境 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#9-perf-soak-03030-分钟长稳测试) |
 | PERF-LHCI-001 | Lighthouse CI | DEFERRED | 需要稳定 Mock/性能基线 | [`TEST_BACKLOG`](../project-tracking/TEST_BACKLOG.md#10-perf-lhci-001lighthouse-ci) |

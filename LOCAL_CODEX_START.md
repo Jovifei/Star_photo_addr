@@ -14,8 +14,8 @@ npm run check:full
 
 1. `README.md`
 2. `docs/gpt_plan/CODEX_HANDOFF_PRODUCT_INTEGRATION_2026-08-07.md`
-3. `docs/LIGHT_POLLUTION_DATA_DECISION.md`
-4. `docs/PUBLIC_ASSETS_AUDIT.md`
+3. `docs/reference/LIGHT_POLLUTION_DATA_DECISION.md`
+4. `docs/reference/PUBLIC_ASSETS_AUDIT.md`
 
 产品路由：`/` 逐星、`/sites` 推荐观星地点、`/planner` 星野决策。联动协议为 `lat/lng/name/elevation/night`；观测夜以傍晚日命名并跨到次日 05:00。
 
