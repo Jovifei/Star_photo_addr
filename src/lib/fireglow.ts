@@ -461,7 +461,10 @@ function scoreWindow(
     probabilityLevel: indexBand?.level ?? null,
     vividness: Math.min(0.99, Math.round((score / 100) * (canvas / 70) * 100) / 100),
     momentLabel,
-    peakTime: best.time.slice(11, 16),
+    // A canvas below momentLabelFor's no-canvas threshold (15) has no peak
+    // moment to advertise: peakTime feeds the UI's 最佳爆发 / 最佳时刻 labels
+    // and must agree with the 无云可烧 verdict instead of contradicting it.
+    peakTime: canvas < 15 ? null : best.time.slice(11, 16),
     deckCloud: deck,
     lowCloud: low,
     midCloud: Math.round(clamp(best.cloudMid, 0, 100)),
