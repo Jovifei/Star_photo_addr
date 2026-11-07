@@ -33,6 +33,6 @@
 - [x] Vite 生产构建通过。
 - [x] Sites Worker 测试通过。
 - [x] E2E 脚本新增 skip link、导航状态、弹层焦点与四档宽度检查。
-- [ ] 在已安装 Playwright Chromium 的环境跑完全部 E2E，并人工检查 `docs/qa/` 截图；当前环境下载 CDN 返回 0 MiB 损坏压缩包，未伪造通过。
+- [ ] 在已安装 Playwright Chromium 的环境跑完全部 E2E；当前环境下载 CDN 返回 0 MiB 损坏压缩包，未伪造通过。
 - [ ] 在真实手机 HTTPS 环境验证浏览器定位授权。
 - [ ] 在有 Docker 的机器验证 `/healthz`。

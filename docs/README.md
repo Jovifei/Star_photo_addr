@@ -23,17 +23,11 @@ docs/
 ├── testing/                  # 测试分层方案、执行状态与离线 E2E
 ├── evidence/                 # 验收原始数据（JSON 矩阵、截图）
 ├── product/                  # 工作区架构
-├── handoff/                  # 功能级交接记录
 ├── ui-audit/                 # UI/移动端审计与验证
-├── qa/                       # 历史 QA 截图与复核
 ├── plans/                    # 阶段执行计划
 ├── research/                 # 站点研究产物
-├── design-references/        # 外部参考站截图
-├── gpt_plan/                 # 早期 GPT 协作计划（历史）
-├── superpowers/              # 过程计划文件（历史）
-├── openspec/                 # 规格说明
 ├── images/                   # README 配图
-└── artifacts/                # 一次性产物（截图等）
+└── evidence/                 # 证据文件（含历史引用的验收输入）
 ```
 
 ## 快速查找
@@ -111,7 +105,7 @@ docs/
 - 每个功能、Bug、测试或部署变更至少新增一份 `engineering-change-log/` 记录；**每个新故障必须在 [ENGINEERING_PLAYBOOK.md](./ENGINEERING_PLAYBOOK.md) 追加 E-xxx 条目**。
 - 文档必须区分静态代码、构建、Mock E2E、真实数据源、生产运行和人工/真机证据；没有执行的保持 `MANUAL`、`BLOCKED` 或 `DEFERRED`。
 - 不在文档写入 Token、API Key、私钥、数据库 URI、原始个人位置或完整生产日志。
-- `tasks/`、`superpowers/`、`gpt_plan/` 属于过程文件，不是项目知识结论。
+- `tasks/` 属于过程文件，不是项目知识结论。
 - 移动或新增 docs 文件后，必须全仓扫描 `docs/<旧路径>` 引用并修复，同时更新本文件索引。
 
 ## 版本索引

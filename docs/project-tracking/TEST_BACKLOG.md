@@ -69,17 +69,6 @@
 - Canvas、卫星瓦片和光污染图层失败时有可理解退化；
 - 无未处理异常和白屏。
 
-### 证据
-
-```text
-docs/qa/device/ios/<date>-<device>-<ios>/
-├── checklist.md
-├── portrait.mp4
-├── landscape.mp4
-├── screenshots/
-└── issues.md
-```
-
 ### 下一步
 
 人工提供设备和录屏；Codex 根据 `issues.md` 修复，并把可稳定自动化的回归加入 WebKit/Chromium E2E。

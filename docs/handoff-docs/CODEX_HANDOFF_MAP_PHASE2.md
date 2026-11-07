@@ -59,13 +59,6 @@ npm run test:e2e
 npm run test:live
 ```
 
-重点检查 `docs/qa/` 新生成的：
-
-- `*-desktop-dashboard.jpg`
-- `*-mobile-dashboard.jpg`（375×812）
-- `*-desktop-map-search.jpg`
-- `*-mobile-map-search.jpg`
-
 验收分辨率以 `playwright.config.js` 为准：桌面 1440×1000，手机 375×812；响应式用例还会检查 768 与 1024。
 
 ## 真实剩余项
@@ -119,7 +112,6 @@ npm run test:live
 - npm test
 - npm run test:e2e
 - npm run test:live
-- 检查 docs/qa 中 desktop/mobile 的 dashboard、map-search、matrix、drawer、location-form 截图。
 - 对照 Observatory Theme v3 检查：所有页面背景、面板、圆角、边框、按钮、表格、导航、状态色一致；375/768/1024/1440 不出现页面级横向溢出，地图搜索框、快速点位列表、候选点名称输入和底栏不重叠。
 - E2E 必须覆盖：进入地图、搜索杭州、选择结果、切换 14 天、编辑名称、保存、防重复、定位允许/拒绝。
 - 在装有 Docker 的机器执行 docker compose up --build -d，再验证 /healthz。

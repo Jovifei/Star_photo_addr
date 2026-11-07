@@ -52,7 +52,6 @@ _broken_git/
 .qoder/
 /.github/skills/comet-*/
 /openspec/
-/docs/superpowers/
 /AGENTS.md
 /CLAUDE.md
 /skills-lock.json
