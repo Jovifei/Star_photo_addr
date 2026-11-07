@@ -122,7 +122,6 @@ export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.aliyun.yml \
-
   up -d --build
 ```
 
@@ -304,7 +303,6 @@ export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.aliyun.yml \
-
   up -d --build
 curl -fsS http://127.0.0.1:3100/healthz
 npm run check:data-sources -- http://127.0.0.1:3100
@@ -320,7 +318,6 @@ export BUILD_REVISION="$(git rev-parse --short=12 HEAD)"
 docker compose \
   -f docker-compose.yml \
   -f docker-compose.aliyun.yml \
-
   up -d --build
 ```
 
