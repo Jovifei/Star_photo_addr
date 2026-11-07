@@ -3,7 +3,7 @@
 // The `public/images/perseids/*` bundle (VIIRS tiles, World-Atlas raster,
 // candidate cities, administrative boundaries) is NOT distributed with this
 // repository: no variant found in git history had a confirmed licence.
-// See `docs/PUBLIC_ASSETS_AUDIT.md` for the per-asset provenance record.
+// See `docs/reference/PUBLIC_ASSETS_AUDIT.md` for the per-asset provenance record.
 //
 // Every consumer MUST consult this registry before issuing a request, so that
 // a missing bundle degrades to an explicit "no data" state instead of an

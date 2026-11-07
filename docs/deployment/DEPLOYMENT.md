@@ -107,4 +107,4 @@ docker compose -f docker-compose.yml -f docker-compose.aliyun.yml up -d --build
 # 回滚：git checkout <上一个tag> 后重新 up --build
 ```
 
-常见问题速查见 `docs/OPERATIONS.md`（配额与降级表现、环境变量表）；测试与门禁见 `docs/TESTING.md`。
+常见问题速查见 `docs/deployment/OPERATIONS.md`（配额与降级表现、环境变量表）；测试与门禁见 `docs/deployment/TESTING.md`。

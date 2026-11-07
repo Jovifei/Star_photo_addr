@@ -59,4 +59,4 @@
 
 ## 5. 回滚与部署说明
 
-部署前保留上一生产版本 `v1.0.14 / 39338495db0d` 的 build identity、镜像和 `star-photo_observing-snapshots` 卷；不清空旧缓存，不修改 `.env` 密钥。按 `docs/ALIYUN_DEPLOYMENT.md` 先核对实际 main SHA，再以串行预热和健康检查完成发布。最终 main/deployment SHA 与公网验收结果在发布台账和交接回传中记录。
+部署前保留上一生产版本 `v1.0.14 / 39338495db0d` 的 build identity、镜像和 `star-photo_observing-snapshots` 卷；不清空旧缓存，不修改 `.env` 密钥。按 `docs/deployment/ALIYUN_DEPLOYMENT.md` 先核对实际 main SHA，再以串行预热和健康检查完成发布。最终 main/deployment SHA 与公网验收结果在发布台账和交接回传中记录。

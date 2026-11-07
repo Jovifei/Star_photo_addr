@@ -39,7 +39,7 @@ export type DarkSkyStatus =
  *
  * IMPORTANT: `bortle`/`bortleName`/`mpsas` are `null` whenever `status !== "ok"`.
  * Nodata must never be presented as a trustworthy B9 / SQM reading — see
- * `docs/LIGHT_POLLUTION_DATA_DECISION.md` ("无数据、过期、质量差必须有独立状态，
+ * `docs/reference/LIGHT_POLLUTION_DATA_DECISION.md` ("无数据、过期、质量差必须有独立状态，
  * 不能默认为『暗』").
  */
 export interface DarkSkySample {

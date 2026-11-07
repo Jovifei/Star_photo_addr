@@ -44,7 +44,7 @@ export default function BortleHelpPopover({
             </p>
             <div className="note">
               <p>
-                部署者需要取得有许可的数据文件，放入约定的 public 目录，设置对应 `NEXT_PUBLIC_ASSET_*` 构建变量，并重新构建镜像。完整步骤见仓库文档 `docs/DARK_SKY_DATA_SETUP.md`。
+                部署者需要取得有许可的数据文件，放入约定的 public 目录，设置对应 `NEXT_PUBLIC_ASSET_*` 构建变量，并重新构建镜像。完整步骤见仓库文档 `docs/deployment/DARK_SKY_DATA_SETUP.md`。
               </p>
             </div>
           </>

@@ -27,4 +27,4 @@ v1.0.9 已把“仅显示达到推荐门槛的地点”放到顶部命令栏。�
 - `npm run check`：51 个 Vitest 文件 / 302 个测试、Lint、TypeScript、生产构建全部通过。
 - `npm run test:e2e`：106 passed / 34 skipped / 0 failed（140 实例）。
 - `npm run test:live` required/optional 数据源全部通过；`npm audit --omit=dev --audit-level=high` 为 0 vulnerabilities。
-- 合并后按 `docs/ALIYUN_DEPLOYMENT.md` 部署并核对公网入口。
+- 合并后按 `docs/deployment/ALIYUN_DEPLOYMENT.md` 部署并核对公网入口。

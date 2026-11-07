@@ -124,7 +124,7 @@ test("未安装本地暗夜栅格时给出明确说明而不是含糊无数据",
   await helpButton.click();
   const dialog = page.getByRole("dialog", { name: "Bortle、SQM 与夜光参考" });
   await expect(dialog).toContainText("有意的安全降级");
-  await expect(dialog).toContainText("docs/DARK_SKY_DATA_SETUP.md");
+  await expect(dialog).toContainText("docs/deployment/DARK_SKY_DATA_SETUP.md");
 });
 
 test("观星计划兼容链接转入统一工作台并保留地点上下文", async ({ page }, testInfo) => {

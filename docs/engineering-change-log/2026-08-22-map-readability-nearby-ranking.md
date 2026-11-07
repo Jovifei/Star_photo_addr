@@ -46,7 +46,7 @@
 - 未安装时明确显示“暗夜数值栅格 / 未安装”；
 - 弹窗解释这是许可驱动的安全降级；
 - VIIRS 视觉夜光仍可用，但不能冒充 Bortle/SQM；
-- 新增 `docs/DARK_SKY_DATA_SETUP.md`，列出目录、构建变量和验证步骤。
+- 新增 `docs/deployment/DARK_SKY_DATA_SETUP.md`，列出目录、构建变量和验证步骤。
 
 ### 2.4 行政边界
 

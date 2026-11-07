@@ -4,7 +4,7 @@
 // Value encoding (vnp46a4-2024.json): 0 = nodata; 1..255 =>
 //   14 + (value - 1) / 254 * 8  mag/arcsec²
 //
-// DEGRADATION CONTRACT (see docs/PUBLIC_ASSETS_AUDIT.md):
+// DEGRADATION CONTRACT (see docs/reference/PUBLIC_ASSETS_AUDIT.md):
 //   * The value-tile bundle is not distributed with this repository. When it is
 //     absent we return `layer-unavailable` WITHOUT issuing any network request,
 //     so a missing bundle can never produce a 404 storm.

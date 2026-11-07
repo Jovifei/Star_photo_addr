@@ -25,4 +25,4 @@
 
 - TDD RED：未接线的命令栏回归在桌面/移动端均因找不到复选框失败。
 - TDD GREEN：当前源码构建后同一回归 2/2 通过；包含顺序、状态、marker 数量和 LocalStorage 断言。
-- 版本一致性、Lint、TypeScript、全量 Vitest、生产构建和完整 E2E 将在合并前执行；公网部署沿用 `docs/ALIYUN_DEPLOYMENT.md` 的低内存流程。
+- 版本一致性、Lint、TypeScript、全量 Vitest、生产构建和完整 E2E 将在合并前执行；公网部署沿用 `docs/deployment/ALIYUN_DEPLOYMENT.md` 的低内存流程。

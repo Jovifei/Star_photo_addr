@@ -228,7 +228,7 @@ Compose 默认包含：
 - `star-weather-worker`：定时生成观测地点评分快照；
 - `observing-snapshots`：持久化快照 volume。
 
-完整部署步骤见 [`docs/ALIYUN_DEPLOYMENT.md`](docs/ALIYUN_DEPLOYMENT.md)。
+完整部署步骤见 [`docs/deployment/ALIYUN_DEPLOYMENT.md`](docs/deployment/ALIYUN_DEPLOYMENT.md)。
 
 ---
 
@@ -328,11 +328,11 @@ Star_photo_addr/
 
 # 文档
 
-- [产品与技术计划](docs/PRODUCT_TECH_PLAN.md)
-- [参考站审计](docs/PERSEIDS_REFERENCE_AUDIT.md)
-- [阿里云部署手册](docs/ALIYUN_DEPLOYMENT.md)
-- [统一视觉系统](docs/UNIFIED_VISUAL_SYSTEM.md)
-- [测试说明](docs/TESTING.md)
+- [产品与技术计划](docs/reference/PRODUCT_TECH_PLAN.md)
+- [参考站审计](docs/reference/PERSEIDS_REFERENCE_AUDIT.md)
+- [阿里云部署手册](docs/deployment/ALIYUN_DEPLOYMENT.md)
+- [统一视觉系统](docs/reference/UNIFIED_VISUAL_SYSTEM.md)
+- [测试说明](docs/deployment/TESTING.md)
 - [工程修改跟踪](docs/engineering-change-log/)
 
 较大功能、Bug 修复或部署变更继续按：

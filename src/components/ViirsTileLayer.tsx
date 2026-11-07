@@ -11,7 +11,7 @@ import { VIIRS_WEB_LAYER } from "@/data/viirsMeta";
  * The tile pyramid is not distributed with this repository. Mounting the layer
  * without it makes Leaflet request a full screen of tiles on every pan/zoom,
  * each one a 404 — so the layer is not mounted at all unless the bundle is
- * installed. See docs/PUBLIC_ASSETS_AUDIT.md.
+ * installed. See docs/reference/PUBLIC_ASSETS_AUDIT.md.
  */
 export default function ViirsTileLayer() {
   const { state } = useStore();

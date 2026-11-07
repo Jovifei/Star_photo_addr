@@ -167,7 +167,7 @@ deploy/nginx/star-photo.conf
 ```text
 .env.example
 docker-compose.yml
-docs/ALIYUN_DEPLOYMENT.md
+docs/deployment/ALIYUN_DEPLOYMENT.md
 ```
 
 部署要求：

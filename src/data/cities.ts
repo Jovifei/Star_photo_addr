@@ -4,7 +4,7 @@
 //
 // DEGRADATION: cities.json is not distributed with this repository — every row's
 // `bortle` value is derived from the unlicensed light-pollution model (see
-// docs/PUBLIC_ASSETS_AUDIT.md). When the file is absent we report `unavailable`
+// docs/reference/PUBLIC_ASSETS_AUDIT.md). When the file is absent we report `unavailable`
 // without issuing a request, and the side panel says so explicitly instead of
 // spinning on "正在加载…" forever.
 

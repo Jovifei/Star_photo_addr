@@ -11,7 +11,7 @@
 - 本次初查时 E 原目录仍在 f70d2bf。核查期间旧会话继续完成同步；本次重读确认 E 原目录已为干净 `main@6e534c0da71d5937c9b74a79e536d4089a53de2f`，`origin/main` 同 SHA，`git ls-remote origin refs/heads/main` 已独立确认GitHub服务端同SHA。
 - 主线包含云端 `e0573b83ef0ccb7af9847eed097635044a85960a`（PR52）、历史分支功能整合和手机日期栏/重试测试时钟修正。C 来源 merge-main-20261008 已由旧会话归档，当前原目录包含新源码。
 - 云端已实现坐标身份约束、版本化跨入口上下文、逐站来源时间、surface UTC epoch/DST、旧缓存只读降级。下一阶段审核实际实现和剩余门槛，不重做这些功能。
-- 旧会话与当前 `docs/MAIN_BRANCH_RECONCILIATION_20261008.md` 记录：lint/typecheck/build、91文件516测试、Chromium272 PASS/126适用SKIP/0FAIL、Firefox/WebKit12 PASS；测试候选95c4597，主线合并ea635d9。本次Git比对确认95c4597到main的src/tests/scripts/依赖/CI/Docker文件无差异；本次未重跑测试，测试结果为来源证据。
+- 旧会话与当前 `docs/history/MAIN_BRANCH_RECONCILIATION_20261008.md` 记录：lint/typecheck/build、91文件516测试、Chromium272 PASS/126适用SKIP/0FAIL、Firefox/WebKit12 PASS；测试候选95c4597，主线合并ea635d9。本次Git比对确认95c4597到main的src/tests/scripts/依赖/CI/Docker文件无差异；本次未重跑测试，测试结果为来源证据。
 - 已读原目录 AGENTS、lessons、指定旧会话 `01a0e1d5-75ef-7ca1-aae1-20350351beb4`，以及 Obsidian 本项目概览、PROJECT_STATUS、DEPLOYED_5FBF_ACCEPTANCE。Obsidian旧快照以当前源码和本次Git状态纠正。
 
 ## 3. 现在卡在哪里
@@ -25,7 +25,7 @@
 ## 4. 关键文件
 
 - 约束与接力：`AGENTS.md`、`tasks/todo.md`、`tasks/lessons.md`、本文件。
-- 最新证据：`docs/MAIN_BRANCH_RECONCILIATION_20261008.md`、`docs/CLOUD_IDENTITY_PROVENANCE_DST_20261007.md`、`LOCAL_CODEX_HANDOFF.md`、`tasks/plans/2026-10-08-main-integration.md`。
+- 最新证据：`docs/history/MAIN_BRANCH_RECONCILIATION_20261008.md`、`docs/history/CLOUD_IDENTITY_PROVENANCE_DST_20261007.md`、`LOCAL_CODEX_HANDOFF.md`、`tasks/plans/2026-10-08-main-integration.md`。
 - 实现链：`src/lib/locationIdentity.ts`、`productRoutes.ts`、`absoluteForecastTime.ts`、`snapshotProvenance.ts`、`forecast.ts`、`forecastIntegrity.ts`、`store.tsx`；forecast/fireglow/cloudsea API routes；`ProductStateBridge.tsx`、`SnapshotSourceDisclosure.tsx`。
 - 验收链：`scripts/acceptance-weather-matrix.mjs`、`scripts/check-release-frontend.mjs`、`tests/e2e/location-transfer.spec.ts`、身份/来源/绝对时间 unit tests、`tmp/main-integration-evidence-20261008`。
 - 旧架构文档“晚霞规划中/不加导航”和旧测试清单已落后源码，不能作为当前未实现清单。

@@ -117,7 +117,7 @@
 
 新增或完善：
 
-- `docs/ALIYUN_DEPLOYMENT.md`；
+- `docs/deployment/ALIYUN_DEPLOYMENT.md`；
 - 多阶段 `Dockerfile`；
 - `docker-compose.yml` 主服务和观星快照 worker；
 - 持久化观星快照 volume；
@@ -381,7 +381,7 @@ export const dynamic = "force-dynamic";
 - `docker-compose.yml`
 - `.env.example`
 - `.github/workflows/ci.yml`
-- `docs/ALIYUN_DEPLOYMENT.md`
+- `docs/deployment/ALIYUN_DEPLOYMENT.md`
 - `scripts/check-data-sources.mjs`
 - `scripts/live-smoke.mjs`
 - `tests/e2e/data-refresh.spec.ts`

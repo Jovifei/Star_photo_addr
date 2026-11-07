@@ -12,7 +12,7 @@
 - 2026 英仙座流星雨入口增加 IMO 来源链接。
 - 地图 E2E 增加地名搜索 mock、地图 14 天、改名、保存、防重复，以及定位允许/拒绝路径。
 - 增加不依赖 Vite 网络接口枚举的测试预览服务器，支持 SPA fallback。
-- 完成光污染数据决策文档：`docs/LIGHT_POLLUTION_DATA_DECISION.md`。
+- 完成光污染数据决策文档：`docs/reference/LIGHT_POLLUTION_DATA_DECISION.md`。
 - 重写 README，使功能、数据边界、运行方式和真实状态与代码一致。
 - 完成 UI/UX Pro Max 优化：设计系统落盘、44px 触控、skip link、导航/筛选语义、弹层焦点管理、地图键盘点位列表、读屏状态与图表按需加载。
 - E2E 增加 375/768/1024/1440 横向溢出、skip link、导航状态与弹层初始焦点检查。
@@ -79,7 +79,7 @@ npm run test:live
 
 ### P1：光污染数据层
 
-先阅读 `docs/LIGHT_POLLUTION_DATA_DECISION.md`。必须由产品方确认商业/非商业用途、Earthdata Token、仅中国或全球、以及是否投入天空亮度传播/现场 SQM 校准。确认前：
+先阅读 `docs/reference/LIGHT_POLLUTION_DATA_DECISION.md`。必须由产品方确认商业/非商业用途、Earthdata Token、仅中国或全球、以及是否投入天空亮度传播/现场 SQM 校准。确认前：
 
 - 不得把 VNP46A4/EOG 普通卫星夜光辐亮度命名为 SQM 或 Bortle。
 - 不得把无数据像元当作“暗”。
@@ -106,11 +106,11 @@ npm run test:live
 
 先完整阅读：
 1. README.md
-2. docs/PRODUCT_TECH_PLAN.md
-3. docs/PERSEIDS_REFERENCE_AUDIT.md
-4. docs/LIGHT_POLLUTION_DATA_DECISION.md
+2. docs/reference/PRODUCT_TECH_PLAN.md
+3. docs/reference/PERSEIDS_REFERENCE_AUDIT.md
+4. docs/reference/LIGHT_POLLUTION_DATA_DECISION.md
 5. docs/CODEX_HANDOFF_MAP_PHASE2.md
-6. docs/UI_UX_PRO_MAX_AUDIT.md
+6. docs/reference/UI_UX_PRO_MAX_AUDIT.md
 7. design-system/star-photo-planner/MASTER.md
 
 第一目标是完成 P0 真实浏览器验收，不要先扩功能：
@@ -124,7 +124,7 @@ npm run test:live
 - E2E 必须覆盖：进入地图、搜索杭州、选择结果、切换 14 天、编辑名称、保存、防重复、定位允许/拒绝。
 - 在装有 Docker 的机器执行 docker compose up --build -d，再验证 /healthz。
 
-只有 P0 全绿后才进入 P1。光污染必须遵守 docs/LIGHT_POLLUTION_DATA_DECISION.md：不能把普通卫星夜光辐亮度伪装成 SQM/Bortle，不能在许可和版本未确认时进入评分。
+只有 P0 全绿后才进入 P1。光污染必须遵守 docs/reference/LIGHT_POLLUTION_DATA_DECISION.md：不能把普通卫星夜光辐亮度伪装成 SQM/Bortle，不能在许可和版本未确认时进入评分。
 
 完成后提交独立分支，给出：commit、实际测试数、截图清单、Docker 结果、仍未解决的外部依赖。直接执行，不要停在方案。
 ```

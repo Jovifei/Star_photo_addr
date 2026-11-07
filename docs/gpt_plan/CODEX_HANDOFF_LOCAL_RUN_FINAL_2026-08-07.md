@@ -289,7 +289,7 @@ PR:
 6. scripts/local-preflight.ps1
 7. Dockerfile、docker-compose.yml、nginx.conf（只审计并记录，本阶段不部署）
 8. .github/workflows/ci.yml
-9. docs/PRODUCT_TECH_PLAN.md 与 docs/PERSEIDS_REFERENCE_AUDIT.md
+9. docs/reference/PRODUCT_TECH_PLAN.md 与 docs/reference/PERSEIDS_REFERENCE_AUDIT.md
 
 必须先复现并解决以下已知 P0，禁止跳过：
 
