@@ -450,6 +450,11 @@ function scoreWindow(
   const canvas = weightedCanvas(best);
   const momentLabel = momentLabelFor(best);
   const direction = phase === "evening" ? "setting" : "rising";
+  // A canvas below momentLabelFor's no-canvas threshold (15) has no peak
+  // moment to advertise: peakTime feeds the UI's 最佳爆发 / 最佳时刻 labels,
+  // and the reason must use the same gated value instead of naming a best
+  // moment of its own, or the two contradict the 无云可烧 verdict.
+  const peakTime = canvas < 15 ? null : best.time.slice(11, 16);
   return {
     status: "scored",
     referenceTime: best.time,
@@ -461,10 +466,7 @@ function scoreWindow(
     probabilityLevel: indexBand?.level ?? null,
     vividness: Math.min(0.99, Math.round((score / 100) * (canvas / 70) * 100) / 100),
     momentLabel,
-    // A canvas below momentLabelFor's no-canvas threshold (15) has no peak
-    // moment to advertise: peakTime feeds the UI's 最佳爆发 / 最佳时刻 labels
-    // and must agree with the 无云可烧 verdict instead of contradicting it.
-    peakTime: canvas < 15 ? null : best.time.slice(11, 16),
+    peakTime,
     deckCloud: deck,
     lowCloud: low,
     midCloud: Math.round(clamp(best.cloudMid, 0, 100)),
@@ -474,7 +476,9 @@ function scoreWindow(
     goldenTime: twilightCrossing(sunSeries, -4, direction),
     blueTime: twilightCrossing(sunSeries, -6, direction),
     astroTime: twilightCrossing(sunSeries, -18, direction),
-    reason: `${momentLabel}：高云 ${Math.round(best.cloudHigh)}%、中云 ${Math.round(best.cloudMid)}%、低云 ${low}%，最佳时刻 ${best.time.slice(11, 16)}。`,
+    reason: peakTime == null
+      ? `${momentLabel}：高云 ${Math.round(best.cloudHigh)}%、中云 ${Math.round(best.cloudMid)}%、低云 ${low}%，无峰值时刻。`
+      : `${momentLabel}：高云 ${Math.round(best.cloudHigh)}%、中云 ${Math.round(best.cloudMid)}%、低云 ${low}%，最佳时刻 ${peakTime}。`,
   };
 }
 
