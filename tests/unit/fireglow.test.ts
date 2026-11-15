@@ -268,6 +268,55 @@ describe("condition index presentation bands", () => {
     expect(result.evening.peakTime).toBeNull();
   });
 
+  it("reason never advertises a best moment when there is no cloud canvas", () => {
+    const date = "2026-08-22";
+    const record = recordWithHours(Array.from({ length: 24 }, (_, hour) => ({
+      time: `${date}T${String(hour).padStart(2, "0")}:00`, low: 0, mid: 0, high: 0,
+    })));
+    const result = scoreFireGlowSite(SITE, record, date);
+    expect(result.evening.status).toBe("scored");
+    expect(result.evening.momentLabel).toBe("无云可烧");
+    expect(result.evening.peakTime).toBeNull();
+    // peakTime is null, so the explanation must not name a 最佳时刻 either;
+    // it keeps the cloud evidence and states explicitly that there is no peak.
+    expect(result.evening.reason).toContain("高云 0%");
+    expect(result.evening.reason).toContain("中云 0%");
+    expect(result.evening.reason).toContain("低云 0%");
+    expect(result.evening.reason).toContain("无峰值时刻");
+    expect(result.evening.reason).not.toContain("最佳时刻");
+  });
+
+  it("reason follows the same canvas threshold as peakTime at the boundary", () => {
+    const date = "2026-08-22";
+    const uniform = (high: number) => recordWithHours(Array.from({ length: 24 }, (_, hour) => ({
+      time: `${date}T${String(hour).padStart(2, "0")}:00`, low: 0, mid: 0, high,
+    })));
+    // Weighted canvas = 0.75 * high: 19% high cloud -> 14.25, below the 15
+    // no-canvas threshold, so no peak moment may be advertised anywhere.
+    const below = scoreFireGlowSite(SITE, uniform(19), date);
+    expect(below.evening.status).toBe("scored");
+    expect(below.evening.momentLabel).toBe("无云可烧");
+    expect(below.evening.peakTime).toBeNull();
+    expect(below.evening.reason).toContain("无峰值时刻");
+    expect(below.evening.reason).not.toContain("最佳时刻");
+    // 20% high cloud -> canvas exactly 15, at the threshold: a peak exists.
+    const at = scoreFireGlowSite(SITE, uniform(20), date);
+    expect(at.evening.status).toBe("scored");
+    expect(at.evening.peakTime).toMatch(/^\d{2}:\d{2}$/);
+    expect(at.evening.reason).toContain(`最佳时刻 ${at.evening.peakTime}`);
+  });
+
+  it("reason advertises the same best moment as peakTime when a real canvas exists", () => {
+    const date = "2026-08-22";
+    const record = recordWithHours(Array.from({ length: 24 }, (_, hour) => ({
+      time: `${date}T${String(hour).padStart(2, "0")}:00`, low: 5, mid: 40, high: 55,
+    })));
+    const result = scoreFireGlowSite(SITE, record, date);
+    expect(result.evening.status).toBe("scored");
+    expect(result.evening.peakTime).toMatch(/^\d{2}:\d{2}$/);
+    expect(result.evening.reason).toContain(`最佳时刻 ${result.evening.peakTime}`);
+  });
+
   it("keeps the phase eruption label when a real cloud canvas exists", () => {
     const date = "2026-08-22";
     const record = recordWithHours(Array.from({ length: 24 }, (_, hour) => ({
