@@ -16,8 +16,28 @@ export default function MapTileStatus() {
   useEffect(() => {
     const bindings = new Map<GridLayer, () => void>();
     const failures = new Map<GridLayer, Map<string, HTMLElement | null>>();
-    let redrawing: GridLayer | null = null;
+    let moving = false;
+    let zooming = false;
+    let pruneQueued = false;
     const publish = () => setError([...failures.values()].some((tiles) => tiles.size > 0));
+    const pruneUnloadedTiles = () => {
+      if (moving || zooming || pruneQueued) return;
+      // Give Leaflet's layer handlers the rest of this turn to queue replacements.
+      pruneQueued = true;
+      queueMicrotask(() => {
+        pruneQueued = false;
+        if (moving || zooming) return;
+        let changed = false;
+        for (const tiles of failures.values()) {
+          for (const [key, tile] of tiles) {
+            if (tile !== null) continue;
+            tiles.delete(key);
+            changed = true;
+          }
+        }
+        if (changed) publish();
+      });
+    };
     const bind = (layer: Layer) => {
       if (!(layer instanceof GridLayer) || bindings.has(layer)) return;
       const tiles = new Map<string, HTMLElement | null>();
@@ -36,9 +56,8 @@ export default function MapTileStatus() {
       const onUnload = (event: TileEvent) => {
         const key = tileKey(event);
         if (tiles.get(key) !== event.tile) return;
-        // Redraw unloads the broken image before scheduling its replacement.
-        if (redrawing === layer) tiles.set(key, null);
-        else onLoad(event);
+        tiles.set(key, null);
+        pruneUnloadedTiles();
       };
       const events = {
         tileerror: onError,
@@ -58,30 +77,25 @@ export default function MapTileStatus() {
       publish();
     };
     map.eachLayer(bind);
-    const onLayerAdd = (event: { layer: Layer }) => bind(event.layer);
-    const onLayerRemove = (event: { layer: Layer }) => unbind(event.layer);
-    map.on("layeradd", onLayerAdd);
-    map.on("layerremove", onLayerRemove);
+    const mapEvents = {
+      layeradd: (event: { layer: Layer }) => bind(event.layer),
+      layerremove: (event: { layer: Layer }) => unbind(event.layer),
+      movestart: () => { moving = true; },
+      moveend: () => { moving = false; pruneUnloadedTiles(); },
+      // Resizing can emit moveend in the middle of an active zoom.
+      zoomstart: () => { zooming = true; },
+      zoomend: () => { zooming = false; pruneUnloadedTiles(); },
+    };
+    map.on(mapEvents);
     retryFailedLayers.current = () => {
       for (const [layer, tiles] of failures) {
-        if (!tiles.size) continue;
-        redrawing = layer;
-        try {
-          layer.redraw();
-        } finally {
-          redrawing = null;
-          // Leaflet queues visible replacements synchronously. Drop offscreen tiles.
-          for (const [key, tile] of tiles) {
-            if (tile === null) tiles.delete(key);
-          }
-          publish();
-        }
+        if (tiles.size) layer.redraw();
       }
     };
     return () => {
-      map.off("layeradd", onLayerAdd);
-      map.off("layerremove", onLayerRemove);
+      map.off(mapEvents);
       bindings.forEach((dispose) => dispose());
+      failures.clear();
       retryFailedLayers.current = null;
     };
   }, [map]);
