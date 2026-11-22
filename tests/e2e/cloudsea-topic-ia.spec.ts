@@ -170,6 +170,95 @@ async function selectTaizijian(page: Page) {
   await page.getByRole("option", { name: "临安太子尖" }).click();
 }
 
+test("mobile map retry keeps the alert until the same tile loads", async ({ page }, info) => {
+  test.skip(!["mobile", "webkit-mobile"].includes(info.project.name), "移动地图重试回归");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const acquiredAt = new Date().toISOString();
+  const body = snapshot(shanghaiDateKey(), {
+    coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 4, pressureHours: 4 },
+  });
+  let weatherRequests = 0;
+  await page.route("**/api/cloudsea/snapshot**", (route) => {
+    weatherRequests++;
+    return route.fulfill({ json: {
+      ...body, generatedAt: acquiredAt,
+      pressureQualitySchema: "pressure-provider-issues-v1",
+      pressureQualityValidatorVersion: "pressure-validator-v1",
+      sites: Object.fromEntries(CLOUD_SEA_SITES.map(({ id }) => [id, body.sites["cs-taizijian"]])),
+      provenance: { version: 1, sourcesBySite: { "cs-longwangshan": [
+        { dataset: "surface", model: "gfs", provider: "Open-Meteo", sourceFetchedAt: acquiredAt },
+      ] } },
+    } });
+  });
+
+  let targetUrl: string | undefined;
+  let targetRequests = 0;
+  let finishReplacement: ((status: number) => void) | undefined;
+  await page.route(/https:\/\/(?:[^/]+\.basemaps\.cartocdn\.com|tile\.openstreetmap\.org)\/.*/, async (route) => {
+    const url = route.request().url();
+    // The mountain selection flies to zoom 8. Fail one tile there, not the initial view.
+    if (new URL(url).pathname.split("/").at(-3) === "8") targetUrl ??= url;
+    if (url === targetUrl) {
+      const status = ++targetRequests === 1 ? 503 :
+        await new Promise<number>((resolve) => { finishReplacement = resolve; });
+      if (status === 503) return route.fulfill({ status, contentType: "text/plain", body: "tile unavailable" });
+    }
+    return route.fulfill({ contentType: "image/png", body: onePixelPng });
+  });
+
+  await page.goto("/cloudsea?model=gfs");
+  await page.getByRole("searchbox", { name: "搜索目录摄影点位" }).fill("安吉龙王山");
+  await page.getByRole("option", { name: "安吉龙王山" }).click();
+  const card = page.locator(".mobile-data-sheet-copy");
+  const source = page.getByTestId("snapshot-source-times");
+  await source.locator("summary").click();
+  const expectWeatherRetained = async () => {
+    await expect(card).toContainText("安吉龙王山");
+    await expect(card.locator("strong")).toHaveText("条件指数 88/100 · 窗口平均");
+    await expect(source.getByText(`原始采集 ${acquiredAt}`, { exact: false })).toBeVisible();
+    expect(weatherRequests).toBe(1);
+  };
+
+  const alert = page.getByTestId("map-tile-render-status");
+  const retry = alert.getByRole("button", { name: "重试地图图层" });
+  await expect(alert).toBeVisible();
+  await expect.poll(() => targetRequests).toBe(1);
+  const tile = page.locator(`img.leaflet-tile[src=${JSON.stringify(targetUrl)}]`);
+  const expectHeldReplacement = async (attempt: number) => {
+    await expect.poll(() => targetRequests).toBe(attempt);
+    await expect.poll(() => tile.evaluateAll((images) =>
+      images.some((image) => !(image as HTMLImageElement).complete))).toBe(true);
+    // Let Leaflet's synchronous unload and React's paint settle while the response is still held.
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expect(alert).toBeVisible({ timeout: 1_500 });
+    await expectWeatherRetained();
+  };
+
+  try {
+    await expectWeatherRetained();
+    await retry.tap();
+    await expectHeldReplacement(2);
+    finishReplacement?.(503);
+    await expect.poll(() => tile.evaluateAll((images) => images.some((image) => {
+      const tileImage = image as HTMLImageElement;
+      return tileImage.complete && tileImage.naturalWidth === 0;
+    }))).toBe(true);
+    await expect(alert).toBeVisible();
+
+    await retry.tap();
+    await expectHeldReplacement(3);
+    finishReplacement?.(200);
+    await expect.poll(() => tile.evaluateAll((images) => images.some((image) => {
+      const tileImage = image as HTMLImageElement;
+      return tileImage.classList.contains("leaflet-tile-loaded") && tileImage.complete && tileImage.naturalWidth > 0;
+    }))).toBe(true);
+    await expect(alert).toHaveCount(0);
+    await expectWeatherRetained();
+  } finally {
+    finishReplacement?.(503);
+  }
+});
+
 test("CloudSea desktop reduces map/card chrome and discloses detail evidence progressively", async ({ page }, info) => {
   test.skip(info.project.name !== "desktop", "桌面 IA 在 desktop Chromium 验证一次");
   const date = shanghaiDateKey();

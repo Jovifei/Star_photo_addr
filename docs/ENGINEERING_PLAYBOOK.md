@@ -25,6 +25,7 @@
 5. **生产部署（低内存服务器专用流程）**
    - 流程冲突声明：`scripts/deploy-remote.ps1` 是早期"服务器端 `up -d --build`"旧入口，在低内存 ECS 上会 OOM（E-002），**禁止再用它发布**；`docs/deployment/ALIYUN_DEPLOYMENT.md` 中的同类命令仅适用于其他环境。
    - Compose 服务名：`star-weather`（容器 `star-photo-star-weather-1`）与 `star-weather-worker`（容器 `star-photo-star-weather-worker-1`）；compose 文件为 `docker-compose.yml -f docker-compose.aliyun.yml`。
+   - 从运行容器的 Compose 标签核对实际项目目录和配置文件顺序。有运维覆盖文件时随现用配置一起加载，并核对 DNS、内存限额和数据卷。历史阶段目录不能用来推断当前运行配置。
    - 隔离组装：下载 runtime 包 → 校验 SHA256 → 在不挂生产卷的临时容器中组装镜像 → `check-release-frontend`（三页 HTML 与包体逐字节一致）+ `check-data-sources` 全绿。
    - 切换：`docker stop --time 30 star-photo-star-weather-worker-1 star-photo-star-weather-1` → 轮询确认零写入者（15 次 × 2s，防 Docker 状态延迟假阳性）→ `tar` 备份生产卷并 `sha256sum` 校验 → 原子替换 `.env` → 起 app → 数据门禁 → 起 worker → 公网 healthz 断言新版本。
    - 执行脚本位置：每次发布的 `assemble.py`、`switch-*-env.py`、`publish*.sh` 保存在服务器 `/opt/star-photo/.deploy-<版本>-<sha>-<日期>/` 阶段目录；切换前必须先在 `.env` 的合成副本上演练 apply/restore。阶段脚本缺失、版本无法确认，或演练未通过时，发布保持 BLOCKED，不得进入停服务、改配置阶段；人工发布必须另有完整、经过复核的操作与回滚步骤。
@@ -116,6 +117,13 @@
 - 解决：PLAYBOOK 与 ALIYUN_DEPLOYMENT 各处加显著冲突声明；旧脚本待后续提交删除或重写。
 - 预防：SOP 文档必须指明唯一有效入口；新增流程时同步废弃旧入口。
 
+### E-014 Next.js 生产构建在安全更新提示时退出
+
+- 症状：Next.js 16.4.3 在编译完成后仍以 `SecurityFatalError` 和非零状态退出。
+- 根因：构建命令触发依赖安全更新提示。编译成功的日志行无法证明构建命令成功退出。
+- 解决：保留首次日志，原样重跑 `npm run check`，确认退出码为 0。单独执行生产依赖审计并记录严重性分布。
+- 预防：按各自的退出码判定构建和审计结果，保留现有门禁。实测见 [地图重试修复记录](./engineering-change-log/2026-11-22-map-tile-retry.md)。
+
 ## 三、快速排障索引
 
 | 症状 | 先查 | 相关记录 |
@@ -125,6 +133,7 @@
 | CI e2e 单用例偶发失败 | 本地重跑同用例 8 次 | E-003/E-004 |
 | 部署后版本未变 | `/healthz`、`.env` APP_IMAGE/BUILD_REVISION | 本文 §一.5 |
 | 构建产物 HTML 不一致 | `check-release-frontend` 三页哈希 | 本文 §一.5 |
+| Next.js 编译后出现 `SecurityFatalError` | 构建退出码、独立依赖审计结果 | E-014 |
 | 火烧云显示"降水条件排除" | `fireglowWindowStatus` 状态语义 | v1.0.33 CHANGELOG |
 
 ## 四、维护规则

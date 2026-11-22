@@ -11,7 +11,13 @@ interface ChangelogModalProps {
 
 const VERSIONS = [
   {
-    version: APP_VERSION_LABEL, date: "2026-11-04", tag: "云海辐射谷雾定标", current: true,
+    version: APP_VERSION_LABEL, date: "2026-11-22", tag: "地图图层重试", current: true,
+    highlights: [
+      { icon: Layers, title: "地图加载成功后再清除提示", desc: "地图重试时保留加载失败提示，替换瓦片成功加载后才清除。原有天气仍可查看。" },
+    ],
+  },
+  {
+    version: "v1.0.34", date: "2026-11-04", tag: "云海辐射谷雾定标", current: false,
     highlights: [
       { icon: Mountain, title: "识别局地辐射谷雾云海", desc: "模式低云量低但高空晴朗、微风、近地高湿且低层逆温在山顶下方时，准确识别谷底云海并给出推荐，避免低分漏报。" },
     ],
