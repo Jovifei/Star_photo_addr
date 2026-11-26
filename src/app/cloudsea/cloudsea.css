@@ -1478,3 +1478,53 @@
   font-size: 12px;
   line-height: 1.55;
 }
+
+@media (max-width: 1199px) {
+  .cloudsea-root :is(.mobile-data-sheet, .nav-tabs .nav-tab) {
+    font-family: var(--font-sans);
+  }
+
+  .cloudsea-root .mobile-data-sheet-location {
+    color: #e5f3f5;
+    font-size: 16px;
+    font-weight: 650;
+    line-height: 1.25;
+  }
+
+  .cloudsea-root .mobile-data-sheet-copy strong {
+    font-size: 17px;
+    font-weight: 650;
+    line-height: 1.3;
+    white-space: normal;
+  }
+
+  .cloudsea-root .mobile-data-sheet-copy small {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .cloudsea-root .mobile-data-sheet-actions button {
+    align-content: center;
+    gap: 1px;
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.1;
+  }
+
+  .cloudsea-root .mobile-data-sheet-status {
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-line;
+  }
+
+  .cloudsea-root .mobile-key-metrics strong {
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cloudsea-root .nav-tabs .nav-tab {
+    font-size: 13px;
+    font-weight: 600;
+  }
+}

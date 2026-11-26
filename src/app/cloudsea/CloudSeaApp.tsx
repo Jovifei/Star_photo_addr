@@ -298,28 +298,27 @@ export default function CloudSeaApp() {
             );
             continue;
           }
-          if (result.error) {
-            notices.push(`${dateLabel(result.date)}：${result.error}；已保留部分真实数据`);
-          }
+          const dateNotices = new Set<string>();
+          if (result.error) dateNotices.add(result.error);
           if (result.snapshot.stale || result.snapshot.refreshError) {
-            notices.push(
-              `${dateLabel(result.date)}：${result.snapshot.refreshError ?? "正在使用较早的成功快照"}`,
-            );
+            dateNotices.add(result.snapshot.refreshError ?? "正在使用较早的成功快照");
           }
+          if (result.error) dateNotices.add("已保留部分真实数据");
           const pressure = result.snapshot.pressure;
           if (pressure && pressure.status !== "available") {
-            notices.push(
-              `${dateLabel(result.date)}：压力层 ${pressure.availableSites}/${pressure.totalSites} 地点可用；缺失地点不推断云层层位`,
+            dateNotices.add(
+              `压力层 ${pressure.availableSites}/${pressure.totalSites} 地点可用；缺失地点不推断云层层位`,
             );
           }
           const surface = result.snapshot.surface;
           if (surface && surface.status !== "available" && !result.error) {
-            notices.push(
-              `${dateLabel(result.date)}：地面天气仅 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`,
+            dateNotices.add(
+              `地面天气仅 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`,
             );
           }
+          if (dateNotices.size) notices.push(`${dateLabel(result.date)}：${[...dateNotices].join("；")}`);
         }
-        setDataNotice([...new Set(notices)].join(" "));
+        setDataNotice(notices.join("\n"));
       } catch (error) {
         if (
           controller.signal.aborted ||
@@ -501,11 +500,7 @@ export default function CloudSeaApp() {
   return (
     <div className="cloudsea-root app-shell">
       <TopicMapSearch sites={CLOUD_SEA_SITES}
-        onSite={(site) => {
-          const forecast = rankedSites.find((entry) => entry.site.id === site.id);
-          if (forecast) handleSelectSite(site.id);
-          else { handleSelectSite(site.id); }
-        }}
+        onSite={(site) => handleSelectSite(site.id)}
         onCoordinate={(point) => { setSelectedSiteId(null); setPickedPoint(point); mapRef.current?.flyTo([point.latitude, point.longitude], 8); }} />
       <ProductHeader
         mark={<Mountains size={18} aria-hidden="true" />}
@@ -887,8 +882,9 @@ export default function CloudSeaApp() {
           title={selectedRanked?.site.name ?? (pickedPoint ? `所点坐标 ${pickedPoint.latitude.toFixed(3)}, ${pickedPoint.longitude.toFixed(3)}` : "云海 · 选择山峰")}
           conclusion={mobileConclusion}
           bestTime={selectedWindow?.peakTime ? `最佳 ${selectedWindow.peakTime}${selectedWindow.peakScore != null ? ` · ${selectedWindow.peakScore}/100` : ""} · ${dateLabel(selectedContext?.dateKey ?? primaryDate)}` : `${phase === "morning" ? "晨间" : "傍晚"} · ${range === 3 ? "三日" : dateLabel(primaryDate)}`}
-          status={dataNotice || (loading ? "正在读取云海条件数据…" : "")}
-          selectionKey={selectedSiteId ?? (pickedPoint ? `${pickedPoint.latitude.toFixed(4)},${pickedPoint.longitude.toFixed(4)}` : null)}
+          status={dataNotice}
+          previewStatus={!hasActiveSnapshot ? "数据读取异常 · 展开查看" : mainConclusionStale ? "展开查看旧数据来源" : "数据覆盖不完整 · 展开查看"}
+          collapseToPeek
         >{(level) => <>
           {pickedPoint ? <section className="mobile-nearby-sites" aria-label="附近云海目录山峰">
             <p>所点坐标只用于找附近山峰；下列指数属于目录点位，不代表该坐标的预测。</p>

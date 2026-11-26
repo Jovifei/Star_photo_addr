@@ -15,14 +15,18 @@ export default function MobileDataSheet({
   conclusion,
   bestTime,
   status,
+  previewStatus,
   selectionKey,
+  collapseToPeek = false,
   children,
 }: {
   title: string;
   conclusion: string;
   bestTime?: string | null;
   status?: string | null;
+  previewStatus?: string;
   selectionKey?: string | null;
+  collapseToPeek?: boolean;
   children: ReactNode | ((level: MobileSheetLevel) => ReactNode);
 }) {
   const mobile = useMobilePanelViewport();
@@ -43,8 +47,10 @@ export default function MobileDataSheet({
     setLevel((current) => LEVELS[Math.max(0, Math.min(2, LEVELS.indexOf(current) + direction))]);
   };
   const stepFromButton = (direction: -1 | 1) => {
-    const destination = LEVELS[Math.max(0, Math.min(2, LEVELS.indexOf(level) + direction))];
-    step(direction);
+    const destination = direction === -1 && collapseToPeek
+      ? "peek"
+      : LEVELS[Math.max(0, Math.min(2, LEVELS.indexOf(level) + direction))];
+    setLevel(destination);
     // The edge button unmounts at peek/full. Keep keyboard focus in the sheet.
     if (destination === "peek" || destination === "full") {
       const target = destination === "full" ? collapseButtonRef : expandButtonRef;
@@ -90,14 +96,20 @@ export default function MobileDataSheet({
         <div className="mobile-data-sheet-copy">
           <span className="mobile-data-sheet-location">{title}</span>
           <strong>{conclusion}</strong>
-          <small>{level === "peek" && status ? status : bestTime || "选择地图上的地点查看条件"}</small>
+          <small role={level === "peek" && previewStatus ? "status" : undefined}>
+            {level === "peek" && status ? previewStatus ?? status : bestTime || "选择地图上的地点查看条件"}
+          </small>
         </div>
         <div className="mobile-data-sheet-actions">
           {level !== "peek" ? (
-            <button ref={collapseButtonRef} type="button" aria-label="收起数据面板" onClick={() => stepFromButton(-1)}><ChevronDown size={18} aria-hidden="true" /></button>
+            <button ref={collapseButtonRef} type="button" aria-label="收起数据面板" onClick={() => stepFromButton(-1)}>
+              <ChevronDown size={18} aria-hidden="true" />{collapseToPeek ? <span>收起</span> : null}
+            </button>
           ) : null}
           {level !== "full" ? (
-            <button ref={expandButtonRef} type="button" aria-label="展开数据面板" onClick={() => stepFromButton(1)}><ChevronUp size={18} aria-hidden="true" /></button>
+            <button ref={expandButtonRef} type="button" aria-label="展开数据面板" onClick={() => stepFromButton(1)}>
+              <ChevronUp size={18} aria-hidden="true" />{collapseToPeek ? <span>展开</span> : null}
+            </button>
           ) : null}
         </div>
       </div>

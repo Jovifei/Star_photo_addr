@@ -37,6 +37,7 @@ docs/
 | 文档 | 内容 | 更新时机 |
 | --- | --- | --- |
 | [ENGINEERING_PLAYBOOK.md](./ENGINEERING_PLAYBOOK.md) | 提交/发布必做步骤、错误记录、排障 | 每次新故障后必追加 |
+| [STAR-20261126-01](./engineering-change-log/STAR-20261126-01.md) | 云海移动端字体、摘要面板状态与回退记录 | 本阶段修复与验收 |
 | [reference/01-ARC-项目制造与交付流程.md](./reference/01-ARC-项目制造与交付流程.md) | 从需求到发布的制造闭环 | 架构或部署经验变化 |
 | [reference/02-REF-项目文档地图.md](./reference/02-REF-项目文档地图.md) | 按问题查找文档（旧版地图，路径以本文件为准） | 大类调整时 |
 | [project-tracking/PROJECT_STATUS.md](./project-tracking/PROJECT_STATUS.md) | 主线状态（⚠️ 正文为 2026-10 历史快照，最新状态以 root LOCAL_CODEX_HANDOFF.md 与 /healthz 为准） | 阶段结束更新 |
