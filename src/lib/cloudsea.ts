@@ -89,6 +89,8 @@ export interface CloudSeaPressureSummary {
   status: PressureEvidenceStatus;
   /** Current-model responses received, including partial responses. */
   receivedSites?: number;
+  /** The provider receipt supplied the counts before snapshot presentation. */
+  receiptCountsVerified?: boolean;
   availableSites: number;
   partialSites?: number;
   totalSites: number;
@@ -259,6 +261,11 @@ export function presentCloudSeaSnapshot(snapshot: CloudSeaSnapshot): CloudSeaSna
   const pressure = snapshot.pressure
     ? {
         ...snapshot.pressure,
+        ...(snapshot.pressure.receiptCountsVerified !== undefined ? {
+          receiptCountsVerified: snapshot.pressure.receiptCountsVerified === true && pressureQualityQualified &&
+            hasValidCloudSeaCoverageCounts(snapshot.pressure, totalSites) &&
+            snapshot.pressure.receivedSites === receivedSites,
+        } : {}),
         status: pressureStatusFor(availableSites, totalSites),
         receivedSites,
         availableSites,
@@ -1039,6 +1046,7 @@ export function buildCloudSeaSnapshot(
     pressure: {
       status: pressureStatusFor(availableSites, totalSites),
       receivedSites,
+      ...(pressureQualityQualified ? { receiptCountsVerified: true } : {}),
       availableSites,
       partialSites: receivedSites - availableSites,
       totalSites,

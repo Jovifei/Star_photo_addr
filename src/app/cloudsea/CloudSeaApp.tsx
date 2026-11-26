@@ -138,6 +138,36 @@ interface SnapshotLoadResult {
   error?: string;
 }
 
+// Older snapshots embed coverage totals in refreshError. Replace only those
+// generated phrases with the validated counts, preserving other diagnostics.
+const embeddedCoverage = /^(?:本次)?(?:地面天气(?:仅)? \d+\/\d+ 地点窗口完整|压力层(?:仅)? \d+\/\d+ 地点(?:可用|完整(?:，收到 \d+ 个，其中 \d+ 个为部分覆盖)?))(，正在使用较早的成功快照)?$/u;
+
+function coverageNotices(snapshot: CloudSeaSnapshot): string[] {
+  const expected = CLOUD_SEA_SITES.length;
+  const { surface, pressure } = snapshot;
+  const notices: string[] = [];
+  if (!hasCompleteCloudSeaCoverage(surface, expected)) {
+    notices.push(surface && hasValidCloudSeaCoverageCounts(surface, expected)
+      ? `地面天气 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`
+      : "地面天气覆盖摘要不完整，暂无法核实");
+  }
+  if (!hasCompleteCloudSeaCoverage(pressure, expected)) {
+    if (pressure && hasValidCloudSeaCoverageCounts(pressure, expected)) {
+      const counts = [`压力层 ${pressure.availableSites}/${pressure.totalSites} 地点完整`];
+      if (pressure.receiptCountsVerified === true && pressure.receivedSites != null && pressure.partialSites != null) {
+        counts.push(`部分覆盖 ${pressure.partialSites} 地点`, `${pressure.totalSites - pressure.receivedSites} 地点缺有效来源`);
+      } else {
+        counts.push("部分覆盖和缺失地点数未核实");
+      }
+      notices.push(counts.join("，"));
+    } else {
+      notices.push("压力层覆盖摘要不完整，暂无法核实");
+    }
+    notices.push("缺失地点不推断云层层位");
+  }
+  return notices;
+}
+
 export default function CloudSeaApp() {
   const contextBaseDate = todayKey();
   const topicContext = useTopicContext(CLOUD_SEA_SITES, "cloudsea", contextBaseDate);
@@ -187,8 +217,8 @@ export default function CloudSeaApp() {
         // last date even though today/tomorrow succeeded.
         for (const date of activeDates) {
           if (controller.signal.aborted) return;
-          let lastError = "云海快照不可用";
-          let degradedSnapshot: CloudSeaSnapshot | null = null;
+          let lastError: string | undefined = "云海快照不可用";
+          let snapshot: CloudSeaSnapshot | null = null;
           for (let attempt = 0; attempt < 2; attempt += 1) {
             if (controller.signal.aborted) return;
             try {
@@ -198,53 +228,33 @@ export default function CloudSeaApp() {
                 signal: controller.signal,
               });
               providerCooldown = response.status === 429 || response.headers.has("Retry-After");
-              let payload = (await response.json().catch(() => null)) as
+              const payload = (await response.json().catch(() => null)) as
                 | (CloudSeaSnapshot & { error?: string })
                 | null;
               if (response.ok && payload?.sites) {
                 if (payload.date !== date || payload.model !== model) {
                   throw new Error("云海快照日期或模型与请求不一致");
                 }
-                payload = qualifyCloudSeaSnapshot(payload);
+                snapshot = qualifyCloudSeaSnapshot(payload);
+                lastError = undefined;
                 const pressureComplete = hasCompleteCloudSeaCoverage(
-                  payload.pressure,
-                  CLOUD_SEA_SITES.length,
-                );
-                const surface = payload.surface;
-                const surfaceCountsValid = hasValidCloudSeaCoverageCounts(
-                  surface,
+                  snapshot.pressure,
                   CLOUD_SEA_SITES.length,
                 );
                 const surfaceComplete = hasCompleteCloudSeaCoverage(
-                  surface,
+                  snapshot.surface,
                   CLOUD_SEA_SITES.length,
                 );
-                if (pressureComplete && surfaceComplete) {
-                  results.push({ date, snapshot: payload });
-                  lastError = "";
-                  break;
-                }
-                degradedSnapshot = payload;
-                lastError = !surfaceComplete
-                  ? !surfaceCountsValid || !surface
-                    ? "地面天气覆盖摘要不完整，快照完整性无法验证"
-                    : `地面天气仅 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`
-                  : !hasValidCloudSeaCoverageCounts(payload.pressure, CLOUD_SEA_SITES.length)
-                    ? "压力层覆盖摘要不完整，快照完整性无法验证"
-                    : `压力层仅 ${payload.pressure!.availableSites}/${payload.pressure!.totalSites} 地点可用`;
-                const receivedPartialPressure = !payload.stale && surfaceComplete &&
-                  hasValidCloudSeaCoverageCounts(payload.pressure, CLOUD_SEA_SITES.length) &&
-                  payload.pressure?.receivedSites === CLOUD_SEA_SITES.length &&
-                  payload.pressure.availableSites > 0 &&
-                  payload.pressure.availableSites < payload.pressure.totalSites;
+                if (pressureComplete && surfaceComplete) break;
+                const pressure = snapshot.pressure;
+                const receivedPartialPressure = !snapshot.stale && surfaceComplete &&
+                  hasValidCloudSeaCoverageCounts(pressure, CLOUD_SEA_SITES.length) &&
+                  pressure?.receivedSites === CLOUD_SEA_SITES.length &&
+                  pressure.availableSites > 0 &&
+                  pressure.availableSites < pressure.totalSites;
                 // Avoid an immediate full-batch retry when every pressure site responded.
-                if (attempt === 1 || receivedPartialPressure) {
-                  results.push({ date, snapshot: payload, error: lastError });
-                  lastError = "";
-                  break;
-                }
-              }
-              if (!response.ok || !payload?.sites) {
+                if (receivedPartialPressure) break;
+              } else {
                 lastError =
                   payload?.error ??
                   `云海快照请求失败（HTTP ${response.status}）`;
@@ -259,13 +269,7 @@ export default function CloudSeaApp() {
               await new Promise((resolve) => setTimeout(resolve, 600));
             }
           }
-          if (lastError) {
-            results.push(
-              degradedSnapshot
-                ? { date, snapshot: degradedSnapshot, error: lastError }
-                : { date, snapshot: null, error: lastError },
-            );
-          }
+          results.push({ date, snapshot, error: lastError });
           if (providerCooldown) {
             for (const pendingDate of activeDates.slice(results.length)) results.push({ date: pendingDate, snapshot: null, error: "天气供应商冷却中，未继续请求后续日期" });
             break;
@@ -298,24 +302,18 @@ export default function CloudSeaApp() {
             );
             continue;
           }
-          const dateNotices = new Set<string>();
-          if (result.error) dateNotices.add(result.error);
-          if (result.snapshot.stale || result.snapshot.refreshError) {
-            dateNotices.add(result.snapshot.refreshError ?? "正在使用较早的成功快照");
-          }
-          if (result.error) dateNotices.add("已保留部分真实数据");
-          const pressure = result.snapshot.pressure;
-          if (pressure && pressure.status !== "available") {
-            dateNotices.add(
-              `压力层 ${pressure.availableSites}/${pressure.totalSites} 地点可用；缺失地点不推断云层层位`,
-            );
-          }
-          const surface = result.snapshot.surface;
-          if (surface && surface.status !== "available" && !result.error) {
-            dateNotices.add(
-              `地面天气仅 ${surface.availableSites}/${surface.totalSites} 地点窗口完整`,
-            );
-          }
+          const { snapshot, error } = result;
+          const diagnostics = [error, snapshot.refreshError]
+            .flatMap(message => message?.split("；") ?? [])
+            .map(message => message.trim())
+            .flatMap(message => {
+              const coverage = embeddedCoverage.exec(message);
+              if (coverage?.[1]) return ["本次请求覆盖不完整，正在使用较早的成功快照"];
+              return message && !coverage ? [message] : [];
+            });
+          if (snapshot.stale && diagnostics.length === 0) diagnostics.push("正在使用较早的成功快照");
+          if (error) diagnostics.push("已保留部分真实数据");
+          const dateNotices = new Set([...coverageNotices(snapshot), ...diagnostics]);
           if (dateNotices.size) notices.push(`${dateLabel(result.date)}：${[...dateNotices].join("；")}`);
         }
         setDataNotice(notices.join("\n"));
