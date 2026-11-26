@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "./offline-test.js";
+import { expandMobileDataSheet } from "./mobile-data-sheet.js";
 import { CLOUD_SEA_SITES } from "../../src/lib/cloudseaSites";
 import { CLOUD_SEA_SCORE_VERSION, conditionLevelFor } from "../../src/lib/cloudsea";
 
@@ -142,7 +143,7 @@ function partialPressureSnapshot(date: string, received = 54, surfaceAvailable =
   return { ...body, pressureQualitySchema: "pressure-provider-issues-v1",
     pressureQualityValidatorVersion: "pressure-validator-v1",
     surface: { status: surfaceAvailable === 54 ? "available" : "partial", availableSites: surfaceAvailable, totalSites: 54, failedSites: 54 - surfaceAvailable },
-    pressure: { status: "partial", receivedSites: received, availableSites: 32, partialSites: received - 32, totalSites: 54, failedSites: 22 }, sites };
+    pressure: { status: "partial", receivedSites: received, receiptCountsVerified: true, availableSites: 32, partialSites: received - 32, totalSites: 54, failedSites: 22 }, sites };
 }
 
 async function mockMapTiles(page: Page) {
@@ -168,6 +169,132 @@ async function selectTaizijian(page: Page) {
   const search = page.getByRole("searchbox", { name: "搜索目录摄影点位" });
   await search.fill("临安太子尖");
   await page.getByRole("option", { name: "临安太子尖" }).click();
+}
+
+for (const width of [320, 390]) {
+  test(`CloudSea keeps the mobile preview in control at ${width}px`, async ({ page }, info) => {
+    test.skip(!["mobile", "webkit-mobile"].includes(info.project.name), "compact panel regression");
+    await page.setViewportSize({ width, height: 844 });
+    const date = shanghaiDateKey();
+    await mockSnapshot(page, snapshot(date, {
+      score: 88,
+      pressureStatus: "partial",
+      pressure: { status: "partial", availableSites: 20 },
+      refreshError: "压力层仅 20/54 地点可用",
+    }));
+    const sheet = page.getByTestId("mobile-data-sheet");
+    const body = sheet.getByTestId("mobile-data-sheet-body");
+    const expand = sheet.getByRole("button", { name: "展开数据面板" });
+
+    await page.goto(selectedTaizijianHref);
+    await expect(sheet.locator(".mobile-data-sheet-location")).toHaveText("临安太子尖");
+    await expect(sheet).toHaveAttribute("data-level", "peek");
+    await expect(body).toBeHidden();
+
+    await page.goto("/cloudsea");
+    await selectTaizijian(page);
+    await expect(sheet.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100 · 窗口平均");
+    await expect(sheet).toHaveAttribute("data-level", "peek");
+    await expect(sheet.getByRole("status")).toHaveText("数据覆盖不完整 · 展开查看");
+    expect((await sheet.boundingBox())!.height).toBeLessThan(120);
+    expect((await expand.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(page.getByRole("navigation", { name: "页面导航" }).getByRole("link", { name: "云海", exact: true }))
+      .toHaveAttribute("aria-current", "page");
+    if (width === 390 && info.project.name === "mobile") {
+      await info.attach("cloudsea-preview", { body: await page.screenshot(), contentType: "image/png" });
+    }
+
+    await expandMobileDataSheet(page);
+    const coverageNotice = sheet.getByRole("status");
+    await expect(coverageNotice).toContainText("压力层 0/54 地点完整");
+    await expect(coverageNotice).not.toContainText("20/54");
+    await expect(coverageNotice).toContainText("部分覆盖和缺失地点数未核实");
+    await expect(coverageNotice).not.toContainText("54 地点缺有效来源");
+    await sheet.getByRole("button", { name: "收起数据面板" }).click();
+    await expect(sheet).toHaveAttribute("data-level", "peek");
+    await expect(body).toBeHidden();
+    await expect(expand).toBeFocused();
+    const evening = page.getByRole("button", { name: "傍晚云海" });
+    await evening.click();
+    await expect(evening).toHaveAttribute("aria-pressed", "true");
+    await expect(sheet).toHaveAttribute("data-level", "peek");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  });
+}
+
+for (const [width, height] of [[320, 844], [812, 375]]) {
+  test(`CloudSea long details stay readable at 200% on ${width}×${height}`, async ({ page }, info) => {
+    test.skip(info.project.name !== "mobile", "enlarged text check on compact Chromium");
+    await page.setViewportSize({ width, height });
+    const date = shanghaiDateKey();
+    const site = CLOUD_SEA_SITES.find(entry => entry.name === "梵净山红云金顶")!;
+    const fixture = snapshot(date, {
+      pressureStatus: "partial",
+      refreshError: "已保留可核实的地面天气与部分有效时次，缺失的时次不能用于推断云层上下关系。较长的异常说明必须能阅读到末尾。",
+    });
+    await mockSnapshot(page, { ...fixture, sites: { [site.id]: fixture.sites["cs-taizijian"] } });
+    const href = "/cloudsea?" + new URLSearchParams({
+      sourceScope: "cloudsea", sourceId: site.id, canonicalId: `cloudsea:${site.id}`,
+      lat: String(site.latitude), lng: String(site.longitude), name: site.name,
+    });
+    await page.goto(href);
+    const sheet = page.getByTestId("mobile-data-sheet");
+    const expand = sheet.getByRole("button", { name: "展开数据面板" });
+    await expect(sheet.locator(".mobile-data-sheet-location")).toHaveText(site.name);
+    await expect(sheet.getByRole("status")).toHaveText("数据覆盖不完整 · 展开查看");
+    await page.addStyleTag({ content: `
+      .cloudsea-root .mobile-data-sheet-location { font-size: 32px }
+      .cloudsea-root .mobile-data-sheet-copy strong { font-size: 34px }
+      .cloudsea-root .mobile-data-sheet-copy small { font-size: 24px }
+      .cloudsea-root .mobile-data-sheet-status { font-size: 26px }
+      .cloudsea-root .mobile-data-sheet-actions button { font-size: 22px }
+      .cloudsea-root .nav-tabs .nav-tab { font-size: 26px }
+    ` });
+
+    const checkText = async () => {
+      expect(await sheet.evaluate(panel => {
+        const nodes = [...panel.querySelectorAll<HTMLElement>(".mobile-data-sheet-copy > *, .mobile-data-sheet-status")]
+          .filter(node => node.getClientRects().length > 0);
+        const buttons = [...panel.querySelectorAll(".mobile-data-sheet-actions button")]
+          .map(button => button.getBoundingClientRect());
+        const text = nodes.map(node => {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          return { parent: node.getBoundingClientRect(), lines: [...range.getClientRects()], label: node.textContent };
+        });
+        const overlaps = (a: DOMRect, b: DOMRect) =>
+          Math.min(a.right, b.right) - Math.max(a.left, b.left) > 2 &&
+          Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 2;
+        const problems: string[] = [];
+        for (const [index, { parent, lines, label }] of text.entries()) {
+          for (const line of lines) {
+            if (line.left < parent.left - 2 || line.right > parent.right + 2) problems.push(`cropped: ${label}`);
+            if (buttons.some(button => overlaps(line, button)) ||
+                text.slice(index + 1).some(group => group.lines.some(other => overlaps(line, other)))) {
+              problems.push(`overlap: ${label}`);
+            }
+          }
+        }
+        return problems;
+      })).toEqual([]);
+    };
+
+    await checkText();
+    await expand.click();
+    await expect(sheet).toHaveAttribute("data-level", "half");
+    await checkText();
+    await expand.click();
+    await expect(sheet).toHaveAttribute("data-level", "full");
+    await checkText();
+
+    const version = sheet.getByRole("button", { name: /查看版本更新记录/ });
+    await version.click({ trial: true });
+    await expect(version).toBeInViewport({ ratio: 0.8 });
+    await sheet.getByRole("button", { name: "收起数据面板" }).click();
+    await expect(expand).toBeFocused();
+    await expect(sheet).toHaveAttribute("data-level", "peek");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  });
 }
 
 test("mobile map retry keeps the alert until the same tile loads", async ({ page }, info) => {
@@ -307,8 +434,8 @@ test("legacy cached summit-cloud wording is corrected in the ranking and detail"
     const search = page.getByRole("searchbox", { name: "搜索目录摄影点位" });
     await search.fill("临安大明山");
     await page.getByRole("option", { name: "临安大明山" }).click();
+    await expandMobileDataSheet(page);
     await expect(page.locator(".mobile-key-metrics")).toContainText("山顶接近或可能处于云层");
-    await page.getByRole("button", { name: "展开数据面板" }).click();
   }
   const detail = page.locator(".cloudsea-site-detail");
   await expect(detail).toContainText("上下各150m余量");
@@ -336,8 +463,8 @@ test("CloudSea pressure unavailable preserves surface facts and vertical unknown
   await page.goto("/cloudsea");
   await selectTaizijian(page);
   await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("垂直证据不足");
+  await expandMobileDataSheet(page);
   await expect(page.locator(".mobile-key-metrics")).toContainText("90%");
-  await page.getByRole("button", { name: "展开数据面板" }).click();
   await expect(page.locator(".cloudsea-site-detail")).toContainText("压力层证据不足");
   await expect(page.locator(".cloudsea-site-detail")).toContainText("不使用启发式云底补算");
   await expect(page.locator(".cloudsea-site-detail")).toContainText("模式云顶范围 (MSL)");
@@ -364,8 +491,8 @@ test("low-cloud model result warns about locally missed valley fog", async ({ pa
     await card.click();
   } else {
     await selectTaizijian(page);
+    await expandMobileDataSheet(page);
     await expect(page.getByTestId("cloudsea-window-evidence").first()).toContainText("可能遗漏局地谷雾");
-    await page.getByRole("button", { name: "展开数据面板" }).click();
   }
   const detail = page.locator(".cloudsea-site-detail");
   await expect(detail).toContainText("网格预报可能漏掉局地谷雾");
@@ -458,6 +585,7 @@ test("CloudSea pressure partial keeps a selected numeric score above global cove
   await page.goto("/cloudsea");
   await selectTaizijian(page);
   await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100 · 窗口平均");
+  await page.getByRole("button", { name: "展开数据面板" }).click();
   await expect(page.locator(".mobile-data-sheet-status")).toContainText("压力层");
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toHaveText("数据降级 · 仅供参考");
 });
@@ -466,19 +594,18 @@ test("CloudSea fresh partial snapshot reports coverage loss without claiming old
   test.skip(info.project.name !== "mobile", "新鲜部分覆盖与过期区分在移动端验收");
   const date = shanghaiDateKey();
   await page.setViewportSize({ width: 390, height: 844 });
-  await mockSnapshot(page, snapshot(date, {
-    score: 88,
-    pressureStatus: "partial",
-    pressure: { status: "partial", availableSites: 20 },
-    stale: false,
-    refreshError: "压力层仅 20/54 地点可用",
-  }));
+  await mockSnapshot(page, {
+    ...partialPressureSnapshot(date),
+    refreshError: "压力层 32/54 地点完整，收到 54 个，其中 22 个为部分覆盖",
+  });
   await page.goto("/cloudsea");
   await selectTaizijian(page);
-  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 88/100 · 窗口平均");
+  await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("条件指数 22/100 · 窗口平均");
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toContainText("旧数据");
   await page.getByRole("button", { name: "展开数据面板" }).click();
-  await expect(page.locator(".mobile-data-sheet-status")).toContainText("压力层仅 20/54 地点可用");
+  const notice = page.locator(".mobile-data-sheet-status");
+  await expect(notice).toContainText("压力层 32/54 地点完整，部分覆盖 22 地点，0 地点缺有效来源");
+  expect((await notice.innerText()).match(/32\/54/g)).toHaveLength(1);
 });
 
 test("CloudSea stale partial snapshot remains explicitly old despite retaining evidence", async ({ page }, info) => {
@@ -490,13 +617,56 @@ test("CloudSea stale partial snapshot remains explicitly old despite retaining e
     pressureStatus: "partial",
     pressure: { status: "partial", availableSites: 20 },
     stale: true,
-    refreshError: "本次请求失败，保留原快照",
+    refreshError: "本次压力层 20/54 地点完整，收到 40 个，其中 20 个为部分覆盖，正在使用较早的成功快照；本次请求失败，保留原快照",
   }));
   await page.goto("/cloudsea");
   await selectTaizijian(page);
   await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("旧数据 · 仅供参考");
+  await expect(page.getByTestId("mobile-data-sheet").getByRole("status")).toHaveText("展开查看旧数据来源");
   await page.getByRole("button", { name: "展开数据面板" }).click();
   await expect(page.locator(".mobile-data-sheet-status")).toContainText("保留原快照");
+  await expect(page.locator(".mobile-data-sheet-status")).toContainText("正在使用较早的成功快照");
+  await expect(page.locator(".mobile-data-sheet-status")).not.toContainText("20/54");
+});
+
+test("CloudSea shows a pending load, respects cooldown and preserves the selected point on recovery", async ({ page }, info) => {
+  test.skip(info.project.name !== "mobile", "mobile loading state");
+  const date = shanghaiDateKey();
+  const requests: string[] = [];
+  let release = () => {};
+  const initialResponse = new Promise<void>(resolve => { release = resolve; });
+  await mockMapTiles(page);
+  await page.route("**/api/cloudsea/snapshot**", async route => {
+    requests.push(new URL(route.request().url()).searchParams.get("refresh") ?? "");
+    if (requests.length === 1) {
+      await initialResponse;
+      await route.fulfill({ status: 429, headers: { "Retry-After": "60" }, json: { error: "天气供应商冷却中" } });
+      return;
+    }
+    await route.fulfill({ status: 200, json: partialPressureSnapshot(date) });
+  });
+
+  const sheet = page.getByTestId("mobile-data-sheet");
+  const conclusion = sheet.locator(".mobile-data-sheet-copy strong");
+  try {
+    await page.goto(selectedTaizijianHref);
+    await expect(conclusion).toHaveText("正在读取云海条件数据…");
+  } finally {
+    release();
+  }
+  await expect(conclusion).toHaveText("数据不可用 · 请重试");
+  await expect(sheet.getByRole("status")).toHaveText("数据读取异常 · 展开查看");
+  await sheet.getByRole("button", { name: "展开数据面板" }).click();
+  await expect(sheet.getByRole("status")).toContainText("天气供应商冷却中");
+  expect(requests).toEqual(["0"]);
+
+  await page.locator(".cloudsea-refresh").first().click();
+  await expect(conclusion).toHaveText("条件指数 22/100 · 窗口平均");
+  await expect(sheet.locator(".mobile-data-sheet-location")).toHaveText("临安太子尖");
+  await expect(sheet).toHaveAttribute("data-level", "half");
+  await expect(sheet.getByRole("status")).toContainText("压力层 32/54 地点完整");
+  await expect(sheet.getByRole("status")).not.toContainText("天气供应商冷却中");
+  expect(requests).toEqual(["0", "1"]);
 });
 
 test("CloudSea provenance labels absent fresh source as coverage loss, not legacy cache", async ({ page }, info) => {
@@ -582,6 +752,7 @@ test("CloudSea total surface failure is unavailable rather than pressure partial
   await page.goto("/cloudsea");
   await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("数据不可用 · 请重试");
   await expect(page.locator(".mobile-data-sheet-copy strong")).not.toContainText("压力");
+  await expect(page.getByTestId("mobile-data-sheet").getByRole("status")).toHaveText("数据读取异常 · 展开查看");
   await expect(page.locator(".cloudsea-map-pane")).toBeVisible();
 });
 
@@ -617,7 +788,7 @@ test("CloudSea keeps partial evidence available without ranking its peak as a wi
   } else {
     await selectTaizijian(page);
     await expect(page.locator(".mobile-data-sheet-copy strong")).toHaveText("窗口覆盖不足");
-    await page.getByRole("button", { name: "展开数据面板" }).click();
+    await expandMobileDataSheet(page);
   }
   const detail = page.locator(".cloudsea-site-detail");
   await expect(detail).toContainText("窗口覆盖不足");

@@ -129,6 +129,7 @@ test("cloudsea labels partial ground-weather coverage as degraded", async ({ pag
         generatedAt: `${date}T00:30:00.000Z`,
         source: "E2E partial surface coverage",
         stale: false,
+        refreshError: "地面天气仅 2/54 地点窗口完整",
         surface: { status: "partial", availableSites: 1, totalSites: 54, failedSites: 53 },
         pressure: { status: "available", availableSites: 54, totalSites: 54, failedSites: 0 },
         sites: { "cs-taizijian": { morning: window, evening: window } },
@@ -141,7 +142,9 @@ test("cloudsea labels partial ground-weather coverage as degraded", async ({ pag
   );
 
   await page.goto("/cloudsea");
-  await expect(page.locator('.cloudsea-beta-banner[role="status"]')).toContainText("地面天气仅 1/54 地点窗口完整");
+  const status = page.getByTestId("cloudsea-evidence-status");
+  await expect(status).toContainText("地面天气 1/54 地点窗口完整");
+  await expect(status).not.toContainText("2/54");
 });
 
 test("cloudsea fails closed when a snapshot has no surface coverage summary", async ({ page }, testInfo) => {

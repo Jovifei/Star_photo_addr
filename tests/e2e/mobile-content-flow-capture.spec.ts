@@ -74,11 +74,21 @@ test("完整应用手机/平板/横屏/桌面截图证据", async ({ page }, inf
     await shot(`${name}-390-half`);
     await page.getByRole("button", { name: "展开数据面板" }).click();
     await shot(`${name}-390-full`);
+    const sheet = page.getByTestId("mobile-data-sheet");
     await page.getByRole("button", { name: "收起数据面板" }).click();
-    await page.getByRole("button", { name: "收起数据面板" }).click();
+    if (path === "/fireglow") {
+      await expect(sheet).toHaveAttribute("data-level", "half");
+      await page.getByRole("button", { name: "收起数据面板" }).click();
+    }
+    await expect(sheet).toHaveAttribute("data-level", "peek");
     const mapBox = (await page.locator(".leaflet-container").boundingBox())!;
     await page.touchscreen.tap(mapBox.x + mapBox.width * .28, mapBox.y + mapBox.height * .25);
-    await expect(page.getByTestId("mobile-data-sheet")).toHaveAttribute("data-level", "half");
+    await expect(sheet.locator(".mobile-data-sheet-location")).toContainText("所点坐标");
+    if (path === "/cloudsea") {
+      await expect(sheet).toHaveAttribute("data-level", "peek");
+      await page.getByRole("button", { name: "展开数据面板" }).click();
+    }
+    await expect(sheet).toHaveAttribute("data-level", "half");
     await shot(`${name}-390-nearby`);
     await expect(page.locator(".topic-controls-toggle")).toHaveCount(0);
     const choices = page.locator(".product-topic-toolbar .segmented button");

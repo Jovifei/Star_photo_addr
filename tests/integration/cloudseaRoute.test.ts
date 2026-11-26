@@ -563,6 +563,7 @@ describe("GET /api/cloudsea/snapshot", () => {
     expect(response.status).toBe(200);
     expect(body.pressure).toEqual({
       status: "available",
+      receiptCountsVerified: true,
       availableSites: CLOUD_SEA_SITES.length,
       receivedSites: CLOUD_SEA_SITES.length,
       partialSites: 0,

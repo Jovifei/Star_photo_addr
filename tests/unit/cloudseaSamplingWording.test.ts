@@ -12,6 +12,7 @@ import {
 } from "@/lib/cloudsea";
 import { CLOUD_SEA_SITES } from "@/lib/cloudseaSites";
 import { PRESSURE_LEVELS, type PressureForecastResponse, type PressureLevelSample } from "@/lib/pressure";
+import { PRESSURE_PROVIDER_QUALITY_SCHEMA, PRESSURE_PROVIDER_VALIDATOR_VERSION } from "@/lib/pressureProviderIntegrity";
 
 const time = "2026-10-30T17:00";
 const site = CLOUD_SEA_SITES.find(item => item.id === "cs-damingshan")!;
@@ -123,6 +124,29 @@ describe("cloud-sea sampling wording", () => {
     expect(snapshot).toEqual(original);
     expect(presentCloudSeaSnapshot(presented)).toEqual(presented);
     expect(qualifyCloudSeaSnapshot(snapshot)).toEqual(presented);
+  });
+
+  it("keeps inferred pressure counts distinct from a verified receipt across server and client qualification", () => {
+    const totalSites = CLOUD_SEA_SITES.length;
+    const partial: CloudSeaWindowScore = { ...evaluate(1489), pressureStatus: "partial",
+      coverage: { expectedHours: 4, surfaceValidHours: 4, scoreableHours: 2, pressureHours: 2 } };
+    const snapshot: CloudSeaSnapshot = {
+      scoreVersion: CLOUD_SEA_SCORE_VERSION, date: "2026-10-30", model: "gfs",
+      generatedAt: "2026-10-30T00:00:00Z", source: "test", stale: false,
+      pressureQualitySchema: PRESSURE_PROVIDER_QUALITY_SCHEMA,
+      pressureQualityValidatorVersion: PRESSURE_PROVIDER_VALIDATOR_VERSION,
+      pressure: { status: "partial", availableSites: 0, totalSites, failedSites: totalSites },
+      sites: { [site.id]: { morning: partial, evening: partial } },
+    };
+    const qualifyTwice = (input: CloudSeaSnapshot) => qualifyCloudSeaSnapshot(
+      JSON.parse(JSON.stringify(qualifyCloudSeaSnapshot(input))) as CloudSeaSnapshot,
+    ).pressure!;
+    const inferred = qualifyTwice(snapshot);
+    expect(inferred.receivedSites).toBe(1);
+    expect(inferred.receiptCountsVerified).not.toBe(true);
+    const reported = qualifyTwice({ ...snapshot,
+      pressure: { ...snapshot.pressure!, receivedSites: 2, partialSites: 2, receiptCountsVerified: true } });
+    expect(reported).toMatchObject({ receivedSites: 2, partialSites: 2, receiptCountsVerified: true });
   });
 
   it("retains partial-window context when replacing legacy wording", () => {
